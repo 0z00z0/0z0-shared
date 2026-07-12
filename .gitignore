@@ -13,6 +13,9 @@ obj/
 .idea/
 .vscode/
 
+## Claude Code — local session/tooling config, not for the repo
+.claude/
+
 ## Build artifacts
 publish-smoketest/
 *.log
