@@ -9,6 +9,17 @@
     </Window.SystemBackdrop>
 
     <Grid x:Name="Root">
+        <!-- Brand typeface: Cascadia Mono, embedded in this library (Assets/Fonts). Grid/StackPanel
+             have no FontFamily to inherit from, so it's applied via an implicit TextBlock style
+             (covers every TextBlock, including the credit rows added in code-behind) plus an
+             explicit BrandFont on each Button's label. Per 0z0-design: Cascadia Mono is the studio's
+             UI/body face; Cascadia Code is only for genuine code/terminal surfaces, not this dialog. -->
+        <Grid.Resources>
+            <FontFamily x:Key="BrandFont">ms-appx:///Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
+            <Style TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource BrandFont}"/>
+            </Style>
+        </Grid.Resources>
         <StackPanel>
 
             <!-- ── Brand header: unified brand navy (not per-app tinted) ───────────────── -->
@@ -85,6 +96,7 @@
                     <Button x:Name="CloseBtn" Grid.Column="2"
                             Content="✕" Width="32" Height="32"
                             Padding="0" FontSize="11"
+                            FontFamily="{StaticResource BrandFont}"
                             Background="Transparent"
                             BorderBrush="Transparent"
                             Foreground="#80FFFFFF"
@@ -129,16 +141,19 @@
                     </Grid.ColumnDefinitions>
                     <Button x:Name="GitHubBtn" Grid.Column="0"
                             Content="View on GitHub"
-                            FontSize="11" HorizontalAlignment="Stretch"/>
+                            FontSize="11" FontFamily="{StaticResource BrandFont}"
+                            HorizontalAlignment="Stretch"/>
                     <Button x:Name="UpdateBtn" Grid.Column="1"
                             Content="Check for Updates"
-                            FontSize="11" HorizontalAlignment="Stretch"/>
+                            FontSize="11" FontFamily="{StaticResource BrandFont}"
+                            HorizontalAlignment="Stretch"/>
                 </Grid>
 
                 <!-- Buy Me a Coffee -->
                 <Button x:Name="BmacBtn"
                         Content="☕  Buy Me a Coffee"
-                        FontSize="11" HorizontalAlignment="Stretch"/>
+                        FontSize="11" FontFamily="{StaticResource BrandFont}"
+                        HorizontalAlignment="Stretch"/>
 
                 <!-- External libraries (collapsed by default; hidden entirely if empty).
                      A plain text toggle rather than a full Expander control — the built-in
@@ -149,7 +164,7 @@
                 <StackPanel x:Name="LibrariesGroup" Spacing="4">
                     <Button x:Name="LibrariesToggleBtn"
                             Content="External libraries ▾"
-                            FontSize="9"
+                            FontSize="9" FontFamily="{StaticResource BrandFont}"
                             Padding="0" MinWidth="0" MinHeight="0"
                             Background="Transparent" BorderBrush="Transparent"
                             HorizontalAlignment="Left"

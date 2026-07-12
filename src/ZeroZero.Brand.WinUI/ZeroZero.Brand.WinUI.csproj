@@ -38,4 +38,19 @@
     <ProjectReference Include="..\ZeroZero.Brand.Core\ZeroZero.Brand.Core.csproj" />
   </ItemGroup>
 
+  <!--
+    Brand typeface: Cascadia Mono (0z0-design/fonts). Shipped as Content so it travels with the
+    library into every consuming app's output under Assets\Fonts\ — BrandAboutWindow references it
+    by that relative path, so consumers get the correct brand face with no per-app setup. The OFL
+    licence must accompany any redistributed copy of the font, so it ships alongside.
+  -->
+  <ItemGroup>
+    <Content Include="Assets\Fonts\CascadiaMono.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Fonts\LICENCE-OFL.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

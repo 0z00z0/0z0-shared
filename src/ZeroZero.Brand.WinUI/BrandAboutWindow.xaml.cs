@@ -38,7 +38,8 @@ public sealed partial class BrandAboutWindow : Window
         AppNameText.Text     = info.AppName;
         VersionText.Text     = $"v{info.Version}";
         DescriptionText.Text = info.Description;
-        FooterText.Text      = $"Copyright © 2026 {CoreBrand.StudioName} · MIT License";
+        // "Licence" (noun) per the studio's British-English house style (design-language.md).
+        FooterText.Text      = $"Copyright © 2026 {CoreBrand.StudioName} · MIT Licence";
 
         CloseBtn.Click      += (_, _) => Close();
         GitHubBtn.Click     += (_, _) => Open(info.RepoUrl);
