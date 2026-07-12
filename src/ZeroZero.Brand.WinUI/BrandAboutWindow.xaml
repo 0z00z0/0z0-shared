@@ -29,11 +29,24 @@
                     <!-- [Ø] studio mark -->
                     <Viewbox Width="72" Height="72" Grid.Column="0" VerticalAlignment="Center">
                         <Canvas Width="256" Height="256">
+                            <!-- Background plate: per 0z0-design/logo/GUIDE.md, the studio mark
+                                 carries its own rounded-square radial-gradient plate wherever the
+                                 full mark is used (About-box credits is an explicitly named
+                                 context) — not just the header's own background. -->
+                            <Rectangle Width="240" Height="240" Canvas.Left="8" Canvas.Top="8"
+                                       RadiusX="52" RadiusY="52">
+                                <Rectangle.Fill>
+                                    <RadialGradientBrush Center="0.5,0.35" RadiusX="0.85" RadiusY="0.85">
+                                        <GradientStop Color="#15263A" Offset="0"/>
+                                        <GradientStop Color="#0A0F17" Offset="1"/>
+                                    </RadialGradientBrush>
+                                </Rectangle.Fill>
+                            </Rectangle>
                             <!-- Left bracket "[" -->
                             <Path Data="M104,78 H82 V178 H104" StrokeThickness="15"
                                   StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
                                 <Path.Stroke>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                         <GradientStop Color="#27E0C8" Offset="0"/>
                                         <GradientStop Color="#11A9D6" Offset="1"/>
                                     </LinearGradientBrush>
@@ -43,7 +56,7 @@
                             <Path Data="M152,78 H174 V178 H152" StrokeThickness="15"
                                   StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
                                 <Path.Stroke>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                         <GradientStop Color="#7B8CFF" Offset="0"/>
                                         <GradientStop Color="#3F5BE0" Offset="1"/>
                                     </LinearGradientBrush>
