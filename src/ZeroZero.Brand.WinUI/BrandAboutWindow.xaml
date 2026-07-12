@@ -27,7 +27,7 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- [Ø] studio mark -->
-                    <Viewbox Width="38" Height="38" Grid.Column="0" VerticalAlignment="Center">
+                    <Viewbox Width="72" Height="72" Grid.Column="0" VerticalAlignment="Center">
                         <Canvas Width="256" Height="256">
                             <!-- Left bracket "[" -->
                             <Path Data="M104,78 H82 V178 H104" StrokeThickness="15"
@@ -82,21 +82,26 @@
             <!-- ── Body (Mica backdrop) ───────────────────────────────────────── -->
             <StackPanel Padding="16,12,16,16" Spacing="10">
 
-                <StackPanel Spacing="2">
-                    <!-- Studio wordmark: teal→purple gradient text -->
-                    <TextBlock FontSize="12" FontWeight="SemiBold">
-                        <TextBlock.Foreground>
-                            <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-                                <GradientStop Color="#27E0C8" Offset="0"/>
-                                <GradientStop Color="#7B8CFF" Offset="1"/>
-                            </LinearGradientBrush>
-                        </TextBlock.Foreground>
-                        ZeroZero Software
-                    </TextBlock>
-                    <TextBlock Text="Small tools. Zero bloat."
-                               FontSize="10"
-                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-                </StackPanel>
+                <!-- Studio wordmark: teal→purple gradient text, clickable through to 0z0.xyz
+                     (replaces the old standalone "0z0.xyz" button lower in the dialog). -->
+                <Button x:Name="StudioLinkBtn"
+                        Background="Transparent" BorderBrush="Transparent"
+                        Padding="0" HorizontalAlignment="Left" HorizontalContentAlignment="Left">
+                    <StackPanel Spacing="2">
+                        <TextBlock FontSize="12" FontWeight="SemiBold">
+                            <TextBlock.Foreground>
+                                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                    <GradientStop Color="#27E0C8" Offset="0"/>
+                                    <GradientStop Color="#7B8CFF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </TextBlock.Foreground>
+                            ZeroZero Software
+                        </TextBlock>
+                        <TextBlock Text="Small tools. Zero bloat."
+                                   FontSize="10"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                    </StackPanel>
+                </Button>
 
                 <!-- App description -->
                 <TextBlock x:Name="DescriptionText"
@@ -117,28 +122,28 @@
                             FontSize="11" HorizontalAlignment="Stretch"/>
                 </Grid>
 
-                <!-- 0z0.xyz -->
-                <Button x:Name="WebsiteBtn"
-                        Content="0z0.xyz"
-                        FontSize="11" HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Center"
-                        Background="Transparent" BorderBrush="Transparent"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-
                 <!-- Buy Me a Coffee -->
                 <Button x:Name="BmacBtn"
                         Content="☕  Buy Me a Coffee"
                         FontSize="11" HorizontalAlignment="Stretch"/>
 
-                <!-- External libraries (collapsed by default; hidden entirely if empty) -->
-                <Expander x:Name="LibrariesExpander"
-                          Header="External libraries"
-                          IsExpanded="False"
-                          FontSize="11"
-                          HorizontalAlignment="Stretch"
-                          HorizontalContentAlignment="Stretch">
-                    <StackPanel x:Name="LibrariesPanel" Spacing="6" Padding="0,4,0,0"/>
-                </Expander>
+                <!-- External libraries (collapsed by default; hidden entirely if empty).
+                     A plain text toggle rather than a full Expander control — the built-in
+                     Expander's card chrome (background, border, full-width header) reads as a
+                     prominent action row; local Background/BorderThickness overrides on it don't
+                     fully strip that, since the header's own theme-resource brushes still apply.
+                     A small link-styled Button is a deliberately low-key credits footnote. -->
+                <StackPanel x:Name="LibrariesGroup" Spacing="4">
+                    <Button x:Name="LibrariesToggleBtn"
+                            Content="External libraries ▾"
+                            FontSize="9"
+                            Padding="0" MinWidth="0" MinHeight="0"
+                            Background="Transparent" BorderBrush="Transparent"
+                            HorizontalAlignment="Left"
+                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                    <StackPanel x:Name="LibrariesPanel" Spacing="6" Padding="0,2,0,0"
+                                Visibility="Collapsed"/>
+                </StackPanel>
 
                 <!-- Footer -->
                 <TextBlock x:Name="FooterText"

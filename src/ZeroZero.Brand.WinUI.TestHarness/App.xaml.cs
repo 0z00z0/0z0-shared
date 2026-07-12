@@ -26,7 +26,7 @@ public partial class App : Application
         {
             Info = new AboutInfo
             {
-                AppName     = "ZeroZero.Brand.WinUI Test Harness",
+                AppName     = "Brand Test Harness",
                 Version     = "0.0.0-dev",
                 Description = "Interactive launch-test rig for the shared BrandAboutWindow component — " +
                               "verifies the About box renders correctly on its own, before ChargeKeeper " +

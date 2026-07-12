@@ -40,10 +40,10 @@ public sealed partial class BrandAboutWindow : Window
         DescriptionText.Text = info.Description;
         FooterText.Text      = $"Copyright © 2026 {CoreBrand.StudioName} · MIT License";
 
-        CloseBtn.Click  += (_, _) => Close();
-        GitHubBtn.Click += (_, _) => Open(info.RepoUrl);
-        WebsiteBtn.Click += (_, _) => Open(CoreBrand.WebsiteUrl);
-        BmacBtn.Click   += (_, _) => Open(CoreBrand.BuyMeACoffeeUrl);
+        CloseBtn.Click      += (_, _) => Close();
+        GitHubBtn.Click     += (_, _) => Open(info.RepoUrl);
+        StudioLinkBtn.Click += (_, _) => Open(CoreBrand.WebsiteUrl);
+        BmacBtn.Click       += (_, _) => Open(CoreBrand.BuyMeACoffeeUrl);
 
         if (options.OnCheckForUpdates is { } onCheckForUpdates)
         {
@@ -60,23 +60,25 @@ public sealed partial class BrandAboutWindow : Window
         PopulateExternalLibraries(info.ExternalLibraries);
 
         // The window's client height is fixed by ConfigureChrome based on the DESIRED size at
-        // construction time (expander collapsed). Without this, opening "External libraries"
+        // construction time (libraries collapsed). Without this, revealing "External libraries"
         // grows the StackPanel's content past the window's fixed bounds — the credit rows get
         // clipped by the native window frame and are invisible, not just scrolled off (there's no
         // ScrollViewer). Caught by an actual on-screen launch-test; a publish smoke test can't see
         // this because it never renders or interacts with the window.
-        // Expander exposes no separate "Collapsed" event — RegisterPropertyChangedCallback on
-        // IsExpanded fires for both directions.
-        LibrariesExpander.RegisterPropertyChangedCallback(
-            Expander.IsExpandedProperty,
-            async (_, _) => { await Task.Delay(300); ResizeToContent(); });
+        LibrariesToggleBtn.Click += (_, _) =>
+        {
+            bool expanded = LibrariesPanel.Visibility == Visibility.Visible;
+            LibrariesPanel.Visibility  = expanded ? Visibility.Collapsed : Visibility.Visible;
+            LibrariesToggleBtn.Content = expanded ? "External libraries ▾" : "External libraries ▴";
+            ResizeToContent();
+        };
     }
 
     private void PopulateExternalLibraries(IReadOnlyList<ExternalLibrary> libraries)
     {
         if (libraries.Count == 0)
         {
-            LibrariesExpander.Visibility = Visibility.Collapsed;
+            LibrariesGroup.Visibility = Visibility.Collapsed;
             return;
         }
 
