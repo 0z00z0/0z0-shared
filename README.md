@@ -42,8 +42,9 @@ app or any other .NET target. Contains:
 
 Deliberately **not** shared: each app's own update-check networking/dialog plumbing
 (`UpdateCheckService`, `UpdateChecker`, `UpdatePrompt`, etc.). Only the window chrome and layout
-are unified — `OnCheckForUpdates` is a plain `Func<Task>` the consumer wires up to its own
-existing update flow.
+are unified — `OnCheckForUpdates` is a plain `Func<Task<bool>>` the consumer wires up to its own
+existing update flow (returning `true` when an update was applied so the window owns the
+clean-exit-before-relaunch step via `OnBeforeExit`).
 
 ### `src/ZeroZero.Brand.WinUI.TestHarness`
 
@@ -85,8 +86,8 @@ var options = new BrandAboutOptions
         RepoUrl           = "https://github.com/0z00z0/YourApp",
         ExternalLibraries = [ new ExternalLibrary("SomeLib", "Some Author", "What it's for", "MIT", "https://...") ],
     },
-    OnCheckForUpdates = async () => await YourApp.Services.UpdateCheckService.CheckNowAsync(...),
-    OnBeforeExit      = () => _onExit(), // optional
+    OnCheckForUpdates = async () => await YourApp.Services.UpdateCheckService.CheckNowAsync(...), // true ⇒ update applied → exit
+    OnBeforeExit      = async () => { await YourApp.ShutdownAsync(); return true; }, // optional; return false to veto the exit
 };
 
 var about = new BrandAboutWindow(options);

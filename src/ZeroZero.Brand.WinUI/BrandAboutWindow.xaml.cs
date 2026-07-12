@@ -48,7 +48,7 @@ public sealed partial class BrandAboutWindow : Window
 
         if (options.OnCheckForUpdates is { } onCheckForUpdates)
         {
-            UpdateBtn.Click += (_, _) => _ = onCheckForUpdates();
+            UpdateBtn.Click += async (_, _) => await RunUpdateCheckAsync(onCheckForUpdates);
         }
         else
         {
@@ -73,6 +73,39 @@ public sealed partial class BrandAboutWindow : Window
             LibrariesToggleBtn.Content = expanded ? "External libraries ▾" : "External libraries ▴";
             ResizeToContent();
         };
+    }
+
+    /// <summary>
+    /// Runs the host's update check and, if it reports an update was applied, owns the clean exit:
+    /// gives the host a chance to tear down via <see cref="BrandAboutOptions.OnBeforeExit"/> (which
+    /// may veto), then closes the window so the app can terminate for the installer to relaunch it.
+    /// Guards the async-void click handler so a throwing host callback can't take the app down.
+    /// </summary>
+    private async Task RunUpdateCheckAsync(Func<Task<bool>> onCheckForUpdates)
+    {
+        UpdateBtn.IsEnabled = false;
+        bool exiting = false;
+        try
+        {
+            if (!await onCheckForUpdates())
+                return;   // no update applied — leave the window open
+
+            if (_options.OnBeforeExit is { } onBeforeExit && !await onBeforeExit())
+                return;   // host vetoed the exit — leave the window open
+
+            exiting = true;
+            Close();
+        }
+        catch (Exception ex)
+        {
+            // The host owns update-flow error reporting; keep a thrown callback from crashing the
+            // app through the async-void handler, and leave the window open to try again.
+            Debug.WriteLine($"BrandAboutWindow: update check failed: {ex}");
+        }
+        finally
+        {
+            if (!exiting) UpdateBtn.IsEnabled = true;
+        }
     }
 
     private void PopulateExternalLibraries(IReadOnlyList<ExternalLibrary> libraries)

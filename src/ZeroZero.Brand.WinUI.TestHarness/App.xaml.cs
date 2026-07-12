@@ -40,7 +40,9 @@ public partial class App : Application
             },
             // Present so the "Check for Updates" button is visible and clickable for the test —
             // omit this to verify the button hides itself instead (see BrandAboutWindow.xaml.cs).
-            OnCheckForUpdates = async () => await Task.Delay(500),
+            // Returns false (no update applied) so the window stays open for inspection rather than
+            // driving the new exit flow.
+            OnCheckForUpdates = async () => { await Task.Delay(500); return false; },
         };
 
         _aboutWindow = new BrandAboutWindow(options);
