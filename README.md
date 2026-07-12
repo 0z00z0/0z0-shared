@@ -45,6 +45,23 @@ Deliberately **not** shared: each app's own update-check networking/dialog plumb
 are unified — `OnCheckForUpdates` is a plain `Func<Task>` the consumer wires up to its own
 existing update flow.
 
+### `src/ZeroZero.Brand.WinUI.TestHarness`
+
+A minimal WinUI exe that launches `BrandAboutWindow` directly with this repo's own sample data —
+run it to eyeball the About box on screen without building or running ChargeKeeper or
+HyperVManagerTray:
+
+```powershell
+dotnet run --project src/ZeroZero.Brand.WinUI.TestHarness
+```
+
+## Screenshot
+
+![BrandAboutWindow](docs/screenshots/about-window.png)
+
+*Updated from the test harness whenever the window is visually verified — always reflects the
+current on-screen appearance, not just what the XAML claims.*
+
 ## How consumers reference this
 
 Both consumers are plain `ProjectReference`s (no NuGet feed yet):
