@@ -1,0 +1,18 @@
+## .NET
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+
+## Visual Studio
+.vs/
+*.suo
+
+## Rider / VS Code
+.idea/
+.vscode/
+
+## Build artifacts
+publish-smoketest/
+*.log

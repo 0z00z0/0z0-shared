@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Brand.Core</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Identity / packaging metadata -->
+    <AssemblyTitle>ZeroZero.Brand.Core</AssemblyTitle>
+    <Product>ZeroZero.Brand.Core</Product>
+    <Description>Shared branding constants and About-window data contracts for ZeroZero Software apps.</Description>
+    <Authors>ZeroZero Software</Authors>
+    <Company>ZeroZero Software</Company>
+    <Copyright>Copyright © 2026 ZeroZero Software</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/0z00z0/ZeroZeroBrand</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+</Project>
