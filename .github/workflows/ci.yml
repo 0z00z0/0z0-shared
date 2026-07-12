@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    # ZeroZero.Brand.WinUI targets net10.0-windows and needs the Windows App SDK build tooling.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore ZeroZeroBrand.slnx
+
+      - name: Build
+        run: dotnet build ZeroZeroBrand.slnx -c Release --no-restore

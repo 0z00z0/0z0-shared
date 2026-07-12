@@ -85,7 +85,7 @@ writing) so all three projects resolve the same Windows App SDK runtime.
 ## Build
 
 ```powershell
-dotnet build ZeroZeroBrand.sln
+dotnet build ZeroZeroBrand.slnx
 ```
 
 ## License

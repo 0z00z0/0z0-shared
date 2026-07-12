@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window
+    x:Class="ZeroZero.Brand.WinUI.BrandAboutWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop Kind="BaseAlt" />
+    </Window.SystemBackdrop>
+
+    <Grid x:Name="Root">
+        <StackPanel>
+
+            <!-- ── Brand header: unified brand navy (not per-app tinted) ───────────────── -->
+            <Border Padding="16,12,12,12">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#15263A" Offset="0"/>
+                        <GradientStop Color="#0A0F17" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- [Ø] studio mark -->
+                    <Viewbox Width="38" Height="38" Grid.Column="0" VerticalAlignment="Center">
+                        <Canvas Width="256" Height="256">
+                            <!-- Left bracket "[" -->
+                            <Path Data="M104,78 H82 V178 H104" StrokeThickness="15"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
+                                <Path.Stroke>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#27E0C8" Offset="0"/>
+                                        <GradientStop Color="#11A9D6" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Path.Stroke>
+                            </Path>
+                            <!-- Right bracket "]" -->
+                            <Path Data="M152,78 H174 V178 H152" StrokeThickness="15"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
+                                <Path.Stroke>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#7B8CFF" Offset="0"/>
+                                        <GradientStop Color="#3F5BE0" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Path.Stroke>
+                            </Path>
+                            <!-- "0" of the Ø -->
+                            <Rectangle Width="32" Height="80" Canvas.Left="112" Canvas.Top="88"
+                                       RadiusX="12" RadiusY="12" Stroke="#D8A657" StrokeThickness="10" Fill="Transparent"/>
+                            <!-- Slash of the Ø -->
+                            <Line X1="148" Y1="92" X2="108" Y2="164" Stroke="#D8A657" StrokeThickness="6"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                        </Canvas>
+                    </Viewbox>
+
+                    <!-- App name + version -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center"
+                                Margin="10,0,0,0" Spacing="2">
+                        <TextBlock x:Name="AppNameText" Text="App"
+                                   FontSize="13" FontWeight="SemiBold"
+                                   Foreground="White"/>
+                        <TextBlock x:Name="VersionText" Text="v—"
+                                   FontSize="11" Foreground="#80FFFFFF"/>
+                    </StackPanel>
+
+                    <!-- Close button -->
+                    <Button x:Name="CloseBtn" Grid.Column="2"
+                            Content="✕" Width="32" Height="32"
+                            Padding="0" FontSize="11"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            Foreground="#80FFFFFF"
+                            VerticalAlignment="Top"/>
+                </Grid>
+            </Border>
+
+            <!-- ── Body (Mica backdrop) ───────────────────────────────────────── -->
+            <StackPanel Padding="16,12,16,16" Spacing="10">
+
+                <StackPanel Spacing="2">
+                    <!-- Studio wordmark: teal→purple gradient text -->
+                    <TextBlock FontSize="12" FontWeight="SemiBold">
+                        <TextBlock.Foreground>
+                            <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                <GradientStop Color="#27E0C8" Offset="0"/>
+                                <GradientStop Color="#7B8CFF" Offset="1"/>
+                            </LinearGradientBrush>
+                        </TextBlock.Foreground>
+                        ZeroZero Software
+                    </TextBlock>
+                    <TextBlock Text="Small tools. Zero bloat."
+                               FontSize="10"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                </StackPanel>
+
+                <!-- App description -->
+                <TextBlock x:Name="DescriptionText"
+                    FontSize="11" TextWrapping="Wrap"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                <!-- View on GitHub | Check for Updates -->
+                <Grid x:Name="ActionRow" ColumnSpacing="8" Margin="0,2,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="GitHubBtn" Grid.Column="0"
+                            Content="View on GitHub"
+                            FontSize="11" HorizontalAlignment="Stretch"/>
+                    <Button x:Name="UpdateBtn" Grid.Column="1"
+                            Content="Check for Updates"
+                            FontSize="11" HorizontalAlignment="Stretch"/>
+                </Grid>
+
+                <!-- 0z0.xyz -->
+                <Button x:Name="WebsiteBtn"
+                        Content="0z0.xyz"
+                        FontSize="11" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Background="Transparent" BorderBrush="Transparent"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                <!-- Buy Me a Coffee -->
+                <Button x:Name="BmacBtn"
+                        Content="☕  Buy Me a Coffee"
+                        FontSize="11" HorizontalAlignment="Stretch"/>
+
+                <!-- External libraries (collapsed by default; hidden entirely if empty) -->
+                <Expander x:Name="LibrariesExpander"
+                          Header="External libraries"
+                          IsExpanded="False"
+                          FontSize="11"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Stretch">
+                    <StackPanel x:Name="LibrariesPanel" Spacing="6" Padding="0,4,0,0"/>
+                </Expander>
+
+                <!-- Footer -->
+                <TextBlock x:Name="FooterText"
+                           FontSize="9" Opacity="0.7"
+                           HorizontalAlignment="Center"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

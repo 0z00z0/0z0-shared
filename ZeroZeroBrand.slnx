@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ZeroZero.Brand.Core/ZeroZero.Brand.Core.csproj" />
+    <Project Path="src/ZeroZero.Brand.WinUI/ZeroZero.Brand.WinUI.csproj" />
+  </Folder>
+</Solution>
