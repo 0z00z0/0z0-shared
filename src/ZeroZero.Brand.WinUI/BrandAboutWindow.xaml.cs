@@ -23,6 +23,11 @@ public sealed partial class BrandAboutWindow : Window
 {
     private readonly BrandAboutOptions _options;
 
+    // Cached from ConfigureChrome so ResizeToContent() can recenter on the same monitor
+    // without re-querying the cursor position (which may have moved since the window opened).
+    private NativeMethods.RECT _workArea;
+    private double _scale;
+
     public BrandAboutWindow(BrandAboutOptions options)
     {
         _options = options;
@@ -53,6 +58,18 @@ public sealed partial class BrandAboutWindow : Window
         }
 
         PopulateExternalLibraries(info.ExternalLibraries);
+
+        // The window's client height is fixed by ConfigureChrome based on the DESIRED size at
+        // construction time (expander collapsed). Without this, opening "External libraries"
+        // grows the StackPanel's content past the window's fixed bounds — the credit rows get
+        // clipped by the native window frame and are invisible, not just scrolled off (there's no
+        // ScrollViewer). Caught by an actual on-screen launch-test; a publish smoke test can't see
+        // this because it never renders or interacts with the window.
+        // Expander exposes no separate "Collapsed" event — RegisterPropertyChangedCallback on
+        // IsExpanded fires for both directions.
+        LibrariesExpander.RegisterPropertyChangedCallback(
+            Expander.IsExpandedProperty,
+            async (_, _) => { await Task.Delay(300); ResizeToContent(); });
     }
 
     private void PopulateExternalLibraries(IReadOnlyList<ExternalLibrary> libraries)
@@ -102,11 +119,24 @@ public sealed partial class BrandAboutWindow : Window
         AppWindow.SetPresenter(presenter);
 
         Root.Width = 320;
-        Root.Measure(new Size(320, double.PositiveInfinity));
+        (_workArea, _scale) = NativeMethods.GetCursorMonitorMetrics();
 
-        var (work, scale) = NativeMethods.GetCursorMonitorMetrics();
-        int cw = (int)Math.Round(320 * scale);
-        int ch = (int)Math.Round((Root.DesiredSize.Height > 0 ? Root.DesiredSize.Height : 270) * scale);
+        ResizeToContent();
+    }
+
+    /// <summary>
+    /// Measures <see cref="Root"/> at its current content (collapsed or expanded) and resizes/
+    /// recenters the native window to fit — called once at construction and again whenever the
+    /// External-libraries expander toggles, since the window would otherwise stay fixed at its
+    /// original (collapsed) height. Recentering on every call keeps growth/shrink symmetric around
+    /// the monitor center the window originally opened on, cached in <see cref="_workArea"/> so a
+    /// cursor that has since moved to another monitor doesn't shift the window.
+    /// </summary>
+    private void ResizeToContent()
+    {
+        Root.Measure(new Size(320, double.PositiveInfinity));
+        int cw = (int)Math.Round(320 * _scale);
+        int ch = (int)Math.Round((Root.DesiredSize.Height > 0 ? Root.DesiredSize.Height : 270) * _scale);
 
         // ResizeClient sizes the CLIENT area (not the outer window), so the 320-DIP content fills
         // it exactly — sizing the outer window instead would leave the border eating into the
@@ -114,8 +144,8 @@ public sealed partial class BrandAboutWindow : Window
         AppWindow.ResizeClient(new SizeInt32(cw, ch));
         var outer = AppWindow.Size;
         AppWindow.Move(new PointInt32(
-            work.Left + (work.Right  - work.Left - outer.Width)  / 2,
-            work.Top  + (work.Bottom - work.Top  - outer.Height) / 2));
+            _workArea.Left + (_workArea.Right  - _workArea.Left - outer.Width)  / 2,
+            _workArea.Top  + (_workArea.Bottom - _workArea.Top  - outer.Height) / 2));
     }
 
     private static void Open(string url) =>
