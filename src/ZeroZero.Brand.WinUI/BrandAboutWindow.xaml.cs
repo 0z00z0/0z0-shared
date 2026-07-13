@@ -104,7 +104,14 @@ public sealed partial class BrandAboutWindow : Window
         }
         finally
         {
-            if (!exiting) UpdateBtn.IsEnabled = true;
+            // The awaits above yield; the user may have closed this always-on-top window meanwhile,
+            // so touching UpdateBtn can throw RO_E_CLOSED. Re-enabling a closed window is moot — guard
+            // it so nothing escapes the async-void click handler onto the UI thread.
+            if (!exiting)
+            {
+                try { UpdateBtn.IsEnabled = true; }
+                catch (Exception ex) { Debug.WriteLine($"BrandAboutWindow: re-enable after close: {ex}"); }
+            }
         }
     }
 
