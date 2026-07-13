@@ -63,17 +63,25 @@ dotnet run --project src/ZeroZero.Brand.WinUI.TestHarness
 *Updated from the test harness whenever the window is visually verified — always reflects the
 current on-screen appearance, not just what the XAML claims.*
 
-## How consumers reference this
+## Integrating the About dialogue
 
-Both consumers are plain `ProjectReference`s (no NuGet feed yet):
+**1. Reference the library.** Add a `ProjectReference` to a sibling checkout of this repo (there is
+no NuGet feed yet — tracked in [issue #1](https://github.com/0z00z0/0z0-shared/issues/1)):
 
 ```xml
-<ProjectReference Include="..\ZeroZeroBrand\src\ZeroZero.Brand.WinUI\ZeroZero.Brand.WinUI.csproj" />
+<ProjectReference Include="..\0z0-shared\src\ZeroZero.Brand.WinUI\ZeroZero.Brand.WinUI.csproj" />
 ```
 
-(`ZeroZero.Brand.WinUI` already references `ZeroZero.Brand.Core` transitively.)
+`ZeroZero.Brand.WinUI` pulls in `ZeroZero.Brand.Core` transitively and ships the brand typeface
+(Cascadia Mono) as content, so a consumer gets the correct font with no extra setup. Your app's
+`app.manifest` should declare `PerMonitorV2` DPI awareness (as ChargeKeeper and HyperVManagerTray
+already do) so the window renders sharp on high-DPI displays.
 
-Construct the window with data only — no per-app XAML or logic duplication:
+> In each consumer's own GitHub Actions CI, add an `actions/checkout` step for `0z00z0/0z0-shared`
+> into the sibling path before building — the runner only checks out one repo, so the relative
+> `ProjectReference` won't resolve otherwise.
+
+**2. Open the window with data only** — no per-app XAML or logic duplication:
 
 ```csharp
 var options = new BrandAboutOptions
@@ -86,13 +94,24 @@ var options = new BrandAboutOptions
         RepoUrl           = "https://github.com/0z00z0/YourApp",
         ExternalLibraries = [ new ExternalLibrary("SomeLib", "Some Author", "What it's for", "MIT", "https://...") ],
     },
-    OnCheckForUpdates = async () => await YourApp.Services.UpdateCheckService.CheckNowAsync(...), // true ⇒ update applied → exit
-    OnBeforeExit      = async () => { await YourApp.ShutdownAsync(); return true; }, // optional; return false to veto the exit
+    OnCheckForUpdates = async () => await YourApp.Services.UpdateCheckService.CheckNowAsync(...),
+    OnBeforeExit      = async () => { await YourApp.ShutdownAsync(); return true; },
 };
 
-var about = new BrandAboutWindow(options);
-about.Activate();
+new BrandAboutWindow(options).Activate();
 ```
+
+**The update-check contract** — both callbacks are optional:
+
+- **`OnCheckForUpdates`** (`Func<Task<bool>>`) — wired to your app's own update flow. Return `true`
+  when an update was applied and the window drives the clean exit (so the installer can relaunch);
+  return `false` when there was nothing to update and the window stays open. **Omit it entirely to
+  hide the "Check for Updates" button** — e.g. a console-only tool or a build with no update channel.
+- **`OnBeforeExit`** (`Func<Task<bool>>`) — run just before an update-triggered close so your app
+  can tear down cleanly; return `false` to veto the exit and keep the window open.
+
+The window owns only chrome and layout; each app keeps its own update-check networking/dialog
+plumbing and wires it in through these two callbacks.
 
 ## Package versions
 
@@ -103,7 +122,7 @@ writing) so all three projects resolve the same Windows App SDK runtime.
 ## Build
 
 ```powershell
-dotnet build ZeroZeroBrand.slnx
+dotnet build 0z0-shared.slnx
 ```
 
 ## License

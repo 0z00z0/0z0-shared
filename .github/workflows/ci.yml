@@ -20,7 +20,7 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Restore
-        run: dotnet restore ZeroZeroBrand.slnx
+        run: dotnet restore 0z0-shared.slnx
 
       - name: Build
-        run: dotnet build ZeroZeroBrand.slnx -c Release --no-restore
+        run: dotnet build 0z0-shared.slnx -c Release --no-restore

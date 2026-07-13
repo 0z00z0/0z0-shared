@@ -20,7 +20,7 @@
     <Company>ZeroZero Software</Company>
     <Copyright>Copyright © 2026 ZeroZero Software</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/0z00z0/ZeroZeroBrand</RepositoryUrl>
+    <RepositoryUrl>https://github.com/0z00z0/0z0-shared</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 

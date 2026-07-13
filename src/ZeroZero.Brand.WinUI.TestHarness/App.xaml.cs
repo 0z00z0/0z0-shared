@@ -31,7 +31,7 @@ public partial class App : Application
                 Description = "Interactive launch-test rig for the shared BrandAboutWindow component — " +
                               "verifies the About box renders correctly on its own, before ChargeKeeper " +
                               "or HyperVManagerTray adopt it.",
-                RepoUrl     = $"{CoreBrand.OrgUrl}/ZeroZeroBrand",
+                RepoUrl     = $"{CoreBrand.OrgUrl}/0z0-shared",
                 ExternalLibraries =
                 [
                     new ExternalLibrary("Microsoft.WindowsAppSDK", "Microsoft", "WinUI 3 / Windows App SDK runtime", "MIT", "https://github.com/microsoft/WindowsAppSDK"),
