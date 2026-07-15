@@ -101,7 +101,19 @@ already do) so the window renders sharp on high-DPI displays.
 > into the sibling path before building — the runner only checks out one repo, so the relative
 > `ProjectReference` won't resolve otherwise.
 
-**2. Open the window with data only** — no per-app XAML or logic duplication:
+**2. Pick the hosting style that matches your app.** Both share the same `AboutInfo` data model —
+pick based on whether your app has a separate About *window* or an About *page*:
+
+| | Tray/systray apps | Full windowed apps |
+|---|---|---|
+| Component | `BrandAboutWindow` | `BrandAboutControl` |
+| Surface | Standalone popup (Mica, no title bar, always-on-top) | Hosted inside your own `Page`/window |
+| "Check for Updates" | Yes, via `BrandAboutOptions` | No — not this layer's concern |
+| Used by | ChargeKeeper, HyperVManagerTray | (candidate: M365Migrator) |
+
+### Option A — Tray app popup (`BrandAboutWindow`)
+
+Open the window with data only — no per-app XAML or logic duplication:
 
 ```csharp
 var options = new BrandAboutOptions
@@ -133,9 +145,12 @@ new BrandAboutWindow(options).Activate();
 The window owns only chrome and layout; each app keeps its own update-check networking/dialog
 plumbing and wires it in through these two callbacks.
 
-**No popup window? Host `BrandAboutControl` directly.** A full windowed app whose About is an
-in-navigation `Page` (not a separate popup, and with no "check for updates" concept) skips
-`BrandAboutWindow` entirely and hosts the content control itself:
+### Option B — Hosted in your own page (`BrandAboutControl`)
+
+A full windowed app whose About is an in-navigation `Page` (not a separate popup, and with no
+"check for updates" concept) skips `BrandAboutWindow` entirely and hosts the content control itself.
+
+**1. Add the control to your existing About page's XAML**, in place of your bespoke layout:
 
 ```xml
 <!-- YourApp's own AboutPage.xaml -->
@@ -146,14 +161,46 @@ in-navigation `Page` (not a separate popup, and with no "check for updates" conc
 </Page>
 ```
 
+**2. Populate it from your existing brand-facts source** (whatever plays the same role as this
+repo's `AboutInfo` in your app today — e.g. a `BrandInfo` static class also feeding a CLI banner):
+
 ```csharp
 // AboutPage.xaml.cs
-About.SetInfo(new AboutInfo { AppName = "YourApp", Version = "1.2.3", /* … */ });
+public AboutPage()
+{
+    InitializeComponent();
+    About.SetInfo(new AboutInfo
+    {
+        AppName           = YourBrandInfo.Product,
+        Version           = YourBrandInfo.Version,
+        Description       = YourBrandInfo.Description,
+        RepoUrl           = YourBrandInfo.RepositoryUrl,
+        ExternalLibraries = YourBrandInfo.ExternalLibraries
+            .Select(l => new ExternalLibrary(l.Name, l.Author, l.Purpose, l.License))
+            .ToList(),
+    });
+}
 ```
 
-The control inherits your page's theme (everything but the fixed-color brand header band uses
-`ThemeResource` brushes) and never shows an update button — there's no `BrandAboutOptions` and no
-update-flow concept at this layer.
+`SetInfo` is a method rather than a settable property (WinUI's XAML compiler needs a parameterless
+constructor for any type exposed as a public property on a XAML class, which `AboutInfo`'s
+`required` members deliberately don't have) — call it once from your page's constructor or
+`Loaded` handler.
+
+**3. Delete your bespoke About view-model/layout** once the control renders correctly — don't keep
+both around. Keep your own brand-facts class (`BrandInfo` or equivalent) as the single source of
+truth; only its *rendering* moves to the shared control, not its data.
+
+**Notes:**
+- The control inherits your page's theme (everything but the fixed-color brand header band uses
+  `ThemeResource` brushes) — no extra theming work needed.
+- Never shows an update button — there's no `BrandAboutOptions` and no update-flow concept at this
+  layer. If your app *does* need an update check from its About surface, that's a case for `BrandAboutWindow` instead (Option A).
+- The three link buttons are **Repository / Website / Donate** — `RepoUrl` comes from your
+  `AboutInfo`; Website and Donate always point at the studio's own `Brand.WebsiteUrl` /
+  `Brand.BuyMeACoffeeUrl` (not per-app), so you don't supply those.
+- Same CI caveat as Option A: your app's own workflow needs the `0z0-shared` sibling-checkout step
+  (see above) or a NuGet pin once [issue #1](https://github.com/0z00z0/0z0-shared/issues/1) lands.
 
 ## Package versions
 
