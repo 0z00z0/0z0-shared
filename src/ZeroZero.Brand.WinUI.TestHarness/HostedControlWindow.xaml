@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="ZeroZero.Brand.WinUI.TestHarness.HostedControlWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:brand="using:ZeroZero.Brand.WinUI">
+
+    <!-- Deliberately plain default chrome (title bar, no Mica, resizable) — the point of this
+         window is to look nothing like BrandAboutWindow's popup. It simulates a full windowed app
+         (e.g. M365Migrator) hosting BrandAboutControl inside its own in-navigation page: no popup
+         chrome, no "Check for Updates" button, just the control living inside ordinary page
+         content. -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <brand:BrandAboutControl x:Name="AboutControl"
+                                  MaxWidth="480" MinWidth="360"
+                                  HorizontalAlignment="Center"
+                                  Margin="24"/>
+    </ScrollViewer>
+</Window>
