@@ -31,8 +31,18 @@ app or any other .NET target. Contains:
 `net10.0-windows10.0.26100.0`, WinUI 3 / Windows App SDK, unpackaged. References
 `ZeroZero.Brand.Core`. Contains:
 
+- **`BrandAboutControl`** — a `UserControl` holding the actual About *content*: the `[Ø]` studio
+  mark + brand header band, company name/tagline (linked to the studio site), app description,
+  three co-equal link buttons (repository / website / donate), an expandable external-libraries
+  credit list, and a copyright footer. Owns no window chrome, sizing, or update/exit flow — hosts
+  either inside `BrandAboutWindow` (tray-app popup) or directly inside a host app's own
+  in-navigation page (a full windowed app with no separate About window and no update concept).
+  Call `SetInfo(AboutInfo)` after construction to populate it (a method, not a settable property —
+  the WinUI XAML compiler needs a parameterless constructor for any type exposed as a public
+  property on a XAML class, which `AboutInfo`'s `required` members deliberately don't have).
 - **`BrandAboutWindow`** — the shared, parameterized About popup (320px wide, Mica backdrop,
-  centered on the monitor under the cursor, no title bar, always-on-top). Replaces each app's own
+  centered on the monitor under the cursor, no title bar, always-on-top), now a thin shell hosting
+  `BrandAboutControl` plus the tray-app-only "Check for Updates" button. Replaces each app's own
   hand-rolled `AboutWindow`. Carries its own minimal Win32 P/Invoke for monitor/DPI metrics, so it
   has no dependency on a consuming app's own `NativeMethods` class.
 - **`BrandAboutOptions`** — the parameters: an `AboutInfo`, an optional `OnCheckForUpdates`
@@ -48,19 +58,29 @@ clean-exit-before-relaunch step via `OnBeforeExit`).
 
 ### `src/ZeroZero.Brand.WinUI.TestHarness`
 
-A minimal WinUI exe that launches `BrandAboutWindow` directly with this repo's own sample data —
-run it to eyeball the About box on screen without building or running ChargeKeeper or
-HyperVManagerTray:
+A minimal WinUI exe that opens both hosting scenarios with this repo's own sample data — run it to
+eyeball the About content on screen without building or running ChargeKeeper, HyperVManagerTray, or
+M365Migrator:
 
 ```powershell
 dotnet run --project src/ZeroZero.Brand.WinUI.TestHarness
 ```
 
-## Screenshot
+It opens two windows: the `BrandAboutWindow` popup ("Window Mode") and a plain window hosting
+`BrandAboutControl` directly with ordinary title-bar chrome and no update button ("Hosted Control
+Demo") — simulating a full windowed app's in-navigation About page.
+
+## Screenshots
+
+**`BrandAboutWindow`** (tray-app popup):
 
 ![BrandAboutWindow](docs/screenshots/about-window.png)
 
-*Updated from the test harness whenever the window is visually verified — always reflects the
+**`BrandAboutControl`** hosted directly in a plain window (no popup chrome, no update button):
+
+![BrandAboutControl hosted](docs/screenshots/about-hosted-control.png)
+
+*Updated from the test harness whenever either surface is visually verified — always reflects the
 current on-screen appearance, not just what the XAML claims.*
 
 ## Integrating the About dialogue
@@ -112,6 +132,28 @@ new BrandAboutWindow(options).Activate();
 
 The window owns only chrome and layout; each app keeps its own update-check networking/dialog
 plumbing and wires it in through these two callbacks.
+
+**No popup window? Host `BrandAboutControl` directly.** A full windowed app whose About is an
+in-navigation `Page` (not a separate popup, and with no "check for updates" concept) skips
+`BrandAboutWindow` entirely and hosts the content control itself:
+
+```xml
+<!-- YourApp's own AboutPage.xaml -->
+<Page ... xmlns:brand="using:ZeroZero.Brand.WinUI">
+    <ScrollViewer>
+        <brand:BrandAboutControl x:Name="About" MaxWidth="560" HorizontalAlignment="Center"/>
+    </ScrollViewer>
+</Page>
+```
+
+```csharp
+// AboutPage.xaml.cs
+About.SetInfo(new AboutInfo { AppName = "YourApp", Version = "1.2.3", /* … */ });
+```
+
+The control inherits your page's theme (everything but the fixed-color brand header band uses
+`ThemeResource` brushes) and never shows an update button — there's no `BrandAboutOptions` and no
+update-flow concept at this layer.
 
 ## Package versions
 

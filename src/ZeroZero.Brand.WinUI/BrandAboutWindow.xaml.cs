@@ -1,15 +1,8 @@
 using System.Diagnostics;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Documents;
 using Windows.Foundation;
 using Windows.Graphics;
-using ZeroZero.Brand.Core;
-// This project's own namespace (ZeroZero.Brand.WinUI) nests inside ZeroZero.Brand, so an
-// unqualified "Brand" would resolve to that enclosing namespace segment rather than the
-// ZeroZero.Brand.Core.Brand class — alias it to sidestep the collision.
-using CoreBrand = ZeroZero.Brand.Core.Brand;
 
 namespace ZeroZero.Brand.WinUI;
 
@@ -18,6 +11,11 @@ namespace ZeroZero.Brand.WinUI;
 /// centered on the monitor under the cursor, no title bar, always-on-top. Replaces each app's own
 /// hand-rolled AboutWindow. Carries its own minimal Win32 P/Invoke (<see cref="NativeMethods"/>)
 /// for monitor/DPI metrics, so it has no dependency on a consuming app's own NativeMethods class.
+///
+/// This is a thin shell: the actual About content (brand header, links, credits) lives in the
+/// hosted <see cref="BrandAboutControl"/>. This window only owns chrome — sizing, centering,
+/// close — plus the tray-app-only "Check for Updates" flow, so a full windowed app (no popup, no
+/// update concept) can host <see cref="BrandAboutControl"/> directly instead of this window.
 /// </summary>
 public sealed partial class BrandAboutWindow : Window
 {
@@ -32,19 +30,15 @@ public sealed partial class BrandAboutWindow : Window
     {
         _options = options;
         InitializeComponent();
+
+        AboutControl.SetInfo(options.Info);
+        // The libraries expander lives inside the hosted control, but only this window's fixed
+        // native size needs to react to it — see ResizeToContent's doc for why.
+        AboutControl.ContentResized += (_, _) => ResizeToContent();
+
         ConfigureChrome();
 
-        var info = options.Info;
-        AppNameText.Text     = info.AppName;
-        VersionText.Text     = $"v{info.Version}";
-        DescriptionText.Text = info.Description;
-        // "Licence" (noun) per the studio's British-English house style (design-language.md).
-        FooterText.Text      = $"Copyright © 2026 {CoreBrand.StudioName} · MIT Licence";
-
-        CloseBtn.Click      += (_, _) => Close();
-        GitHubBtn.Click     += (_, _) => Open(info.RepoUrl);
-        StudioLinkBtn.Click += (_, _) => Open(CoreBrand.WebsiteUrl);
-        BmacBtn.Click       += (_, _) => Open(CoreBrand.BuyMeACoffeeUrl);
+        CloseBtn.Click += (_, _) => Close();
 
         if (options.OnCheckForUpdates is { } onCheckForUpdates)
         {
@@ -53,26 +47,9 @@ public sealed partial class BrandAboutWindow : Window
         else
         {
             // No update channel wired up (e.g. a build with no update service) — hide the button
-            // and let "View on GitHub" take the full row instead of leaving a dead gap.
+            // entirely rather than leaving a dead, disabled row.
             UpdateBtn.Visibility = Visibility.Collapsed;
-            Grid.SetColumnSpan(GitHubBtn, 2);
         }
-
-        PopulateExternalLibraries(info.ExternalLibraries);
-
-        // The window's client height is fixed by ConfigureChrome based on the DESIRED size at
-        // construction time (libraries collapsed). Without this, revealing "External libraries"
-        // grows the StackPanel's content past the window's fixed bounds — the credit rows get
-        // clipped by the native window frame and are invisible, not just scrolled off (there's no
-        // ScrollViewer). Caught by an actual on-screen launch-test; a publish smoke test can't see
-        // this because it never renders or interacts with the window.
-        LibrariesToggleBtn.Click += (_, _) =>
-        {
-            bool expanded = LibrariesPanel.Visibility == Visibility.Visible;
-            LibrariesPanel.Visibility  = expanded ? Visibility.Collapsed : Visibility.Visible;
-            LibrariesToggleBtn.Content = expanded ? "External libraries ▾" : "External libraries ▴";
-            ResizeToContent();
-        };
     }
 
     /// <summary>
@@ -115,40 +92,6 @@ public sealed partial class BrandAboutWindow : Window
         }
     }
 
-    private void PopulateExternalLibraries(IReadOnlyList<ExternalLibrary> libraries)
-    {
-        if (libraries.Count == 0)
-        {
-            LibrariesGroup.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        foreach (var lib in libraries)
-        {
-            var line = new TextBlock
-            {
-                FontSize      = 11,
-                TextWrapping  = TextWrapping.Wrap,
-                Opacity       = 0.85,
-            };
-
-            if (lib.Url is { } url)
-            {
-                var link = new Hyperlink();
-                link.Inlines.Add(new Run { Text = lib.Name });
-                link.Click += (_, _) => Open(url);
-                line.Inlines.Add(link);
-                line.Inlines.Add(new Run { Text = $" — {lib.Purpose} ({lib.License})" });
-            }
-            else
-            {
-                line.Text = $"{lib.Name} — {lib.Purpose} ({lib.License})";
-            }
-
-            LibrariesPanel.Children.Add(line);
-        }
-    }
-
     private void ConfigureChrome()
     {
         AppWindow.IsShownInSwitchers = false;
@@ -168,12 +111,13 @@ public sealed partial class BrandAboutWindow : Window
     }
 
     /// <summary>
-    /// Measures <see cref="Root"/> at its current content (collapsed or expanded) and resizes/
-    /// recenters the native window to fit — called once at construction and again whenever the
-    /// External-libraries expander toggles, since the window would otherwise stay fixed at its
-    /// original (collapsed) height. Recentering on every call keeps growth/shrink symmetric around
-    /// the monitor center the window originally opened on, cached in <see cref="_workArea"/> so a
-    /// cursor that has since moved to another monitor doesn't shift the window.
+    /// Measures <see cref="Root"/> at its current content (libraries collapsed or expanded) and
+    /// resizes/recenters the native window to fit — called once at construction and again whenever
+    /// the hosted control's external-libraries expander toggles (via <see cref="BrandAboutControl.ContentResized"/>),
+    /// since the window would otherwise stay fixed at its original (collapsed) height. Recentering
+    /// on every call keeps growth/shrink symmetric around the monitor center the window originally
+    /// opened on, cached in <see cref="_workArea"/> so a cursor that has since moved to another
+    /// monitor doesn't shift the window.
     /// </summary>
     private void ResizeToContent()
     {
@@ -190,7 +134,4 @@ public sealed partial class BrandAboutWindow : Window
             _workArea.Left + (_workArea.Right  - _workArea.Left - outer.Width)  / 2,
             _workArea.Top  + (_workArea.Bottom - _workArea.Top  - outer.Height) / 2));
     }
-
-    private static void Open(string url) =>
-        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
 }
