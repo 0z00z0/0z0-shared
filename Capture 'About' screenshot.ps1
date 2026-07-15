@@ -44,7 +44,8 @@ public class AboutCapture {
     public static List<IntPtr> GetProcessWindows(uint pid) {
         var handles = new List<IntPtr>();
         EnumWindows((hWnd, lParam) => {
-            GetWindowThreadProcessId(hWnd, out uint windowPid);
+            uint windowPid;
+            GetWindowThreadProcessId(hWnd, out windowPid);
             if (windowPid == pid && IsWindowVisible(hWnd) && GetWindowTextLength(hWnd) > 0) {
                 handles.Add(hWnd);
             }

@@ -93,25 +93,23 @@
         <!-- ── Body (inherits the host's theme via ThemeResource brushes) ─────────────────── -->
         <StackPanel Padding="16,12,16,16" Spacing="10">
 
-            <!-- Studio wordmark: teal→purple gradient text, clickable through to the studio site. -->
-            <Button x:Name="StudioLinkBtn"
-                    Background="Transparent" BorderBrush="Transparent"
-                    Padding="0" HorizontalAlignment="Left" HorizontalContentAlignment="Left">
-                <StackPanel Spacing="2">
-                    <TextBlock FontSize="12" FontWeight="SemiBold">
-                        <TextBlock.Foreground>
-                            <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-                                <GradientStop Color="#27E0C8" Offset="0"/>
-                                <GradientStop Color="#7B8CFF" Offset="1"/>
-                            </LinearGradientBrush>
-                        </TextBlock.Foreground>
-                        ZeroZero Software
-                    </TextBlock>
-                    <TextBlock Text="Small tools. Zero bloat."
-                               FontSize="10"
-                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-                </StackPanel>
-            </Button>
+            <!-- Studio wordmark: teal→purple gradient text. Plain (non-interactive) text, not a
+                 button — the "Website" link below already covers that action; making the wordmark
+                 clickable too would just be a second control doing the exact same thing. -->
+            <StackPanel Spacing="2">
+                <TextBlock FontSize="12" FontWeight="SemiBold">
+                    <TextBlock.Foreground>
+                        <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                            <GradientStop Color="#27E0C8" Offset="0"/>
+                            <GradientStop Color="#7B8CFF" Offset="1"/>
+                        </LinearGradientBrush>
+                    </TextBlock.Foreground>
+                    ZeroZero Software
+                </TextBlock>
+                <TextBlock Text="Small tools. Zero bloat."
+                           FontSize="10"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+            </StackPanel>
 
             <!-- App description -->
             <TextBlock x:Name="DescriptionText"

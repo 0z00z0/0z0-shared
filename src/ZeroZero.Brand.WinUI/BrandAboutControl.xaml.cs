@@ -54,7 +54,6 @@ public sealed partial class BrandAboutControl : UserControl
         // Year is computed, not a literal, so this doesn't go stale like a hard-coded one would.
         FooterText.Text      = $"Copyright © {DateTime.UtcNow.Year} {CoreBrand.StudioName} · MIT Licence";
 
-        StudioLinkBtn.Click += (_, _) => Open(CoreBrand.WebsiteUrl);
         RepoBtn.Click       += (_, _) => Open(info.RepoUrl);
         SiteBtn.Click       += (_, _) => Open(CoreBrand.WebsiteUrl);
         DonateBtn.Click     += (_, _) => Open(CoreBrand.BuyMeACoffeeUrl);

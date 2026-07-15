@@ -18,9 +18,13 @@ public sealed partial class HostedControlWindow : Window
         InitializeComponent();
         Title = "Hosted Control Demo";
         AboutControl.SetInfo(info);
-        // Sized close to the control's actual content height (measured on screen) rather than an
-        // arbitrary tall default — a real host page would have its own surrounding nav chrome, but
-        // an oversized demo window here just reads as a rendering bug (a wall of dead background).
-        AppWindow.Resize(new SizeInt32(640, 560));
+
+        // Measure the control's real desired height and size the window to fit it (plus a small
+        // margin for the title bar and the ScrollViewer's own padding) instead of a guessed
+        // constant — a mismatched constant left a wall of dead background below the content, which
+        // reads as a rendering bug in a demo whose whole point is showing the control's real size.
+        AboutControl.Measure(new Windows.Foundation.Size(480, double.PositiveInfinity));
+        int contentHeight = (int)Math.Ceiling(AboutControl.DesiredSize.Height);
+        AppWindow.Resize(new SizeInt32(640, contentHeight + 96));
     }
 }
