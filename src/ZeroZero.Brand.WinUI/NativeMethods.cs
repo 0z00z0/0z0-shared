@@ -7,8 +7,11 @@ namespace ZeroZero.Brand.WinUI;
 /// mouse cursor. Deliberately self-contained — this library has no dependency on any consuming
 /// app's own <c>NativeMethods</c> class. Ported from the monitor-metrics subset of ChargeKeeper's
 /// and HyperVManagerTray's (near-identical) <c>Helpers/NativeMethods.cs</c>.
+/// Uses source-generated <see cref="LibraryImportAttribute"/> interop rather than
+/// <c>DllImport</c> — no runtime marshalling stub, and it's checked for correctness at compile
+/// time instead of failing at the first call.
 /// </summary>
-internal static class NativeMethods
+internal static partial class NativeMethods
 {
     // SPI_GETWORKAREA: usable desktop area on the primary display, excluding the taskbar.
     private const uint SPI_GETWORKAREA = 0x0030;
@@ -31,20 +34,26 @@ internal static class NativeMethods
         public uint dwFlags;
     }
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool SystemParametersInfo(uint action, uint param, out RECT output, uint winIni);
+    // SystemParametersInfo/GetMonitorInfo have no plain export in user32.dll, only the *A/*W
+    // variants — DllImport's default ExactSpelling=false silently probed for the right suffix,
+    // but LibraryImport requires an exact entry point, so the Unicode (*W) name is spelled out.
+    [LibraryImport("user32.dll", EntryPoint = "SystemParametersInfoW", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SystemParametersInfo(uint action, uint param, out RECT output, uint winIni);
 
-    [DllImport("user32.dll")]
-    private static extern bool GetCursorPos(out POINT point);
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetCursorPos(out POINT point);
 
-    [DllImport("user32.dll")]
-    private static extern IntPtr MonitorFromPoint(POINT point, uint flags);
+    [LibraryImport("user32.dll")]
+    private static partial IntPtr MonitorFromPoint(POINT point, uint flags);
 
-    [DllImport("user32.dll")]
-    private static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
+    [LibraryImport("user32.dll", EntryPoint = "GetMonitorInfoW")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
 
-    [DllImport("Shcore.dll")]
-    private static extern int GetDpiForMonitor(IntPtr monitor, int dpiType, out uint dpiX, out uint dpiY);
+    [LibraryImport("Shcore.dll")]
+    private static partial int GetDpiForMonitor(IntPtr monitor, int dpiType, out uint dpiX, out uint dpiY);
 
     /// <summary>
     /// Work area (taskbar-excluded desktop bounds, in physical pixels) and DPI scale factor of the
