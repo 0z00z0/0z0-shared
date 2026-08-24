@@ -25,9 +25,13 @@ jobs:
       - name: Build
         run: dotnet build 0z0-shared.slnx -c Release --no-restore
 
-      # Invoked against the test csproj, not the solution: the solution also holds
-      # ZeroZero.Brand.WinUI.TestHarness, a WinUI application whose Windows App SDK bootstrapper
-      # blocks on a runner with no desktop session. ZeroZero.Brand.Core.Tests is plain net10.0 and
-      # references only ZeroZero.Brand.Core, so nothing here can reach that bootstrapper.
-      - name: Unit tests
+      # Each test project is invoked by name rather than through the solution: the solution also
+      # holds ZeroZero.Brand.WinUI.TestHarness, a WinUI application whose Windows App SDK
+      # bootstrapper blocks on a runner with no desktop session. Both test projects are plain
+      # net10.0 and reference only plain net10.0 libraries, so neither can reach that bootstrapper.
+      # One step per project: a single step would report only the last exit code.
+      - name: Unit tests — ZeroZero.Brand.Core
         run: dotnet test tests\ZeroZero.Brand.Core.Tests\ZeroZero.Brand.Core.Tests.csproj -c Release --no-build --nologo
+
+      - name: Unit tests — ZeroZero.Config
+        run: dotnet test tests\ZeroZero.Config.Tests\ZeroZero.Config.Tests.csproj -c Release --no-build --nologo

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Config</RootNamespace>
+
+    <AssemblyTitle>ZeroZero.Config</AssemblyTitle>
+    <Product>ZeroZero.Config</Product>
+    <Description>Atomic JSON settings files: typed snapshot reads, mutation under one lock, change notification and quarantine of an unreadable file.</Description>
+  </PropertyGroup>
+
+</Project>
