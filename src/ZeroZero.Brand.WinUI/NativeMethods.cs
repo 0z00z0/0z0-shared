@@ -3,10 +3,9 @@ using System.Runtime.InteropServices;
 namespace ZeroZero.Brand.WinUI;
 
 /// <summary>
-/// Minimal Win32 P/Invoke for centering <see cref="BrandAboutWindow"/> on the monitor under the
+/// Minimal Win32 P/Invoke for centring <see cref="BrandAboutWindow"/> on the monitor under the
 /// mouse cursor. Deliberately self-contained — this library has no dependency on any consuming
-/// app's own <c>NativeMethods</c> class. Ported from the monitor-metrics subset of ChargeKeeper's
-/// and HyperVManagerTray's (near-identical) <c>Helpers/NativeMethods.cs</c>.
+/// app's own <c>NativeMethods</c> class.
 /// Uses source-generated <see cref="LibraryImportAttribute"/> interop rather than
 /// <c>DllImport</c> — no runtime marshalling stub, and it's checked for correctness at compile
 /// time instead of failing at the first call.

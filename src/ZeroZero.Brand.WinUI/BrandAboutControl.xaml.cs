@@ -37,7 +37,7 @@ public sealed partial class BrandAboutControl : UserControl
     /// any public property on a XAML class, which <see cref="AboutInfo"/>'s <see langword="required"/>
     /// members deliberately don't have (CS9035). A XAML-hosted consumer (e.g. an in-nav About page)
     /// calls this from code-behind after construction; <see cref="BrandAboutWindow"/>'s constructor
-    /// does it for you.
+    /// calls it itself.
     /// </summary>
     public void SetInfo(AboutInfo info)
     {

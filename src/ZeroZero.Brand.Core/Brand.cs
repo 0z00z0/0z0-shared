@@ -2,7 +2,7 @@ namespace ZeroZero.Brand.Core;
 
 /// <summary>
 /// Studio-wide constants shared by every ZeroZero Software app: identity, links, and the brand
-/// palette. Kept as plain string/hex constants (rather than platform color types) so this class
+/// palette. Kept as plain string/hex constants (rather than platform colour types) so this class
 /// is usable from any .NET target, WinUI or not.
 /// </summary>
 public static class Brand

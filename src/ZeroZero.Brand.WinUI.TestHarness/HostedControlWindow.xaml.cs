@@ -19,10 +19,10 @@ public sealed partial class HostedControlWindow : Window
         Title = "Hosted Control Demo";
         AboutControl.SetInfo(info);
 
-        // Measure the control's real desired height and size the window to fit it (plus a small
-        // margin for the title bar and the ScrollViewer's own padding) instead of a guessed
-        // constant — a mismatched constant left a wall of dead background below the content, which
-        // reads as a rendering bug in a demo whose whole point is showing the control's real size.
+        // The window must fit the control exactly: this demo exists to show the control's real
+        // size, so any slack reads as a rendering bug. Measure the control's desired height and
+        // size to that, plus a small margin for the title bar and the ScrollViewer's own padding —
+        // never a constant, which cannot track the content.
         AboutControl.Measure(new Windows.Foundation.Size(480, double.PositiveInfinity));
         int contentHeight = (int)Math.Ceiling(AboutControl.DesiredSize.Height);
         AppWindow.Resize(new SizeInt32(640, contentHeight + 96));

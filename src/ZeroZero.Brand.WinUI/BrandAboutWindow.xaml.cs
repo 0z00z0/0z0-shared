@@ -8,12 +8,12 @@ namespace ZeroZero.Brand.WinUI;
 
 /// <summary>
 /// The shared, parameterized About popup for ZeroZero Software apps — 320px wide, Mica backdrop,
-/// centered on the monitor under the cursor, no title bar, always-on-top. Replaces each app's own
-/// hand-rolled AboutWindow. Carries its own minimal Win32 P/Invoke (<see cref="NativeMethods"/>)
-/// for monitor/DPI metrics, so it has no dependency on a consuming app's own NativeMethods class.
+/// centred on the monitor under the cursor, no title bar, always-on-top. Carries its own minimal
+/// Win32 P/Invoke (<see cref="NativeMethods"/>) for monitor/DPI metrics, so it has no dependency
+/// on a consuming app's own NativeMethods class.
 ///
 /// This is a thin shell: the actual About content (brand header, links, credits) lives in the
-/// hosted <see cref="BrandAboutControl"/>. This window only owns chrome — sizing, centering,
+/// hosted <see cref="BrandAboutControl"/>. This window only owns chrome — sizing, centring,
 /// close — plus the tray-app-only "Check for Updates" flow, so a full windowed app (no popup, no
 /// update concept) can host <see cref="BrandAboutControl"/> directly instead of this window.
 /// </summary>
@@ -21,7 +21,7 @@ public sealed partial class BrandAboutWindow : Window
 {
     private readonly BrandAboutOptions _options;
 
-    // Cached from ConfigureChrome so ResizeToContent() can recenter on the same monitor
+    // Cached from ConfigureChrome so ResizeToContent() can recentre on the same monitor
     // without re-querying the cursor position (which may have moved since the window opened).
     private NativeMethods.RECT _workArea;
     private double _scale;
@@ -112,10 +112,10 @@ public sealed partial class BrandAboutWindow : Window
 
     /// <summary>
     /// Measures <see cref="Root"/> at its current content (libraries collapsed or expanded) and
-    /// resizes/recenters the native window to fit — called once at construction and again whenever
+    /// resizes/recentres the native window to fit — called once at construction and again whenever
     /// the hosted control's external-libraries expander toggles (via <see cref="BrandAboutControl.ContentResized"/>),
-    /// since the window would otherwise stay fixed at its original (collapsed) height. Recentering
-    /// on every call keeps growth/shrink symmetric around the monitor center the window originally
+    /// since the window would otherwise stay fixed at its original (collapsed) height. Recentring
+    /// on every call keeps growth/shrink symmetric around the monitor centre the window originally
     /// opened on, cached in <see cref="_workArea"/> so a cursor that has since moved to another
     /// monitor doesn't shift the window.
     /// </summary>

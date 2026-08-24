@@ -28,7 +28,7 @@ When the two disagree, **GitHub wins** — `TODO.md` is regenerated/corrected fr
 - **Done** → close the issue with a comment referencing the implementing commit(s); move the line to
   `TODO.md` → _Recently done_.
 - **Descoped / won't-do** → close with a comment saying why.
-- Refresh the `_Last synced_` date in `TODO.md` whenever you touch it.
+- Refresh the `_Last synced_` date in `TODO.md` on every edit to it.
 
 An automated assistant working in any 0z0 repo keeps both surfaces in sync as part of any task that
 changes work status — it is not a manual afterthought.

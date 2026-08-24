@@ -9,7 +9,7 @@
         <MicaBackdrop Kind="BaseAlt" />
     </Window.SystemBackdrop>
 
-    <!-- Thin shell around BrandAboutControl: Mica backdrop, no title bar, sizing/centering/close,
+    <!-- Thin shell around BrandAboutControl: Mica backdrop, no title bar, sizing/centring/close,
          and the window-only "Check for Updates" action. The About *content* (brand header, links,
          credits) lives in the hosted control so it can also be embedded in a host app's own
          in-navigation page with none of this chrome (see BrandAboutControl's class doc). -->
@@ -34,8 +34,7 @@
         </StackPanel>
 
         <!-- Close button: window-only chrome, overlaid on the header band's top-right corner
-             (Margin approximates the band's own 16,12,16,12 padding so it lands in the same spot
-             the old single-file window used to place it). -->
+             (Margin approximates the band's own 16,12,16,12 padding so the two line up). -->
         <Button x:Name="CloseBtn"
                 Content="✕" Width="32" Height="32"
                 Padding="0" FontSize="11"
