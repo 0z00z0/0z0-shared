@@ -4,6 +4,7 @@
     <Project Path="src/ZeroZero.Brand.WinUI/ZeroZero.Brand.WinUI.csproj" />
     <Project Path="src/ZeroZero.Brand.WinUI.TestHarness/ZeroZero.Brand.WinUI.TestHarness.csproj" />
     <Project Path="src/ZeroZero.Config/ZeroZero.Config.csproj" />
+    <Project Path="src/ZeroZero.Mqtt/ZeroZero.Mqtt.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ZeroZero.Brand.Core.Tests/ZeroZero.Brand.Core.Tests.csproj" />

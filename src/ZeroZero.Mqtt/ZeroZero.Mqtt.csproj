@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Mqtt</RootNamespace>
+
+    <AssemblyTitle>ZeroZero.Mqtt</AssemblyTitle>
+    <Product>ZeroZero.Mqtt</Product>
+    <Description>An MQTT integration for desktop applications: broker connection, endpoint search and probe, retained per-entity channels with dedupe, command routing, availability through the Last Will, and publish groups.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The storage seam has a file-backed implementation; a host with its own document
+         implements the three-member interface instead and this reference costs it nothing. -->
+    <ProjectReference Include="..\ZeroZero.Config\ZeroZero.Config.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MQTTnet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The protocol-level tests drive the connection against a fake broker on a loopback
+         listener, which needs the members the public surface deliberately does not expose. -->
+    <InternalsVisibleTo Include="ZeroZero.Mqtt.Tests" />
+  </ItemGroup>
+
+</Project>
