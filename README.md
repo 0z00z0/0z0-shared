@@ -90,7 +90,10 @@ for the protocol module and `ZeroZero.Brand.WinUI` for `InfoIcon`. Contains:
 - **`Themes/MqttPanelResources.xaml`** — five theme keys a host may override, defaulting to the
   stock WinUI theme.
 
-[`consume-mqtt-settings-panel.md`](consume-mqtt-settings-panel.md) is the adoption checklist.
+[`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) is the implementation guide for the whole module —
+the four assemblies, the six wiring steps, the entity model, identity, the encryption model and the
+panel. [`consume-mqtt-settings-panel.md`](consume-mqtt-settings-panel.md) is the shorter adoption
+checklist for the panel alone.
 
 ### `src/ZeroZero.Brand.WinUI.TestHarness`
 
@@ -369,11 +372,14 @@ The library pins `Microsoft.WindowsAppSDK` `2.2.0` and `Microsoft.Windows.SDK.Bu
 unifies a package graph on the version nearest the consuming project, so the app's own pin governs
 the Windows App SDK runtime that is actually resolved for the whole build.
 
-## Conventions
+## Documentation
 
-[`docs/TODO-HANDLING.md`](docs/TODO-HANDLING.md) is the studio-wide work-tracking convention every
-0z0 repo follows: GitHub Issues are the source of truth, and a git-ignored local `TODO.md` mirrors
-them.
+| Document | Covers |
+|---|---|
+| [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) | The MQTT module end to end: the four assemblies, the six wiring steps, the entity model, identity and what it guarantees, the encryption model, and the settings panel. |
+| [`consume-mqtt-settings-panel.md`](consume-mqtt-settings-panel.md) | The panel alone, as an adoption checklist. |
+| [`consume-brand-about-control.md`](consume-brand-about-control.md) | `BrandAboutControl`, as an adoption checklist. |
+| [`docs/TODO-HANDLING.md`](docs/TODO-HANDLING.md) | The studio-wide work-tracking convention every 0z0 repo follows: GitHub Issues are the source of truth, and a git-ignored local `TODO.md` mirrors them. |
 
 ## Build
 
