@@ -19,3 +19,6 @@ obj/
 ## Build artifacts
 publish-smoketest/
 *.log
+
+## Local ToDo mirror — GitHub Issues are the source of truth
+TODO.md
