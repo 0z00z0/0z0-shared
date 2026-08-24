@@ -364,12 +364,10 @@ single source of truth — only its *rendering* moves to the shared control, not
 
 ## Package versions
 
-The library pins `Microsoft.WindowsAppSDK` `2.1.3` and `Microsoft.Windows.SDK.BuildTools`
-`10.0.28000.1839`. A consuming app may pin higher: NuGet unifies a package graph on the version
-nearest the consuming project, so the app's own pin governs the Windows App SDK runtime that is
-actually resolved for the whole build. Keeping the studio's apps and this library on one version is
-tracked in [issue #3](https://github.com/0z00z0/0z0-shared/issues/3) and
-[issue #6](https://github.com/0z00z0/0z0-shared/issues/6).
+The library pins `Microsoft.WindowsAppSDK` `2.2.0` and `Microsoft.Windows.SDK.BuildTools`
+`10.0.28000.2270`. Those pins are a floor, not a lock: a consuming app may pin higher, and NuGet
+unifies a package graph on the version nearest the consuming project, so the app's own pin governs
+the Windows App SDK runtime that is actually resolved for the whole build.
 
 ## Conventions
 
