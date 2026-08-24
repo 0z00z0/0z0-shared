@@ -65,6 +65,10 @@ through an MSBuild property so CI can point it elsewhere without editing the `.c
 `WindowsAppSDKSelfContained` set as a global property: MSBuild propagates a global property into
 every project reference, and the Windows App SDK targets reject it on a class library.
 
+**Pin the checkout to a tag, not a commit.** Every consumer-visible API change is released under a
+`v`-prefixed tag, and the notes for that tag state what it breaks — the module is pre-1.0, so a
+minor bump may. The README's [Pin a tag](../README.md#3-pin-a-tag) carries both CI shapes.
+
 `CommunityToolkit.WinUI.Controls.SettingsControls` is a ceiling, not a preference. The panel holds
 it at or below `8.2.251219`, because a consuming app holds a direct reference at that version and a
 direct reference below a transitive one is NU1605, an error. Raise both or neither.

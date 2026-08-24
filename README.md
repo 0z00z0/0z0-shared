@@ -236,7 +236,7 @@ That matches nothing locally, where the repo is an outside-the-tree sibling.
 
 **Clone to a real sibling.** The alternative keeps the relative path identical to local dev by
 cloning (this repo is public, so no token is needed) beside the workspace checkout, and is what a
-pinned build wants because `checkout --detach` takes an exact commit:
+pinned build wants because `checkout --detach` takes an exact ref:
 
 ```yaml
       - name: Clone 0z0-shared (sibling dependency, pinned)
@@ -246,16 +246,47 @@ pinned build wants because `checkout --detach` takes an exact commit:
           git -C ../0z0-shared checkout --detach $ref
 ```
 
-### 3. Pin the version, if reproducibility matters
+### 3. Pin a tag
 
-Local dev builds against the live sibling checkout while CI builds a pinned commit, so a consumer
+Every consumer-visible API change is released under a `v`-prefixed tag — `v0.1.0`, `v0.2.0` — and
+**a tag is the ref to pin, not a raw commit SHA.** A tag reads as a version, so a pin bump is a
+legible diff and a reviewable decision; a SHA says only that something moved. Each tag carries
+release notes listing what changed, so **a consumer raising its pin reads the notes for that tag
+first** — the breaking changes are stated there, and there is no other place they are collected.
+
+The scheme is [semantic versioning](https://semver.org) and the library is **pre-1.0**: while the
+major stays `0`, a **minor** bump may break the API and a **patch** never does. Tags are cut on a
+consumer-visible API change, not on a calendar, so a stretch with no new tag means the API has not
+moved. The version is declared once, in `Directory.Build.props`, and every assembly in the
+repository reports it; the release workflow refuses to publish a tag that disagrees with it.
+
+Both CI shapes above take a tag wherever they take a SHA. The **workspace subfolder** shape passes
+it as the second checkout's `ref`:
+
+```yaml
+      - uses: actions/checkout@v7
+        with:
+          repository: 0z00z0/0z0-shared
+          path: 0z0-shared
+          ref: v0.1.0
+```
+
+The **sibling clone** shape needs no change at all — a full `git clone` fetches tags, so
+`checkout --detach $ref` resolves one. Shallow is the one thing to watch: `--depth 1` alone leaves
+no tag to check out, so it comes with `--branch v0.1.0`.
+
+Local dev builds against the live sibling checkout while CI builds the pinned tag, so a consumer
 that adopts a newly added shared type builds green locally and fails CI with `CS0234`. A consumer
-that wants reproducible builds therefore keeps two things: a **pinned-SHA file** read by every
+that wants reproducible builds therefore keeps two things: a **pinned-ref file** read by every
 workflow that clones this repo (one file, so the pins cannot drift between CI and release), and a
 **build-time drift guard** — an MSBuild target that compares the live sibling checkout against that
 file and raises a warning, never an error, and skips entirely when either the ref file or the
 sibling clone is absent. ChargeKeeper's `.github/0z0-shared-ref` plus its `CheckSharedPin` target
-and `scripts/check-shared-pin.ps1` are the working example.
+and `scripts/check-shared-pin.ps1` are the working example. Put the tag in that file rather than
+the SHA it resolves to, and let the guard resolve it — the pin is then readable where it is edited.
+
+There is no NuGet feed to pin instead. `ZeroZero.Brand.WinUI` cannot be packed, so a release is the
+tag and its notes, which is all a `ProjectReference` on a pinned checkout needs.
 
 ### 4. Pick the hosting style
 
@@ -362,8 +393,8 @@ single source of truth — only its *rendering* moves to the shared control, not
   `Brand.WebsiteUrl` / `Brand.BuyMeACoffeeUrl` rather than anything per-app. None of those five are
   supplied by the consumer.
 - The reference and CI recipe above applies here too: the consuming app's own workflow needs one of
-  the two checkout shapes, or a NuGet pin once
-  [issue #1](https://github.com/0z00z0/0z0-shared/issues/1) lands.
+  the two checkout shapes, pinned to a tag — or a NuGet pin, once
+  [issue #14](https://github.com/0z00z0/0z0-shared/issues/14) makes the WinUI assembly packable.
 
 ## Package versions
 
@@ -379,6 +410,7 @@ the Windows App SDK runtime that is actually resolved for the whole build.
 | [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) | The MQTT module end to end: the four assemblies, the six wiring steps, the entity model, identity and what it guarantees, the encryption model, and the settings panel. |
 | [`consume-mqtt-settings-panel.md`](consume-mqtt-settings-panel.md) | The panel alone, as an adoption checklist. |
 | [`consume-brand-about-control.md`](consume-brand-about-control.md) | `BrandAboutControl`, as an adoption checklist. |
+| [`docs/release-notes/`](docs/release-notes) | One file per tag, named for it. What a release contains and what it breaks; the release workflow publishes the file matching the tag and fails when it is absent. |
 | [`docs/TODO-HANDLING.md`](docs/TODO-HANDLING.md) | The studio-wide work-tracking convention every 0z0 repo follows: GitHub Issues are the source of truth, and a git-ignored local `TODO.md` mirrors them. |
 
 ## Build
