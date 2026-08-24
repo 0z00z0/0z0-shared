@@ -24,3 +24,10 @@ jobs:
 
       - name: Build
         run: dotnet build 0z0-shared.slnx -c Release --no-restore
+
+      # Invoked against the test csproj, not the solution: the solution also holds
+      # ZeroZero.Brand.WinUI.TestHarness, a WinUI application whose Windows App SDK bootstrapper
+      # blocks on a runner with no desktop session. ZeroZero.Brand.Core.Tests is plain net10.0 and
+      # references only ZeroZero.Brand.Core, so nothing here can reach that bootstrapper.
+      - name: Unit tests
+        run: dotnet test tests\ZeroZero.Brand.Core.Tests\ZeroZero.Brand.Core.Tests.csproj -c Release --no-build --nologo
