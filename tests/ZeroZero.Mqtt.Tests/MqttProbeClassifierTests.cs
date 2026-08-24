@@ -59,8 +59,46 @@ public class MqttProbeClassifierTests
         var wrapped = new InvalidOperationException("connect failed",
             new AuthenticationException("The remote certificate is invalid."));
 
-        Assert.Equal(MqttProbeOutcome.TlsFailed,
+        Assert.Equal(MqttProbeOutcome.TlsUntrusted,
             MqttProbe.ClassifyConnectException(wrapped, CancellationToken.None).Outcome);
+    }
+
+    [Fact]
+    public void ClassifyConnectException_TellsANonTlsListenerFromAnUntrustedCertificate()
+    {
+        // The same exception both ways round: what separates them is whether the far end ever
+        // presented a certificate, which the exception cannot say and the handshake can.
+        var wrapped = new InvalidOperationException("connect failed",
+            new AuthenticationException("Authentication failed."));
+
+        Assert.Equal(MqttProbeOutcome.TlsUntrusted,
+            MqttProbe.ClassifyConnectException(wrapped, CancellationToken.None, certificatePresented: true).Outcome);
+        Assert.Equal(MqttProbeOutcome.TlsUnsupported,
+            MqttProbe.ClassifyConnectException(wrapped, CancellationToken.None, certificatePresented: false).Outcome);
+    }
+
+    [Fact]
+    public void ClassifyConnectException_ReadsAHangUpOnTheClientHelloAsNoTlsThere()
+    {
+        // A plain broker reads a ClientHello as a malformed packet and closes, so the failure arrives
+        // as a reset rather than as an authentication failure. No certificate was seen, so nothing
+        // secure was on offer.
+        var reset = new InvalidOperationException("connect failed",
+            new SocketException((int)SocketError.ConnectionReset));
+
+        Assert.Equal(MqttProbeOutcome.TlsUnsupported,
+            MqttProbe.ClassifyConnectException(reset, CancellationToken.None, certificatePresented: false).Outcome);
+    }
+
+    [Fact]
+    public void ClassifyConnectException_KeepsAnOsVerdictAboutTheAddressWhateverTheHandshakeSaw()
+    {
+        // "Nothing is listening" is about the address, not about what the address speaks.
+        var refused = new InvalidOperationException("connect failed",
+            new SocketException((int)SocketError.ConnectionRefused));
+
+        Assert.Equal(MqttProbeOutcome.Unreachable,
+            MqttProbe.ClassifyConnectException(refused, CancellationToken.None, certificatePresented: false).Outcome);
     }
 
     [Fact]

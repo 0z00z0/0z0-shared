@@ -2,6 +2,9 @@ namespace ZeroZero.Mqtt;
 
 /// <summary>One application-declared group of published things: the key entities carry, the copy a
 /// settings panel renders, and where a fresh installation starts.</summary>
+/// <remarks>Switching a group off stops its entities publishing; it does not withdraw them. The layer
+/// above announces one that has already been announced as unavailable instead, so a checkbox that
+/// commits on the spot stays a reversible choice.</remarks>
 /// <param name="DefaultOn">Whether the group is announced before anyone has touched it. A feature
 /// group is normally on — the published surface is the point of the feature, and a group is switched
 /// off to reduce it, never to opt into it — while a group that costs something to produce is what an

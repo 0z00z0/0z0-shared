@@ -30,8 +30,12 @@ public abstract class MqttEntity
     /// collisions such names produce.</remarks>
     public required string EntityId { get; init; }
 
-    /// <summary>What the receiver shows. Free text, and no id is derived from it.</summary>
-    public required string Name { get; init; }
+    /// <summary>What the receiver shows. Free text, and no id is derived from it. Null makes the
+    /// entity the device's main feature: the receiver then names it after the device alone instead of
+    /// "Device Entity".</summary>
+    /// <remarks>Required rather than defaulted, because "the main feature" is a declaration and there
+    /// can be only one of it per device.</remarks>
+    public required string? Name { get; init; }
 
     /// <summary>The publish-group key, or null for an entity that is always published.</summary>
     public string? Group { get; init; }
@@ -46,15 +50,35 @@ public abstract class MqttEntity
     public string? DeviceClass { get; init; }
 
     /// <summary>Capability gating, evaluated on every announcement pass. Null means true.</summary>
-    /// <remarks>One predicate decides membership and capability together with the group: an entity is
+    /// <remarks>
+    /// <para>One predicate decides membership and capability together with the group: an entity is
     /// published when its group is on <b>and</b> this returns true. That is what keeps a select with
-    /// nothing to offer, or a control the hardware does not expose, omitted rather than announced
-    /// empty.</remarks>
+    /// nothing to offer, or a control the hardware does not expose, withheld rather than announced
+    /// empty.</para>
+    /// <para>It runs on the announcement thread and usually reads live hardware, so it can fail as
+    /// well as answer. A throw is <b>not</b> a false: it says the capability could not be read, not
+    /// that it is absent, and the two must not be the same announcement. A controller that does not
+    /// answer, a management interface that times out, a busy resource — all of them look like "absent"
+    /// to a predicate that can only return a boolean, and a reconnect after resume from standby is
+    /// exactly when they are least likely to answer. So a throw keeps whatever the record already says
+    /// about the entity, and one unanswered read cannot rewrite the document.</para>
+    /// </remarks>
     public Func<bool>? Include { get; init; }
 
     /// <summary>How long a requested publish waits before reading the entity, so a burst of signals
     /// collapses into one read and an in-progress write lands before the read that reports it.</summary>
     public TimeSpan Debounce { get; init; }
+
+    /// <summary>Whether the receiver enables the entity when it first appears. False for something
+    /// worth publishing but not worth showing until someone asks for it.</summary>
+    public bool EnabledByDefault { get; init; } = true;
+
+    /// <summary>Whether the state topic is published retained, so a receiver connecting later has a
+    /// value at once. False for a reading that expires: the broker replays a retained payload on every
+    /// subscribe, and an expiry that already elapsed comes back looking current.</summary>
+    /// <remarks>A non-retained state topic holds nothing, so nothing is recorded against it and there
+    /// is nothing to empty when the entity goes.</remarks>
+    public bool Retain { get; init; } = true;
 
     /// <summary>Discovery keys this model has no property for. Merged into the component entry last,
     /// so an entry here wins.</summary>
@@ -74,10 +98,12 @@ public abstract class MqttEntity
 
     /// <summary>What is published when the entity has no current reading.</summary>
     /// <remarks>
-    /// Null empties the topic, which is how a receiver is told the value is unknown. A platform that
-    /// ignores an empty payload — and so goes on showing the last value it saw — declares a sentinel
-    /// instead. The behaviour is per platform rather than universal, so each component type states
-    /// its own and a correction is one line in one class.
+    /// <para>Every platform that ignores a zero-length payload — sensor, binary sensor, switch, number
+    /// and select — publishes <see cref="MqttPayload.None"/>, because emptying the topic there leaves
+    /// the last value standing, which is the stale state the rule exists to prevent. Only
+    /// <see cref="MqttText"/> keeps null: an empty string is a value there.</para>
+    /// <para>The behaviour is per platform rather than universal, so each component type states its
+    /// own and a correction is one line in one class.</para>
     /// </remarks>
     public abstract string? NoValuePayload { get; }
 
@@ -88,11 +114,21 @@ public abstract class MqttEntity
     /// always carries a value is impossible: its sentinel stands in.</summary>
     public string? ReadState() => HasState ? ReadPayload() ?? NoValuePayload : null;
 
-    /// <summary>Whether a given configuration publishes this entity.</summary>
+    /// <summary>Whether a given configuration publishes this entity: true to publish, false to
+    /// withhold, and null when <see cref="Include"/> could not answer.</summary>
     /// <param name="groups">The group state as it stood at the start of the pass, or null for a
     /// consumer that declares no groups.</param>
-    public bool IsPublished(PublishGroupSnapshot? groups) =>
-        (groups?.IsEnabled(Group) ?? true) && (Include?.Invoke() ?? true);
+    /// <remarks>A switched-off group is a decision the user made and answers false outright, without
+    /// the capability being read at all — there is nothing to publish either way, and reading hardware
+    /// for an entity nobody wants is work for its own sake.</remarks>
+    public bool? IsPublished(PublishGroupSnapshot? groups)
+    {
+        if (!(groups?.IsEnabled(Group) ?? true)) return false;
+        if (Include is not { } include) return true;
+
+        try { return include(); }
+        catch { return null; }
+    }
 
     /// <summary>Why this entity cannot be published, or null when it can.</summary>
     internal virtual string? Validate() =>

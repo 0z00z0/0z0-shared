@@ -34,10 +34,26 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     private string _availabilityTopic = "";
     private int _state = (int)MqttConnectionState.Disabled;
 
-    // A superseded identity, held rather than evicted inline because the change can land while
-    // disconnected: best-effort now, guaranteed on the next connect. Written under _gate, taken with
-    // Interlocked.Exchange.
-    private MqttDeviceIdentity? _retiredIdentity;
+    /// <summary>A superseded identity with the topic keys it owned at the moment it was superseded.
+    /// The keys travel with it because the set in force moves on: reading them later composes the old
+    /// id's topics from the new id's entities.</summary>
+    private sealed record RetiredIdentity(
+        MqttDeviceIdentity Identity, IReadOnlyList<string> Channels, IReadOnlyList<string> Commands);
+
+    // Held rather than evicted inline because the change can land while disconnected: best-effort now,
+    // guaranteed on the next connect. Written under _gate, taken with Interlocked.Exchange.
+    private RetiredIdentity? _retiredIdentity;
+
+    // Channel keys whose retained topics could not be emptied when they were dropped, because there
+    // was no link. Kept rather than lost: the replace has already forgotten them, so without this the
+    // next connect has nothing left that knows they were ever published.
+    private readonly Lock _pending = new();
+    private readonly HashSet<string> _pendingEvictions = new(StringComparer.Ordinal);
+
+    // Command topics this connection has just emptied. The broker delivers the clear back to us with
+    // an empty payload and the retain flag down, which is indistinguishable from someone sending an
+    // empty command — and for a text entity an empty string is a value.
+    private readonly HashSet<string> _selfCleared = new(StringComparer.Ordinal);
 
     // Honoured on the maintain-loop thread, so the forced socket drop cannot race its own connect.
     private volatile bool _reconnectRequested;
@@ -127,8 +143,12 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         {
             if (!parameters.ShouldRun)
             {
+                // Switched off, or a configuration that has stopped being complete — a blanked host is
+                // reached by editing one field. Both stop publishing and leave everything in place:
+                // the device stays, its values stay, and it reads as offline. Removing it is
+                // RemoveDeviceAsync, which nothing here can arrive at by accident.
                 _parameters = parameters;
-                await StopInternalAsync(clearRetained: true).ConfigureAwait(false);
+                await StopInternalAsync(remove: false).ConfigureAwait(false);
                 SetState(MqttConnectionState.Disabled);
                 return;
             }
@@ -158,7 +178,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             if (previousIdentity.DeviceId.Length > 0 && previousIdentity.DeviceId != deviceId)
             {
                 _log.Info($"MQTT: device id '{previousIdentity.DeviceId}' → '{deviceId}'; evicting the old device.");
-                _retiredIdentity = previousIdentity;
+                _retiredIdentity = new(previousIdentity, _channels.Keys, _router.EntityIds);
             }
             await ClearRetiredIdentityAsync(CancellationToken.None).ConfigureAwait(false);
 
@@ -213,18 +233,24 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
                 continue;
             }
 
+            // Whether the far end offered encryption at all, which is what decides if the plain
+            // candidate behind this one may be tried.
+            var witness = address.Encrypted ? new MqttHandshakeWitness() : null;
             try
             {
                 // MQTTnet hands a refused CONNACK back as a result code rather than throwing, so the
                 // code has to be read — otherwise a rejection looks like a live connection until the
                 // first publish fails.
                 var connack = await _client
-                    .ConnectAsync(BuildOptions(parameters, address), ct).ConfigureAwait(false);
+                    .ConnectAsync(BuildOptions(parameters, address, witness), ct).ConfigureAwait(false);
                 result = MqttProbe.ClassifyConnack(
                     MqttClientWiring.ConnackCode(connack), connack?.ReasonString);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { result = MqttProbe.ClassifyConnectException(ex, ct); }
+            catch (Exception ex)
+            {
+                result = MqttProbe.ClassifyConnectException(ex, ct, witness?.CertificatePresented);
+            }
 
             if (result.Outcome == MqttProbeOutcome.Success)
             {
@@ -271,10 +297,11 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         return result is { Outcome: MqttProbeOutcome.Unreachable } ? result : null;
     }
 
-    private MqttClientOptions BuildOptions(MqttConnectParameters parameters, MqttEndpointAddress address)
+    private MqttClientOptions BuildOptions(
+        MqttConnectParameters parameters, MqttEndpointAddress address, MqttHandshakeWitness? witness)
     {
         var builder = new MqttClientOptionsBuilder()
-            .WithEndpoint(address, parameters.CertificateTrust)
+            .WithEndpoint(address, parameters.CertificateTrust, witness)
             .WithClientId(_identity.DeviceId)
             .WithCleanSession()
             // MQTTnet pings within this period on an idle link, so the broker will not drop a quiet
@@ -472,6 +499,10 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         // Evict a superseded device id first, so a consumer never sees both devices at once.
         await ClearRetiredIdentityAsync(ct).ConfigureAwait(false);
 
+        // Channels dropped while there was no link. Before the announcement, so a value is not
+        // stranded under a component the document is about to remove.
+        await FlushEvictionsAsync(ct).ConfigureAwait(false);
+
         // The layer above announces before anything is declared online.
         if (_setup.Listener is { } listener)
             await listener.OnConnectedAsync(this, _identity, ct).ConfigureAwait(false);
@@ -580,13 +611,43 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     public async Task SetChannelsAsync(
         IEnumerable<MqttChannel> channels, CancellationToken ct = default)
     {
-        var departed = _channels.Replace(channels);
-        if (departed.Count == 0 || !IsConnected) return;
+        var (departed, arrived) = _channels.Replace(channels);
 
-        await PublishAsync(
-            departed.Select(key =>
+        // Recorded before the link is checked. The replace has already dropped these keys, so a return
+        // here without them written down loses them for good: nothing left would know they were ever
+        // published, and their values would stay retained on the broker for ever.
+        lock (_pending) foreach (string key in departed) _pendingEvictions.Add(key);
+
+        // A channel that has just arrived has published nothing yet, and its topic may have been
+        // emptied when it last went. Ask for its value, so an entity coming back carries one rather
+        // than reading as unknown until something else signals it.
+        foreach (string key in arrived) RequestPublish(key);
+
+        await FlushEvictionsAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Empties the retained topics of channels that have gone, including any that were
+    /// dropped while there was no link. No-op while disconnected: the next connect runs it.</summary>
+    private async Task FlushEvictionsAsync(CancellationToken ct)
+    {
+        if (!IsConnected) return;
+
+        List<string> keys;
+        lock (_pending)
+        {
+            if (_pendingEvictions.Count == 0) return;
+            keys = [.. _pendingEvictions];
+            _pendingEvictions.Clear();
+        }
+
+        bool landed = await PublishAsync(
+            keys.Select(key =>
                 MqttMessage.Empty(MqttTopics.Channel(_setup.TopicRoot, _identity.DeviceId, key))),
             ct).ConfigureAwait(false);
+
+        // Put back what the broker did not take, so the next connect tries again rather than leaving
+        // a value stranded on a topic nothing publishes to any more.
+        if (!landed) lock (_pending) foreach (string key in keys) _pendingEvictions.Add(key);
     }
 
     /// <summary>Swaps the declared command targets.</summary>
@@ -625,10 +686,18 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     /// <summary>True when the message belonged to the command subtree, whatever became of it.</summary>
     private bool RouteCommand(MqttInboundMessage message)
     {
+        // The echo of this connection's own retained-clear. It arrives with the retain flag down and
+        // an empty payload, and an entity that takes an empty string as a value would act on it.
+        if (message.Payload.Length == 0 && TakeSelfCleared(message.Topic)) return true;
+
         var routing = _router.Route(
             _setup.TopicRoot, _identity.DeviceId, message.Topic, message.Retained, message.Payload);
 
         if (routing.EntityId is not { } entityId) return false;
+
+        // A command is an event, not state. Left retained it is redelivered and refused on every
+        // reconnect for ever, and only whoever put it there could otherwise clear it.
+        if (routing.Verdict.Outcome == MqttCommandOutcome.Retained) ClearRetainedCommand(message.Topic);
 
         if (routing.Verdict is { Outcome: MqttCommandOutcome.Accepted, Run: { } run })
         {
@@ -643,6 +712,21 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         _setup.CommandRefused?.Invoke(new MqttCommandRefusal(
             DateTimeOffset.UtcNow, entityId, routing.Verdict.Outcome, routing.Verdict.Detail));
         return true;
+    }
+
+    /// <summary>Empties a command topic something left retained, and notes that the clear's own echo
+    /// is to be ignored.</summary>
+    private void ClearRetainedCommand(string topic)
+    {
+        lock (_pending) _selfCleared.Add(topic);
+        Enqueue($"ClearRetained:{topic}", ct => PublishAsync(topic, "", retain: true, ct: ct));
+    }
+
+    /// <summary>Whether an empty payload on this topic is this connection's own clear coming back.
+    /// Taken rather than read: the note stands for one message.</summary>
+    private bool TakeSelfCleared(string topic)
+    {
+        lock (_pending) return _selfCleared.Remove(topic);
     }
 
     private void Enqueue(string source, Func<CancellationToken, Task> run) =>
@@ -673,19 +757,31 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         if (Interlocked.Exchange(ref _retiredIdentity, null) is not { } retired) return;
 
         if (_setup.Listener is { } listener)
-            await listener.OnIdentityRetiredAsync(this, retired, ct).ConfigureAwait(false);
+            await listener.OnIdentityRetiredAsync(this, retired.Identity, ct).ConfigureAwait(false);
 
-        await PublishAsync(OwnTopics(retired.DeviceId).Select(MqttMessage.Empty), ct).ConfigureAwait(false);
+        await PublishAsync(
+                OwnTopics(retired.Identity.DeviceId, retired.Channels, retired.Commands)
+                    .Select(MqttMessage.Empty),
+                ct)
+            .ConfigureAwait(false);
     }
 
-    /// <summary>Every retained topic this layer owns under one device id: the availability topic and
-    /// each declared channel. They belong in an eviction because they are published retained too —
-    /// leave them out and a payload is stranded on the broker under the abandoned id.</summary>
-    private IEnumerable<string> OwnTopics(string deviceId)
+    /// <summary>Every topic this layer owns under one device id: the two availability topics, each
+    /// named channel and each named command topic. The channels and commands are passed in rather than
+    /// read here, because the set in force is the new identity's — composing the old id's topics from
+    /// today's keys evicts whatever the two happen to have in common and strands the rest.</summary>
+    /// <remarks>The command topics belong in a removal even though this layer never publishes on them:
+    /// something else can leave a retained command there, and a device removed with one still standing
+    /// gets it redelivered the moment it is published again.</remarks>
+    private IEnumerable<string> OwnTopics(
+        string deviceId, IReadOnlyList<string> channels, IReadOnlyList<string> commands)
     {
         yield return MqttTopics.Availability(_setup.TopicRoot, deviceId);
-        foreach (string key in _channels.Keys)
+        yield return MqttTopics.WithheldAvailability(_setup.TopicRoot, deviceId);
+        foreach (string key in channels)
             yield return MqttTopics.Channel(_setup.TopicRoot, deviceId, key);
+        foreach (string entityId in commands)
+            yield return MqttTopics.Command(_setup.TopicRoot, deviceId, entityId);
     }
 
     /// <summary>False when the message did not reach the broker. Only a caller the user is watching
@@ -835,7 +931,21 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         }
     }
 
-    private async Task StopInternalAsync(bool clearRetained, CancellationToken ct = default)
+    /// <summary>Removes the device from the broker and then stops: the document, the availability
+    /// topics, every value and every command topic. Explicit and separate, because it takes the whole
+    /// device off the receiver, which nothing a user does to the settings should.</summary>
+    /// <returns>False when there was no live link to do it over, so nothing was removed.</returns>
+    public async Task<bool> RemoveDeviceAsync(CancellationToken ct = default)
+    {
+        if (!_client.IsConnected) return false;
+        await StopInternalAsync(remove: true, ct).ConfigureAwait(false);
+        SetState(MqttConnectionState.Disabled);
+        return true;
+    }
+
+    /// <param name="remove">Whether the device is being removed outright, as against publishing
+    /// simply stopping. Only <see cref="RemoveDeviceAsync"/> passes true.</param>
+    private async Task StopInternalAsync(bool remove, CancellationToken ct = default)
     {
         _enabled = false;
         _cts?.Cancel();
@@ -843,19 +953,24 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         {
             if (!_client.IsConnected) return;
 
-            if (clearRetained)
+            if (remove)
             {
-                // Publishing turned off: empty every retained topic the device owns, payloads
-                // included, so a consumer drops the device. An "offline" publish here would
-                // re-retain what this cleared.
+                // Empty every retained topic the device owns, payloads and command topics included,
+                // so a consumer drops the device and no stuck retained command outlives it. An
+                // "offline" publish here would re-retain what this cleared.
                 if (_setup.Listener is { } listener)
-                    await listener.OnStoppingAsync(this, _identity, ct).ConfigureAwait(false);
-                await PublishAsync(OwnTopics(_identity.DeviceId).Select(MqttMessage.Empty), ct)
+                    await listener.OnRemovingAsync(this, _identity, ct).ConfigureAwait(false);
+                await PublishAsync(
+                        OwnTopics(_identity.DeviceId, _channels.Keys, _router.EntityIds)
+                            .Select(MqttMessage.Empty),
+                        ct)
                     .ConfigureAwait(false);
             }
             else
             {
-                // A normal exit keeps the retained announcement, so the device persists.
+                // Stopping keeps the retained announcement, so the device persists and reads as
+                // offline. What a normal exit, a switched-off feature and an incomplete configuration
+                // all come through.
                 await PublishAsync(_availabilityTopic, _setup.OfflinePayload, retain: true, ct: ct)
                     .ConfigureAwait(false);
             }
@@ -885,7 +1000,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         try { _work.Writer.TryComplete(); } catch { /* already completed */ }
 
         var stopCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(750));
-        try { Task.Run(() => StopInternalAsync(clearRetained: false, stopCts.Token)).Wait(TimeSpan.FromSeconds(1)); }
+        try { Task.Run(() => StopInternalAsync(remove: false, stopCts.Token)).Wait(TimeSpan.FromSeconds(1)); }
         catch { /* the process is exiting either way */ }
 
         _workerStop.Cancel();

@@ -6,18 +6,25 @@ namespace ZeroZero.Mqtt;
 public sealed record MqttDeviceIdentity(string DeviceId, string DiscoveryPrefix, string DeviceName);
 
 /// <summary>What runs alongside the connection at the three points a layer above it has to act: on
-/// connect, on shutdown, and when an identity is superseded. The connection knows nothing of what
-/// the listener does — this is how the discovery layer sits on top without the core depending on
-/// it.</summary>
+/// connect, when the device is removed, and when an identity is superseded. The connection knows
+/// nothing of what the listener does — this is how the discovery layer sits on top without the core
+/// depending on it.</summary>
+/// <remarks>There is deliberately no callback for stopping. Stopping publishes offline and leaves
+/// everything else exactly as it is, so there is nothing for a layer above to do; removal is the
+/// separate, explicit operation below.</remarks>
 public interface IMqttConnectionListener
 {
     /// <summary>Runs on every (re)connect, before availability is published, so nothing is announced
     /// as online before the thing being announced exists.</summary>
     Task OnConnectedAsync(IMqttPublisher publisher, MqttDeviceIdentity identity, CancellationToken ct);
 
-    /// <summary>Runs when publishing is switched off, before the connection empties its own retained
-    /// topics.</summary>
-    Task OnStoppingAsync(IMqttPublisher publisher, MqttDeviceIdentity identity, CancellationToken ct);
+    /// <summary>Runs when the device is being removed outright, before the connection empties its own
+    /// retained topics.</summary>
+    /// <remarks>Reached only from <see cref="MqttConnection.RemoveDeviceAsync"/>. Never from switching
+    /// publishing off, and never from a configuration that has stopped being complete: this takes the
+    /// device off the receiver entirely, so it happens because somebody asked for it and for no other
+    /// reason.</remarks>
+    Task OnRemovingAsync(IMqttPublisher publisher, MqttDeviceIdentity identity, CancellationToken ct);
 
     /// <summary>Runs for an identity that has been superseded, so nothing it owned is left retained.</summary>
     Task OnIdentityRetiredAsync(IMqttPublisher publisher, MqttDeviceIdentity retired, CancellationToken ct);

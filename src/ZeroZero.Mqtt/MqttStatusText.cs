@@ -84,7 +84,8 @@ public static class MqttStatusText
         MqttProbeOutcome.TimedOut     => $"The broker did not answer over {Name(transport)} within {(int)MqttProbe.Timeout.TotalSeconds} seconds.",
         MqttProbeOutcome.AuthRejected => $"The broker answered over {Name(transport)} but rejected these credentials ({Detail(result)}).",
         MqttProbeOutcome.Rejected     => $"The broker refused the connection over {Name(transport)} ({Detail(result)}).",
-        MqttProbeOutcome.TlsFailed    => $"The encrypted connection over {Name(transport)} was not established — {Detail(result)}. Check the certificate trust setting.",
+        MqttProbeOutcome.TlsUntrusted => $"The encrypted connection over {Name(transport)} was not established — {Detail(result)}. Check the certificate trust setting.",
+        MqttProbeOutcome.TlsUnsupported => $"The broker does not accept encrypted connections over {Name(transport)} on that port — {Detail(result)}.",
         _                             => $"The connection over {Name(transport)} failed — {Detail(result)}.",
     };
 
@@ -155,7 +156,8 @@ public static class MqttStatusText
         MqttProbeOutcome.TimedOut     => "did not answer",
         MqttProbeOutcome.AuthRejected => "rejected these credentials",
         MqttProbeOutcome.Rejected     => $"was refused ({Detail(result)})",
-        MqttProbeOutcome.TlsFailed    => $"refused the encrypted connection ({Detail(result)})",
+        MqttProbeOutcome.TlsUntrusted => $"refused the encrypted connection ({Detail(result)})",
+        MqttProbeOutcome.TlsUnsupported => "does not accept encrypted connections there",
         _                             => $"failed ({Detail(result)})",
     };
 

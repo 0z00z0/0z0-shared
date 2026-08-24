@@ -84,12 +84,19 @@ public class CommandAcceptanceTests
     }
 
     [Fact]
-    public void ASelectRefusesItsOwnSentinel()
+    public void ASelectRefusesTheResetLiteralAsARequest()
     {
-        // It is offered so the topic can always carry a value, not so it can be asked for.
-        var verdict = Sample.Select().Accept(MqttSelect.DefaultNoOption);
+        // The module publishes it to say there is no reading. Arriving inbound it is not a request:
+        // there is nothing to apply, and anything holding a broker connection can send it. Declared as
+        // an option too, because that is the only case the guard is load-bearing in — a consumer whose
+        // list genuinely holds the word would otherwise have "no reading" applied as a choice.
+        int applied = 0;
+        var select = Sample.Select(
+            options: () => ["Office", MqttPayload.None], apply: _ => applied++);
 
-        Assert.Equal(MqttCommandOutcome.NotAnOption, verdict.Outcome);
+        Assert.Equal(MqttCommandOutcome.NotAnOption, select.Accept(MqttPayload.None).Outcome);
+        Assert.Equal(0, applied);
+        Assert.Equal(MqttCommandOutcome.Accepted, select.Accept("Office").Outcome);
     }
 
     [Fact]

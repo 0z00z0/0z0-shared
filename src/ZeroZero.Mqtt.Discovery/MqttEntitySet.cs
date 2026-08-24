@@ -41,20 +41,63 @@ public sealed class MqttEntitySet
 
     public MqttEntity? Find(string entityId) => _byId.GetValueOrDefault(entityId);
 
-    /// <summary>The name a user would recognise, for a status line that has only an entity id.</summary>
+    /// <summary>The name a user would recognise, for a status line that has only an entity id. Falls
+    /// back to the id, which is also what a main-feature entity — one that declares no name of its
+    /// own — has to be called in a line about one entity rather than about the device.</summary>
     public string NameOf(string entityId) => Find(entityId)?.Name ?? entityId;
 
-    /// <summary>The entities a given configuration announces.</summary>
+    /// <summary>The entities a given configuration announces. An entity whose capability could not be
+    /// read is not one of them — use <see cref="Resolve"/> where the record can say what it was.</summary>
     public IReadOnlyList<MqttEntity> Published(PublishGroupSnapshot? groups) =>
-        [.. _all.Where(e => e.IsPublished(groups))];
+        [.. _all.Where(e => e.IsPublished(groups) == true)];
 
     /// <summary>The complement of <see cref="Published"/>: switched off, or gated out by
     /// <see cref="MqttEntity.Include"/>.</summary>
+    /// <remarks>A reversible state, and the announcement pass needs it as an input: an entity here has
+    /// stopped publishing but has not stopped existing, so one already announced stays in the document
+    /// and is shown unavailable rather than removed. Without it, a group toggle and a deletion are the
+    /// same thing to a receiver — and a group toggle is a settings checkbox that commits at once.</remarks>
+    /// <remarks>An entity whose capability could not be read counts as withheld here, because this
+    /// is the plain complement and has no record to consult. A pass uses <see cref="Resolve"/>
+    /// instead, which does.</remarks>
     public IReadOnlyList<MqttEntity> Withheld(PublishGroupSnapshot? groups) =>
-        [.. _all.Where(e => !e.IsPublished(groups))];
+        [.. _all.Where(e => e.IsPublished(groups) != true)];
 
-    /// <summary>The retained state topics the connection publishes on, one per announced entity that
-    /// has state. A button contributes none.</summary>
+    /// <summary>The two lists one announcement pass works from, with an unreadable capability resolved
+    /// against what was published last time rather than guessed.</summary>
+    /// <param name="recorded">What this identity last put on the broker, or null when nothing has
+    /// been.</param>
+    /// <remarks>An <see cref="MqttEntity.Include"/> that throws says the capability could not be read.
+    /// Reading that as absent would let one unanswered hardware call — a controller busy, a management
+    /// interface timing out, a resume from standby — withhold every entity behind it at once. So the
+    /// entity keeps the disposition the record holds, and an entity the record has never heard of is
+    /// left out rather than announced on the strength of a failed read.</remarks>
+    public (IReadOnlyList<MqttEntity> Published, IReadOnlyList<MqttEntity> Withheld) Resolve(
+        PublishGroupSnapshot? groups, PublishedDevice? recorded)
+    {
+        var published = new List<MqttEntity>();
+        var withheld = new List<MqttEntity>();
+
+        foreach (var entity in _all)
+        {
+            switch (entity.IsPublished(groups))
+            {
+                case true: published.Add(entity); break;
+                case false: withheld.Add(entity); break;
+                default:
+                    if (recorded?.Entities.FirstOrDefault(
+                            e => string.Equals(e.EntityId, entity.EntityId, StringComparison.Ordinal))
+                        is { } was)
+                        (was.Withheld ? withheld : published).Add(entity);
+                    break;
+            }
+        }
+
+        return (published, withheld);
+    }
+
+    /// <summary>The state topics the connection publishes on, one per announced entity that has state.
+    /// A button contributes none.</summary>
     public static IReadOnlyList<MqttChannel> Channels(IReadOnlyList<MqttEntity> published) =>
         [.. published.Where(e => e.HasState).Select(Channel)];
 
@@ -65,5 +108,5 @@ public sealed class MqttEntitySet
         [.. published.OfType<MqttCommandEntity>().Select(e => new MqttCommandTarget(e.EntityId, e.Accept))];
 
     private static MqttChannel Channel(MqttEntity entity) =>
-        new(entity.EntityId, entity.ReadState, Retain: true, Debounce: entity.Debounce);
+        new(entity.EntityId, entity.ReadState, Retain: entity.Retain, Debounce: entity.Debounce);
 }

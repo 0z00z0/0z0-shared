@@ -13,6 +13,12 @@ namespace ZeroZero.Mqtt.Discovery;
 /// <para>A component is removed by writing it with only its platform key. Leaving it out of a later
 /// document does not remove it — the receiver keeps what it already has — so removal is something the
 /// document says, not something it omits.</para>
+/// <para>Removal is reserved for an entity the entity table no longer contains. A receiver files what
+/// the user set against the unique id and gives it back if the entity returns, so a removal is churn
+/// rather than loss — with one exception: the chosen entity id comes back only while nothing else has
+/// claimed it meanwhile. An entity that is merely not being published right now therefore keeps its
+/// whole entry and is pointed at an availability topic that says offline, which also keeps it on the
+/// device's own page instead of making it disappear and reappear as a checkbox moves.</para>
 /// </remarks>
 public static class DiscoveryDocument
 {
@@ -23,14 +29,19 @@ public static class DiscoveryDocument
 
     /// <summary>The document for one pass.</summary>
     /// <param name="components">The entities this configuration announces.</param>
-    /// <param name="removed">Entities the record says were announced and this configuration does not:
-    /// each written with only its platform key, which is what deletes it.</param>
+    /// <param name="withheld">Entities the record says were announced and this configuration is not
+    /// publishing right now — a group switched off, an <see cref="MqttEntity.Include"/> gone false.
+    /// Written whole, plus their own availability topic, so the receiver shows them unavailable and
+    /// every registry setting survives the entity coming back.</param>
+    /// <param name="removed">Entities the record says were announced and the entity table no longer
+    /// contains: each written with only its platform key, which is what deletes it.</param>
     public static string Build(
         string topicRoot,
         MqttDeviceIdentity identity,
         DiscoveryDevice device,
         DiscoveryOrigin origin,
         IReadOnlyList<MqttEntity> components,
+        IReadOnlyList<MqttEntity> withheld,
         IReadOnlyList<PublishedEntity> removed,
         string onlinePayload = "online",
         string offlinePayload = "offline")
@@ -39,16 +50,19 @@ public static class DiscoveryDocument
         {
             ["dev"] = DeviceBlock(identity, device),
             ["o"] = OriginBlock(origin),
-            // Once, at the root. No component repeats it.
+            // Once, at the root. No component repeats it, except one that is being withheld.
             ["availability_topic"] = MqttTopics.Availability(topicRoot, identity.DeviceId),
             ["payload_available"] = onlinePayload,
             ["payload_not_available"] = offlinePayload,
             ["qos"] = (int)MqttQos.AtLeastOnce,
         };
 
+        string withheldTopic = MqttTopics.WithheldAvailability(topicRoot, identity.DeviceId);
         var entries = new JsonObject();
         foreach (var entity in components)
-            entries[entity.EntityId] = Component(topicRoot, identity.DeviceId, entity);
+            entries[entity.EntityId] = Component(topicRoot, identity.DeviceId, entity, null);
+        foreach (var entity in withheld)
+            entries[entity.EntityId] = Component(topicRoot, identity.DeviceId, entity, withheldTopic);
         foreach (var entity in removed)
             entries[entity.EntityId] = new JsonObject { ["p"] = entity.Platform };
 
@@ -56,7 +70,11 @@ public static class DiscoveryDocument
         return root.ToJsonString(Writer);
     }
 
-    private static JsonObject Component(string topicRoot, string deviceId, MqttEntity entity)
+    /// <param name="availabilityTopic">An availability topic of the component's own, or null to
+    /// inherit the root's. Non-null only for a withheld entity, whose topic retains the offline
+    /// payload for as long as it is withheld.</param>
+    private static JsonObject Component(
+        string topicRoot, string deviceId, MqttEntity entity, string? availabilityTopic)
     {
         var entry = new JsonObject
         {
@@ -65,19 +83,26 @@ public static class DiscoveryDocument
             // deliberately no object_id and no default_entity_id: both pin an entity id the receiver
             // is better left to compose, and the first is deprecated under device discovery.
             ["unique_id"] = $"{deviceId}_{entity.EntityId}",
-            ["name"] = entity.Name,
         };
+
+        var keys = new DiscoveryKeys(entry);
+        // Null is a value here, not an omission: it makes the entity the device's main feature.
+        keys.SetOrNull("name", entity.Name);
 
         if (entity.HasState)
             entry["state_topic"] = MqttTopics.Channel(topicRoot, deviceId, entity.EntityId);
         if (entity.IsCommand)
             entry["command_topic"] = MqttTopics.Command(topicRoot, deviceId, entity.EntityId);
 
-        var keys = new DiscoveryKeys(entry);
+        // Overrides the root's, which is the whole of how a withheld entity is shown unavailable
+        // without its registry entry being touched.
+        keys.Set("availability_topic", availabilityTopic);
+
         // Primary is a value, not a gap: it is what keeps a control on the main card.
         keys.Set("entity_category", CategoryKey(entity.Category));
         keys.Set("icon", entity.Icon);
         keys.Set("device_class", entity.DeviceClass);
+        keys.SetWhenFalse("enabled_by_default", entity.EnabledByDefault);
         entity.Describe(keys);
 
         if (entity.Extra is { } extra)
@@ -97,7 +122,10 @@ public static class DiscoveryDocument
             ["mdl"] = device.Model,
             ["sw"] = device.SoftwareVersion,
         };
-        if (device.ConfigurationUrl is { Length: > 0 } url) block["cu"] = url;
+        var keys = new DiscoveryKeys(block);
+        keys.Set("hw", device.HardwareVersion);
+        keys.Set("sn", device.SerialNumber);
+        keys.Set("cu", device.ConfigurationUrl);
         return block;
     }
 

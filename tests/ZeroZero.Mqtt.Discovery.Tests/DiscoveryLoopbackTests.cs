@@ -157,21 +157,44 @@ public class DiscoveryLoopbackTests
     }
 
     [Fact]
-    public async Task SwitchingPublishingOffLeavesNothingRetained()
+    public async Task SwitchingPublishingOffLeavesTheDeviceStandingAsOffline()
+    {
+        // A settings switch, not a deletion. Removing the device here would take it off the receiver
+        // altogether on an action the user reads as "pause".
+        using var broker = new FakeBroker();
+        var (connection, publisher) = await ConnectAsync(
+            broker, new MqttEntitySet([Sample.Sensor(), Sample.Button()]));
+        using (publisher)
+        {
+            Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(State("cpu_load")) == "12"));
+            string document = broker.LastPayload(ConfigTopic)!;
+
+            await connection.ApplyAsync(new MqttConnectParameters { Enabled = false });
+            connection.Dispose();
+
+            Assert.Equal(document, broker.LastPayload(ConfigTopic));
+            Assert.Equal("12", broker.LastPayload(State("cpu_load")));
+            Assert.Equal("offline", broker.LastPayload(Availability));
+        }
+    }
+
+    [Fact]
+    public async Task RemovingTheDeviceLeavesNothingRetained()
     {
         using var broker = new FakeBroker();
         var (connection, publisher) = await ConnectAsync(
             broker, new MqttEntitySet([Sample.Sensor(), Sample.Button()]));
         using (publisher)
         {
-            Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(ConfigTopic) is not null));
+            Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(State("cpu_load")) == "12"));
 
-            await connection.ApplyAsync(new MqttConnectParameters { Enabled = false });
+            Assert.True(await connection.RemoveDeviceAsync());
             connection.Dispose();
 
             Assert.Equal("", broker.LastPayload(ConfigTopic));
             Assert.Equal("", broker.LastPayload(State("cpu_load")));
             Assert.Equal("", broker.LastPayload(Availability));
+            Assert.Equal("", broker.LastPayload(MqttTopics.Command(Root, Device, "restart")));
         }
     }
 }

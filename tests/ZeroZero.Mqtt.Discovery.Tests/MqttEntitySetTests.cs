@@ -66,23 +66,32 @@ public class MqttEntitySetTests
         Assert.Throws<ArgumentException>(() => new MqttEntitySet([number]));
     }
 
-    [Fact]
-    public void ASelectWithAnEmptySentinelIsRejected()
+    private static MqttNumber Number(double step) => new()
     {
-        // The sentinel is the payload a select publishes instead of an empty one; an empty sentinel
-        // is the empty payload with extra steps.
-        var select = new MqttSelect
-        {
-            EntityId = "profile",
-            Name = "Profile",
-            Options = () => ["Office"],
-            Read = () => "Office",
-            Apply = _ => MqttCommandVerdict.Accept(() => { }),
-            NoOption = "",
-        };
+        EntityId = "level",
+        Name = "Level",
+        Read = () => 1,
+        Apply = _ => MqttCommandVerdict.Accept(() => { }),
+        Min = 0,
+        Max = 1,
+        Step = step,
+    };
 
-        Assert.Throws<ArgumentException>(() => new MqttEntitySet([select]));
+    [Theory]
+    [InlineData(0.0001)]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(double.NaN)]
+    public void ANumberWithAStepBelowTheSchemasFloorIsRejected(double step)
+    {
+        // The receiver's schema requires it, and a bad step drops that component from the document
+        // silently at the far end — nothing local shows anything wrong.
+        Assert.Throws<ArgumentException>(() => new MqttEntitySet([Number(step)]));
     }
+
+    [Fact]
+    public void ANumberAtTheSchemasFloorIsAccepted() =>
+        Assert.Single(new MqttEntitySet([Number(MqttNumber.MinimumStep)]).All);
 
     [Fact]
     public void PublishedAndWithheldAreComplements()

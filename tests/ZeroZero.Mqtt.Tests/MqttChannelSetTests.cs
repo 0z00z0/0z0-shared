@@ -67,13 +67,27 @@ public class MqttChannelSetTests
     }
 
     [Fact]
-    public void Replace_ReportsTheChannelsThatHaveGone()
+    public void Replace_ReportsTheChannelsThatHaveGoneAndTheOnesThatHaveArrived()
     {
+        // Both halves are acted on: the ones that have gone leave a retained value to empty, and the
+        // ones that have arrived have nothing on their topic until something asks them for a value.
         var set = new MqttChannelSet([Channel("cpu_load"), Channel("quiet_mode")]);
 
-        var departed = set.Replace([Channel("cpu_load")]);
+        var (departed, arrived) = set.Replace([Channel("cpu_load"), Channel("gpu_load")]);
 
         Assert.Equal(["quiet_mode"], departed);
+        Assert.Equal(["gpu_load"], arrived);
+    }
+
+    [Fact]
+    public void Replace_ReportsNothingArrivedForAnUnchangedSet()
+    {
+        var set = new MqttChannelSet([Channel("cpu_load")]);
+
+        var (departed, arrived) = set.Replace([Channel("cpu_load")]);
+
+        Assert.Empty(departed);
+        Assert.Empty(arrived);
     }
 
     [Fact]

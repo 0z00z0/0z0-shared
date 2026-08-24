@@ -50,6 +50,12 @@ public static class MqttIdentity
 
     /// <summary>Why a user-typed device id is unusable, or null when it is fine. Blank is not an
     /// error — an empty setting means "use the machine-name default".</summary>
+    /// <remarks>Uniqueness is a constraint this cannot check and does not claim to. The id has to be
+    /// unique across every installation publishing to the one broker, because it is the MQTT client id
+    /// — two machines sharing it disconnect each other in a loop — and the <c>unique_id</c> stem, so
+    /// they would also overwrite each other's entities. Nothing local can see the other machines, so a
+    /// host offering this field says so where the user types it. The machine-name default is unique by
+    /// construction.</remarks>
     public static string? Validate(string raw)
     {
         string trimmed = raw.Trim();

@@ -9,7 +9,9 @@ public enum MqttCommandOutcome
     /// <summary>No declared command entity owns that topic.</summary>
     Unrecognised,
 
-    /// <summary>The message arrived retained, so it is a replay rather than a request.</summary>
+    /// <summary>The message arrived retained, so it is a replay rather than a request. The
+    /// connection empties the topic as well as refusing it: left standing it would be redelivered
+    /// and refused again on every reconnect, and only whoever put it there could clear it.</summary>
     Retained,
 
     /// <summary>The payload does not parse as the value this entity takes.</summary>
@@ -73,8 +75,9 @@ public readonly record struct MqttCommandRefusal(
 
 /// <summary>Topic to target. Drops a retained inbound message outright and records the drop.</summary>
 /// <remarks>A command is an event, not state. With a clean session plus resubscribe-on-connect, a
-/// retained payload under the command subtree would be redelivered and re-fire on every
-/// reconnect.</remarks>
+/// retained payload under the command subtree would be redelivered and re-fire on every reconnect.
+/// Judging it is this class's part; emptying the topic afterwards is the connection's, because only
+/// something holding a client can publish.</remarks>
 public sealed class MqttCommandRouter
 {
     private readonly Lock _lock = new();

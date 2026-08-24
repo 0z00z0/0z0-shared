@@ -24,11 +24,21 @@ internal sealed class DiscoveryKeys(JsonObject target)
         if (value is { } number) target[key] = number;
     }
 
+    /// <summary>A key whose null is a value rather than an absence: it is written either way, as the
+    /// string or as JSON null. What lets an entity declare itself the device's main feature.</summary>
+    public void SetOrNull(string key, string? value) => target[key] = value;
+
     /// <summary>Written only when true: a false flag is the receiver's own default everywhere this
     /// model uses one.</summary>
     public void SetWhenTrue(string key, bool value)
     {
         if (value) target[key] = true;
+    }
+
+    /// <summary>Written only when false, for a key whose receiver-side default is true.</summary>
+    public void SetWhenFalse(string key, bool value)
+    {
+        if (!value) target[key] = false;
     }
 
     public void SetList(string key, IEnumerable<string> values) =>

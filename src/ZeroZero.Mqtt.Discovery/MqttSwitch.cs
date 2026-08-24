@@ -5,9 +5,10 @@ public sealed class MqttSwitch : MqttCommandEntity
 {
     public override string Platform => "switch";
 
-    /// <summary>An empty payload matches neither declared payload, which is how a receiver is told
-    /// the state is unknown.</summary>
-    public override string? NoValuePayload => null;
+    /// <summary>A receiver ignores an empty payload here and goes on showing the last state it saw, so
+    /// an absent reading is published as <see cref="MqttPayload.None"/> — the literal it reads as
+    /// unknown.</summary>
+    public override string? NoValuePayload => MqttPayload.None;
 
     /// <summary>The current reading, or null when there is none.</summary>
     public required Func<bool?> Read { get; init; }

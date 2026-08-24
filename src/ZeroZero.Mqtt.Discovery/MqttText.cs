@@ -11,10 +11,12 @@ public sealed class MqttText : MqttCommandEntity
 
     public override string Platform => "text";
 
-    /// <summary>An empty payload is a legitimate value here — the empty string — so a text entity
-    /// with no reading empties its topic and the two are indistinguishable on the wire. A consumer
-    /// that needs them apart declares a sentinel of its own through <see cref="MqttEntity.Extra"/>
-    /// and never returns null.</summary>
+    /// <summary>The one platform that keeps null. An empty payload is a legitimate value here — the
+    /// empty string — so a text entity with no reading empties its topic, and the two are
+    /// indistinguishable on the wire. <see cref="MqttPayload.None"/> is not used because it would be
+    /// stored as the four-character word rather than read as "no value". A consumer that needs the two
+    /// apart declares a sentinel of its own through <see cref="MqttEntity.Extra"/> and never returns
+    /// null.</summary>
     public override string? NoValuePayload => null;
 
     /// <summary>The current value, or null when there is none.</summary>

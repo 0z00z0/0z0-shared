@@ -22,6 +22,14 @@ public static class MqttTopics
     public static string Availability(string topicRoot, string deviceId) =>
         Channel(topicRoot, deviceId, AvailabilityKey);
 
+    /// <summary>The one topic that permanently retains the offline payload, for entities the
+    /// configuration is not publishing right now. A component pointing at it reads as unavailable
+    /// while keeping every registry setting the user gave it.</summary>
+    /// <remarks>It sits below the availability topic rather than beside it, so it needs no reserved
+    /// channel key of its own: no entity id can carry a separator, so none can compose this path.</remarks>
+    public static string WithheldAvailability(string topicRoot, string deviceId) =>
+        $"{Availability(topicRoot, deviceId)}/withheld";
+
     /// <summary>The command topic for one command entity, e.g. <c>appname/&lt;device&gt;/cmd/quiet_mode</c>.</summary>
     public static string Command(string topicRoot, string deviceId, string entityId) =>
         $"{topicRoot}/{deviceId}/{CommandSegment}/{entityId}";

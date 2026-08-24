@@ -35,6 +35,7 @@ public class DiscoveryLedgerFileTests : IDisposable
     {
         DiscoveryLedgerFile.In(_directory).Update(ledger => ledger.Devices.Add(new PublishedDevice
         {
+            DeviceId = Sample.DeviceId,
             ConfigTopic = Sample.ConfigTopic,
             AvailabilityTopic = Sample.Availability,
             Entities =
@@ -46,7 +47,7 @@ public class DiscoveryLedgerFileTests : IDisposable
             ],
         }));
 
-        var reopened = DiscoveryLedgerFile.In(_directory).Read().Find(Sample.ConfigTopic);
+        var reopened = DiscoveryLedgerFile.In(_directory).Read().Find(Sample.DeviceId);
 
         Assert.NotNull(reopened);
         Assert.Equal(Sample.Availability, reopened.AvailabilityTopic);
@@ -95,7 +96,7 @@ public class TransientLedgerStoreTests
         var store = new TransientLedgerStore();
         store.Update(ledger => ledger.Devices.Add(new PublishedDevice { ConfigTopic = Sample.ConfigTopic }));
 
-        Assert.NotNull(store.Read().Find(Sample.ConfigTopic));
+        Assert.NotNull(store.Read().Find(Sample.DeviceId));
     }
 
     [Fact]

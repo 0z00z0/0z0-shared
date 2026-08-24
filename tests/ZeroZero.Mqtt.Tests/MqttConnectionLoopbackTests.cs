@@ -333,7 +333,7 @@ public class MqttConnectionLoopbackTests
     }
 
     [Fact]
-    public async Task SwitchingPublishingOffEmptiesEveryTopicTheDeviceOwned()
+    public async Task SwitchingPublishingOffGoesOfflineAndLeavesEverythingStanding()
     {
         using var broker = new FakeBroker();
         using var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => "42")]));
@@ -341,9 +341,108 @@ public class MqttConnectionLoopbackTests
 
         await connection.ApplyAsync(Parameters(broker) with { Enabled = false });
 
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == "offline"));
+        Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
+        Assert.Equal(MqttConnectionState.Disabled, connection.State);
+    }
+
+    [Fact]
+    public async Task AnIncompleteConfigurationStopsPublishingAndRemovesNothing()
+    {
+        // Reached by clearing one field. A user blanking the host to pause publishing must not take
+        // the device off the receiver with it, so this path behaves exactly as the master switch does.
+        using var broker = new FakeBroker();
+        using var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => "42")]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("cpu_load")) == 1));
+
+        await connection.ApplyAsync(Parameters(broker) with { Host = "" });
+
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == "offline"));
+        Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
+    }
+
+    [Fact]
+    public async Task AChannelDroppedWhileDisconnectedIsEmptiedOnTheNextConnect()
+    {
+        // The replace has already forgotten the key by the time the link is checked, so a caller that
+        // simply returns has lost it: nothing left knows the topic was ever published, and the value
+        // stays retained on the broker for ever.
+        using var broker = new FakeBroker();
+        using var connection = new MqttConnection(
+            Setup([new("cpu_load", () => "42"), new("gpu_load", () => "7")]));
+
+        await connection.SetChannelsAsync([new("cpu_load", () => "42")]);
+        await connection.ApplyAsync(Parameters(broker));
+
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("gpu_load")) == ""));
+    }
+
+    [Fact]
+    public async Task AChannelThatArrivesIsAskedForItsValueAtOnce()
+    {
+        // Its topic holds nothing — either it never did, or it was emptied when the key last went —
+        // so an entity coming back after a group was re-ticked would otherwise read as unknown until
+        // something else happened to signal it.
+        using var broker = new FakeBroker();
+        using var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => "42")]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("cpu_load")) == 1));
+
+        await connection.SetChannelsAsync(
+            [new("cpu_load", () => "42"), new("gpu_load", () => "7")]);
+
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("gpu_load")) == "7"));
+    }
+
+    [Fact]
+    public async Task RemovingTheDeviceEmptiesEveryTopicItOwned()
+    {
+        using var broker = new FakeBroker();
+        using var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => "42")]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("cpu_load")) == 1));
+
+        Assert.True(await connection.RemoveDeviceAsync());
+
         Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == ""));
         Assert.Equal("", broker.LastPayload(Topic("cpu_load")));
         Assert.Equal(MqttConnectionState.Disabled, connection.State);
+    }
+
+    [Fact]
+    public async Task RemovingTheDeviceClearsACommandTopicSomethingLeftRetained()
+    {
+        // Only whoever put it there could otherwise clear it, and it would be redelivered the moment
+        // the feature was switched on again.
+        using var broker = new FakeBroker();
+        using var connection = await ConnectAsync(
+            broker,
+            Setup([new("cpu_load", () => "42")],
+                  [new("quiet_mode", _ => MqttCommandVerdict.Accept(() => { }))]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("cpu_load")) == 1));
+
+        await connection.RemoveDeviceAsync();
+
+        Assert.Equal("", broker.LastPayload(MqttTopics.Command(Root, Device, "quiet_mode")));
+    }
+
+    [Fact]
+    public async Task ARetainedCommandIsEmptiedRatherThanRefusedForEver()
+    {
+        // A command is an event. Left retained it is redelivered and refused on every reconnect, and
+        // nothing but the broker's owner could clear it.
+        var refusals = new List<MqttCommandRefusal>();
+        int applied = 0;
+        using var broker = new FakeBroker();
+        using var connection = await ConnectAsync(
+            broker,
+            Setup(commands: [new("quiet_mode", _ => MqttCommandVerdict.Accept(() => applied++))],
+                  refused: r => { lock (refusals) refusals.Add(r); }));
+
+        string topic = MqttTopics.Command(Root, Device, "quiet_mode");
+        await broker.SendAsync(topic, "ON", retained: true);
+
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(topic) == ""));
+        Assert.Equal(0, applied);
+        lock (refusals) Assert.Contains(refusals, r => r.Outcome == MqttCommandOutcome.Retained);
     }
 
     [Fact]

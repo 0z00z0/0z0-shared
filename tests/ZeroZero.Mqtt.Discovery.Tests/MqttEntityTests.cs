@@ -43,24 +43,40 @@ public class MqttEntityTests
     }
 
     [Fact]
-    public void EmptyPayloadSemanticsAreDeclaredPerPlatform()
+    public void AnAbsentReadingIsPublishedAsTheResetLiteralNotAsAnEmptyPayload()
     {
-        // Everything whose empty payload a receiver reads as "no value" empties its topic.
-        Assert.False(Sample.Sensor().AlwaysCarriesValue);
-        Assert.False(Sample.BinarySensor().AlwaysCarriesValue);
-        Assert.False(Sample.Switch().AlwaysCarriesValue);
-        Assert.False(Sample.Number().AlwaysCarriesValue);
-        Assert.False(Sample.Text().AlwaysCarriesValue);
-
-        // A select's empty payload is ignored, so it never sends one.
-        Assert.True(Sample.Select().AlwaysCarriesValue);
+        // A receiver ignores a zero-length payload on all five and goes on showing the last value it
+        // saw, which is exactly the stale state the rule exists to prevent. What it reads as "no
+        // value" is the literal.
+        Assert.Equal("None", Sample.Sensor(value: null).ReadState());
+        Assert.Equal("None", Sample.BinarySensor(read: () => null).ReadState());
+        Assert.Equal("None", Sample.Switch(read: () => null).ReadState());
+        Assert.Equal("None", Sample.Number(read: () => null).ReadState());
+        Assert.Equal("None", Sample.Select(read: () => null).ReadState());
     }
 
     [Fact]
-    public void ASensorPublishesItsReadingOrEmptiesItsTopic()
+    public void TextIsTheOnePlatformThatEmptiesItsTopic()
+    {
+        // An empty string is a legitimate value on a text entity, so the two are the same bytes and
+        // the literal would be stored as the word rather than read as "no value".
+        Assert.Null(Sample.Text(read: () => null).ReadState());
+        Assert.False(Sample.Text().AlwaysCarriesValue);
+    }
+
+    [Fact]
+    public void ATextValuedSensorReadingTheResetLiteralIsIndistinguishableFromNoReading()
+    {
+        // The collision is unavoidable: the receiver reserves the literal and offers no second form.
+        // Recorded so nobody later reads it as a bug in the reader.
+        Assert.Equal(Sample.Sensor(value: null).ReadState(), Sample.Sensor(value: "None").ReadState());
+    }
+
+    [Fact]
+    public void ASensorPublishesItsReading()
     {
         Assert.Equal("12", Sample.Sensor(value: "12").ReadState());
-        Assert.Null(Sample.Sensor(value: null).ReadState());
+        Assert.Equal(MqttPayload.None, Sample.Sensor(value: null).ReadState());
     }
 
     [Fact]
@@ -82,14 +98,14 @@ public class MqttEntityTests
     }
 
     [Fact]
-    public void AReadingThatGoesAbsentEmptiesTheTopicAgain()
+    public void AReadingThatGoesAbsentResetsTheValueAgain()
     {
         string? reading = "12";
         var sensor = new MqttSensor { EntityId = "cpu_load", Name = "CPU load", Read = () => reading };
 
         Assert.Equal("12", sensor.ReadState());
         reading = null;
-        Assert.Null(sensor.ReadState());
+        Assert.Equal(MqttPayload.None, sensor.ReadState());
     }
 
     [Fact]
@@ -97,7 +113,7 @@ public class MqttEntityTests
     {
         Assert.Equal("ON", Sample.BinarySensor(read: () => true).ReadState());
         Assert.Equal("OFF", Sample.BinarySensor(read: () => false).ReadState());
-        Assert.Null(Sample.BinarySensor(read: () => null).ReadState());
+        Assert.Equal(MqttPayload.None, Sample.BinarySensor(read: () => null).ReadState());
     }
 
     [Fact]
@@ -120,42 +136,24 @@ public class MqttEntityTests
     {
         Assert.Equal("30", Sample.Number(read: () => 30).ReadState());
         Assert.Equal("12.5", Sample.Number(read: () => 12.5).ReadState());
-        Assert.Null(Sample.Number(read: () => null).ReadState());
+        Assert.Equal(MqttPayload.None, Sample.Number(read: () => null).ReadState());
     }
 
     [Fact]
-    public void ASelectNeverPublishesAnEmptyPayload()
+    public void ASelectResetsRatherThanEmptyingItsTopic()
     {
         var select = Sample.Select(read: () => null);
 
-        Assert.Equal(MqttSelect.DefaultNoOption, select.ReadState());
+        Assert.Equal(MqttPayload.None, select.ReadState());
         Assert.NotEqual("", select.ReadState());
     }
 
     [Fact]
-    public void ASelectOffersTheSentinelAsAnOption()
+    public void ASelectWithNothingToOfferOffersNothing()
     {
-        // It is publishable at any moment, and a payload that is not an option is one the receiver
-        // discards.
-        var select = Sample.Select(options: () => ["Office", "Home"]);
-
-        Assert.Equal(["Office", "Home", MqttSelect.DefaultNoOption], select.PublishedOptions());
-    }
-
-    [Fact]
-    public void ASelectWithNothingToOfferStillOffersSomething()
-    {
-        var select = Sample.Select(options: () => []);
-
-        Assert.Equal([MqttSelect.DefaultNoOption], select.PublishedOptions());
-    }
-
-    [Fact]
-    public void ASelectDoesNotOfferItsSentinelTwice()
-    {
-        var select = Sample.Select(options: () => ["Office", MqttSelect.DefaultNoOption]);
-
-        Assert.Equal(["Office", MqttSelect.DefaultNoOption], select.PublishedOptions());
+        // No sentinel keeping the list non-empty: the reset literal works without being an option, so
+        // an empty list is simply an empty list.
+        Assert.Empty(Sample.Select(options: () => []).Options());
     }
 
     [Fact]
@@ -168,11 +166,11 @@ public class MqttEntityTests
         IReadOnlyList<string> options = ["Office"];
         var select = Sample.Select(options: () => { reads++; return options; });
 
-        Assert.Contains("Office", select.PublishedOptions());
+        Assert.Contains("Office", select.Options());
 
         options = ["Home"];
-        Assert.Contains("Home", select.PublishedOptions());
-        Assert.DoesNotContain("Office", select.PublishedOptions());
+        Assert.Contains("Home", select.Options());
+        Assert.DoesNotContain("Office", select.Options());
         Assert.Equal(3, reads);
     }
 
@@ -201,5 +199,30 @@ public class MqttEntityTests
         Assert.False(entity.IsPublished(null));
         capable = true;
         Assert.True(entity.IsPublished(null));
+    }
+
+    [Fact]
+    public void AnIncludeThatThrowsIsUnknownRatherThanFalse()
+    {
+        // It reads live hardware, and every way that read can fail returns the same answer as "this
+        // capability is absent" to a predicate that can only say true or false. A resume from standby
+        // forces a reconnect at exactly the moment those reads are least likely to answer.
+        var entity = Sample.Sensor(include: () => throw new TimeoutException("the controller is busy"));
+
+        Assert.Null(entity.IsPublished(null));
+    }
+
+    [Fact]
+    public void ASwitchedOffGroupIsFalseWithoutTheCapabilityBeingReadAtAll()
+    {
+        // The user's decision settles it, and reading hardware for an entity nobody wants is work for
+        // its own sake — including work that can throw.
+        int reads = 0;
+        var groups = new PublishGroupSet(
+            new MemorySettingsStore(), [new PublishGroup("metrics", "Metrics", DefaultOn: false)]);
+        var entity = Sample.Sensor(group: "metrics", include: () => { reads++; return true; });
+
+        Assert.False(entity.IsPublished(groups.Snapshot()));
+        Assert.Equal(0, reads);
     }
 }
