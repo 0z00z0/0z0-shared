@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+  <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+  <xsd:element name="root" msdata:IsDataSet="true">
+    <xsd:complexType>
+      <xsd:choice maxOccurs="unbounded">
+        <xsd:element name="metadata">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="value" type="xsd:string" minOccurs="0" />
+            </xsd:sequence>
+            <xsd:attribute name="name" use="required" type="xsd:string" />
+            <xsd:attribute name="type" type="xsd:string" />
+            <xsd:attribute name="mimetype" type="xsd:string" />
+            <xsd:attribute ref="xml:space" />
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="assembly">
+          <xsd:complexType>
+            <xsd:attribute name="alias" type="xsd:string" />
+            <xsd:attribute name="name" type="xsd:string" />
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="data">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+            </xsd:sequence>
+            <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+            <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+            <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+            <xsd:attribute ref="xml:space" />
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="resheader">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+            </xsd:sequence>
+            <xsd:attribute name="name" type="xsd:string" use="required" />
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:choice>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AgeDay" xml:space="preserve">
+    <value>{0} day ago</value>
+  </data>
+  <data name="AgeDays" xml:space="preserve">
+    <value>{0} days ago</value>
+  </data>
+  <data name="AgeHour" xml:space="preserve">
+    <value>{0} hour ago</value>
+  </data>
+  <data name="AgeHours" xml:space="preserve">
+    <value>{0} hours ago</value>
+  </data>
+  <data name="AgeJustNow" xml:space="preserve">
+    <value>just now</value>
+  </data>
+  <data name="AgeMinutes" xml:space="preserve">
+    <value>{0} min ago</value>
+  </data>
+  <data name="Applied" xml:space="preserve">
+    <value>Applied.</value>
+  </data>
+  <data name="ButtonApply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="ButtonChangeDeviceId" xml:space="preserve">
+    <value>Change ID…</value>
+  </data>
+  <data name="ButtonPublishNow" xml:space="preserve">
+    <value>Publish now</value>
+  </data>
+  <data name="ButtonTest" xml:space="preserve">
+    <value>Test connection</value>
+  </data>
+  <data name="ClauseAuthRejected" xml:space="preserve">
+    <value>rejected these credentials</value>
+  </data>
+  <data name="ClauseFailed" xml:space="preserve">
+    <value>failed ({0})</value>
+  </data>
+  <data name="ClauseRejected" xml:space="preserve">
+    <value>was refused ({0})</value>
+  </data>
+  <data name="ClauseSuccess" xml:space="preserve">
+    <value>connected</value>
+  </data>
+  <data name="ClauseTimedOut" xml:space="preserve">
+    <value>did not answer</value>
+  </data>
+  <data name="ClauseTlsUnsupported" xml:space="preserve">
+    <value>does not accept encrypted connections there</value>
+  </data>
+  <data name="ClauseTlsUntrusted" xml:space="preserve">
+    <value>refused the encrypted connection ({0})</value>
+  </data>
+  <data name="ClauseUnreachable" xml:space="preserve">
+    <value>could not be reached ({0})</value>
+  </data>
+  <data name="DescApply" xml:space="preserve">
+    <value>Reconnects once.</value>
+  </data>
+  <data name="DescBroker" xml:space="preserve">
+    <value>How the broker is reached. Changes take effect on Apply.</value>
+  </data>
+  <data name="DescDeviceId" xml:space="preserve">
+    <value>Used in every topic and entity id. Changing it moves them all.</value>
+  </data>
+  <data name="DescDeviceName" xml:space="preserve">
+    <value>Shown wherever this device appears.</value>
+  </data>
+  <data name="DescDiscoveryPrefix" xml:space="preserve">
+    <value>Prefix for discovery topics. Change only to match the broker.</value>
+  </data>
+  <data name="DescEncryption" xml:space="preserve">
+    <value>Encrypts traffic to the broker.</value>
+  </data>
+  <data name="DescPassword" xml:space="preserve">
+    <value>Leave blank for anonymous access.</value>
+  </data>
+  <data name="DescPort" xml:space="preserve">
+    <value>Automatic tries the standard ports.</value>
+  </data>
+  <data name="DescPublish" xml:space="preserve">
+    <value>Which entities are announced.</value>
+  </data>
+  <data name="DescPublishSwitch" xml:space="preserve">
+    <value>Publishes this application's state to an MQTT broker.</value>
+  </data>
+  <data name="DescTransport" xml:space="preserve">
+    <value>TCP direct, or WebSocket through a proxy.</value>
+  </data>
+  <data name="DescUsername" xml:space="preserve">
+    <value>Leave blank for anonymous access.</value>
+  </data>
+  <data name="DeviceIdAcknowledge" xml:space="preserve">
+    <value>I understand everything referring to the old ID stops working</value>
+  </data>
+  <data name="DeviceIdCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="DeviceIdConfirm" xml:space="preserve">
+    <value>Change ID</value>
+  </data>
+  <data name="DeviceIdCurrent" xml:space="preserve">
+    <value>Current ID: {0}</value>
+  </data>
+  <data name="DeviceIdNew" xml:space="preserve">
+    <value>New ID</value>
+  </data>
+  <data name="DeviceIdPreview" xml:space="preserve">
+    <value>Publishes as: {0}</value>
+  </data>
+  <data name="DeviceIdTitle" xml:space="preserve">
+    <value>Change device ID</value>
+  </data>
+  <data name="DeviceIdWarning" xml:space="preserve">
+    <value>Changing the ID renames every entity this application publishes. Anything pointing at the old entities stops resolving — no error is reported, the entities are simply no longer there.
+
+The old entities are removed from the broker on confirmation. Their recorded history is not carried over to the new ones.
+
+An empty box restores the name derived from this machine.</value>
+  </data>
+  <data name="HeadingBroker" xml:space="preserve">
+    <value>Broker</value>
+  </data>
+  <data name="HeadingDevice" xml:space="preserve">
+    <value>Device</value>
+  </data>
+  <data name="HeadingPublish" xml:space="preserve">
+    <value>What to publish</value>
+  </data>
+  <data name="HeadingStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="InfoApply" xml:space="preserve">
+    <value>Commits every field above as one change and remakes the connection once. Nothing above is live until it is pressed.</value>
+  </data>
+  <data name="InfoBroker" xml:space="preserve">
+    <value>These fields are staged locally and take effect on Apply, so the connection is remade once per edit session rather than once per keystroke. Port, transport and encryption left on Automatic are found by probing, which happens when one of these fields settles and when Test connection or Apply is pressed — never merely on opening the page.</value>
+  </data>
+  <data name="InfoBrokerInUse" xml:space="preserve">
+    <value>The address the live connection is using. The saved values, not the ones staged in the fields below; the two differ until Apply.</value>
+  </data>
+  <data name="InfoConnection" xml:space="preserve">
+    <value>Where the broker settings in force came from, and whether the live link is encrypted. A port, transport or encryption left on Automatic is found by probing the host, and the answer is remembered against that host and user name. Setting one by hand pins it, and nothing is probed around it. Automatic can settle on clear text on its own, which is why this row says which it is.</value>
+  </data>
+  <data name="InfoDevice" xml:space="preserve">
+    <value>How this machine appears to whatever consumes the entities: one display name, and one identifier every topic is built from.</value>
+  </data>
+  <data name="InfoDeviceId" xml:space="preserve">
+    <value>Changing it renames every published entity, so it has a confirmation of its own rather than riding the Apply batch.</value>
+  </data>
+  <data name="InfoDeviceName" xml:space="preserve">
+    <value>Cosmetic — it renames nothing else. An empty box falls back to the name derived from this machine, shown as the placeholder. Saved as it is typed, not behind Apply.</value>
+  </data>
+  <data name="InfoDiscoveryPrefix" xml:space="preserve">
+    <value>Entities are announced using the Home Assistant MQTT Discovery convention, an openly published specification that some MQTT consumers follow and others ignore. The prefix only needs changing for a consumer that listens elsewhere.</value>
+  </data>
+  <data name="InfoEncryption" xml:space="preserve">
+    <value>Automatic tries each endpoint encrypted first and only then in clear text. A broker that answers and refuses the credentials ends the search, so a wrong password never causes a retry in clear text; nor does a broker that offered a certificate this machine does not trust. Only an endpoint with no encryption on offer at all is retried plain. An explicit choice is never reached around, and a broker reached over WebSocket through a public front door is encrypted by its address rather than by this setting.</value>
+  </data>
+  <data name="InfoHost" xml:space="preserve">
+    <value>A name or an address. A host written as a ws:// or wss:// address is used exactly as typed, which covers a broker served under a path the port alone cannot express.</value>
+  </data>
+  <data name="InfoLastCommand" xml:space="preserve">
+    <value>The most recent command the broker sent. Commands arrive on the topics the announced entities subscribe to. Nothing is shown until one is acted on.</value>
+  </data>
+  <data name="InfoLastPublish" xml:space="preserve">
+    <value>When a message last reached the broker. Unchanged values are not re-sent, so this stands still while nothing changes. Publish now sends the current state for the groups switched on below; it announces nothing and re-declares no entity.</value>
+  </data>
+  <data name="InfoPassword" xml:space="preserve">
+    <value>Never written to the log, never published, and never part of what a found endpoint is remembered against.</value>
+  </data>
+  <data name="InfoPort" xml:space="preserve">
+    <value>Automatic tries the ports brokers are commonly served on, in turn, and remembers the one that answered. The list covers plain MQTT, MQTT over encryption, and the front-door ports a broker published over WebSocket answers on. The last entry takes a port typed by hand.</value>
+  </data>
+  <data name="InfoPublishSwitch" xml:space="preserve">
+    <value>The master switch for the whole feature. Nothing on the network is touched while it is off, and the rest of this panel is hidden because none of it applies. This switch takes effect immediately; the broker fields take effect on Apply.</value>
+  </data>
+  <data name="InfoStatus" xml:space="preserve">
+    <value>Read-only, and about the live connection rather than the fields below. The two ages re-read themselves while this page is open.</value>
+  </data>
+  <data name="InfoTest" xml:space="preserve">
+    <value>Tries the values in the fields above, including ones not yet applied, over a throwaway connection of its own. It commits nothing at all: not the fields, and not where the broker answered.</value>
+  </data>
+  <data name="InfoTransport" xml:space="preserve">
+    <value>Automatic tries a plain socket first and falls back to WebSocket, then remembers whichever answered and starts there next time — the usual case for a machine that is on the internal network sometimes and outside it at others. An explicit choice is never reached around.</value>
+  </data>
+  <data name="InfoUsername" xml:space="preserve">
+    <value>Part of what a found endpoint is remembered against: a broker commonly fronts a separate listener per account, so changing the user name starts the search again.</value>
+  </data>
+  <data name="NotApplied" xml:space="preserve">
+    <value>Not applied</value>
+  </data>
+  <data name="PlaceholderHost" xml:space="preserve">
+    <value>e.g. mqtt.example.com</value>
+  </data>
+  <data name="PlaceholderPort" xml:space="preserve">
+    <value>1-65535</value>
+  </data>
+  <data name="PortAutomatic" xml:space="preserve">
+    <value>Automatic</value>
+  </data>
+  <data name="PortCustom" xml:space="preserve">
+    <value>Other…</value>
+  </data>
+  <data name="PortNotANumber" xml:space="preserve">
+    <value>Port must be a whole number between {0} and {1}.</value>
+  </data>
+  <data name="PortOutOfRange" xml:space="preserve">
+    <value>Port must be between {0} and {1}.</value>
+  </data>
+  <data name="ProbeAuthRejected" xml:space="preserve">
+    <value>The broker answered over {0} but rejected these credentials ({1}).</value>
+  </data>
+  <data name="ProbeFailed" xml:space="preserve">
+    <value>The connection over {0} failed — {1}.</value>
+  </data>
+  <data name="ProbeRejected" xml:space="preserve">
+    <value>The broker refused the connection over {0} ({1}).</value>
+  </data>
+  <data name="ProbeSuccess" xml:space="preserve">
+    <value>Connected over {0}. The broker accepted these settings.</value>
+  </data>
+  <data name="ProbeTimedOut" xml:space="preserve">
+    <value>The broker did not answer over {0} within {1} seconds.</value>
+  </data>
+  <data name="ProbeTlsUnsupported" xml:space="preserve">
+    <value>The broker does not accept encrypted connections over {0} on that port — {1}.</value>
+  </data>
+  <data name="ProbeTlsUntrusted" xml:space="preserve">
+    <value>The encrypted connection over {0} was not established — {1}. Check the certificate trust setting.</value>
+  </data>
+  <data name="ProbeUnreachable" xml:space="preserve">
+    <value>Could not reach the broker over {0} — {1}.</value>
+  </data>
+  <data name="ProgressEndpoint" xml:space="preserve">
+    <value>{0} on port {1}</value>
+  </data>
+  <data name="ProgressFinished" xml:space="preserve">
+    <value>{0} {1}.</value>
+  </data>
+  <data name="ProgressNoAnswer" xml:space="preserve">
+    <value>{0} — no answer recorded.</value>
+  </data>
+  <data name="ProgressPort" xml:space="preserve">
+    <value>Trying {0}…</value>
+  </data>
+  <data name="ProgressTransport" xml:space="preserve">
+    <value>Trying {0} — asking the broker…</value>
+  </data>
+  <data name="ProvenanceAutomatic" xml:space="preserve">
+    <value>Automatically detected</value>
+  </data>
+  <data name="ProvenanceEncrypted" xml:space="preserve">
+    <value>{0} — encrypted</value>
+  </data>
+  <data name="ProvenanceManual" xml:space="preserve">
+    <value>Set manually</value>
+  </data>
+  <data name="ProvenanceNotEncrypted" xml:space="preserve">
+    <value>{0} — not encrypted</value>
+  </data>
+  <data name="PublishFailed" xml:space="preserve">
+    <value>Nothing reached the broker</value>
+  </data>
+  <data name="ReportFragment" xml:space="preserve">
+    <value>{0} {1}</value>
+  </data>
+  <data name="ReportFragmentJoin" xml:space="preserve">
+    <value>; </value>
+  </data>
+  <data name="ReportNoHost" xml:space="preserve">
+    <value>No broker host set.</value>
+  </data>
+  <data name="ReportNothingReached" xml:space="preserve">
+    <value>Neither transport reached the broker. {0}.</value>
+  </data>
+  <data name="ReportWithContext" xml:space="preserve">
+    <value>{0} {1}.</value>
+  </data>
+  <data name="RowApply" xml:space="preserve">
+    <value>Apply these settings</value>
+  </data>
+  <data name="RowBrokerInUse" xml:space="preserve">
+    <value>Broker in use</value>
+  </data>
+  <data name="RowConnection" xml:space="preserve">
+    <value>Connection</value>
+  </data>
+  <data name="RowDeviceId" xml:space="preserve">
+    <value>Device ID</value>
+  </data>
+  <data name="RowDeviceName" xml:space="preserve">
+    <value>Device name</value>
+  </data>
+  <data name="RowDiscoveryPrefix" xml:space="preserve">
+    <value>Discovery prefix</value>
+  </data>
+  <data name="RowEncryption" xml:space="preserve">
+    <value>Encrypted connection</value>
+  </data>
+  <data name="RowHost" xml:space="preserve">
+    <value>Host</value>
+  </data>
+  <data name="RowLastCommand" xml:space="preserve">
+    <value>Last command received</value>
+  </data>
+  <data name="RowLastPublish" xml:space="preserve">
+    <value>Last publish</value>
+  </data>
+  <data name="RowPassword" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="RowPort" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="RowTransport" xml:space="preserve">
+    <value>Transport</value>
+  </data>
+  <data name="RowUsername" xml:space="preserve">
+    <value>Username</value>
+  </data>
+  <data name="Saved" xml:space="preserve">
+    <value>Saved.</value>
+  </data>
+  <data name="StateConnected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="StateConnecting" xml:space="preserve">
+    <value>Connecting</value>
+  </data>
+  <data name="StateDisabled" xml:space="preserve">
+    <value>Not publishing</value>
+  </data>
+  <data name="StateNotConnected" xml:space="preserve">
+    <value>Not connected</value>
+  </data>
+  <data name="StateRetrying" xml:space="preserve">
+    <value>Reconnecting</value>
+  </data>
+  <data name="StateSearching" xml:space="preserve">
+    <value>Looking for the broker</value>
+  </data>
+  <data name="StatusBrokerInUse" xml:space="preserve">
+    <value>{0}:{1} over {2}</value>
+  </data>
+  <data name="StatusBrokerNotSet" xml:space="preserve">
+    <value>Not set</value>
+  </data>
+  <data name="StatusBrokerUnsettled" xml:space="preserve">
+    <value>{0} — not connected yet</value>
+  </data>
+  <data name="StatusLastCommand" xml:space="preserve">
+    <value>{0} — {1}</value>
+  </data>
+  <data name="StatusNoHost" xml:space="preserve">
+    <value>No broker host set</value>
+  </data>
+  <data name="StatusNothingPublished" xml:space="preserve">
+    <value>Nothing published yet</value>
+  </data>
+  <data name="StatusNothingReceived" xml:space="preserve">
+    <value>Nothing received yet</value>
+  </data>
+  <data name="StatusProbing" xml:space="preserve">
+    <value>Looking for the broker</value>
+  </data>
+  <data name="TestRunning" xml:space="preserve">
+    <value>Testing…</value>
+  </data>
+  <data name="TitlePublishSwitch" xml:space="preserve">
+    <value>Publish to MQTT</value>
+  </data>
+  <data name="ToggleOff" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="ToggleOn" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="TransportTcp" xml:space="preserve">
+    <value>TCP</value>
+  </data>
+  <data name="TransportWebSocket" xml:space="preserve">
+    <value>WebSocket</value>
+  </data>
+</root>

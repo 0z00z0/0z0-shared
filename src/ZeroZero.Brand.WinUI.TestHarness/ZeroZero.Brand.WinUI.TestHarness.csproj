@@ -31,6 +31,9 @@
   <ItemGroup>
     <ProjectReference Include="..\ZeroZero.Brand.Core\ZeroZero.Brand.Core.csproj" />
     <ProjectReference Include="..\ZeroZero.Brand.WinUI\ZeroZero.Brand.WinUI.csproj" />
+    <!-- The rig covers every shared WinUI component in this repository, not only the About window:
+         the MQTT settings panel is driven here from fabricated state so it can be seen rendered. -->
+    <ProjectReference Include="..\ZeroZero.Mqtt.WinUI\ZeroZero.Mqtt.WinUI.csproj" />
   </ItemGroup>
 
 </Project>

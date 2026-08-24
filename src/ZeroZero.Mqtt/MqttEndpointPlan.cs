@@ -229,6 +229,15 @@ public static class MqttEndpointPlan
             _ => null,
         };
 
+    /// <summary>Whether nothing at all is left to find: the port, the transport and the encryption
+    /// are each pinned by hand, so no sweep can reach around any of them. Pure.</summary>
+    /// <remarks>All three, not any: pinning only the port still leaves the transport and the scheme
+    /// to be discovered, and a status line calling that "set manually" would overstate it.</remarks>
+    public static bool Pinned(MqttEndpointRequest request) =>
+        request.Port is not null
+        && request.Transport != MqttTransportMode.Auto
+        && request.Encryption != MqttEncryptionMode.Auto;
+
     /// <summary>How the endpoint in force came to be what it is, and whether it is in clear text.
     /// Pure.</summary>
     /// <remarks>The encryption clause is not decoration. Automatic falls back to plain on its own, so
@@ -236,11 +245,7 @@ public static class MqttEndpointPlan
     /// say so.</remarks>
     public static string DescribeProvenance(MqttEndpointRequest request, MqttEndpointMemory? memory)
     {
-        string source = request.Port is not null
-                     && request.Transport != MqttTransportMode.Auto
-                     && request.Encryption != MqttEncryptionMode.Auto
-            ? SetManually
-            : AutomaticallyDetected;
+        string source = Pinned(request) ? SetManually : AutomaticallyDetected;
 
         return EncryptionInForce(request, memory) switch
         {

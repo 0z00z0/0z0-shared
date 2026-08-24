@@ -1,0 +1,450 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="ZeroZero.Mqtt.WinUI.MqttSettingsPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:brand="using:ZeroZero.Brand.WinUI"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    mc:Ignorable="d">
+
+    <!-- The alignment contract for the panel. Every field is one width, every card right-aligns its
+         content, and an InfoIcon always sits to the LEFT of the field it explains — so no adornment
+         can displace a right edge and the whole column lands on one line without a single per-card
+         measurement.
+
+         No user-facing text lives in this file. Every string comes from MqttStrings through the
+         panel's own resolver, so the module's prose has one home, one fallback and one translation
+         mechanism rather than a second set of literals here that could drift from it. -->
+    <UserControl.Resources>
+        <x:Double x:Key="MqttFieldWidth">240</x:Double>
+
+        <!-- Trims the toolkit's 68 px card floor so single-line rows reserve no extra height; cards
+             carrying a description still grow past it. Scoped to the panel root so it also reaches
+             the group rows built in code below. -->
+        <x:Double x:Key="SettingsCardMinHeight">52</x:Double>
+
+        <Style x:Key="MqttTextFieldStyle" TargetType="TextBox">
+            <Setter Property="Width" Value="{StaticResource MqttFieldWidth}"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+        </Style>
+        <!-- PasswordBox has no TextAlignment: the masked run follows the control's content alignment
+             instead, which is why this style differs from the TextBox one by a property name rather
+             than by intent. -->
+        <Style x:Key="MqttPasswordFieldStyle" TargetType="PasswordBox">
+            <Setter Property="Width" Value="{StaticResource MqttFieldWidth}"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+        </Style>
+        <Style x:Key="MqttComboFieldStyle" TargetType="ComboBox">
+            <Setter Property="Width" Value="{StaticResource MqttFieldWidth}"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
+
+        <!-- The one small toned-down label used for every row's sub-text and for the panel's status
+             lines, so the secondary tier is defined once. -->
+        <Style x:Key="MqttHintStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{ThemeResource MqttPanelSecondaryBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <!-- Section heading and rule. Self-contained rather than inherited from the host, because a
+             shared panel cannot require a host to have declared a style key: an unresolved BasedOn is
+             a parse failure, not a fallback. What a host does rebrand is the colour, through the one
+             theme key. -->
+        <Style x:Key="MqttSubHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="CharacterSpacing" Value="40"/>
+            <Setter Property="Foreground" Value="{ThemeResource MqttPanelHeadingBrush}"/>
+        </Style>
+        <!-- Marks where one sub-section ends and the next begins. The whole gap between groups sits
+             above the rule and the heading, so a heading binds downwards to its own cards rather
+             than floating between two groups. -->
+        <Style x:Key="MqttSectionDividerStyle" TargetType="Border">
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Background" Value="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+            <Setter Property="Margin" Value="0,24,0,12"/>
+        </Style>
+
+        <!-- The Status block's own two tiers. The label is the elastic half and gives way first; the
+             value is the field width every other row on this panel uses, so the right edge is the
+             panel's right edge here too. -->
+        <Style x:Key="MqttStatusLabelStyle" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextWrapping" Value="NoWrap"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="Foreground" Value="{ThemeResource MqttPanelBodyBrush}"/>
+        </Style>
+        <!-- The overflow rule, in one place: one line, never wrapped, an ellipsis where it does not
+             fit, and the whole string on a hover tip that the code-behind sets beside the text.
+             Nothing here may change a size — a value that is an error changes colour and only
+             colour. A translation longer than the English trims rather than reflowing the block. -->
+        <Style x:Key="MqttStatusValueStyle" TargetType="TextBlock"
+               BasedOn="{StaticResource MqttHintStyle}">
+            <Setter Property="Width" Value="{StaticResource MqttFieldWidth}"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+            <Setter Property="TextWrapping" Value="NoWrap"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- The error tier is a style rather than a brush assigned in code. A brush fetched from a
+             dictionary at runtime carries no theme context, so it resolves against the application's
+             theme and lands the wrong way round inside a subtree with a RequestedTheme of its own —
+             a secondary value in a light page painted the dark theme's near-white. A ThemeResource
+             inside a setter is resolved where the style is applied, which is the element. -->
+        <Style x:Key="MqttStatusErrorStyle" TargetType="TextBlock"
+               BasedOn="{StaticResource MqttStatusValueStyle}">
+            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}"/>
+        </Style>
+
+        <Style x:Key="MqttResultStyle" TargetType="TextBlock"
+               BasedOn="{StaticResource MqttHintStyle}"/>
+        <Style x:Key="MqttResultErrorStyle" TargetType="TextBlock"
+               BasedOn="{StaticResource MqttHintStyle}">
+            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}"/>
+        </Style>
+    </UserControl.Resources>
+
+    <!-- Five sections in the order the questions arise: whether to publish at all, what the
+         connection is doing, which device this is, how it is reached, and what goes out. The last
+         two are collapsed, because both are set once and then left.
+
+         The heading introducing this panel belongs to the host page, not here. -->
+    <StackPanel Spacing="4">
+
+        <!-- No section heading of its own: the master switch is one card at the top of the panel,
+             the way every other page opens, and a heading here would only repeat the card's own
+             name back at it. -->
+        <controls:SettingsCard x:Name="PublishCard">
+            <controls:SettingsCard.Description>
+                <TextBlock x:Name="PublishDescriptionText" Style="{StaticResource MqttHintStyle}"/>
+            </controls:SettingsCard.Description>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <brand:InfoIcon x:Name="PublishInfoIcon"/>
+                <ToggleSwitch x:Name="EnabledToggle" Toggled="OnEnabledToggled"/>
+            </StackPanel>
+        </controls:SettingsCard>
+
+        <!-- Hidden rather than disabled while publishing is off: a greyed panel still invites
+             reading, and none of it has an answer until the feature is on. -->
+        <StackPanel x:Name="DetailPanel" Spacing="4">
+
+            <Border Style="{StaticResource MqttSectionDividerStyle}"/>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock x:Name="StatusHeading" Style="{StaticResource MqttSubHeaderStyle}"
+                           VerticalAlignment="Center"/>
+                <brand:InfoIcon x:Name="StatusInfoIcon"/>
+            </StackPanel>
+
+            <!-- THE TRAP, AND THE FIX.
+
+                 A SettingsCard whose content can be arbitrarily long collapses its own header column
+                 to zero width and then grows without bound. The card's content column is Auto and
+                 takes its width first; the header column is * and gets whatever is left; and a
+                 horizontal StackPanel in the content slot measures its children at infinite width,
+                 so TextWrapping is inert and a long value reports an unbounded desired width.
+
+                 So this is one Border around a Grid, not four SettingsCards: the content here is a
+                 value the connection decides, and a connection error is a sentence of unknown
+                 length. The values never wrap and trim with an ellipsis at the field width, and a
+                 single writer (SetStatusValue) puts on text, tooltip and colour together so nothing
+                 can change a size.
+
+                 The rows are Auto and the block has a floor rather than a fixed height, so a large
+                 Windows text size grows the block instead of clipping four lines inside it. The
+                 width cap is what stops the trap; the height never needed to be part of it.
+
+                 Any new value rendered inside a SettingsCard on this panel needs the same treatment:
+                 a width cap, NoWrap with CharacterEllipsis, and the full string on a hover tooltip.
+
+                 Column order is the panel's alignment contract: elastic label, then the row's own
+                 action, then the icon, then the value at the field width, so nothing can displace
+                 the right edge and no value can be squeezed. -->
+            <Border x:Name="StatusBorder"
+                    Background="{ThemeResource MqttPanelCardBackgroundBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{ThemeResource ControlCornerRadius}"
+                    Padding="16,12,16,12">
+                <Grid ColumnSpacing="8" RowSpacing="6">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <!-- The only elastic column, so it is the only thing a narrow window or a row
+                             button can take space from. -->
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- First, because it answers the question the rest of the panel raises: whether
+                         these values were found or chosen. -->
+                    <TextBlock x:Name="ConnectionLabel" Grid.Row="0" Grid.Column="0"
+                               Style="{StaticResource MqttStatusLabelStyle}"/>
+                    <brand:InfoIcon x:Name="ConnectionInfoIcon" Grid.Row="0" Grid.Column="2"/>
+                    <TextBlock x:Name="DetectText" Grid.Row="0" Grid.Column="3" Text="—"
+                               Style="{StaticResource MqttStatusValueStyle}"/>
+
+                    <TextBlock x:Name="BrokerInUseLabel" Grid.Row="1" Grid.Column="0"
+                               Style="{StaticResource MqttStatusLabelStyle}"/>
+                    <brand:InfoIcon x:Name="BrokerInUseInfoIcon" Grid.Row="1" Grid.Column="2"/>
+                    <TextBlock x:Name="BrokerStatusText" Grid.Row="1" Grid.Column="3" Text="—"
+                               Style="{StaticResource MqttStatusValueStyle}"/>
+
+                    <TextBlock x:Name="LastPublishLabel" Grid.Row="2" Grid.Column="0"
+                               Style="{StaticResource MqttStatusLabelStyle}"/>
+                    <!-- In the row's own column, not the value's: the value keeps the field width
+                         whatever the button does, so a narrow window trims the label rather than the
+                         fact. -->
+                    <Button x:Name="PublishNowBtn" Grid.Row="2" Grid.Column="1"
+                            Click="OnPublishNowClicked"
+                            VerticalAlignment="Center"
+                            MinHeight="0" Padding="10,3,10,3" FontSize="12"/>
+                    <brand:InfoIcon x:Name="LastPublishInfoIcon" Grid.Row="2" Grid.Column="2"/>
+                    <TextBlock x:Name="LastPublishText" Grid.Row="2" Grid.Column="3" Text="—"
+                               Style="{StaticResource MqttStatusValueStyle}"/>
+
+                    <TextBlock x:Name="LastCommandLabel" Grid.Row="3" Grid.Column="0"
+                               Style="{StaticResource MqttStatusLabelStyle}"/>
+                    <brand:InfoIcon x:Name="LastCommandInfoIcon" Grid.Row="3" Grid.Column="2"/>
+                    <TextBlock x:Name="LastCommandText" Grid.Row="3" Grid.Column="3" Text="—"
+                               Style="{StaticResource MqttStatusValueStyle}"/>
+                </Grid>
+            </Border>
+
+            <!-- Before Broker: which device this is comes before how it connects. The name is
+                 cosmetic and commits on its own; the id is destructive and changes only through its
+                 own confirmation dialogue. Neither rides the Apply batch, so neither can be lost
+                 behind a collapsed group. -->
+            <Border Style="{StaticResource MqttSectionDividerStyle}"/>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock x:Name="DeviceHeading" Style="{StaticResource MqttSubHeaderStyle}"
+                           VerticalAlignment="Center"/>
+                <brand:InfoIcon x:Name="DeviceInfoIcon"/>
+            </StackPanel>
+
+            <controls:SettingsCard x:Name="DeviceNameCard">
+                <controls:SettingsCard.Description>
+                    <TextBlock x:Name="DeviceNameDescription" Style="{StaticResource MqttHintStyle}"/>
+                </controls:SettingsCard.Description>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock x:Name="DeviceNameSavedText" Style="{StaticResource MqttHintStyle}"
+                               Foreground="{ThemeResource MqttPanelAccentBrush}"
+                               VerticalAlignment="Center" Visibility="Collapsed"/>
+                    <brand:InfoIcon x:Name="DeviceNameInfoIcon"/>
+                    <TextBox x:Name="DeviceNameBox" Style="{StaticResource MqttTextFieldStyle}"
+                             TextChanged="OnDeviceNameEdited"
+                             LostFocus="OnDeviceNameCommitted" KeyDown="OnDeviceNameKeyDown"/>
+                </StackPanel>
+            </controls:SettingsCard>
+
+            <!-- Read-only with a button, not a text box: the id is the unique_id stem and every topic
+                 segment, so editing it in place would make a rename a side effect of a keystroke. -->
+            <controls:SettingsCard x:Name="DeviceIdCard">
+                <controls:SettingsCard.Description>
+                    <TextBlock x:Name="DeviceIdDescription" Style="{StaticResource MqttHintStyle}"/>
+                </controls:SettingsCard.Description>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <brand:InfoIcon x:Name="DeviceIdInfoIcon"/>
+                    <TextBlock x:Name="DeviceIdText" VerticalAlignment="Center"
+                               Style="{StaticResource MqttHintStyle}"
+                               IsTextSelectionEnabled="True"/>
+                    <Button x:Name="ChangeDeviceIdBtn" Click="OnChangeDeviceIdClicked"/>
+                </StackPanel>
+            </controls:SettingsCard>
+
+            <!-- A section, headed like every other one. An expander's own Header draws inside the
+                 card chrome and reads as a settings row, not as a title, so the name lives above the
+                 chrome and the expander does not repeat it.
+
+                 The unapplied marker sits beside the heading, OUTSIDE the expander: a staged edit
+                 that only a collapsed group can show is an edit that is lost at the next reload with
+                 nothing on screen having said so. -->
+            <Border Style="{StaticResource MqttSectionDividerStyle}"/>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock x:Name="BrokerHeading" Style="{StaticResource MqttSubHeaderStyle}"
+                           VerticalAlignment="Center"/>
+                <brand:InfoIcon x:Name="BrokerInfoIcon"/>
+                <TextBlock x:Name="BrokerDirtyText" Style="{StaticResource MqttHintStyle}"
+                           Foreground="{ThemeResource MqttPanelAccentBrush}"
+                           VerticalAlignment="Center" Visibility="Collapsed"/>
+            </StackPanel>
+
+            <controls:SettingsExpander x:Name="BrokerExpander" IsExpanded="False">
+                <controls:SettingsExpander.Description>
+                    <TextBlock x:Name="BrokerExpanderDescription" Style="{StaticResource MqttHintStyle}"/>
+                </controls:SettingsExpander.Description>
+
+                <controls:SettingsExpander.Items>
+                    <!-- Host carries no description: one that could only restate the header is words
+                         without information, and the row reads better without it. -->
+                    <controls:SettingsCard x:Name="HostCard">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <brand:InfoIcon x:Name="HostInfoIcon"/>
+                            <TextBox x:Name="HostBox" Style="{StaticResource MqttTextFieldStyle}"
+                                     TextChanged="OnBrokerFieldEdited"/>
+                        </StackPanel>
+                    </controls:SettingsCard>
+
+                    <!-- Host then Port then Transport, because that is the order the answers narrow
+                         in: which machine, which door, which language. The typed box and its error
+                         line share the field width, so an expanded port row keeps the same right
+                         edge as every other. -->
+                    <controls:SettingsCard x:Name="PortCard">
+                        <controls:SettingsCard.Description>
+                            <TextBlock x:Name="PortDescription" Style="{StaticResource MqttHintStyle}"/>
+                        </controls:SettingsCard.Description>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <brand:InfoIcon x:Name="PortInfoIcon"/>
+                            <StackPanel Spacing="4" HorizontalAlignment="Right">
+                                <ComboBox x:Name="PortCombo" Style="{StaticResource MqttComboFieldStyle}"
+                                          SelectionChanged="OnPortSelectionChanged"/>
+                                <TextBox x:Name="PortCustomBox" Style="{StaticResource MqttTextFieldStyle}"
+                                         Visibility="Collapsed" TextChanged="OnBrokerFieldEdited"/>
+                                <TextBlock x:Name="PortErrorText" Visibility="Collapsed"
+                                           Style="{StaticResource MqttHintStyle}"
+                                           Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                           Width="{StaticResource MqttFieldWidth}" TextAlignment="Right"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </controls:SettingsCard>
+
+                    <!-- Automatic is first so it is the default selection, matching the setting. -->
+                    <controls:SettingsCard x:Name="TransportCard">
+                        <controls:SettingsCard.Description>
+                            <TextBlock x:Name="TransportDescription" Style="{StaticResource MqttHintStyle}"/>
+                        </controls:SettingsCard.Description>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <brand:InfoIcon x:Name="TransportInfoIcon"/>
+                            <ComboBox x:Name="TransportCombo" Style="{StaticResource MqttComboFieldStyle}"
+                                      SelectionChanged="OnBrokerSelectionChanged"/>
+                        </StackPanel>
+                    </controls:SettingsCard>
+
+                    <!-- Named away from the acronym, and silent about ports: the port is its own
+                         setting and may be anything the broker is served on. Three-state like Port
+                         and Transport, and for the same reason — whether a broker serves a port in
+                         cipher is the broker's business, so Automatic is first. -->
+                    <controls:SettingsCard x:Name="EncryptionCard">
+                        <controls:SettingsCard.Description>
+                            <TextBlock x:Name="EncryptionDescription" Style="{StaticResource MqttHintStyle}"/>
+                        </controls:SettingsCard.Description>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <brand:InfoIcon x:Name="EncryptionInfoIcon"/>
+                            <ComboBox x:Name="EncryptionCombo" Style="{StaticResource MqttComboFieldStyle}"
+                                      SelectionChanged="OnBrokerSelectionChanged"/>
+                        </StackPanel>
+                    </controls:SettingsCard>
+
+                    <!-- The credentials sit below the addressing: they decide whether the broker
+                         accepts the session, never which door it knocks on. -->
+                    <controls:SettingsCard x:Name="UsernameCard">
+                        <controls:SettingsCard.Description>
+                            <TextBlock x:Name="UsernameDescription" Style="{StaticResource MqttHintStyle}"/>
+                        </controls:SettingsCard.Description>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <brand:InfoIcon x:Name="UsernameInfoIcon"/>
+                            <TextBox x:Name="UsernameBox" Style="{StaticResource MqttTextFieldStyle}"
+                                     TextChanged="OnBrokerFieldEdited"/>
+                        </StackPanel>
+                    </controls:SettingsCard>
+
+                    <controls:SettingsCard x:Name="PasswordCard">
+                        <controls:SettingsCard.Description>
+                            <TextBlock x:Name="PasswordDescription" Style="{StaticResource MqttHintStyle}"/>
+                        </controls:SettingsCard.Description>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <brand:InfoIcon x:Name="PasswordInfoIcon"/>
+                            <PasswordBox x:Name="PasswordBox" Style="{StaticResource MqttPasswordFieldStyle}"
+                                         PasswordChanged="OnBrokerFieldEdited"/>
+                        </StackPanel>
+                    </controls:SettingsCard>
+
+                    <!-- Last in the section, and the only field here that is about the consumer
+                         rather than the broker. -->
+                    <controls:SettingsCard x:Name="PrefixCard">
+                        <controls:SettingsCard.Description>
+                            <TextBlock x:Name="PrefixDescription" Style="{StaticResource MqttHintStyle}"/>
+                        </controls:SettingsCard.Description>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <brand:InfoIcon x:Name="PrefixInfoIcon"/>
+                            <TextBox x:Name="PrefixBox" Style="{StaticResource MqttTextFieldStyle}"
+                                     TextChanged="OnBrokerFieldEdited"/>
+                        </StackPanel>
+                    </controls:SettingsCard>
+
+                    <!-- Apply sits at the far right, where every field above puts its own edge, so
+                         the one control that commits the section lands on the panel's action edge
+                         instead of hiding at the start of a row. -->
+                    <controls:SettingsCard x:Name="ApplyCard"
+                                           ContentAlignment="Vertical"
+                                           HorizontalContentAlignment="Stretch">
+                        <controls:SettingsCard.Description>
+                            <TextBlock x:Name="ApplyDescription" Style="{StaticResource MqttHintStyle}"/>
+                        </controls:SettingsCard.Description>
+                        <StackPanel Spacing="8" Margin="0,4,0,4">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <Button x:Name="TestBtn" Click="OnTestConnectionClicked"/>
+                                    <ProgressRing x:Name="TestProgress" Width="16" Height="16"
+                                                  IsActive="False" Visibility="Collapsed"
+                                                  VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="AppliedText" VerticalAlignment="Center"
+                                               Style="{StaticResource MqttHintStyle}"
+                                               Foreground="{ThemeResource MqttPanelAccentBrush}"
+                                               Visibility="Collapsed"/>
+                                    <brand:InfoIcon x:Name="TestInfoIcon"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                            HorizontalAlignment="Right">
+                                    <brand:InfoIcon x:Name="ApplyInfoIcon"/>
+                                    <Button x:Name="ApplyBtn" Click="OnApplyClicked"/>
+                                </StackPanel>
+                            </Grid>
+                            <!-- Names which values were tested: under the batch save model the fields
+                                 and the saved settings can disagree, and a green result must not be
+                                 ambiguous. Also the sweep's progress line, endpoint by endpoint. -->
+                            <TextBlock x:Name="TestResultText" Style="{StaticResource MqttHintStyle}"
+                                       Visibility="Collapsed"/>
+                        </StackPanel>
+                    </controls:SettingsCard>
+                </controls:SettingsExpander.Items>
+            </controls:SettingsExpander>
+
+            <!-- Last, and closed: each group is named by the application that declared it, so what a
+                 toggle covers needs no explaining beyond its own name, and the set is changed far
+                 less often than anything above it. -->
+            <Border Style="{StaticResource MqttSectionDividerStyle}"/>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock x:Name="PublishHeading" Style="{StaticResource MqttSubHeaderStyle}"
+                           VerticalAlignment="Center"/>
+                <!-- Consumer-owned, and collapsed when the consumer supplied nothing: an icon that
+                     opens on an empty flyout is worse than no icon. -->
+                <brand:InfoIcon x:Name="PublishGroupsInfoIcon" Visibility="Collapsed"/>
+            </StackPanel>
+
+            <!-- The rows are built in code from MqttPanelSetup.Groups: the panel renders the
+                 application's group vocabulary and declares none of its own. Empty Items here, one
+                 SettingsCard per declared PublishGroup at load. -->
+            <controls:SettingsExpander x:Name="PublishExpander" IsExpanded="False">
+                <controls:SettingsExpander.Description>
+                    <TextBlock x:Name="PublishExpanderDescription" Style="{StaticResource MqttHintStyle}"/>
+                </controls:SettingsExpander.Description>
+            </controls:SettingsExpander>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

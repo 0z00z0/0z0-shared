@@ -74,6 +74,24 @@ are unified — `OnCheckForUpdates` is a plain `Func<Task<bool>>` the consumer w
 existing update flow (returning `true` when an update was applied so the window owns the
 clean-exit-before-relaunch step via `OnBeforeExit`).
 
+### `src/ZeroZero.Mqtt.WinUI`
+
+`net10.0-windows10.0.26100.0`, WinUI 3 / Windows App SDK, unpackaged. References `ZeroZero.Mqtt`
+for the protocol module and `ZeroZero.Brand.WinUI` for `InfoIcon`. Contains:
+
+- **`MqttSettingsPanel`** — the settings page for the MQTT module: a master switch, a live status
+  block, the device identity, a staged broker block behind an Apply, and one row per
+  application-declared publish group. The panel renders the structure and knows no application's
+  subject matter; everything domain-shaped arrives through `MqttPanelSetup` and every edit reports
+  back as a callback.
+- **`MqttPanelSetup`** — everything the panel needs from its host, in one object initialiser.
+- **`MqttResourceStrings`** — the module's own `.resw`, read through `ResourceLoader`, with the
+  built-in en-GB in `MqttStrings` as the floor.
+- **`Themes/MqttPanelResources.xaml`** — five theme keys a host may override, defaulting to the
+  stock WinUI theme.
+
+[`consume-mqtt-settings-panel.md`](consume-mqtt-settings-panel.md) is the adoption checklist.
+
 ### `src/ZeroZero.Brand.WinUI.TestHarness`
 
 A minimal WinUI exe that opens both hosting scenarios with this repo's own sample data — run it to
@@ -99,6 +117,14 @@ Two PowerShell scripts in the repo root drive that harness:
   (the hosted control), the two images this README embeds. Capture goes through `PrintWindow` with
   `PW_RENDERFULLCONTENT`, so the translucent Mica backdrop resolves cleanly and no desktop content
   bleeds through; the two windows are told apart by their `AppWindow` title, not creation order.
+- **`Capture 'MQTT panel' screenshots.ps1`** — launches the harness with `--mqtt` and writes the
+  eight panel PNGs: each theme as the panel opens, with the Broker group open, with the publish list
+  open, and holding an unapplied edit. It holds the display awake and checks the desktop is
+  composing first, because DWM composes nothing while the display is off and a capture taken then is
+  uniformly black.
+
+The harness takes `--mqtt` to open the MQTT panel scenario instead of the About windows: one
+component per run, so unrelated windows never land on top of each other.
 
 ## Screenshots
 
@@ -110,7 +136,23 @@ Two PowerShell scripts in the repo root drive that harness:
 
 ![BrandAboutControl hosted](docs/screenshots/about-hosted-control.png)
 
-Both images are the capture script's output, so they show the surfaces as they actually render
+**`MqttSettingsPanel`**, as it opens (light and dark):
+
+| Light | Dark |
+|---|---|
+| ![MQTT panel, light](docs/screenshots/mqtt-panel-light.png) | ![MQTT panel, dark](docs/screenshots/mqtt-panel-dark.png) |
+
+With the Broker group open, and with the publish list open:
+
+| Broker | Publish groups |
+|---|---|
+| ![MQTT panel, broker group open](docs/screenshots/mqtt-panel-light-broker.png) | ![MQTT panel, publish list open](docs/screenshots/mqtt-panel-light-groups.png) |
+
+An unapplied broker edit is marked beside the section heading, so a closed group cannot hide it:
+
+![MQTT panel, unapplied edit](docs/screenshots/mqtt-panel-light-edited.png)
+
+All images are the capture scripts' output, so they show the surfaces as they actually render
 rather than what the XAML claims.
 
 ## Integrating the About dialogue
