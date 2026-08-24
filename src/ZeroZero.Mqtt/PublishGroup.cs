@@ -5,12 +5,20 @@ namespace ZeroZero.Mqtt;
 /// <remarks>Switching a group off stops its entities publishing; it does not withdraw them. The layer
 /// above announces one that has already been announced as unavailable instead, so a checkbox that
 /// commits on the spot stays a reversible choice.</remarks>
+/// <param name="Description">The visible line under the row's label, where a group's shipped default
+/// needs justifying — "Off by default: these describe the application, not the hardware." Empty for a
+/// group whose label already says everything, because a description that restates its label is words
+/// without information.</param>
 /// <param name="DefaultOn">Whether the group is announced before anyone has touched it. A feature
 /// group is normally on — the published surface is the point of the feature, and a group is switched
 /// off to reduce it, never to opt into it — while a group that costs something to produce is what an
 /// operator opts into.</param>
+/// <param name="Info">What the group contains, behind the row's info icon. Distinct from
+/// <paramref name="Description"/> rather than a longer version of it: one justifies the default, the
+/// other says what is in the group. Empty means the row gets no icon at all, which is better than an
+/// icon opening on nothing.</param>
 public sealed record PublishGroup(
-    string Key, string Label, string Description = "", bool DefaultOn = true);
+    string Key, string Label, string Description = "", bool DefaultOn = true, string Info = "");
 
 /// <summary>The group state as it stood at one instant. Taken once and asked many times, so a
 /// publish pass cannot announce one entity under the old answer and the next under the new.</summary>
