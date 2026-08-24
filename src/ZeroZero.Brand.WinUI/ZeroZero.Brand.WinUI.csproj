@@ -3,10 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
-    <LangVersion>latest</LangVersion>
     <RootNamespace>ZeroZero.Brand.WinUI</RootNamespace>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <!-- Required by the LibraryImport source generator's generated marshalling code (NativeMethods). -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
@@ -15,28 +12,20 @@
     <UseWinUI>true</UseWinUI>
     <WinUISDKReferences>false</WinUISDKReferences>
 
-    <!-- Identity / packaging metadata -->
     <AssemblyTitle>ZeroZero.Brand.WinUI</AssemblyTitle>
     <Product>ZeroZero.Brand.WinUI</Product>
     <Description>Shared WinUI 3 About-window component for ZeroZero Software apps.</Description>
-    <Authors>ZeroZero Software</Authors>
-    <Company>ZeroZero Software</Company>
-    <Copyright>Copyright © 2026 ZeroZero Software</Copyright>
-    <NeutralLanguage>en-GB</NeutralLanguage>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/0z00z0/0z0-shared</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <!--
-    The Windows App SDK / SDK.BuildTools versions this library pins. A consuming app may pin
-    higher: NuGet unifies on the version nearest the consuming project, so the app's own pin
-    governs the runtime the whole build resolves. Keeping the studio's apps and this library on
-    one version is tracked in issue #3.
+    The Windows App SDK / SDK.BuildTools versions this library pins live in Directory.Packages.props.
+    A consuming app may pin higher: NuGet unifies on the version nearest the consuming project, so
+    the app's own pin governs the runtime the whole build resolves. Keeping the studio's apps and
+    this library on one version is tracked in issue #3.
   -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.1.3" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.1839" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
   </ItemGroup>
 
   <ItemGroup>

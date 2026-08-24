@@ -1,0 +1,22 @@
+<Project>
+
+  <!-- Language and compilation settings every project in this repository shares. -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NeutralLanguage>en-GB</NeutralLanguage>
+  </PropertyGroup>
+
+  <!-- Studio identity and packaging metadata. Per-assembly values (AssemblyTitle, Product,
+       Description) stay in the project that owns them. -->
+  <PropertyGroup>
+    <Authors>ZeroZero Software</Authors>
+    <Company>ZeroZero Software</Company>
+    <Copyright>Copyright © 2026 ZeroZero Software</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/0z00z0/0z0-shared</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+</Project>
