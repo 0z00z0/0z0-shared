@@ -8,6 +8,8 @@
     <RootNamespace>ZeroZero.Brand.WinUI.TestHarness</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Required by the LibraryImport source generator's generated marshalling code (NativeMethods). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
     <!-- Interactive manual test rig only: launches BrandAboutWindow with this repo's own sample
          data so it can be eyeballed without building/running ChargeKeeper or HyperVManagerTray.

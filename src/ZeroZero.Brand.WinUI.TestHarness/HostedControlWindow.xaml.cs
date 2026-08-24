@@ -1,3 +1,4 @@
+using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Windows.Graphics;
 using ZeroZero.Brand.Core;
@@ -24,7 +25,14 @@ public sealed partial class HostedControlWindow : Window
         // size to that, plus a small margin for the title bar and the ScrollViewer's own padding —
         // never a constant, which cannot track the content.
         AboutControl.Measure(new Windows.Foundation.Size(480, double.PositiveInfinity));
-        int contentHeight = (int)Math.Ceiling(AboutControl.DesiredSize.Height);
-        AppWindow.Resize(new SizeInt32(640, contentHeight + 96));
+        double contentHeight = AboutControl.DesiredSize.Height;
+
+        // Layout measures in device-independent units, but AppWindow.Resize takes physical pixels;
+        // the two coincide only at 100% scaling. Scale by the window's own DPI, or a scaled display
+        // gets a window far smaller than its content and clips the control.
+        double scale = NativeMethods.GetScaleForWindow(Win32Interop.GetWindowFromWindowId(AppWindow.Id));
+        AppWindow.Resize(new SizeInt32(
+            (int)Math.Ceiling(640 * scale),
+            (int)Math.Ceiling((contentHeight + 96) * scale)));
     }
 }
