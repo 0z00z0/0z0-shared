@@ -169,8 +169,8 @@ public sealed class FakeBroker : IDisposable
         var deadline = DateTime.UtcNow + TimeSpan.FromMilliseconds(300);
         while (DateTime.UtcNow < deadline && !_stop.IsCancellationRequested)
         {
-            if (stream.DataAvailable) await stream.ReadAsync(scrap, _stop.Token);
-            else await Task.Delay(20, _stop.Token);
+            if (!stream.DataAvailable) await Task.Delay(20, _stop.Token);
+            else if (await stream.ReadAsync(scrap, _stop.Token) == 0) return;   // the client went first
         }
     }
 
