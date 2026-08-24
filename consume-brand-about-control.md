@@ -1,29 +1,14 @@
 # Consuming BrandAboutControl
 
-1. Sibling `ProjectReference` to `..\0z0-shared\src\ZeroZero.Brand.WinUI\ZeroZero.Brand.WinUI.csproj`.
-2. Host the control:
+A checklist for a full windowed app adopting the shared About content control. The detail —
+the `ProjectReference` recipe, the CI shapes, the sample XAML and code — is in
+[the README's hosting section](README.md#option-b--hosted-in-the-apps-own-page-brandaboutcontrol).
 
-```xml
-<Page ... xmlns:brand="using:ZeroZero.Brand.WinUI">
-    <ScrollViewer>
-        <brand:BrandAboutControl x:Name="About" MaxWidth="560" HorizontalAlignment="Center"/>
-    </ScrollViewer>
-</Page>
-```
-
-3. Populate it with your own app's data:
-
-```csharp
-About.SetInfo(new AboutInfo
-{
-    AppName           = "...",
-    Version           = "...",
-    Description       = "...",
-    RepoUrl           = "...",
-    ExternalLibraries = [ new ExternalLibrary("Name", "Author", "Purpose", "License") ],
-});
-```
-
-4. Don't supply Mark/Company/Tagline/Website/Donate — the control provides those itself from
-   studio-wide constants.
-5. CI needs a sibling checkout of `0z00z0/0z0-shared` (no NuGet feed).
+1. Reference `ZeroZero.Brand.WinUI` from a sibling checkout of this repo, and give the consuming
+   workflow a checkout of it too.
+2. Host `BrandAboutControl` in the existing About page's XAML, in place of the bespoke layout.
+3. Call `SetInfo(AboutInfo)` once from the page's constructor or `Loaded` handler.
+4. Supply only app facts: name, version, description, repo URL, external-library credits. The
+   control provides the studio mark, company name, tagline, website link and donate link itself.
+5. Delete the bespoke About layout once the control renders; keep the app's own brand-facts class
+   as the single source of truth for the data.
