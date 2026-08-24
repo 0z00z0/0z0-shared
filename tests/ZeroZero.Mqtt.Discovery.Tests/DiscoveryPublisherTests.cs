@@ -181,14 +181,15 @@ public class DiscoveryPublisherTests
     {
         // The set's members are unchanged: only the strings an Options delegate returns differ.
         // Comparing entity identity, or comparing the entity objects, misses it entirely.
-        List<string> options = ["Office", "Home"];
+        IReadOnlyList<string> options = ["Office", "Home"];
         var set = new MqttEntitySet([Sample.Select(options: () => options)]);
         using var harness = new Harness(set);
 
         await harness.ConnectAsync();
         harness.Broker.Forget();
 
-        options[1] = "Workshop";
+        // A different list, not the same one mutated: the delegate has to be asked again.
+        options = ["Office", "Workshop"];
         await harness.Publisher.SetEntitiesAsync(set);
 
         Assert.Equal(1, harness.Broker.CountOn(Sample.ConfigTopic));

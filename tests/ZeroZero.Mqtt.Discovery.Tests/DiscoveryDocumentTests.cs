@@ -287,13 +287,18 @@ public class DiscoveryDocumentTests
     [Fact]
     public void ASelectsOptionsAreReadWhenTheDocumentIsComposed()
     {
-        List<string> options = ["Office"];
+        // A different list each time, so an implementation holding on to the first one is caught.
+        IReadOnlyList<string> options = ["Office"];
         var select = Sample.Select(options: () => options);
 
-        Assert.Contains("Office", Component(Build([select]), "profile")["options"]!.AsArray().Select(n => (string?)n));
+        Assert.Contains("Office", Options(Build([select])));
 
-        options[0] = "Studio";
-        Assert.Contains("Studio", Component(Build([select]), "profile")["options"]!.AsArray().Select(n => (string?)n));
+        options = ["Studio"];
+        Assert.Contains("Studio", Options(Build([select])));
+        Assert.DoesNotContain("Office", Options(Build([select])));
+
+        static IEnumerable<string?> Options(JsonObject document) =>
+            Component(document, "profile")["options"]!.AsArray().Select(n => (string?)n);
     }
 
     [Fact]

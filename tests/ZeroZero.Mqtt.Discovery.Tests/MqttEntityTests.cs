@@ -64,6 +64,35 @@ public class MqttEntityTests
     }
 
     [Fact]
+    public void AReadingIsTakenEveryTimeItIsAsked()
+    {
+        // Every publish pass reads the entity again. A reading held on to would put a value on the
+        // topic that stopped being true and never changed back.
+        int reads = 0;
+        var sensor = new MqttSensor
+        {
+            EntityId = "cpu_load",
+            Name = "CPU load",
+            Read = () => (++reads).ToString(),
+        };
+
+        Assert.Equal("1", sensor.ReadState());
+        Assert.Equal("2", sensor.ReadState());
+        Assert.Equal("3", MqttEntitySet.Channels([sensor])[0].Payload());
+    }
+
+    [Fact]
+    public void AReadingThatGoesAbsentEmptiesTheTopicAgain()
+    {
+        string? reading = "12";
+        var sensor = new MqttSensor { EntityId = "cpu_load", Name = "CPU load", Read = () => reading };
+
+        Assert.Equal("12", sensor.ReadState());
+        reading = null;
+        Assert.Null(sensor.ReadState());
+    }
+
+    [Fact]
     public void ABinarySensorPublishesTheDeclaredPair()
     {
         Assert.Equal("ON", Sample.BinarySensor(read: () => true).ReadState());
@@ -132,13 +161,19 @@ public class MqttEntityTests
     [Fact]
     public void ASelectsOptionsAreReadEveryTimeTheyAreAsked()
     {
-        List<string> options = ["Office"];
-        var select = Sample.Select(options: () => options);
+        // A fresh list each time, not the same one mutated: a consumer composing its options from
+        // what the machine currently holds hands back a new list on every call, and an implementation
+        // that held on to the first one would never see a second.
+        int reads = 0;
+        IReadOnlyList<string> options = ["Office"];
+        var select = Sample.Select(options: () => { reads++; return options; });
 
         Assert.Contains("Office", select.PublishedOptions());
 
-        options.Add("Home");
+        options = ["Home"];
         Assert.Contains("Home", select.PublishedOptions());
+        Assert.DoesNotContain("Office", select.PublishedOptions());
+        Assert.Equal(3, reads);
     }
 
     [Fact]
