@@ -56,8 +56,9 @@ public static class DiscoveryDeclaration
         foreach (var entry in retired)
         {
             // Same component and same id is one config topic with two owners. The eviction lands
-            // before the document, so the receiver would delete and immediately recreate: nothing
-            // looks broken, and whatever the user set on the entity is gone.
+            // before the document, so the receiver deletes and immediately recreates on every pass
+            // that runs it — invisible from here, and it loses the user's chosen entity id outright if
+            // anything claims that id in the gap.
             if (entities.Find(entry.EntityId) is { } live
                 && string.Equals(live.Platform, entry.Component, StringComparison.Ordinal))
                 return $"Retired entity '{entry.Component}/{entry.EntityId}' is also a live entity, and "

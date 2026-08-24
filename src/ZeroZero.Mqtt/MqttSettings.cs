@@ -44,6 +44,9 @@ public sealed class MqttSettings
     /// segment below the root. Empty = derived from the topic root and the machine name; changing it
     /// evicts the old id's retained topics so a consumer deletes the previous device instead of
     /// ghosting it.</summary>
+    /// <remarks>It has to be unique across every installation publishing to the one broker, and
+    /// nothing local can check that — see <see cref="MqttIdentity.Validate"/>. The machine-name
+    /// default is unique by construction.</remarks>
     public string DeviceId { get; set; } = "";
 
     /// <summary>Empty = the application's own default, from

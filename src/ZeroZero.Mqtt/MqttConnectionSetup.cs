@@ -21,9 +21,9 @@ public interface IMqttConnectionListener
     /// <summary>Runs when the device is being removed outright, before the connection empties its own
     /// retained topics.</summary>
     /// <remarks>Reached only from <see cref="MqttConnection.RemoveDeviceAsync"/>. Never from switching
-    /// publishing off, and never from a configuration that has stopped being complete: this deletes
-    /// the receiver's registry entries, and with them every name, entity id and area the user chose,
-    /// so it happens because somebody asked for it and for no other reason.</remarks>
+    /// publishing off, and never from a configuration that has stopped being complete: this takes the
+    /// device off the receiver entirely, so it happens because somebody asked for it and for no other
+    /// reason.</remarks>
     Task OnRemovingAsync(IMqttPublisher publisher, MqttDeviceIdentity identity, CancellationToken ct);
 
     /// <summary>Runs for an identity that has been superseded, so nothing it owned is left retained.</summary>

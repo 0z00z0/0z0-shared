@@ -128,8 +128,8 @@ public interface IDiscoveryLedgerStore
 
 /// <summary>The ledger for the life of the process and no longer. The deliberate opt-out, never a
 /// default: without a durable store an entity removed while the application was closed is never
-/// evicted, a retirement is replayed on every start, and a migration is replayed as a retirement —
-/// which destroys the registry entry the migration existed to preserve.</summary>
+/// evicted, a retirement is replayed on every start, and a migration is replayed as a retirement,
+/// which removes what the handover kept.</summary>
 /// <remarks>Right for a test, and for a host that genuinely has nowhere to write.
 /// <see cref="DiscoveryLedgerFile.In"/> is one line and has none of these properties.</remarks>
 public sealed class TransientLedgerStore : IDiscoveryLedgerStore

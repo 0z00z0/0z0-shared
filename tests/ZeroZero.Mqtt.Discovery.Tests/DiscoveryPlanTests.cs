@@ -114,9 +114,9 @@ public class DiscoveryPlanTests
     [Fact]
     public void AWithheldEntityKeepsItsWholeComponentAndIsAnnouncedUnavailable()
     {
-        // A group switched off and an Include gone false are reversible, and a checkbox that commits
-        // at once must not announce a permanent removal. The component stays whole — every key the
-        // receiver files it by — and an availability topic of its own says it is not reporting.
+        // A group switched off and an Include gone false are reversible, and a reversible action
+        // must not be announced as a removal. The component stays whole — every key the receiver
+        // files it by — and an availability topic of its own says it is not reporting.
         var pass = Announce(
             LedgerWith(Recorded("cpu_load"), Recorded("gpu_load")),
             [Sample.Sensor("cpu_load")],
@@ -259,7 +259,7 @@ public class DiscoveryPlanTests
     {
         // The prefix decides where the document is written and nothing else: every unique id, the
         // availability topic and every state topic are composed without it. Abandoning on it would
-        // empty the live device's own topics and rebuild its entities from nothing.
+        // empty the live device's own availability and every current value under it.
         var pass = Announce(
             LedgerWith(Recorded("cpu_load")),
             [Sample.Sensor()],
@@ -303,9 +303,9 @@ public class DiscoveryPlanTests
     [Fact]
     public void ARetirementHappensOnceAndIsWrittenDownAsATopic()
     {
-        // Repeated on every connect it would undo a rename after every network blip, resume and
-        // receiver restart. Recorded as the composed topic, component segment and all, because that
-        // is the thing that was emptied.
+        // Repeated on every connect it costs a publish each time and re-runs a removal against a
+        // path a consumer may since have started using again. Recorded as the composed topic,
+        // component segment and all, because that is the thing that was emptied.
         var retired = new[] { new RetiredEntity("sensor", "old_name") };
         string topic = DiscoveryTopics.Component(Sample.Prefix, "sensor", Sample.DeviceId, "old_name");
 

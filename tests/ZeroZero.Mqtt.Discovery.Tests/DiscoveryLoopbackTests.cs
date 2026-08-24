@@ -159,8 +159,8 @@ public class DiscoveryLoopbackTests
     [Fact]
     public async Task SwitchingPublishingOffLeavesTheDeviceStandingAsOffline()
     {
-        // A settings switch, not a deletion. Removing the device here would take every registry entry
-        // with it — the names, the entity ids, the areas — on an action the user reads as "pause".
+        // A settings switch, not a deletion. Removing the device here would take it off the receiver
+        // altogether on an action the user reads as "pause".
         using var broker = new FakeBroker();
         var (connection, publisher) = await ConnectAsync(
             broker, new MqttEntitySet([Sample.Sensor(), Sample.Button()]));

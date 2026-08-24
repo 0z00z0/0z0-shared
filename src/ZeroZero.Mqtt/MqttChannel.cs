@@ -9,6 +9,10 @@ public enum MqttPayloadStatus
 
     /// <summary>No current reading. The topic is emptied, so a consumer connecting later sees
     /// nothing rather than a value of unknown age.</summary>
+    /// <remarks>Reached only for a channel whose payload function has nothing to hand back. An entity
+    /// declared through the discovery layer answers with its own reset literal instead, because a
+    /// receiver ignores a zero-length payload on most platforms and goes on showing the last value —
+    /// so the emptied topic would say nothing at all there.</remarks>
     None,
 
     /// <summary>The payload function threw. Nothing is known about the current value, so the last

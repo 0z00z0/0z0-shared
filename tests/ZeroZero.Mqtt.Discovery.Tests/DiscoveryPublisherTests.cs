@@ -99,9 +99,9 @@ public class DiscoveryPublisherTests
     [Fact]
     public async Task ARetirementIsMadeOnTheFirstConnectAndNotOnEveryOneAfterIt()
     {
-        // Repeated on every connect it would undo a rename after every network blip, resume and
-        // receiver restart — and the eviction lands before the document, so the receiver deletes and
-        // immediately recreates and nothing looks broken.
+        // Repeated on every connect it costs a publish after every network blip, resume and receiver
+        // restart, and re-runs a removal against a path a consumer may since have started using
+        // again. The eviction lands before the document, so nothing local ever shows it happening.
         string topic = DiscoveryTopics.Component(Sample.Prefix, "switch", Sample.DeviceId, "old_name");
         using var harness = new Harness(
             new MqttEntitySet([Sample.Sensor()]), retired: [new RetiredEntity("switch", "old_name")]);
@@ -162,11 +162,24 @@ public class DiscoveryPublisherTests
     }
 
     [Fact]
-    public void AnEntityMayNotBeBothRetiredAndMigrating() =>
-        Assert.Throws<ArgumentException>(() => new Harness(
+    public void AnEntityMayNotBeBothRetiredAndMigrating()
+    {
+        // Neither is a live entity, so this is refused on the contradiction alone: one declaration
+        // empties the topic the other hands over, and the two intents cannot both be honoured.
+        var error = Assert.Throws<ArgumentException>(() => new Harness(
             new MqttEntitySet([Sample.Sensor()]),
-            retired: [new RetiredEntity("sensor", "cpu_load")],
-            migrating: [new MigratingEntity("sensor", "cpu_load")]));
+            retired: [new RetiredEntity("sensor", "old_name")],
+            migrating: [new MigratingEntity("sensor", "old_name")]));
+
+        Assert.Contains("old_name", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheSamePairUnderDifferentComponentsIsNotAContradiction() =>
+        Assert.NotNull(new Harness(
+            new MqttEntitySet([Sample.Sensor()]),
+            retired: [new RetiredEntity("binary_sensor", "old_name")],
+            migrating: [new MigratingEntity("switch", "old_name")]));
 
     [Fact]
     public async Task AMigrationHandsTheOldTopicOverBeforeTheDocumentAndClearsItAfter()
@@ -191,8 +204,8 @@ public class DiscoveryPublisherTests
     [Fact]
     public async Task AMigrationIsNotReplayedAsARetirementAfterARestart()
     {
-        // The consumer this lands in restarts at every reboot, every update and every watchdog
-        // restart, so "someone restarts after migrating" describes every user within a day or two.
+        // The two write one topic with opposite intent, and the consumer this lands in restarts at
+        // every reboot, every update and every watchdog restart — so a replay would be the rule.
         string topic = DiscoveryTopics.Component(Sample.Prefix, "sensor", Sample.DeviceId, "cpu_load");
         var ledger = new RecordingLedgerStore();
         var migrating = new[] { new MigratingEntity("sensor", "cpu_load") };
@@ -339,9 +352,9 @@ public class DiscoveryPublisherTests
     [Fact]
     public async Task AGroupSwitchedOffLeavesItsEntitiesUnavailableNotRemoved()
     {
-        // A settings checkbox that commits at once. Announcing a removal would take the receiver's
-        // entry with it, and re-ticking would return the entity with a default name, a default entity
-        // id and no area.
+        // A settings checkbox that commits at once. Announcing a removal takes the entity off the
+        // device page until it is re-ticked, and gives up the user's chosen entity id for good if
+        // anything claims it in the gap.
         using var harness = new Harness(
             new MqttEntitySet([Sample.Sensor("cpu_load"), Sample.Sensor("gpu_load", group: "metrics")]),
             groups: new PublishGroup("metrics", "Metrics"));
@@ -454,6 +467,24 @@ public class DiscoveryPublisherTests
 
         Assert.Equal(0, harness.Ledger.Writes);
         Assert.Empty(harness.Ledger.Read().Devices);
+    }
+
+    [Fact]
+    public async Task ADocumentThatDidNotLandHoldsBackTheSweepBehindIt()
+    {
+        // Everything in the sweep removes something the new document is meant to have taken over
+        // first. Sent after a document that never arrived, it removes without replacing.
+        using var harness = new Harness(
+            new MqttEntitySet([Sample.Sensor("cpu_load"), Sample.Sensor("gpu_load")]));
+        await harness.ConnectAsync();
+        harness.Broker.Forget();
+        harness.Broker.Refuses = topic => topic == Sample.ConfigTopic;
+        int writes = harness.Ledger.Writes;
+
+        await harness.Publisher.SetEntitiesAsync(new MqttEntitySet([Sample.Sensor("cpu_load")]));
+
+        Assert.Equal(0, harness.Broker.CountOn(Sample.State("gpu_load")));
+        Assert.Equal(writes, harness.Ledger.Writes);
     }
 
     [Fact]

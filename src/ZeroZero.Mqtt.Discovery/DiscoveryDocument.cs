@@ -12,10 +12,13 @@ namespace ZeroZero.Mqtt.Discovery;
 /// entities is announced in a single retained publish.</para>
 /// <para>A component is removed by writing it with only its platform key. Leaving it out of a later
 /// document does not remove it — the receiver keeps what it already has — so removal is something the
-/// document says, not something it omits. Removal is permanent: it takes the receiver's registry entry
-/// with it, and with that the name, the entity id and the area the user chose. Only an entity the
-/// entity table no longer contains is written that way; one that is merely not being published now
-/// keeps its whole entry and is pointed at an availability topic that says offline.</para>
+/// document says, not something it omits.</para>
+/// <para>Removal is reserved for an entity the entity table no longer contains. A receiver files what
+/// the user set against the unique id and gives it back if the entity returns, so a removal is churn
+/// rather than loss — with one exception: the chosen entity id comes back only while nothing else has
+/// claimed it meanwhile. An entity that is merely not being published right now therefore keeps its
+/// whole entry and is pointed at an availability topic that says offline, which also keeps it on the
+/// device's own page instead of making it disappear and reappear as a checkbox moves.</para>
 /// </remarks>
 public static class DiscoveryDocument
 {

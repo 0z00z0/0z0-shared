@@ -23,11 +23,14 @@ internal sealed record DiscoveryPass(
 /// entity lists go in, the messages and the next ledger come out.</summary>
 /// <remarks>
 /// An entity stops being published for reasons that mean entirely different things to a receiver, and
-/// the record carries which: <b>deleted</b> is gone from the entity table and is removed permanently;
+/// the record carries which: <b>deleted</b> is gone from the entity table and is removed;
 /// <b>withheld</b> is a group switched off or an <see cref="MqttEntity.Include"/> currently false, is
 /// reversible, and is announced unavailable rather than removed; <b>migrating</b> is an item handed
-/// over from single-component discovery with its settings intact; <b>retired</b> is an id the consumer
-/// declares no longer exists anywhere.
+/// over from single-component discovery; <b>retired</b> is an id the consumer declares no longer
+/// exists anywhere.
+/// <para>The distinction is about saying what is true, not about rescuing anything. A receiver files
+/// what the user set against the unique id and gives it back when the entity returns, so nothing here
+/// restores, re-attaches or reconciles on its behalf.</para>
 /// </remarks>
 internal static class DiscoveryPlan
 {
@@ -55,9 +58,9 @@ internal static class DiscoveryPlan
         var sweep = new List<MqttMessage>();
 
         // Identity is the device id, not the address the document sits at. A moved discovery prefix
-        // leaves every unique id, the availability topic and every state topic exactly where they were,
-        // so abandoning on it would empty the live device's own topics and delete a registry the new
-        // document then rebuilds from nothing.
+        // leaves every unique id, the availability topic and every state topic exactly where they
+        // were, so abandoning on it would empty the live device's own topics — the availability the
+        // will owns and every current value — and take the device off the receiver on the way past.
         foreach (var abandoned in next.Devices
             .Where(d => !string.Equals(d.DeviceId, identity.DeviceId, StringComparison.Ordinal))
             .ToList())

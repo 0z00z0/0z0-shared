@@ -932,8 +932,8 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     }
 
     /// <summary>Removes the device from the broker and then stops: the document, the availability
-    /// topics, every value and every command topic. Explicit and separate, because it deletes the
-    /// receiver's registry entries along with the names, entity ids and areas the user chose.</summary>
+    /// topics, every value and every command topic. Explicit and separate, because it takes the whole
+    /// device off the receiver, which nothing a user does to the settings should.</summary>
     /// <returns>False when there was no live link to do it over, so nothing was removed.</returns>
     public async Task<bool> RemoveDeviceAsync(CancellationToken ct = default)
     {

@@ -13,6 +13,8 @@ public sealed class MqttButton : MqttCommandEntity
 
     public override bool HasState => false;
 
+    /// <summary>Never reached: a button declares no state topic, so there is nothing to say an
+    /// absent reading on.</summary>
     public override string? NoValuePayload => null;
 
     /// <summary>What the press does.</summary>

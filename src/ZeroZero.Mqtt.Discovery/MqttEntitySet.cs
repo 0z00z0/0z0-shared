@@ -57,6 +57,9 @@ public sealed class MqttEntitySet
     /// stopped publishing but has not stopped existing, so one already announced stays in the document
     /// and is shown unavailable rather than removed. Without it, a group toggle and a deletion are the
     /// same thing to a receiver — and a group toggle is a settings checkbox that commits at once.</remarks>
+    /// <remarks>An entity whose capability could not be read counts as withheld here, because this
+    /// is the plain complement and has no record to consult. A pass uses <see cref="Resolve"/>
+    /// instead, which does.</remarks>
     public IReadOnlyList<MqttEntity> Withheld(PublishGroupSnapshot? groups) =>
         [.. _all.Where(e => e.IsPublished(groups) != true)];
 

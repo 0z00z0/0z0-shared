@@ -136,8 +136,8 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
     public Task RepublishAsync(CancellationToken ct = default) => AnnounceAsync(force: false, ct);
 
     /// <summary>Removes the device outright: the document, the availability topics and every value.
-    /// Deliberately explicit, and never what switching publishing off does — this deletes the
-    /// receiver's registry entries, and with them every name, entity id and area the user chose.</summary>
+    /// Deliberately explicit, and never what switching publishing off does — this takes the whole
+    /// device off the receiver.</summary>
     public Task RemoveDeviceAsync(CancellationToken ct = default)
     {
         var (publisher, identity) = Target();
