@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0, matching the project under test. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Mqtt.Discovery.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ZeroZero.Mqtt.Discovery\ZeroZero.Mqtt.Discovery.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The end-to-end test drives a real connection at a loopback listener, and the smallest MQTT
+         server that can hold a session already exists next door. Linked rather than copied: two of
+         them would drift, and the wire is the one thing both suites are asserting about. -->
+    <Compile Include="..\ZeroZero.Mqtt.Tests\FakeBroker.cs" Link="FakeBroker.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+</Project>

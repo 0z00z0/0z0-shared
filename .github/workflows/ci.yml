@@ -40,3 +40,7 @@ jobs:
       # beyond the loopback interface — no broker, and no outbound network.
       - name: Unit tests — ZeroZero.Mqtt
         run: dotnet test tests\ZeroZero.Mqtt.Tests\ZeroZero.Mqtt.Tests.csproj -c Release --no-build --nologo
+
+      # Drives the same loopback listener, one layer up.
+      - name: Unit tests — ZeroZero.Mqtt.Discovery
+        run: dotnet test tests\ZeroZero.Mqtt.Discovery.Tests\ZeroZero.Mqtt.Discovery.Tests.csproj -c Release --no-build --nologo

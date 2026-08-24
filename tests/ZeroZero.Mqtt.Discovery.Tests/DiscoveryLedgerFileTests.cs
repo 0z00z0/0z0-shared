@@ -1,0 +1,133 @@
+using Xunit;
+using ZeroZero.Config;
+
+namespace ZeroZero.Mqtt.Discovery.Tests;
+
+/// <summary>The record on disk. What makes eviction survive a restart is that a second process reads
+/// back what the first one wrote, so that round trip is asserted rather than assumed.</summary>
+public class DiscoveryLedgerFileTests : IDisposable
+{
+    private readonly string _directory =
+        Path.Combine(Path.GetTempPath(), "zz-discovery-" + Guid.NewGuid().ToString("N"));
+
+    public DiscoveryLedgerFileTests() => Directory.CreateDirectory(_directory);
+
+    public void Dispose()
+    {
+        try { Directory.Delete(_directory, recursive: true); } catch (IOException) { }
+    }
+
+    [Fact]
+    public void TheModuleOwnsTheNameAndTheHostOwnsTheDirectory()
+    {
+        var ledger = DiscoveryLedgerFile.In(_directory);
+
+        Assert.Equal(
+            Path.Combine(_directory, DiscoveryLedgerFile.DefaultFileName), ledger.FilePath);
+    }
+
+    [Fact]
+    public void AFreshDirectoryHasNothingRecorded() =>
+        Assert.Empty(DiscoveryLedgerFile.In(_directory).Read().Devices);
+
+    [Fact]
+    public void WhatOneRunWroteTheNextRunReads()
+    {
+        DiscoveryLedgerFile.In(_directory).Update(ledger => ledger.Devices.Add(new PublishedDevice
+        {
+            ConfigTopic = Sample.ConfigTopic,
+            AvailabilityTopic = Sample.Availability,
+            Entities =
+            [
+                new PublishedEntity
+                {
+                    EntityId = "vm_alpha", Platform = "sensor", StateTopic = Sample.State("vm_alpha"),
+                },
+            ],
+        }));
+
+        var reopened = DiscoveryLedgerFile.In(_directory).Read().Find(Sample.ConfigTopic);
+
+        Assert.NotNull(reopened);
+        Assert.Equal(Sample.Availability, reopened.AvailabilityTopic);
+        Assert.Equal("vm_alpha", reopened.Entities.Single().EntityId);
+        Assert.Equal(Sample.State("vm_alpha"), reopened.Entities.Single().StateTopic);
+    }
+
+    [Fact]
+    public void ReadHandsBackASnapshot()
+    {
+        var store = DiscoveryLedgerFile.In(_directory);
+        store.Update(ledger => ledger.Devices.Add(new PublishedDevice { ConfigTopic = Sample.ConfigTopic }));
+
+        store.Read().Devices.Clear();
+
+        Assert.Single(store.Read().Devices);
+    }
+
+    [Fact]
+    public void TheRecordSitsBesideTheBrokerSettingsRatherThanInsideThem()
+    {
+        // What was published is state the layer discovers. Writing it as a setting would make a
+        // successful announcement look like a settings change to anything listening for one.
+        Assert.NotEqual(MqttSettingsFile.DefaultFileName, DiscoveryLedgerFile.DefaultFileName);
+    }
+
+    [Fact]
+    public void AnUnreadableFileFallsBackToNothingRecordedRatherThanThrowing()
+    {
+        File.WriteAllText(Path.Combine(_directory, DiscoveryLedgerFile.DefaultFileName), "{ not json");
+
+        var store = new DiscoveryLedgerFile(
+            new SettingsFileOptions(_directory, DiscoveryLedgerFile.DefaultFileName));
+
+        Assert.Empty(store.Read().Devices);
+    }
+}
+
+/// <summary>The default store, and the one configuration in which eviction does not survive a
+/// restart.</summary>
+public class TransientLedgerStoreTests
+{
+    [Fact]
+    public void ItRemembersWithinTheProcess()
+    {
+        var store = new TransientLedgerStore();
+        store.Update(ledger => ledger.Devices.Add(new PublishedDevice { ConfigTopic = Sample.ConfigTopic }));
+
+        Assert.NotNull(store.Read().Find(Sample.ConfigTopic));
+    }
+
+    [Fact]
+    public void ReadHandsBackASnapshot()
+    {
+        var store = new TransientLedgerStore();
+        store.Update(ledger => ledger.Devices.Add(new PublishedDevice { ConfigTopic = Sample.ConfigTopic }));
+
+        store.Read().Devices.Clear();
+
+        Assert.Single(store.Read().Devices);
+    }
+
+    [Fact]
+    public void ACopyIsDeepEnoughToBeOne()
+    {
+        var ledger = new DiscoveryLedger
+        {
+            Devices =
+            [
+                new PublishedDevice
+                {
+                    ConfigTopic = Sample.ConfigTopic,
+                    Entities = [new PublishedEntity { EntityId = "cpu_load" }],
+                },
+            ],
+        };
+
+        var copy = ledger.Copy();
+        copy.Devices[0].Entities[0].EntityId = "changed";
+        copy.Devices[0].Entities.Add(new PublishedEntity { EntityId = "extra" });
+
+        Assert.Equal("cpu_load", ledger.Devices[0].Entities.Single().EntityId);
+    }
+}
