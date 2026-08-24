@@ -1,12 +1,11 @@
 # Launches the BrandAboutWindow test harness and captures WINDOW-ONLY screenshots of both hosting
-# scenarios it now opens — the tray-app popup (BrandAboutWindow) and the hosted-control demo
+# scenarios it opens — the tray-app popup (BrandAboutWindow) and the hosted-control demo
 # (BrandAboutControl embedded in a plain window, simulating M365Migrator's in-nav About page) — to
-# docs\screenshots\. The popup capture keeps the original "about-window.png" filename the README
-# embeds; the hosted-control capture is new.
+# docs\screenshots\, under the filenames the README embeds.
 #
 # Window-aware capture (PrintWindow + PW_RENDERFULLCONTENT) pulls each window's own composited
 # bitmap straight from DWM — so the translucent Mica backdrop resolves cleanly and no desktop
-# content bleeds through behind/around the dialog. A plain screen-region grab would capture
+# content bleeds through behind/around the dialogue. A plain screen-region grab would capture
 # whatever sits behind the window instead.
 #
 # The two windows are told apart by their AppWindow title (set in App.xaml.cs even though
@@ -16,12 +15,23 @@
 $ErrorActionPreference = "Stop"
 
 $harnessDir = Join-Path $PSScriptRoot "src\ZeroZero.Brand.WinUI.TestHarness"
-$exePath    = Join-Path $harnessDir "bin\Debug\net10.0-windows10.0.26100.0\win-x64\ZeroZero.Brand.WinUI.TestHarness.exe"
 $outDir     = Join-Path $PSScriptRoot "docs\screenshots"
 
-if (-not (Test-Path $exePath)) {
+# The harness csproj derives its RuntimeIdentifier from the running process architecture, so the
+# output folder is win-x64 on x64 and win-arm64 on arm64. Locate the exe instead of assuming one.
+function Resolve-HarnessExe {
+    Get-ChildItem -Path (Join-Path $harnessDir "bin\Debug") -Filter "ZeroZero.Brand.WinUI.TestHarness.exe" `
+                  -Recurse -File -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1 -ExpandProperty FullName
+}
+
+$exePath = Resolve-HarnessExe
+if (-not $exePath) {
     Write-Host "Building test harness..."
     dotnet build $harnessDir
+    $exePath = Resolve-HarnessExe
+    if (-not $exePath) { throw "Test harness exe not found under $harnessDir\bin\Debug." }
 }
 
 Add-Type -TypeDefinition @'
@@ -67,8 +77,8 @@ Add-Type -AssemblyName System.Drawing
 [AboutCapture]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
 
 # Maps a window's AppWindow title (set in App.xaml.cs) to the screenshot file it should produce.
-# "about-window.png" is the original filename the README embeds — kept stable so that reference
-# doesn't break as this script grows a second scenario.
+# Both filenames are embedded by the README, so they are fixed; a title with no mapping falls back
+# to a slug of its own.
 $titleToFile = @{
     "Window Mode"        = "about-window.png"
     "Hosted Control Demo" = "about-hosted-control.png"
