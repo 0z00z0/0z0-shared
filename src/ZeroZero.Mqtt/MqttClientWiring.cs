@@ -6,9 +6,11 @@ namespace ZeroZero.Mqtt;
 /// <summary>Whether one encrypted attempt ever saw a certificate. A far end that presented one speaks
 /// TLS and something is wrong with its certificate; a far end that presented none does not speak TLS
 /// on that port at all, and only the second may be retried in clear text.</summary>
-/// <remarks>Recorded rather than inferred from the exception: both failures arrive as an
-/// authentication failure, and the wording that would separate them comes from the platform and is
-/// translated. Written from the validation callback, which runs on the handshake's thread.</remarks>
+/// <remarks>Recorded rather than inferred from the exception: a broker with no TLS on its port hangs
+/// up on the ClientHello and one with a bad certificate fails the handshake, and both reach the
+/// client as an ordinary communication failure carrying an end of stream, a reset or a stall. The
+/// wording that would separate them comes from the platform and is translated. Written from the
+/// validation callback, which runs on the handshake's thread.</remarks>
 internal sealed class MqttHandshakeWitness
 {
     private int _presented;

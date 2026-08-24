@@ -53,9 +53,25 @@ public class MqttProbeClassifierTests
         Assert.Equal(MqttProbeOutcome.TimedOut,
             MqttProbe.ClassifySocketError(SocketError.TimedOut).Outcome);
 
+    /// <summary>Stands in for the client library's own communication exception: an ordinary wrapper
+    /// carrying neither a socket error nor an authentication failure. No client-library type is
+    /// referenced here on purpose — the module's types stand in front of that library, and what the
+    /// classifier can see of the wrapper is only that it is neither of the two it used to require.</summary>
+    private sealed class CommunicationException(string message, Exception inner)
+        : Exception(message, inner);
+
+    /// <summary>The failure a broker with no TLS on its port produces against a ClientHello, as
+    /// measured against a real one: it reads the handshake as a malformed packet, closes the socket,
+    /// and the client reports the end of the stream. Nothing in the chain names TLS at all.</summary>
+    private static Exception HungUpOnTheClientHello() =>
+        new CommunicationException("connect failed",
+            new IOException("Received an unexpected EOF or 0 bytes from the transport stream."));
+
     [Fact]
-    public void ClassifyConnectException_ReadsAHandshakeFailureAsItsOwnVerdict()
+    public void ClassifyConnectException_ReadsAnAuthenticationFailureWithNoWitnessAsATrustProblem()
     {
+        // No witness was attached, so the only thing left to go on is that the failure was raised
+        // where a certificate is checked.
         var wrapped = new InvalidOperationException("connect failed",
             new AuthenticationException("The remote certificate is invalid."));
 
@@ -64,41 +80,87 @@ public class MqttProbeClassifierTests
     }
 
     [Fact]
-    public void ClassifyConnectException_TellsANonTlsListenerFromAnUntrustedCertificate()
+    public void ClassifyConnectException_SeparatesTheTwoTlsFailuresOnTheCertificateAlone()
     {
-        // The same exception both ways round: what separates them is whether the far end ever
+        // The same failure both ways round: what separates them is whether the far end ever
         // presented a certificate, which the exception cannot say and the handshake can.
-        var wrapped = new InvalidOperationException("connect failed",
-            new AuthenticationException("Authentication failed."));
+        var hangUp = HungUpOnTheClientHello();
 
         Assert.Equal(MqttProbeOutcome.TlsUntrusted,
-            MqttProbe.ClassifyConnectException(wrapped, CancellationToken.None, certificatePresented: true).Outcome);
+            MqttProbe.ClassifyConnectException(hangUp, CancellationToken.None, certificatePresented: true).Outcome);
         Assert.Equal(MqttProbeOutcome.TlsUnsupported,
-            MqttProbe.ClassifyConnectException(wrapped, CancellationToken.None, certificatePresented: false).Outcome);
+            MqttProbe.ClassifyConnectException(hangUp, CancellationToken.None, certificatePresented: false).Outcome);
     }
 
     [Fact]
-    public void ClassifyConnectException_ReadsAHangUpOnTheClientHelloAsNoTlsThere()
+    public void ClassifyConnectException_ReadsAClosedSocketOnTheClientHelloAsNoTlsThere()
     {
-        // A plain broker reads a ClientHello as a malformed packet and closes, so the failure arrives
-        // as a reset rather than as an authentication failure. No certificate was seen, so nothing
-        // secure was on offer.
-        var reset = new InvalidOperationException("connect failed",
-            new SocketException((int)SocketError.ConnectionReset));
+        // The measured case, and the one that kept an ordinary internal broker on 1883 unreachable:
+        // the chain carries no socket error and no authentication failure, so a verdict resting on
+        // either type falls through to a generic failure and blocks the clear-text retry.
+        Assert.Equal(MqttProbeOutcome.TlsUnsupported,
+            MqttProbe.ClassifyConnectException(
+                HungUpOnTheClientHello(), CancellationToken.None, certificatePresented: false).Outcome);
+    }
+
+    [Theory]
+    [InlineData(SocketError.ConnectionReset)]
+    [InlineData(SocketError.ConnectionAborted)]
+    public void ClassifyConnectException_ReadsATornDownSocketOnTheClientHelloAsNoTlsThere(SocketError error)
+    {
+        // Some far ends abort the connection instead of closing it cleanly. Same answer: the socket
+        // had already been established, and no certificate arrived over it.
+        var torn = new CommunicationException("connect failed", new SocketException((int)error));
 
         Assert.Equal(MqttProbeOutcome.TlsUnsupported,
-            MqttProbe.ClassifyConnectException(reset, CancellationToken.None, certificatePresented: false).Outcome);
+            MqttProbe.ClassifyConnectException(torn, CancellationToken.None, certificatePresented: false).Outcome);
     }
 
     [Fact]
-    public void ClassifyConnectException_KeepsAnOsVerdictAboutTheAddressWhateverTheHandshakeSaw()
+    public void ClassifyConnectException_ReadsAStalledHandshakeAsNoTlsThere()
     {
-        // "Nothing is listening" is about the address, not about what the address speaks.
-        var refused = new InvalidOperationException("connect failed",
-            new SocketException((int)SocketError.ConnectionRefused));
+        // A far end that takes the ClientHello and answers nothing, reported by the client's own
+        // timeout rather than by the OS. Nothing secure was on offer, so the retry stays open.
+        var stalled = new CommunicationException(
+            "connect failed", new TimeoutException("The operation has timed out."));
 
-        Assert.Equal(MqttProbeOutcome.Unreachable,
-            MqttProbe.ClassifyConnectException(refused, CancellationToken.None, certificatePresented: false).Outcome);
+        Assert.Equal(MqttProbeOutcome.TlsUnsupported,
+            MqttProbe.ClassifyConnectException(stalled, CancellationToken.None, certificatePresented: false).Outcome);
+    }
+
+    [Fact]
+    public void ClassifyConnectException_NeverReadsAPlainAttemptsFailureAsATlsVerdict()
+    {
+        // No witness means the attempt asked for no encryption, so neither TLS verdict can apply to
+        // it however the failure arrived.
+        Assert.Equal(MqttProbeOutcome.Failed,
+            MqttProbe.ClassifyConnectException(HungUpOnTheClientHello(), CancellationToken.None).Outcome);
+    }
+
+    [Theory]
+    [InlineData(SocketError.ConnectionRefused, MqttProbeOutcome.Unreachable)]
+    [InlineData(SocketError.HostNotFound, MqttProbeOutcome.Unreachable)]
+    [InlineData(SocketError.TimedOut, MqttProbeOutcome.TimedOut)]
+    public void ClassifyConnectException_KeepsAnOsVerdictAboutTheAddressWhateverTheWitnessSaw(
+        SocketError error, MqttProbeOutcome expected)
+    {
+        // These are the failures of an attempt whose handshake never began, so an absent certificate
+        // says nothing about them. Reading them as "no TLS there" would turn a filtered port into a
+        // licence to retry in clear text.
+        var os = new CommunicationException("connect failed", new SocketException((int)error));
+
+        Assert.Equal(expected,
+            MqttProbe.ClassifyConnectException(os, CancellationToken.None, certificatePresented: false).Outcome);
+    }
+
+    [Fact]
+    public void ClassifyConnectException_LeavesAnExpiredBudgetAsNoAnswerRatherThanNoTlsThere()
+    {
+        // A budget that ran out cannot say whether a handshake ever began, so it keeps its own
+        // verdict — which blocks the downgrade, the safe side of an unanswerable question.
+        Assert.Equal(MqttProbeOutcome.TimedOut,
+            MqttProbe.ClassifyConnectException(
+                new OperationCanceledException(), CancellationToken.None, certificatePresented: false).Outcome);
     }
 
     [Fact]

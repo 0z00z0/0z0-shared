@@ -63,6 +63,10 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
 
     private CancellationTokenSource? _cts;
 
+    // A second Dispose must be harmless, and a host that tears down explicitly and then disposes on
+    // exit makes it happen. Without the latch the second call cancels an already-disposed source.
+    private int _disposed;
+
     private static readonly TimeSpan KeepAlive = TimeSpan.FromSeconds(60);
 
     // Drop detection is event-driven (the client's disconnect event wakes the loop), so this is only
@@ -990,13 +994,15 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     // Keeps a thrown broker error from carrying the password into the log: type and message only.
     private static Exception Sanitise(Exception ex) => new($"{ex.GetType().Name}: {ex.Message}");
 
-    /// <summary>Tears the connection down. Synchronous and bounded on purpose.</summary>
+    /// <summary>Tears the connection down. Synchronous, bounded and idempotent on purpose.</summary>
     /// <remarks>Reached from a host's Exit command on the UI thread, so the teardown runs off it and
     /// inside a budget. The token expires before the wait does, so the wait ends because the work
     /// ended rather than with a QoS 1 publish still in flight into the client's own disposal, waiting
     /// on an acknowledgement a half-dead socket will never send.</remarks>
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
         try { _work.Writer.TryComplete(); } catch { /* already completed */ }
 
         var stopCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(750));

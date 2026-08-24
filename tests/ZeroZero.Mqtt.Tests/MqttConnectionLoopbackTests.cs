@@ -460,6 +460,38 @@ public class MqttConnectionLoopbackTests
     }
 
     [Fact]
+    public async Task AutomaticEncryptionAgainstAPlainBroker_ConnectsInClearText()
+    {
+        // The publisher, not only the connection check: what the defect cost was the live link to an
+        // ordinary internal broker, so the live link is what has to reach one. The broker hangs up on
+        // the encrypted attempt, and the plain candidate behind it is only tried if that hang-up is
+        // read as "nothing secure was on offer".
+        using var broker = new FakeBroker();
+        var parameters = Parameters(broker) with { EncryptionMode = MqttEncryptionMode.Auto };
+        MqttEndpointMemory? remembered = null;
+
+        using var connection = new MqttConnection(Setup(remember: m => remembered = m));
+        await connection.ApplyAsync(parameters);
+
+        Assert.True(await FakeBroker.WaitAsync(() => connection.IsConnected), "the connection never came up");
+        Assert.Equal(false, remembered?.Encrypted);
+        Assert.Equal(broker.Port, remembered?.Port);
+    }
+
+    [Fact]
+    public void DisposingTwiceIsHarmless()
+    {
+        // IDisposable requires it, and a host that tears down explicitly and then disposes on exit
+        // does it. The second call used to cancel an already-disposed cancellation source.
+        using var broker = new FakeBroker();
+        var connection = new MqttConnection(Setup());
+        connection.Apply(Parameters(broker));
+
+        connection.Dispose();
+        connection.Dispose();
+    }
+
+    [Fact]
     public void TeardownIsBoundedRatherThanOpenEnded()
     {
         // Reached from a host's Exit command on the UI thread, with a QoS 1 publish possibly in

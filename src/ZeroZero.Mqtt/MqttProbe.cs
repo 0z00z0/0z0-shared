@@ -208,12 +208,16 @@ public static class MqttProbe
     /// <param name="certificatePresented">Whether the far end presented a certificate during this
     /// attempt, or null when the attempt was not an encrypted one and the question does not arise.
     /// It is what separates the two TLS failures, and the separation cannot be made from the
-    /// exception: both arrive as an authentication failure, and the wording that would tell them
+    /// exception: the same close, reset or stall carries both, and the wording that would tell them
     /// apart is the platform's and is translated.</param>
     /// <remarks>
-    /// A TLS failure is looked for first and separately. It has no <see cref="SocketException"/>
-    /// inside it, so without its own verdict it lands on <see cref="MqttProbeOutcome.Failed"/> and is
-    /// indistinguishable from any other transport failure.
+    /// On an encrypted attempt the certificate is the whole verdict and the exception type carries
+    /// no weight. A broker that does not speak TLS on its port reads a ClientHello as a malformed
+    /// packet and closes the socket, and that arrives as a client-library communication exception
+    /// wrapping an end of stream — no <see cref="SocketException"/> and no authentication failure
+    /// anywhere in the chain. A reset, an abort and a stalled handshake reach here in as many other
+    /// shapes. Deciding on any of those types would leave the ordinary internal broker on 1883
+    /// unreachable under Automatic, which is what the witness exists to prevent.
     /// </remarks>
     public static MqttProbeResult ClassifyConnectException(
         Exception ex, CancellationToken ct, bool? certificatePresented = null)
@@ -229,18 +233,24 @@ public static class MqttProbe
             socket ??= e as SocketException;
         }
 
+        // Ahead of the witness deliberately: an expired budget cannot say whether a handshake ever
+        // began, so it keeps its own verdict rather than being read as an absent certificate.
         if (cancelled) return Cancelled(ct);
 
         // The OS saying there is nothing there, or nothing answering, stands on its own: it is about
-        // the address, not about what the address speaks.
+        // the address, not about what the address speaks. These are also the failures of an attempt
+        // whose handshake never started, so the witness has nothing to say about them and must not
+        // turn a filtered port into "no TLS there".
         if (socket is not null
             && ClassifySocketError(socket.SocketErrorCode) is
                { Outcome: MqttProbeOutcome.Unreachable or MqttProbeOutcome.TimedOut } reached)
             return reached;
 
-        // An encrypted attempt that got past the socket and no further. A far end that presented no
-        // certificate never offered encryption at all; one that did has something wrong with it.
-        if (certificatePresented is { } presented && (handshake || socket is not null))
+        // What is left of an encrypted attempt is a handshake that began and did not finish, and the
+        // certificate settles it: one that arrived means encryption was on offer and something is
+        // wrong with it; none means nothing secure was ever offered and no credential left the
+        // machine, so the plain retry behind this candidate is safe.
+        if (certificatePresented is { } presented)
             return new(
                 presented ? MqttProbeOutcome.TlsUntrusted : MqttProbeOutcome.TlsUnsupported,
                 Describe(ex));

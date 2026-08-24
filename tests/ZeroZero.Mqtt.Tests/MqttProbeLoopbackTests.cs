@@ -47,6 +47,29 @@ public class MqttProbeLoopbackTests
         Assert.Equal(MqttTransport.Tcp, report.Transport);
     }
 
+    /// <summary>Automatic encryption against a broker with no TLS on its port, which is the ordinary
+    /// internal broker on 1883. The encrypted attempt is hung up on, and everything then rests on
+    /// that hang-up being read as "nothing secure was on offer" rather than as a generic failure —
+    /// read the other way, the clear-text candidate behind it is never tried and the broker is
+    /// unreachable. Against a listener rather than a constructed exception, because the shape of the
+    /// failure is exactly what was got wrong.</summary>
+    [Fact]
+    public async Task AutomaticEncryptionAgainstAPlainBroker_RetriesInClearTextAndConnects()
+    {
+        using var broker = new FakeBroker();
+        var target = new MqttProbeTarget("127.0.0.1", broker.Port, "user", "placeholder",
+            ClientId: "exampleapp_probe", Transport: MqttTransportMode.Tcp,
+            Encryption: MqttEncryptionMode.Auto);
+
+        var report = await MqttProbe.RunAsync(target, CancellationToken.None);
+
+        Assert.Equal(2, report.Attempts.Count);
+        Assert.True(report.Attempts[0].Candidate.Encrypted);
+        Assert.Equal(MqttProbeOutcome.TlsUnsupported, report.Attempts[0].Outcome);
+        Assert.False(report.Attempts[1].Candidate.Encrypted);
+        Assert.True(report.Succeeded);
+    }
+
     /// <summary>Auto must actually try the second transport, not report the first one's failure as
     /// the whole answer. Nothing serves WebSocket on loopback either, so both attempts fail — what is
     /// asserted is that both were made and both are named. The port is pinned so the sweep is exactly

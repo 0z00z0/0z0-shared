@@ -16,7 +16,10 @@ public readonly record struct BrokerPublish(string Topic, string Payload, bool R
 /// carrying a refusal is treated as a failed publish. Both are properties of the bytes, and a fake
 /// client would assert only that the module calls the methods it calls.
 /// <para>It handles one connection at a time and drops a zero-byte one, because the encrypted
-/// candidate check opens and closes a socket before any MQTT is spoken.</para>
+/// candidate check opens and closes a socket before any MQTT is spoken. A malformed CONNECT is
+/// dropped the same way, which is what makes it a faithful stand-in for a broker with no TLS on its
+/// port: the ClientHello of an encrypted attempt is exactly that, and the hang-up it earns is the
+/// failure the clear-text retry has to be decided from.</para>
 /// </remarks>
 public sealed class FakeBroker : IDisposable
 {
@@ -115,6 +118,11 @@ public sealed class FakeBroker : IDisposable
             switch (header >> 4)
             {
                 case 1:
+                    // The reserved header flags of a CONNECT must be zero, and a broker closes the
+                    // socket on one where they are not rather than answering. That is what a TLS
+                    // ClientHello arriving on a plain port is from here: its first byte, 0x16, reads
+                    // as a CONNECT carrying flags 6.
+                    if ((header & 0x0F) != 0) { await DrainAsync(stream); return; }
                     Interlocked.Increment(ref _connects);
                     await WriteAsync(stream, ConnackPacket());
                     break;
@@ -149,6 +157,21 @@ public sealed class FakeBroker : IDisposable
         // A reason code needs the long form: packet id, reason code, and an empty property block.
         byte reason = (byte)PubackFor(topic);
         await WriteAsync(stream, [0x40, 0x04, (byte)(packetId >> 8), (byte)(packetId & 0xFF), reason, 0x00]);
+    }
+
+    /// <summary>Takes the rest of a packet the session is abandoning, so the close that follows is a
+    /// shutdown rather than a reset. A socket closed with bytes still unread sends a reset, and the
+    /// client would report a socket error where a real broker's clean close gives an end of stream —
+    /// the difference the clear-text retry has to be decided across.</summary>
+    private async Task DrainAsync(NetworkStream stream)
+    {
+        var scrap = new byte[1024];
+        var deadline = DateTime.UtcNow + TimeSpan.FromMilliseconds(300);
+        while (DateTime.UtcNow < deadline && !_stop.IsCancellationRequested)
+        {
+            if (stream.DataAvailable) await stream.ReadAsync(scrap, _stop.Token);
+            else await Task.Delay(20, _stop.Token);
+        }
     }
 
     private byte[] ConnackPacket() => [0x20, 0x03, 0x00, (byte)Connack, 0x00];
