@@ -54,6 +54,14 @@ internal static partial class NativeMethods
     [LibraryImport("Shcore.dll")]
     private static partial int GetDpiForMonitor(IntPtr monitor, int dpiType, out uint dpiX, out uint dpiY);
 
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetWindowRect(IntPtr window, out RECT rect);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetClientRect(IntPtr window, out RECT rect);
+
     /// <summary>
     /// Work area (taskbar-excluded desktop bounds, in physical pixels) and DPI scale factor of the
     /// monitor currently under the mouse cursor — i.e. the screen whose tray the user just clicked.
@@ -78,6 +86,20 @@ internal static partial class NativeMethods
         }
 
         return (GetPrimaryWorkArea(), 1.0);
+    }
+
+    /// <summary>
+    /// Physical pixels the window frame adds around a window's client area, read from the window
+    /// itself. Both rectangles are already in the window's own DPI, so the difference needs no
+    /// scaling. Zero if either rectangle is unavailable.
+    /// </summary>
+    internal static (int Width, int Height) GetNonClientSize(IntPtr window)
+    {
+        // GetClientRect always reports its origin at 0,0, so the client extent is Right/Bottom.
+        if (!GetWindowRect(window, out RECT frame) || !GetClientRect(window, out RECT client))
+            return (0, 0);
+
+        return (frame.Right - frame.Left - client.Right, frame.Bottom - frame.Top - client.Bottom);
     }
 
     /// <summary>

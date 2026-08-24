@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Windows.Foundation;
@@ -19,6 +20,12 @@ namespace ZeroZero.Brand.WinUI;
 /// </summary>
 public sealed partial class BrandAboutWindow : Window
 {
+    /// <summary>
+    /// Client width in device-independent units. The content is both measured against and laid out
+    /// at this width, so the measured height is the height that renders.
+    /// </summary>
+    private const double ContentWidth = 320;
+
     private readonly BrandAboutOptions _options;
 
     // Cached from ConfigureChrome so ResizeToContent() can recentre on the same monitor
@@ -104,31 +111,43 @@ public sealed partial class BrandAboutWindow : Window
         presenter.IsAlwaysOnTop = true;
         AppWindow.SetPresenter(presenter);
 
-        Root.Width = 320;
+        Root.Width = ContentWidth;
         (_workArea, _scale) = NativeMethods.GetCursorMonitorMetrics();
 
         ResizeToContent();
+
+        // A measure taken here reports a provisional layout: the content is not in the live visual
+        // tree yet, so its text is measured with fallback metrics rather than the brand font's, and
+        // comes out taller than what renders. Size again once the content is loaded, where the
+        // measure is the layout on screen; the call above only keeps the window off WinUI's default
+        // size in the meantime.
+        Root.Loaded += (_, _) => ResizeToContent();
     }
 
     /// <summary>
     /// Measures <see cref="Root"/> at its current content (libraries collapsed or expanded) and
-    /// resizes/recentres the native window to fit — called once at construction and again whenever
-    /// the hosted control's external-libraries expander toggles (via <see cref="BrandAboutControl.ContentResized"/>),
-    /// since the window would otherwise stay fixed at its original (collapsed) height. Recentring
-    /// on every call keeps growth/shrink symmetric around the monitor centre the window originally
-    /// opened on, cached in <see cref="_workArea"/> so a cursor that has since moved to another
-    /// monitor doesn't shift the window.
+    /// resizes/recentres the native window to fit — called at construction, once the content loads,
+    /// and again whenever the hosted control's external-libraries expander toggles (via
+    /// <see cref="BrandAboutControl.ContentResized"/>), since the window would otherwise stay fixed
+    /// at its original (collapsed) height. Recentring on every call keeps growth/shrink symmetric
+    /// around the monitor centre the window originally opened on, cached in <see cref="_workArea"/>
+    /// so a cursor that has since moved to another monitor doesn't shift the window.
     /// </summary>
     private void ResizeToContent()
     {
-        Root.Measure(new Size(320, double.PositiveInfinity));
-        int cw = (int)Math.Round(320 * _scale);
+        Root.Measure(new Size(ContentWidth, double.PositiveInfinity));
+        int cw = (int)Math.Round(ContentWidth * _scale);
         int ch = (int)Math.Round((Root.DesiredSize.Height > 0 ? Root.DesiredSize.Height : 270) * _scale);
 
-        // ResizeClient sizes the CLIENT area (not the outer window), so the 320-DIP content fills
-        // it exactly — sizing the outer window instead would leave the border eating into the
-        // client area and clipping the right-hand buttons. Centre using the resulting outer size.
-        AppWindow.ResizeClient(new SizeInt32(cw, ch));
+        // The client area has to end up exactly the content's size: the content stacks from the top,
+        // so any surplus shows as an empty band under the last row. ResizeClient would derive the
+        // outer size from a frame that still counts a title bar this presenter does not draw, adding
+        // some 52 physical pixels of it at 175% scaling. Add the frame the window actually has,
+        // taken from its own rectangles, and size the outer window to that; the client then fills
+        // with the 320-DIP content exactly, with no border eating into it. Centre using that same
+        // outer size.
+        var (ncWidth, ncHeight) = NativeMethods.GetNonClientSize(Win32Interop.GetWindowFromWindowId(AppWindow.Id));
+        AppWindow.Resize(new SizeInt32(cw + ncWidth, ch + ncHeight));
         var outer = AppWindow.Size;
         AppWindow.Move(new PointInt32(
             _workArea.Left + (_workArea.Right  - _workArea.Left - outer.Width)  / 2,
