@@ -9,5 +9,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/ZeroZero.Brand.Core.Tests/ZeroZero.Brand.Core.Tests.csproj" />
     <Project Path="tests/ZeroZero.Config.Tests/ZeroZero.Config.Tests.csproj" />
+    <Project Path="tests/ZeroZero.Mqtt.Tests/ZeroZero.Mqtt.Tests.csproj" />
   </Folder>
 </Solution>

@@ -1,0 +1,378 @@
+using Xunit;
+
+namespace ZeroZero.Mqtt.Tests;
+
+/// <summary>The connection against a real listener speaking MQTT. What these are about is the wire:
+/// that a value lands on its own bare topic, that a refused acknowledgement is read as a failed
+/// publish rather than a delivered one, and that an inbound command reaches an asynchronous handler
+/// off the receive callback. A stubbed client would assert only that the module calls the methods it
+/// calls.</summary>
+public class MqttConnectionLoopbackTests
+{
+    private const string Root = "exampleapp";
+    private const string Device = "desk01";
+
+    private static string Topic(string key) => MqttTopics.Channel(Root, Device, key);
+
+    private static string Availability => MqttTopics.Availability(Root, Device);
+
+    private static MqttConnectParameters Parameters(FakeBroker broker) => new()
+    {
+        Enabled = true,
+        Host = "127.0.0.1",
+        Port = broker.Port,
+        TransportMode = MqttTransportMode.Tcp,
+        EncryptionMode = MqttEncryptionMode.Off,
+        DeviceId = Device,
+    };
+
+    private static async Task<MqttConnection> ConnectAsync(FakeBroker broker, MqttConnectionSetup setup)
+    {
+        var connection = new MqttConnection(setup);
+        await connection.ApplyAsync(Parameters(broker));
+        Assert.True(await FakeBroker.WaitAsync(() => connection.IsConnected), "the connection never came up");
+        return connection;
+    }
+
+    private static MqttConnectionSetup Setup(
+        IEnumerable<MqttChannel>? channels = null,
+        IEnumerable<MqttCommandTarget>? commands = null,
+        IEnumerable<MqttSubscription>? subscriptions = null,
+        Action<MqttCommandRefusal>? refused = null,
+        Action<MqttEndpointMemory>? remember = null) => new()
+        {
+            TopicRoot = Root,
+            Channels = [.. channels ?? []],
+            CommandTargets = [.. commands ?? []],
+            Subscriptions = [.. subscriptions ?? []],
+            CommandRefused = refused,
+            RememberEndpoint = remember,
+        };
+
+    [Fact]
+    public async Task AConnectAnnouncesItselfOnlineAndSubscribesToTheCommandSubtree()
+    {
+        using var broker = new FakeBroker();
+        using var connection = await ConnectAsync(broker, Setup());
+
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == "online"));
+        Assert.True(await FakeBroker.WaitAsync(
+            () => broker.Subscriptions.Contains(MqttTopics.CommandFilter(Root, Device))));
+        Assert.Equal(MqttConnectionState.Connected, connection.State);
+    }
+
+    [Fact]
+    public async Task EachEntityGetsItsOwnBareTopicCarryingAPlainValue()
+    {
+        using var broker = new FakeBroker();
+        using var connection = await ConnectAsync(broker, Setup([
+            new("cpu_load", () => "42"),
+            new("quiet_mode", () => "ON"),
+        ]));
+
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("quiet_mode")) is not null));
+        Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
+        Assert.Equal("ON", broker.LastPayload(Topic("quiet_mode")));
+        Assert.All(broker.Published.Where(p => p.Topic.StartsWith(Root, StringComparison.Ordinal)),
+            p => Assert.True(p.Retained));
+    }
+
+    [Fact]
+    public async Task AnUnchangedValueIsNotSentAgain()
+    {
+        using var broker = new FakeBroker();
+        using var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => "42")]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("cpu_load")) == 1));
+
+        connection.Publish("cpu_load", "42");
+        await Task.Delay(300);
+
+        Assert.Equal(1, broker.CountOn(Topic("cpu_load")));
+    }
+
+    /// <summary>A publish the broker declined must not take the dedupe slot with it, or the value
+    /// that never arrived is indistinguishable from one that did and the topic stays wrong until it
+    /// happens to change again.</summary>
+    [Fact]
+    public async Task ARefusedPublishIsRolledBackAndSentAgainOnTheNextPass()
+    {
+        using var broker = new FakeBroker
+        {
+            PubackFor = topic => topic.EndsWith("cpu_load", StringComparison.Ordinal)
+                ? MqttPubackCode.NotAuthorised
+                : MqttPubackCode.Success,
+        };
+        using var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => "42")]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("cpu_load")) == 1));
+
+        connection.Publish("cpu_load", "42");
+
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("cpu_load")) >= 2),
+            "a refused publish was recorded as sent");
+    }
+
+    [Fact]
+    public async Task ARefusedPublishIsNotRecordedAsActivity()
+    {
+        using var broker = new FakeBroker { PubackFor = _ => MqttPubackCode.QuotaExceeded };
+        using var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => "42")]));
+
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("cpu_load")) >= 1));
+
+        Assert.Null(connection.Activity.LastPublish);
+    }
+
+    [Fact]
+    public async Task ADeliveredPublishIsRecordedAsActivity()
+    {
+        using var broker = new FakeBroker();
+        using var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => "42")]));
+
+        Assert.True(await FakeBroker.WaitAsync(() => connection.Activity.LastPublish is not null));
+    }
+
+    [Fact]
+    public async Task AnInboundCommandReachesAnAsynchronousHandlerWithAToken()
+    {
+        using var broker = new FakeBroker();
+        var ran = new TaskCompletionSource<string>();
+        bool cancellable = false;
+        using var connection = await ConnectAsync(broker, Setup(
+            commands: [new("quiet_mode", payload => MqttCommandVerdict.Accept(async ct =>
+            {
+                cancellable = ct.CanBeCanceled;
+                await Task.Yield();
+                ran.TrySetResult(payload);
+            }))]));
+
+        await broker.SendAsync(MqttTopics.Command(Root, Device, "quiet_mode"), "ON");
+
+        Assert.Equal("ON", await ran.Task.WaitAsync(TimeSpan.FromSeconds(10)));
+        Assert.True(cancellable);
+        Assert.Equal("quiet_mode", connection.Activity.LastCommand?.EntityId);
+    }
+
+    [Fact]
+    public async Task ARetainedCommandIsDroppedAndReportedRatherThanActedOn()
+    {
+        using var broker = new FakeBroker();
+        var refusals = new List<MqttCommandRefusal>();
+        bool ran = false;
+        using var connection = await ConnectAsync(broker, Setup(
+            commands: [new("quiet_mode", _ => MqttCommandVerdict.Accept(() => ran = true))],
+            refused: r => { lock (refusals) refusals.Add(r); }));
+
+        await broker.SendAsync(MqttTopics.Command(Root, Device, "quiet_mode"), "ON", retained: true);
+
+        Assert.True(await FakeBroker.WaitAsync(() => { lock (refusals) return refusals.Count == 1; }));
+        Assert.False(ran);
+        Assert.Equal(MqttCommandOutcome.Retained, refusals[0].Outcome);
+        Assert.Null(connection.Activity.LastCommand);
+    }
+
+    [Fact]
+    public async Task ARefusalCarriesTheApplicationsOwnWordingToItsOwnSink()
+    {
+        using var broker = new FakeBroker();
+        var refusals = new List<MqttCommandRefusal>();
+        using var connection = await ConnectAsync(broker, Setup(
+            commands: [new("power", _ => MqttCommandVerdict.Refuse("'Shutdown' is not available while it is off."))],
+            refused: r => { lock (refusals) refusals.Add(r); }));
+
+        await broker.SendAsync(MqttTopics.Command(Root, Device, "power"), "Shutdown");
+
+        Assert.True(await FakeBroker.WaitAsync(() => { lock (refusals) return refusals.Count == 1; }));
+        Assert.Equal("'Shutdown' is not available while it is off.", refusals[0].Detail);
+        Assert.Equal("power", refusals[0].EntityId);
+    }
+
+    [Fact]
+    public async Task ASubscriptionOutsideTheCommandTreeGetsItsOwnHandler()
+    {
+        using var broker = new FakeBroker();
+        var arrived = new TaskCompletionSource<MqttInboundMessage>();
+        using var connection = await ConnectAsync(broker, Setup(
+            subscriptions: [new("homeassistant/status", (message, _) =>
+            {
+                arrived.TrySetResult(message);
+                return Task.CompletedTask;
+            })]));
+
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Subscriptions.Contains("homeassistant/status")));
+        await broker.SendAsync("homeassistant/status", "online");
+
+        var message = await arrived.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal("online", message.Payload);
+    }
+
+    /// <summary>No current reading empties the topic, so a consumer connecting later sees nothing
+    /// rather than a value of unknown age — and it does so once, not on every pass.</summary>
+    [Fact]
+    public async Task AChannelWithNoCurrentReadingEmptiesItsTopicExactlyOnce()
+    {
+        using var broker = new FakeBroker();
+        string? reading = "42";
+        using var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => reading)]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("cpu_load")) == 1));
+
+        reading = null;
+        connection.RequestPublish("cpu_load");
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("cpu_load")) == ""));
+
+        connection.RequestPublish("cpu_load");
+        await Task.Delay(300);
+
+        Assert.Equal(2, broker.CountOn(Topic("cpu_load")));
+    }
+
+    /// <summary>A reader that threw says nothing about the current value, so what stands, stands.
+    /// Emptying the topic here would assert "no value" on the strength of a bug in the reader.</summary>
+    [Fact]
+    public async Task AThrowingReaderLeavesTheLastPublishedValueStanding()
+    {
+        using var broker = new FakeBroker();
+        bool broken = false;
+        using var connection = await ConnectAsync(broker, Setup([
+            new("cpu_load", () => broken ? throw new InvalidOperationException("no reading") : "42"),
+        ]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("cpu_load")) == 1));
+
+        broken = true;
+        connection.RequestPublish("cpu_load");
+        await Task.Delay(300);
+
+        Assert.Equal(1, broker.CountOn(Topic("cpu_load")));
+        Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
+    }
+
+    [Fact]
+    public async Task PublishNow_SendsEveryChannelWhetherOrNotItMoved()
+    {
+        using var broker = new FakeBroker();
+        using var connection = await ConnectAsync(broker, Setup([
+            new("cpu_load", () => "42"),
+            new("quiet_mode", () => "ON"),
+        ]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("quiet_mode")) == 1));
+
+        Assert.True(await connection.PublishNowAsync());
+
+        Assert.Equal(2, broker.CountOn(Topic("cpu_load")));
+        Assert.Equal(2, broker.CountOn(Topic("quiet_mode")));
+    }
+
+    /// <summary>A group toggle rebuilds the channel set, and the entities that left have to be
+    /// evicted in one pass rather than one sequential retained publish each.</summary>
+    [Fact]
+    public async Task SetChannels_EmptiesTheTopicsOfTheEntitiesThatHaveGone()
+    {
+        using var broker = new FakeBroker();
+        var withheld = Enumerable.Range(0, 12).Select(i => new MqttChannel($"metric_{i}", () => "1")).ToList();
+        using var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => "42"), .. withheld]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("metric_11")) == 1));
+
+        await connection.SetChannelsAsync([new("cpu_load", () => "42")]);
+
+        Assert.All(withheld, channel => Assert.Equal("", broker.LastPayload(Topic(channel.Key))));
+        Assert.Equal(1, broker.CountOn(Topic("cpu_load")));
+    }
+
+    /// <summary>Idempotence is what makes "apply on every settings change" safe: a group toggle and a
+    /// remembered endpoint both leave the projection identical and must not bounce the socket.</summary>
+    /// <remarks>The changed apply comes first as a control, so a reconnect is known to be visible;
+    /// then a round trip after the repeated apply proves the session that carried it is the same
+    /// one, rather than a silence that might only mean the test was not looking long enough.</remarks>
+    [Fact]
+    public async Task ApplyingTheSameParametersAgainDoesNotBounceTheSocket()
+    {
+        using var broker = new FakeBroker();
+        string reading = "42";
+        using var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => reading)]));
+        Assert.Equal(1, broker.Connects);
+        var moved = Parameters(broker) with { DeviceName = "Workshop" };
+
+        await connection.ApplyAsync(moved);
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Connects == 2, TimeSpan.FromSeconds(30)),
+            "a changed parameter set must reconnect, or the rest of this proves nothing");
+
+        await connection.ApplyAsync(moved);
+        reading = "43";
+        connection.RequestPublish("cpu_load");
+
+        Assert.True(await FakeBroker.WaitAsync(
+            () => broker.LastPayload(Topic("cpu_load")) == "43", TimeSpan.FromSeconds(30)));
+        Assert.Equal(2, broker.Connects);
+    }
+
+    [Fact]
+    public async Task AConnectHandsTheEndpointToTheHostRatherThanToTheSettings()
+    {
+        using var broker = new FakeBroker();
+        MqttEndpointMemory? remembered = null;
+        using var connection = await ConnectAsync(broker, Setup(remember: m => remembered = m));
+
+        Assert.True(await FakeBroker.WaitAsync(() => remembered is not null));
+        Assert.Equal(broker.Port, remembered!.Port);
+        Assert.Equal(MqttTransport.Tcp, remembered.Transport);
+        Assert.False(remembered.Encrypted);
+    }
+
+    [Fact]
+    public async Task ABrokerRefusingTheCredentialsEndsInFailedRatherThanRetrying()
+    {
+        using var broker = new FakeBroker(MqttConnackCode.NotAuthorised);
+        using var connection = new MqttConnection(Setup());
+        var states = new List<MqttConnectionState>();
+        connection.StateChanged += s => { lock (states) states.Add(s); };
+
+        await connection.ApplyAsync(Parameters(broker));
+
+        Assert.True(await FakeBroker.WaitAsync(() => connection.State == MqttConnectionState.Failed));
+        lock (states) Assert.Contains(MqttConnectionState.Failed, states);
+        Assert.False(connection.IsConnected);
+    }
+
+    [Fact]
+    public async Task SwitchingPublishingOffEmptiesEveryTopicTheDeviceOwned()
+    {
+        using var broker = new FakeBroker();
+        using var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => "42")]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("cpu_load")) == 1));
+
+        await connection.ApplyAsync(Parameters(broker) with { Enabled = false });
+
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == ""));
+        Assert.Equal("", broker.LastPayload(Topic("cpu_load")));
+        Assert.Equal(MqttConnectionState.Disabled, connection.State);
+    }
+
+    [Fact]
+    public async Task ANormalExitLeavesTheDeviceStandingAsOffline()
+    {
+        using var broker = new FakeBroker();
+        var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => "42")]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == "online"));
+
+        connection.Dispose();
+
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == "offline"));
+        // The payload topics keep their values, so the device persists across a restart.
+        Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
+    }
+
+    [Fact]
+    public void TeardownIsBoundedRatherThanOpenEnded()
+    {
+        // Reached from a host's Exit command on the UI thread, with a QoS 1 publish possibly in
+        // flight into a half-dead socket.
+        using var broker = new FakeBroker();
+        var connection = new MqttConnection(Setup());
+        connection.Apply(Parameters(broker));
+
+        var started = DateTimeOffset.UtcNow;
+        connection.Dispose();
+
+        Assert.True(DateTimeOffset.UtcNow - started < TimeSpan.FromSeconds(5),
+            "teardown must be bounded, not open-ended");
+    }
+}
