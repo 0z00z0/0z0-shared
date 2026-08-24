@@ -8,13 +8,13 @@ namespace ZeroZero.Mqtt.Discovery.Tests;
 public class CommandAcceptanceTests
 {
     [Fact]
-    public void ASwitchTakesItsDeclaredPair()
+    public async Task ASwitchTakesItsDeclaredPair()
     {
         bool? applied = null;
         var entity = Sample.Switch(apply: on => applied = on);
 
         Assert.Equal(MqttCommandOutcome.Accepted, entity.Accept("ON").Outcome);
-        entity.Accept("OFF").Run!(CancellationToken.None).Wait();
+        await entity.Accept("OFF").Run!(CancellationToken.None);
 
         Assert.False(applied);
     }
@@ -53,21 +53,21 @@ public class CommandAcceptanceTests
         Assert.Equal(MqttCommandOutcome.Accepted, Sample.Number().Accept(payload).Outcome);
 
     [Fact]
-    public void ANumberReadsThePayloadAsAMachineWouldWriteIt()
+    public async Task ANumberReadsThePayloadAsAMachineWouldWriteIt()
     {
         double? applied = null;
-        Sample.Number(apply: v => applied = v).Accept("42.5").Run!(CancellationToken.None).Wait();
+        await Sample.Number(apply: v => applied = v).Accept("42.5").Run!(CancellationToken.None);
 
         Assert.Equal(42.5, applied);
     }
 
     [Fact]
-    public void ASelectTakesOneOfItsCurrentOptions()
+    public async Task ASelectTakesOneOfItsCurrentOptions()
     {
         string? applied = null;
         var entity = Sample.Select(apply: v => applied = v);
 
-        entity.Accept("Home").Run!(CancellationToken.None).Wait();
+        await entity.Accept("Home").Run!(CancellationToken.None);
         Assert.Equal("Home", applied);
     }
 
@@ -93,7 +93,7 @@ public class CommandAcceptanceTests
     }
 
     [Fact]
-    public void AButtonTakesOnlyItsOwnPayload()
+    public async Task AButtonTakesOnlyItsOwnPayload()
     {
         int presses = 0;
         var button = Sample.Button(press: () => presses++);
@@ -101,7 +101,7 @@ public class CommandAcceptanceTests
         Assert.Equal(MqttCommandOutcome.Malformed, button.Accept("ON").Outcome);
         Assert.Equal(MqttCommandOutcome.Malformed, button.Accept("press").Outcome);
 
-        button.Accept(MqttButton.DefaultPress).Run!(CancellationToken.None).Wait();
+        await button.Accept(MqttButton.DefaultPress).Run!(CancellationToken.None);
         Assert.Equal(1, presses);
     }
 
