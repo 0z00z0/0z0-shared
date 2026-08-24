@@ -11,7 +11,7 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// Interactive manual test rig exercising both ways of hosting the shared About content, so each
 /// can be eyeballed without building or running ChargeKeeper, HyperVManagerTray, or M365Migrator:
 /// <list type="bullet">
-/// <item><see cref="BrandAboutWindow"/> — the tray-app popup (Mica backdrop, centering, credits
+/// <item><see cref="BrandAboutWindow"/> — the tray-app popup (Mica backdrop, centring, credits
 /// expander, "Check for Updates").</item>
 /// <item><see cref="HostedControlWindow"/> — <see cref="BrandAboutControl"/> embedded directly in
 /// a plain window with ordinary chrome and no update button, simulating a full windowed app's
@@ -42,8 +42,8 @@ public partial class App : Application
                 AppName     = "Brand Test Harness",
                 Version     = "0.0.0-dev",
                 Description = "Interactive launch-test rig for the shared BrandAboutWindow component — " +
-                              "verifies the About box renders correctly on its own, before ChargeKeeper " +
-                              "or HyperVManagerTray adopt it.",
+                              "renders the About box from this repo's own sample data, independently " +
+                              "of any consuming app.",
                 RepoUrl     = $"{CoreBrand.OrgUrl}/0z0-shared",
                 ExternalLibraries = libraries,
             },
