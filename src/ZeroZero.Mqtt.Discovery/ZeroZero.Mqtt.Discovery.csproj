@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Mqtt.Discovery</RootNamespace>
+
+    <AssemblyTitle>ZeroZero.Mqtt.Discovery</AssemblyTitle>
+    <Product>ZeroZero.Mqtt.Discovery</Product>
+    <Description>The entity and discovery-document layer over ZeroZero.Mqtt: seven typed component types, one bare topic per entity, a single device document with shared availability, and eviction that survives a process restart.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroZero.Mqtt\ZeroZero.Mqtt.csproj" />
+    <!-- Only the file-backed ledger needs it; a host with its own document implements the two-member
+         store interface instead and this reference costs it nothing. -->
+    <ProjectReference Include="..\ZeroZero.Config\ZeroZero.Config.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The key writer and the reconciliation plan are deliberately not public: they are how the
+         layer composes a document, not what a consumer declares. The tests assert on both. -->
+    <InternalsVisibleTo Include="ZeroZero.Mqtt.Discovery.Tests" />
+  </ItemGroup>
+
+</Project>
