@@ -17,7 +17,7 @@ public class BrandTests
 
     [Fact]
     public void Tagline_IsTheStudioTagline()
-        => Assert.Equal("Small tools. Zero bloat.", Brand.Tagline);
+        => Assert.Equal("Big tools. Maximum bloat.", Brand.Tagline);
 
     [Theory]
     [InlineData(Brand.WebsiteUrl, "0z0.xyz")]
