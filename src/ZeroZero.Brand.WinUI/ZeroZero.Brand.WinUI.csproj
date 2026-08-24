@@ -22,15 +22,17 @@
     <Authors>ZeroZero Software</Authors>
     <Company>ZeroZero Software</Company>
     <Copyright>Copyright © 2026 ZeroZero Software</Copyright>
+    <NeutralLanguage>en-GB</NeutralLanguage>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/0z00z0/0z0-shared</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <!--
-    Microsoft.WindowsAppSDK / Microsoft.Windows.SDK.BuildTools versions pinned to match what
-    ChargeKeeper and HyperVManagerTray already use, so all three projects resolve the same
-    Windows App SDK runtime (checked against their live .csproj files 2026-07-12).
+    The Windows App SDK / SDK.BuildTools versions this library pins. A consuming app may pin
+    higher: NuGet unifies on the version nearest the consuming project, so the app's own pin
+    governs the runtime the whole build resolves. Keeping the studio's apps and this library on
+    one version is tracked in issues #3 and #6.
   -->
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.1.3" />
