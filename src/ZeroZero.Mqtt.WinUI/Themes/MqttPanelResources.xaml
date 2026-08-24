@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    The panel's whole theming surface: five keys, three themes, and no dependency beyond WinUI's own
+    lightweight styling.
+
+    Every colour the panel draws with resolves through one of these by ThemeResource. A host rebrands
+    by declaring the same key in its own application resources, which wins because it is nearer the
+    control; keys it leaves alone keep the defaults below. The set is small on purpose — enough to
+    make the panel look like the pages beside it, not a knob per element.
+
+    The defaults are the stock WinUI theme, never a brand. A studio's teal headings and monospace face
+    belong in that application's overrides, applied through these keys.
+-->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ResourceDictionary.ThemeDictionaries>
+
+        <!-- "Default" is the dark theme's dictionary, which is WinUI's own naming rather than a
+             fallback. The text roles read the stock theme's own colour for the theme they are read
+             under, so those entries look alike across the two; the accent does not, because one
+             accent shade is illegible against the opposite ground. -->
+        <ResourceDictionary x:Key="Default">
+            <SolidColorBrush x:Key="MqttPanelHeadingBrush"        Color="{ThemeResource TextFillColorPrimary}"/>
+            <SolidColorBrush x:Key="MqttPanelBodyBrush"           Color="{ThemeResource TextFillColorPrimary}"/>
+            <SolidColorBrush x:Key="MqttPanelSecondaryBrush"      Color="{ThemeResource TextFillColorSecondary}"/>
+            <SolidColorBrush x:Key="MqttPanelAccentBrush"         Color="{ThemeResource SystemAccentColorLight2}"/>
+            <SolidColorBrush x:Key="MqttPanelCardBackgroundBrush" Color="{ThemeResource CardBackgroundFillColorDefault}"/>
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="MqttPanelHeadingBrush"        Color="{ThemeResource TextFillColorPrimary}"/>
+            <SolidColorBrush x:Key="MqttPanelBodyBrush"           Color="{ThemeResource TextFillColorPrimary}"/>
+            <SolidColorBrush x:Key="MqttPanelSecondaryBrush"      Color="{ThemeResource TextFillColorSecondary}"/>
+            <SolidColorBrush x:Key="MqttPanelAccentBrush"         Color="{ThemeResource SystemAccentColorDark2}"/>
+            <SolidColorBrush x:Key="MqttPanelCardBackgroundBrush" Color="{ThemeResource CardBackgroundFillColorDefault}"/>
+        </ResourceDictionary>
+
+        <!-- High contrast takes the system's own colours rather than the palette's: the whole point
+             of the mode is that the user's choice outranks every design decision here. -->
+        <ResourceDictionary x:Key="HighContrast">
+            <SolidColorBrush x:Key="MqttPanelHeadingBrush"        Color="{ThemeResource SystemColorWindowTextColor}"/>
+            <SolidColorBrush x:Key="MqttPanelBodyBrush"           Color="{ThemeResource SystemColorWindowTextColor}"/>
+            <SolidColorBrush x:Key="MqttPanelSecondaryBrush"      Color="{ThemeResource SystemColorWindowTextColor}"/>
+            <SolidColorBrush x:Key="MqttPanelAccentBrush"         Color="{ThemeResource SystemColorHighlightColor}"/>
+            <SolidColorBrush x:Key="MqttPanelCardBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}"/>
+        </ResourceDictionary>
+
+    </ResourceDictionary.ThemeDictionaries>
+
+</ResourceDictionary>

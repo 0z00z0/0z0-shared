@@ -27,8 +27,20 @@ public partial class App : Application
 
     public App() => InitializeComponent();
 
+    private readonly List<Window> _mqttWindows = [];
+
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // One scenario per run: the About windows and the MQTT panel windows are captured by
+        // separate scripts, and four unrelated windows in one run would land on top of each other.
+        // Read from the process command line, because an unpackaged WinUI launch carries no
+        // arguments on the activation event.
+        if (Environment.GetCommandLineArgs().Any(a => a.Equals("--mqtt", StringComparison.Ordinal)))
+        {
+            ShowMqttPanels();
+            return;
+        }
+
         var libraries = new ExternalLibrary[]
         {
             new("Microsoft.WindowsAppSDK", "Microsoft", "WinUI 3 / Windows App SDK runtime", "MIT", "https://github.com/microsoft/WindowsAppSDK"),
@@ -72,5 +84,47 @@ public partial class App : Application
         };
         _hostedControlWindow = new HostedControlWindow(hostedInfo);
         _hostedControlWindow.Activate();
+    }
+
+    /// <summary>
+    /// Eight windows: each theme as the panel opens with both groups closed, each theme with the
+    /// Broker group open, each theme with the publish list open, and each theme holding a staged
+    /// edit behind a closed Broker group. One group open at a time, because a window holding both is
+    /// taller than the display and a screenshot of it would prove nothing about the half that
+    /// scrolled off. The titles are what the capture script names the files by.
+    /// </summary>
+    private void ShowMqttPanels()
+    {
+
+        var scenarios = new (string Title, ElementTheme Theme, bool Broker, bool Publish, bool Edited)[]
+        {
+            ("MQTT Panel Light", ElementTheme.Light, false, false, false),
+            ("MQTT Panel Dark", ElementTheme.Dark, false, false, false),
+            ("MQTT Panel Light Broker", ElementTheme.Light, true, false, false),
+            ("MQTT Panel Dark Broker", ElementTheme.Dark, true, false, false),
+            ("MQTT Panel Light Groups", ElementTheme.Light, false, true, false),
+            ("MQTT Panel Dark Groups", ElementTheme.Dark, false, true, false),
+            ("MQTT Panel Light Edited", ElementTheme.Light, false, false, true),
+            ("MQTT Panel Dark Edited", ElementTheme.Dark, false, false, true),
+        };
+
+        for (int i = 0; i < scenarios.Length; i++)
+        {
+            var (title, theme, broker, publish, edited) = scenarios[i];
+            try
+            {
+                var window = new MqttPanelWindow(title, theme, broker, publish, edited, offset: i * 50);
+                _mqttWindows.Add(window);
+                window.Activate();
+            }
+            catch (Exception ex)
+            {
+                // A WinExe has nowhere to print, and a window that never appears is otherwise
+                // indistinguishable from one that failed silently.
+                File.WriteAllText(
+                    Path.Combine(Path.GetTempPath(), "mqtt-harness-error.txt"), ex.ToString());
+                throw;
+            }
+        }
     }
 }

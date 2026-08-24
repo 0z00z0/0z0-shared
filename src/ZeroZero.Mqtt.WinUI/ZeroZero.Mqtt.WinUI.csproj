@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>ZeroZero.Mqtt.WinUI</RootNamespace>
+
+    <!-- WinUI 3 / Windows App SDK, unpackaged (no MSIX) — a class library consumed by unpackaged
+         apps, so it must not pull in packaging tooling itself. -->
+    <UseWinUI>true</UseWinUI>
+    <WinUISDKReferences>false</WinUISDKReferences>
+
+    <AssemblyTitle>ZeroZero.Mqtt.WinUI</AssemblyTitle>
+    <Product>ZeroZero.Mqtt.WinUI</Product>
+    <Description>The MQTT settings panel: master switch, live status, device identity, a staged broker block and one row per application-declared publish group.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
+    <!-- Held at or below the version pinned in Directory.Packages.props: a consuming app holds a
+         direct reference there, and a direct reference below a transitive one is NU1605, an error. -->
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroZero.Mqtt\ZeroZero.Mqtt.csproj" />
+    <!-- InfoIcon lives in the brand assembly: it carries no MQTT vocabulary, and both consumers of
+         this panel already reference that assembly for the About window. -->
+    <ProjectReference Include="..\ZeroZero.Brand.WinUI\ZeroZero.Brand.WinUI.csproj" />
+  </ItemGroup>
+
+  <!--
+    The module's own user-facing prose, neutral language en-GB (Directory.Build.props). A consumer
+    localises by adding its own language folder; nothing here needs forking. Every string also has a
+    built-in en-GB default in MqttStrings, so a resource map that fails to load degrades to the
+    module's own wording rather than to blank controls.
+  -->
+  <ItemGroup>
+    <PRIResource Include="Strings\en-GB\Resources.resw" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="ZeroZero.Brand.WinUI.TestHarness.MqttPanelWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mqtt="using:ZeroZero.Mqtt.WinUI">
+
+    <!-- Ordinary chrome and a scroll viewer, which is what a host's settings page gives the panel:
+         the panel is a tall StackPanel and scrolls nothing itself. The section heading above it is
+         the host's too, so the rig supplies one. -->
+    <Grid x:Name="Root" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <ScrollViewer x:Name="Scroller" HorizontalScrollBarVisibility="Disabled" Padding="24,20,24,24">
+            <StackPanel Spacing="12" MaxWidth="720" HorizontalAlignment="Left">
+                <TextBlock Text="MQTT" FontSize="20" FontWeight="SemiBold"/>
+                <mqtt:MqttSettingsPanel x:Name="Panel"/>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>
