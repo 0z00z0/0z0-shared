@@ -70,6 +70,13 @@ public sealed partial class BrandAboutControl : UserControl
 
     private void PopulateExternalLibraries(IReadOnlyList<ExternalLibrary> libraries)
     {
+        // Cleared before every repopulate, for the same reason the link handlers attach once: a
+        // consumer with a cached in-navigation About page calls SetInfo on every navigation, and
+        // appending to a panel that still holds the previous lines renders the whole credit list
+        // once per visit. Cleared ahead of the empty-list exit too, so a later info without
+        // libraries leaves no stale lines behind.
+        LibrariesPanel.Children.Clear();
+
         if (libraries.Count == 0)
         {
             LibrariesGroup.Visibility = Visibility.Collapsed;
