@@ -29,7 +29,18 @@ public sealed partial class BrandAboutControl : UserControl
     /// </summary>
     public event EventHandler? ContentResized;
 
-    public BrandAboutControl() => InitializeComponent();
+    public BrandAboutControl()
+    {
+        InitializeComponent();
+
+        // Wired once at construction, never from SetInfo: a consumer with a cached in-navigation
+        // About page calls SetInfo on every navigation, and wiring there would stack one more
+        // handler per call — the third visit would open each link three times. The repository
+        // handler therefore reads the current _info rather than capturing a SetInfo argument.
+        RepoBtn.Click   += (_, _) => { if (_info is { } info) Open(info.RepoUrl); };
+        SiteBtn.Click   += (_, _) => Open(CoreBrand.WebsiteUrl);
+        DonateBtn.Click += (_, _) => Open(CoreBrand.BuyMeACoffeeUrl);
+    }
 
     /// <summary>
     /// Supplies the per-app data to render. A method rather than a settable CLR property — the
@@ -53,10 +64,6 @@ public sealed partial class BrandAboutControl : UserControl
         // "Licence" (noun) per the studio's British-English house style (design-language.md).
         // Year is computed, not a literal, so this doesn't go stale like a hard-coded one would.
         FooterText.Text      = $"Copyright © {DateTime.UtcNow.Year} {CoreBrand.StudioName} · MIT Licence";
-
-        RepoBtn.Click       += (_, _) => Open(info.RepoUrl);
-        SiteBtn.Click       += (_, _) => Open(CoreBrand.WebsiteUrl);
-        DonateBtn.Click     += (_, _) => Open(CoreBrand.BuyMeACoffeeUrl);
 
         PopulateExternalLibraries(info.ExternalLibraries);
     }
