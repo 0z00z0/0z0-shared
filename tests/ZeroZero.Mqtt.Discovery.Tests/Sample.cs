@@ -26,8 +26,11 @@ public static class Sample
 
     public static string Availability => MqttTopics.Availability(TopicRoot, DeviceId);
 
+    public static string Withheld => MqttTopics.WithheldAvailability(TopicRoot, DeviceId);
+
     public static MqttSensor Sensor(
-        string id = "cpu_load", string? value = "12", string? group = null, Func<bool>? include = null) =>
+        string id = "cpu_load", string? value = "12", string? group = null, Func<bool>? include = null,
+        bool retain = true) =>
         new()
         {
             EntityId = id,
@@ -37,6 +40,7 @@ public static class Sample
             StateClass = MqttStateClass.Measurement,
             Group = group,
             Include = include,
+            Retain = retain,
         };
 
     public static MqttButton Button(string id = "restart", Action? press = null) => new()
@@ -60,12 +64,15 @@ public static class Sample
         };
 
     public static MqttSwitch Switch(
-        string id = "quiet_mode", Func<bool?>? read = null, Action<bool>? apply = null) => new()
+        string id = "quiet_mode", Func<bool?>? read = null, Action<bool>? apply = null,
+        string? group = null, Func<bool>? include = null) => new()
         {
             EntityId = id,
             Name = "Quiet mode",
             Read = read ?? (() => true),
             Apply = on => MqttCommandVerdict.Accept(() => apply?.Invoke(on)),
+            Group = group,
+            Include = include,
         };
 
     public static MqttNumber Number(

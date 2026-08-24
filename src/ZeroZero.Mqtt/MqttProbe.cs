@@ -22,11 +22,17 @@ public enum MqttProbeOutcome
     /// <summary>CONNACK: refused for some other reason — client id, protocol, banned.</summary>
     Rejected,
 
-    /// <summary>A socket opened and the TLS handshake then failed: an untrusted certificate, a
-    /// protocol mismatch, a plain listener behind an encrypted candidate. Distinct from
-    /// <see cref="Failed"/> because it is the one failure that must never be retried in clear
-    /// text.</summary>
-    TlsFailed,
+    /// <summary>A socket opened, the far end presented a certificate, and the link still failed: the
+    /// certificate is not trusted, or the protocols do not meet. Encryption <b>was</b> on offer, so a
+    /// clear-text retry would send the password to a broker that could have taken it in cipher — this
+    /// is the outcome that must never be downgraded, and certificate trust is what resolves it.</summary>
+    TlsUntrusted,
+
+    /// <summary>A socket opened and the far end never presented a certificate: it does not speak TLS
+    /// on this port. Nothing secure was ever on offer and no credentials left the machine — the
+    /// handshake fails before CONNECT — so a clear-text retry on the same endpoint is what Automatic
+    /// means, and is the ordinary way an internal broker on 1883 is found.</summary>
+    TlsUnsupported,
 
     /// <summary>Protocol error, or anything else.</summary>
     Failed,
@@ -199,13 +205,18 @@ public static class MqttProbe
     };
 
     /// <summary>Classifies a failed connect attempt from what the exception chain carries.</summary>
+    /// <param name="certificatePresented">Whether the far end presented a certificate during this
+    /// attempt, or null when the attempt was not an encrypted one and the question does not arise.
+    /// It is what separates the two TLS failures, and the separation cannot be made from the
+    /// exception: both arrive as an authentication failure, and the wording that would tell them
+    /// apart is the platform's and is translated.</param>
     /// <remarks>
     /// A TLS failure is looked for first and separately. It has no <see cref="SocketException"/>
     /// inside it, so without its own verdict it lands on <see cref="MqttProbeOutcome.Failed"/> and is
-    /// indistinguishable from any other transport failure — which is what lets an untrusted
-    /// certificate fall through to a clear-text retry.
+    /// indistinguishable from any other transport failure.
     /// </remarks>
-    public static MqttProbeResult ClassifyConnectException(Exception ex, CancellationToken ct)
+    public static MqttProbeResult ClassifyConnectException(
+        Exception ex, CancellationToken ct, bool? certificatePresented = null)
     {
         SocketException? socket = null;
         bool cancelled = false;
@@ -219,7 +230,22 @@ public static class MqttProbe
         }
 
         if (cancelled) return Cancelled(ct);
-        if (handshake) return new(MqttProbeOutcome.TlsFailed, Describe(ex));
+
+        // The OS saying there is nothing there, or nothing answering, stands on its own: it is about
+        // the address, not about what the address speaks.
+        if (socket is not null
+            && ClassifySocketError(socket.SocketErrorCode) is
+               { Outcome: MqttProbeOutcome.Unreachable or MqttProbeOutcome.TimedOut } reached)
+            return reached;
+
+        // An encrypted attempt that got past the socket and no further. A far end that presented no
+        // certificate never offered encryption at all; one that did has something wrong with it.
+        if (certificatePresented is { } presented && (handshake || socket is not null))
+            return new(
+                presented ? MqttProbeOutcome.TlsUntrusted : MqttProbeOutcome.TlsUnsupported,
+                Describe(ex));
+
+        if (handshake) return new(MqttProbeOutcome.TlsUntrusted, Describe(ex));
         if (socket is not null) return ClassifySocketError(socket.SocketErrorCode);
         return new(MqttProbeOutcome.Failed, Describe(ex));
     }

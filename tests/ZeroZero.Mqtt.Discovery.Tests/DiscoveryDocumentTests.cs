@@ -11,9 +11,12 @@ namespace ZeroZero.Mqtt.Discovery.Tests;
 public class DiscoveryDocumentTests
 {
     private static JsonObject Build(
-        IReadOnlyList<MqttEntity> components, IReadOnlyList<PublishedEntity>? removed = null) =>
+        IReadOnlyList<MqttEntity> components,
+        IReadOnlyList<PublishedEntity>? removed = null,
+        IReadOnlyList<MqttEntity>? withheld = null) =>
         (JsonObject)JsonNode.Parse(DiscoveryDocument.Build(
-            Sample.TopicRoot, Sample.Identity, Sample.Device, Sample.Origin, components, removed ?? []))!;
+            Sample.TopicRoot, Sample.Identity, Sample.Device, Sample.Origin,
+            components, withheld ?? [], removed ?? []))!;
 
     private static JsonObject Component(JsonObject document, string entityId) =>
         (JsonObject)document["cmps"]![entityId]!;
@@ -63,11 +66,84 @@ public class DiscoveryDocumentTests
     }
 
     [Fact]
+    public void ASerialNumberAndHardwareVersionAreWrittenWhereDeclaredAndOmittedOtherwise()
+    {
+        var declared = new DiscoveryDevice("V", "M", "1.0", null, "SN-0042", "rev C");
+        string json = DiscoveryDocument.Build(
+            Sample.TopicRoot, Sample.Identity, declared, Sample.Origin, [Sample.Sensor()], [], []);
+        var block = (JsonObject)JsonNode.Parse(json)!["dev"]!;
+
+        Assert.Equal("SN-0042", (string?)block["sn"]);
+        Assert.Equal("rev C", (string?)block["hw"]);
+
+        var bare = (JsonObject)Build([Sample.Sensor()])["dev"]!;
+        Assert.False(bare.ContainsKey("sn"));
+        Assert.False(bare.ContainsKey("hw"));
+    }
+
+    [Fact]
+    public void ANamelessEntityIsTheDevicesMainFeature()
+    {
+        // Written as JSON null rather than omitted: omitted, the receiver composes a name from the
+        // device and the platform, which is the "Device Sensor" this exists to avoid.
+        var sensor = new MqttSensor { EntityId = "state", Name = null, Read = () => "ok" };
+        var entry = Component(Build([sensor]), "state");
+
+        Assert.True(entry.ContainsKey("name"));
+        Assert.Null((string?)entry["name"]);
+    }
+
+    [Fact]
+    public void EnabledByDefaultIsWrittenOnlyWhereItIsFalse()
+    {
+        var quiet = new MqttSensor
+        {
+            EntityId = "detail", Name = "Detail", Read = () => "x", EnabledByDefault = false,
+        };
+        var document = Build([Sample.Sensor(), quiet]);
+
+        Assert.False(Component(document, "cpu_load").ContainsKey("enabled_by_default"));
+        Assert.False((bool?)Component(document, "detail")["enabled_by_default"]);
+    }
+
+    [Fact]
+    public void ASensorCarriesItsExpiryAndItsForcedUpdate()
+    {
+        var sensor = new MqttSensor
+        {
+            EntityId = "cpu_load", Name = "CPU load", Read = () => "1",
+            ForceUpdate = true, ExpireAfter = 600, Retain = false,
+        };
+        var entry = Component(Build([sensor]), "cpu_load");
+
+        Assert.True((bool?)entry["force_update"]);
+        Assert.Equal(600, (int?)entry["expire_after"]);
+    }
+
+    [Fact]
+    public void AWithheldComponentIsWrittenWholeWithItsOwnAvailabilityTopic()
+    {
+        // Not a removal stub: it keeps every key the receiver files the entity by, and only the
+        // availability topic differs — which is how "not reporting" is said without saying "gone".
+        var document = Build([Sample.Sensor()], withheld: [Sample.Switch()]);
+        var entry = Component(document, "quiet_mode");
+
+        Assert.Equal("switch", (string?)entry["p"]);
+        Assert.Equal($"{Sample.DeviceId}_quiet_mode", (string?)entry["unique_id"]);
+        Assert.Equal("Quiet mode", (string?)entry["name"]);
+        Assert.Equal(Sample.Withheld, (string?)entry["availability_topic"]);
+        Assert.Equal(Sample.Command("quiet_mode"), (string?)entry["command_topic"]);
+
+        // The published one inherits the root's, so only the withheld one repeats the key.
+        Assert.False(Component(document, "cpu_load").ContainsKey("availability_topic"));
+    }
+
+    [Fact]
     public void AConfigurationUrlIsOmittedRatherThanWrittenEmpty()
     {
         var json = DiscoveryDocument.Build(
             Sample.TopicRoot, Sample.Identity, new DiscoveryDevice("V", "M", "1.0"), Sample.Origin,
-            [Sample.Sensor()], []);
+            [Sample.Sensor()], [], []);
         var device = (JsonObject)JsonNode.Parse(json)!["dev"]!;
 
         Assert.False(device.ContainsKey("cu"));
@@ -88,7 +164,7 @@ public class DiscoveryDocumentTests
     {
         var json = DiscoveryDocument.Build(
             Sample.TopicRoot, Sample.Identity, Sample.Device, new DiscoveryOrigin("App", "1.0"),
-            [Sample.Sensor()], []);
+            [Sample.Sensor()], [], []);
 
         Assert.False(((JsonObject)JsonNode.Parse(json)!["o"]!).ContainsKey("url"));
     }
@@ -266,7 +342,7 @@ public class DiscoveryDocumentTests
             };
 
             string json = DiscoveryDocument.Build(
-                Sample.TopicRoot, Sample.Identity, Sample.Device, Sample.Origin, [number], []);
+                Sample.TopicRoot, Sample.Identity, Sample.Device, Sample.Origin, [number], [], []);
 
             Assert.Contains("\"min\":0.5", json, StringComparison.Ordinal);
             Assert.DoesNotContain("0,5", json, StringComparison.Ordinal);
@@ -275,13 +351,15 @@ public class DiscoveryDocumentTests
     }
 
     [Fact]
-    public void ASelectPublishesItsOptionsAndItsSentinel()
+    public void ASelectPublishesTheOptionsItWasGivenAndNothingElse()
     {
+        // No sentinel entry. The reset literal is accepted without being offered, so the picker shows
+        // real choices only.
         var entry = Component(Build([Sample.Select()]), "profile");
 
-        Assert.Equal(
-            ["Office", "Home", MqttSelect.DefaultNoOption],
-            entry["options"]!.AsArray().Select(n => (string?)n));
+        Assert.Equal(["Office", "Home"], entry["options"]!.AsArray().Select(n => (string?)n));
+        Assert.DoesNotContain(
+            MqttPayload.None, entry["options"]!.AsArray().Select(n => (string?)n));
     }
 
     [Fact]
@@ -377,7 +455,8 @@ public class DiscoveryDocumentTests
     public void ARemovedComponentCarriesOnlyItsPlatform()
     {
         // Leaving it out of a later document does not remove it — the receiver keeps what it has —
-        // so removal is something the document says.
+        // so removal is something the document says, and it is reserved for an entity the table no
+        // longer contains.
         var document = Build(
             [Sample.Sensor()],
             [new PublishedEntity { EntityId = "gone", Platform = "switch", StateTopic = Sample.State("gone") }]);
@@ -400,7 +479,7 @@ public class DiscoveryDocumentTests
     {
         var identity = new MqttDeviceIdentity(Sample.DeviceId, Sample.Prefix, "Kjøkken");
         string json = DiscoveryDocument.Build(
-            Sample.TopicRoot, identity, Sample.Device, Sample.Origin, [Sample.Sensor()], []);
+            Sample.TopicRoot, identity, Sample.Device, Sample.Origin, [Sample.Sensor()], [], []);
 
         Assert.Contains("Kjøkken", json, StringComparison.Ordinal);
         Assert.DoesNotContain("\n", json, StringComparison.Ordinal);

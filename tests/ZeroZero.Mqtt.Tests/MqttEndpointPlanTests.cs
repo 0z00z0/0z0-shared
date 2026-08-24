@@ -114,12 +114,12 @@ public class MqttEndpointPlanTests
     }
 
     [Fact]
-    public void NextEndpoint_CarriesOnPastATlsFailureOnOneEndpoint()
+    public void NextEndpoint_CarriesOnPastAnUntrustedCertificateOnOneEndpoint()
     {
         // A refused certificate on one port says nothing about the next port or the other transport.
         var attempts = new List<MqttEndpointAttempt>
         {
-            new(new(1883, MqttTransport.Tcp, true), MqttProbeOutcome.TlsFailed),
+            new(new(1883, MqttTransport.Tcp, true), MqttProbeOutcome.TlsUntrusted),
         };
 
         var next = MqttEndpointPlan.NextEndpoint(Request(), null, attempts);
@@ -129,7 +129,25 @@ public class MqttEndpointPlanTests
     }
 
     [Fact]
-    public void NextEndpoint_FallsBackToPlainOnlyWhenNothingWasListening()
+    public void NextEndpoint_ReachesAPlainBrokerOnTheSecondAttempt()
+    {
+        // The ordinary internal broker: clear text on 1883, nothing encrypted anywhere. The encrypted
+        // candidate for the port is tried first and finds no TLS there, and the plain candidate for
+        // the same port is next — not the whole encrypted list first, and not never.
+        var sweep = MqttEndpointPlan.Sweep(Request(), null);
+        Assert.Equal(new MqttEndpointCandidate(1883, MqttTransport.Tcp, true), sweep[0]);
+
+        var attempts = new List<MqttEndpointAttempt>
+        {
+            new(new(1883, MqttTransport.Tcp, true), MqttProbeOutcome.TlsUnsupported),
+        };
+
+        Assert.Equal(new MqttEndpointCandidate(1883, MqttTransport.Tcp, false),
+            MqttEndpointPlan.NextEndpoint(Request(), null, attempts));
+    }
+
+    [Fact]
+    public void NextEndpoint_FallsBackToPlainWhenNothingWasListening()
     {
         var nothingThere = new List<MqttEndpointAttempt>
         {
@@ -141,11 +159,11 @@ public class MqttEndpointPlanTests
     }
 
     [Fact]
-    public void NextEndpoint_NeverRetriesInClearTextAfterATlsFailure()
+    public void NextEndpoint_NeverRetriesInClearTextAfterAnUntrustedCertificate()
     {
         var refusedTheCertificate = new List<MqttEndpointAttempt>
         {
-            new(new(1883, MqttTransport.Tcp, true), MqttProbeOutcome.TlsFailed),
+            new(new(1883, MqttTransport.Tcp, true), MqttProbeOutcome.TlsUntrusted),
         };
 
         Assert.Null(MqttEndpointPlan.NextEndpoint(
@@ -153,14 +171,30 @@ public class MqttEndpointPlanTests
     }
 
     [Theory]
-    [InlineData(MqttProbeOutcome.TlsFailed)]
+    [InlineData(MqttProbeOutcome.TlsUntrusted)]
+    [InlineData(MqttProbeOutcome.AuthRejected)]
     [InlineData(MqttProbeOutcome.TimedOut)]
     [InlineData(MqttProbeOutcome.Failed)]
-    public void DowngradeBlocked_BlocksThePlainRetryWhenSomethingWasThere(MqttProbeOutcome outcome)
+    public void DowngradeBlocked_BlocksThePlainRetryUnlessNothingSecureWasOnOffer(MqttProbeOutcome outcome)
     {
         var attempts = new List<MqttEndpointAttempt> { new(new(1883, MqttTransport.Tcp, true), outcome) };
 
         Assert.True(MqttEndpointPlan.DowngradeBlocked(attempts, new(1883, MqttTransport.Tcp, false)));
+        Assert.False(MqttEndpointPlan.DowngradeSafe(outcome));
+    }
+
+    [Theory]
+    [InlineData(MqttProbeOutcome.Unreachable)]
+    [InlineData(MqttProbeOutcome.TlsUnsupported)]
+    public void DowngradeBlocked_LeavesThePlainRetryOpenWhenTheEndpointOfferedNoEncryption(
+        MqttProbeOutcome outcome)
+    {
+        // Nothing was listening, or something was and it does not speak TLS on that port. Neither can
+        // have taken a credential: the handshake fails before CONNECT is sent.
+        var attempts = new List<MqttEndpointAttempt> { new(new(1883, MqttTransport.Tcp, true), outcome) };
+
+        Assert.False(MqttEndpointPlan.DowngradeBlocked(attempts, new(1883, MqttTransport.Tcp, false)));
+        Assert.True(MqttEndpointPlan.DowngradeSafe(outcome));
     }
 
     [Fact]
@@ -168,7 +202,7 @@ public class MqttEndpointPlanTests
     {
         var attempts = new List<MqttEndpointAttempt>
         {
-            new(new(8883, MqttTransport.Tcp, true), MqttProbeOutcome.TlsFailed),
+            new(new(8883, MqttTransport.Tcp, true), MqttProbeOutcome.TlsUntrusted),
         };
 
         Assert.False(MqttEndpointPlan.DowngradeBlocked(attempts, new(1883, MqttTransport.Tcp, false)));
@@ -180,7 +214,7 @@ public class MqttEndpointPlanTests
     {
         var attempts = new List<MqttEndpointAttempt>
         {
-            new(new(1883, MqttTransport.Tcp, true), MqttProbeOutcome.TlsFailed),
+            new(new(1883, MqttTransport.Tcp, true), MqttProbeOutcome.TlsUntrusted),
         };
 
         Assert.False(MqttEndpointPlan.DowngradeBlocked(attempts, new(1883, MqttTransport.Tcp, true)));

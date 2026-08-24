@@ -5,9 +5,10 @@ public sealed class MqttBinarySensor : MqttEntity
 {
     public override string Platform => "binary_sensor";
 
-    /// <summary>An empty payload matches neither declared payload, which is how a receiver is told
-    /// the state is unknown.</summary>
-    public override string? NoValuePayload => null;
+    /// <summary>A receiver ignores an empty payload here and goes on showing the last state it saw, so
+    /// an absent reading is published as <see cref="MqttPayload.None"/> — the literal it reads as
+    /// unknown.</summary>
+    public override string? NoValuePayload => MqttPayload.None;
 
     /// <summary>The current reading, or null when there is none.</summary>
     public required Func<bool?> Read { get; init; }
@@ -16,6 +17,12 @@ public sealed class MqttBinarySensor : MqttEntity
 
     public string PayloadOff { get; init; } = MqttPayload.Off;
 
+    /// <inheritdoc cref="MqttSensor.ForceUpdate"/>
+    public bool ForceUpdate { get; init; }
+
+    /// <inheritdoc cref="MqttSensor.ExpireAfter"/>
+    public int? ExpireAfter { get; init; }
+
     private protected override string? ReadPayload() =>
         Read() switch { true => PayloadOn, false => PayloadOff, null => null };
 
@@ -23,5 +30,7 @@ public sealed class MqttBinarySensor : MqttEntity
     {
         keys.Set("payload_on", PayloadOn);
         keys.Set("payload_off", PayloadOff);
+        keys.SetWhenTrue("force_update", ForceUpdate);
+        keys.Set("expire_after", ExpireAfter);
     }
 }

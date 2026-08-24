@@ -66,12 +66,16 @@ public sealed class MqttChannelSet
     }
 
     /// <summary>Swaps the declared set, returning the keys that have gone so the caller can empty
-    /// their retained topics. The dedupe entries of channels that survive are kept, so a rebuild
-    /// does not re-send every unchanged payload; the entries of channels that have gone are dropped
-    /// along with their gates.</summary>
+    /// their retained topics, and the ones that have arrived so it can ask them for a value. The
+    /// dedupe entries of channels that survive are kept, so a rebuild does not re-send every unchanged
+    /// payload; the entries of channels that have gone are dropped along with their gates.</summary>
+    /// <remarks>A key that arrives has nothing on its topic — either it never had a value, or the
+    /// value was emptied when the key last went — so a caller that does not publish it leaves the
+    /// entity reading as unknown until something else signals it.</remarks>
     /// <exception cref="ArgumentException">A key is unusable, or two channels share one. Both are
     /// declaration mistakes that would otherwise publish silently to the wrong topic.</exception>
-    public IReadOnlyList<string> Replace(IEnumerable<MqttChannel> channels)
+    public (IReadOnlyList<string> Departed, IReadOnlyList<string> Arrived) Replace(
+        IEnumerable<MqttChannel> channels)
     {
         var next = new Dictionary<string, MqttChannel>(StringComparer.Ordinal);
         foreach (var channel in channels)
@@ -86,6 +90,7 @@ public sealed class MqttChannelSet
         lock (_lock)
         {
             var departed = _channels.Keys.Where(k => !next.ContainsKey(k)).ToList();
+            var arrived = next.Keys.Where(k => !_channels.ContainsKey(k)).ToList();
 
             _channels.Clear();
             foreach (var (key, channel) in next)
@@ -98,7 +103,7 @@ public sealed class MqttChannelSet
                 _lastPayload.Remove(gone);
                 _gates.Remove(gone);
             }
-            return departed;
+            return (departed, arrived);
         }
     }
 

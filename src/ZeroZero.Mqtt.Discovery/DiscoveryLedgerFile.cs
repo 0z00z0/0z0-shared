@@ -10,8 +10,9 @@ namespace ZeroZero.Mqtt.Discovery;
 /// settings change to anything listening for one.</para>
 /// <para>A host whose configuration is a single document implements
 /// <see cref="IDiscoveryLedgerStore"/>'s two members over that document instead and never constructs
-/// this class. A host that constructs neither gets <see cref="TransientLedgerStore"/> and loses
-/// eviction across a restart.</para>
+/// this class. There is no third option: a store has to be named, because what is given up without a
+/// durable one — eviction across a restart, a retirement made once rather than on every start, a
+/// migration that is not replayed as a retirement — is not something to arrive at by omission.</para>
 /// </remarks>
 public sealed class DiscoveryLedgerFile : IDiscoveryLedgerStore
 {
@@ -31,7 +32,9 @@ public sealed class DiscoveryLedgerFile : IDiscoveryLedgerStore
 
     public string FilePath => _file.FilePath;
 
-    public DiscoveryLedger Read() => _file.Read();
+    // Through Copy, which is where a record written before the device id was stored beside the topic
+    // has it derived — so an existing installation keeps its identity rather than reading as a new one.
+    public DiscoveryLedger Read() => _file.Read().Copy();
 
     public void Update(Action<DiscoveryLedger> mutate) => _file.Update(mutate);
 }

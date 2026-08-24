@@ -85,7 +85,7 @@ public class MqttStatusTextTests
     public void Describe_SendsACertificateFailureToTheTrustSettingRatherThanToThePassword()
     {
         string sentence = MqttStatusText.Describe(
-            new(MqttProbeOutcome.TlsFailed, "the remote certificate is invalid"), MqttTransport.Tcp);
+            new(MqttProbeOutcome.TlsUntrusted, "the remote certificate is invalid"), MqttTransport.Tcp);
 
         Assert.Contains("certificate trust", sentence);
         Assert.DoesNotContain("credentials", sentence);
@@ -161,7 +161,7 @@ public class MqttStatusTextTests
         Assert.False(MqttStatusText.IsFailure(
             new([new(new(1883, MqttTransport.Tcp), MqttProbeOutcome.Success)])));
         Assert.True(MqttStatusText.IsFailure(
-            new([new(new(1883, MqttTransport.Tcp), MqttProbeOutcome.TlsFailed)])));
+            new([new(new(1883, MqttTransport.Tcp), MqttProbeOutcome.TlsUntrusted)])));
     }
 
     [Fact]

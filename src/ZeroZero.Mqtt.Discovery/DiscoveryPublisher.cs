@@ -19,17 +19,21 @@ public sealed record DiscoveryPublisherSetup
     /// <see cref="DiscoveryPublisher.SetEntitiesAsync"/>.</summary>
     public required MqttEntitySet Entities { get; init; }
 
+    /// <summary>Where what was published is written down. Required, and with no default, because every
+    /// alternative is a choice with consequences: see <see cref="DiscoveryLedgerFile.In"/> for the
+    /// durable form and <see cref="TransientLedgerStore"/> for what is given up without it.</summary>
+    public required IDiscoveryLedgerStore Ledger { get; init; }
+
     /// <summary>The publish groups, or null for a consumer that declares none.</summary>
     public PublishGroupSet? Groups { get; init; }
 
     /// <summary>Entities withdrawn in an earlier version of the consumer, whose retained
-    /// per-component configs must go on being emptied.</summary>
+    /// per-component configs are emptied once and then written down.</summary>
     public IReadOnlyList<RetiredEntity> Retired { get; init; } = [];
 
-    /// <summary>Where what was published is written down. The default keeps it for the life of the
-    /// process, which is enough for a fixed entity table and not enough for one that changes: an
-    /// entity removed while the application was closed is evicted only if the record outlived it.</summary>
-    public IDiscoveryLedgerStore Ledger { get; init; } = new TransientLedgerStore();
+    /// <summary>Entities moving from their own single-component config into the device document,
+    /// keeping everything the user set on them.</summary>
+    public IReadOnlyList<MigratingEntity> Migrating { get; init; } = [];
 
     /// <summary>Where the announced channel set is handed to the connection. Null for a consumer that
     /// declares its channels itself.</summary>
@@ -57,7 +61,7 @@ public sealed record DiscoveryPublisherSetup
 }
 
 /// <summary>Announces the device document on connect, re-announces it when what is announced changes,
-/// and empties everything the device owns when publishing stops.</summary>
+/// and empties everything the device owns when the device is removed.</summary>
 /// <remarks>
 /// The connection knows nothing of this: it runs the layer above at three points through
 /// <see cref="IMqttConnectionListener"/>, and hands it a publisher each time. Nothing here holds an
@@ -81,8 +85,13 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
     // because a change of identity is a different document at a different address.
     private (string Topic, string Json)? _announced;
 
+    /// <exception cref="ArgumentException">An entity is declared both retired and migrating, or a
+    /// retired id names an entity the set still publishes.</exception>
     public DiscoveryPublisher(DiscoveryPublisherSetup setup)
     {
+        ArgumentNullException.ThrowIfNull(setup);
+        Validate(setup.Entities, setup);
+
         _setup = setup;
         _log = setup.Log;
         _entities = setup.Entities;
@@ -110,11 +119,13 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
         _ = Guard(nameof(SetEntities), ct => SetEntitiesAsync(entities, ct));
 
     /// <inheritdoc cref="SetEntities"/>
+    /// <exception cref="ArgumentException">The new set contradicts the declared retirements.</exception>
     public Task SetEntitiesAsync(MqttEntitySet entities, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(entities);
+        Validate(entities, _setup);
         lock (_gate) _entities = entities;
-        return AnnounceAsync(includeRetired: false, force: false, ct);
+        return AnnounceAsync(force: false, ct);
     }
 
     /// <summary>Re-reads what the entities currently say and re-announces if it has changed. What a
@@ -122,8 +133,16 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
     public void Republish() => _ = Guard(nameof(Republish), RepublishAsync);
 
     /// <inheritdoc cref="Republish"/>
-    public Task RepublishAsync(CancellationToken ct = default) =>
-        AnnounceAsync(includeRetired: false, force: false, ct);
+    public Task RepublishAsync(CancellationToken ct = default) => AnnounceAsync(force: false, ct);
+
+    /// <summary>Removes the device outright: the document, the availability topics and every value.
+    /// Deliberately explicit, and never what switching publishing off does — this deletes the
+    /// receiver's registry entries, and with them every name, entity id and area the user chose.</summary>
+    public Task RemoveDeviceAsync(CancellationToken ct = default)
+    {
+        var (publisher, identity) = Target();
+        return publisher is null ? Task.CompletedTask : WithdrawAsync(publisher, identity, ct);
+    }
 
     /// <summary>The subscription that answers a receiver's birth message. Wired into the connection's
     /// own subscription list by a consumer that wants a receiver restarting with no retained state to
@@ -138,10 +157,10 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
 
         // Forced: the retained set on the broker is not this process's to assume anything about. It
         // may have been cleared, or written by an older version, or by another machine sharing an id.
-        await AnnounceAsync(includeRetired: true, force: true, ct).ConfigureAwait(false);
+        await AnnounceAsync(force: true, ct).ConfigureAwait(false);
     }
 
-    async Task IMqttConnectionListener.OnStoppingAsync(
+    async Task IMqttConnectionListener.OnRemovingAsync(
         IMqttPublisher publisher, MqttDeviceIdentity identity, CancellationToken ct)
     {
         lock (_gate) { _publisher = publisher; _identity = identity; }
@@ -160,27 +179,31 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
 
     /// <summary>One announcement pass: the projection to the connection, then the eviction, the
     /// document and the sweep, then the record of what landed.</summary>
-    private async Task AnnounceAsync(bool includeRetired, bool force, CancellationToken ct)
+    private async Task AnnounceAsync(bool force, CancellationToken ct)
     {
         await _pass.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             // One snapshot for the whole pass, so it cannot announce one entity under the old group
-            // state and the next under the new.
+            // state and the next under the new. The record goes in too: an entity whose capability
+            // could not be read keeps what it was, rather than one failed call deciding it.
             var groups = _setup.Groups?.Snapshot();
             var entities = Entities;
-            var published = entities.Published(groups);
+            var (publisher, identity) = Target();
+            var ledger = _setup.Ledger.Read();
+
+            var (published, withheld) = entities.Resolve(groups, ledger.Find(identity.DeviceId));
 
             _setup.SetCommandTargets?.Invoke(MqttEntitySet.CommandTargets(published));
             if (_setup.SetChannelsAsync is { } setChannels)
                 await setChannels(MqttEntitySet.Channels(published), ct).ConfigureAwait(false);
 
-            var (publisher, identity) = Target();
             if (publisher is null || identity.DeviceId.Length == 0 || !_setup.IsConnected()) return;
 
             var plan = DiscoveryPlan.Announce(
-                _setup.Ledger.Read(), _setup.TopicRoot, identity, _setup.Device, _setup.Origin,
-                published, _setup.Retired, _setup.OnlinePayload, _setup.OfflinePayload, includeRetired);
+                ledger, _setup.TopicRoot, identity, _setup.Device, _setup.Origin,
+                published, withheld, _setup.Retired, _setup.Migrating,
+                _setup.OnlinePayload, _setup.OfflinePayload);
 
             bool landed = await publisher.PublishAsync(plan.Evictions, ct).ConfigureAwait(false);
 
@@ -192,10 +215,15 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
                 _announced = landed ? (plan.ConfigTopic, plan.Document) : null;
             }
 
-            landed &= await publisher.PublishAsync(plan.Sweep, ct).ConfigureAwait(false);
+            // Only once the document has landed. Everything in the sweep removes something the new
+            // document is meant to have taken over first — a migrating entity's old config, the old
+            // address after a prefix change, the values of components it has just removed — so sending
+            // it after a document that never arrived would remove without replacing.
+            if (landed) landed = await publisher.PublishAsync(plan.Sweep, ct).ConfigureAwait(false);
 
             // Only what reached the broker is written down. A pass that half-landed leaves the record
-            // as it was, so the next connect evicts what this one failed to.
+            // as it was, so the next connect evicts what this one failed to — and re-sends a migration
+            // flag that never arrived rather than recording it as done.
             if (landed) Store(plan.Ledger);
         }
         finally { _pass.Release(); }
@@ -211,7 +239,8 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
         try
         {
             var (messages, ledger) = DiscoveryPlan.Withdraw(
-                _setup.Ledger.Read(), identity.DiscoveryPrefix, identity.DeviceId, _setup.Retired);
+                _setup.Ledger.Read(), _setup.TopicRoot, identity, Entities.All,
+                _setup.Retired, _setup.Migrating);
 
             if (await publisher.PublishAsync(messages, ct).ConfigureAwait(false)) Store(ledger);
             _announced = null;
@@ -230,7 +259,7 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
             await Task.Delay(Random.Shared.NextDouble() * delay, ct).ConfigureAwait(false);
 
         _log.Info("MQTT: the receiver announced itself; re-announcing the device.");
-        await AnnounceAsync(includeRetired: true, force: true, ct).ConfigureAwait(false);
+        await AnnounceAsync(force: true, ct).ConfigureAwait(false);
     }
 
     private void OnGroupsChanged() => Republish();
@@ -244,6 +273,12 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
 
     private void Store(DiscoveryLedger ledger) =>
         _setup.Ledger.Update(stored => stored.Devices = ledger.Devices);
+
+    private static void Validate(MqttEntitySet entities, DiscoveryPublisherSetup setup)
+    {
+        if (DiscoveryDeclaration.Validate(entities, setup.Retired, setup.Migrating) is { } error)
+            throw new ArgumentException(error, nameof(entities));
+    }
 
     // The callers are fire-and-forget, so an unhandled throw would silently stop the announcement.
     private async Task Guard(string source, Func<CancellationToken, Task> work)

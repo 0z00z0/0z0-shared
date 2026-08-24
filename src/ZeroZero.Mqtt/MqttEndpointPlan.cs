@@ -31,9 +31,9 @@ public static class MqttEndpointPlan
     /// <summary>Whether the broker itself answered, as opposed to nothing being reached. An answer
     /// ends the sweep: the same broker sits behind the next candidate too, so carrying on only spends
     /// time and blurs a precise verdict.</summary>
-    /// <remarks>A TLS failure is deliberately not an answer. It says the certificate was refused on
-    /// one endpoint, which tells nothing about the next port or the other transport, so it ends the
-    /// downgrade on that endpoint alone — see <see cref="DowngradeBlocked"/>.</remarks>
+    /// <remarks>Neither TLS failure is an answer. Each says something about one endpoint's encryption
+    /// and nothing about the next port or the other transport, so both are settled on that endpoint
+    /// alone — see <see cref="DowngradeBlocked"/>.</remarks>
     public static bool Answered(MqttProbeOutcome outcome) => outcome
         is MqttProbeOutcome.Success or MqttProbeOutcome.AuthRejected or MqttProbeOutcome.Rejected;
 
@@ -80,13 +80,19 @@ public static class MqttEndpointPlan
     }
 
     /// <summary>Whether a plain candidate must be skipped because the encrypted candidate on the same
-    /// endpoint reached something. Pure.</summary>
+    /// endpoint found encryption on offer. Pure.</summary>
     /// <remarks>
-    /// Automatic keeps its fallback to clear text, but only where nothing was listening. An endpoint
-    /// that completed a TCP connect and then failed at the TLS layer has a broker behind it, and
-    /// retrying it in clear text sends the password to the very broker the user was trying to reach
-    /// securely. Only <see cref="MqttProbeOutcome.Unreachable"/> — the operating system saying
-    /// there is nothing there — leaves the downgrade open.
+    /// <para>Automatic keeps its fallback to clear text, and the question is a local one about this
+    /// endpoint: was a secure channel available here. Two outcomes say no and leave the downgrade
+    /// open — <see cref="MqttProbeOutcome.Unreachable"/>, the operating system saying there is nothing
+    /// there, and <see cref="MqttProbeOutcome.TlsUnsupported"/>, the far end taking the socket and
+    /// never presenting a certificate. Neither sent a credential: the handshake fails before CONNECT
+    /// does.</para>
+    /// <para>Everything else blocks. A presented certificate that was not trusted means encryption
+    /// <b>was</b> available, so a clear-text retry would put the password on the wire at the very
+    /// broker that offered to take it in cipher; the certificate trust setting is the way out of that,
+    /// not a downgrade. A rejected credential blocks for the same reason, and the sweep stops there
+    /// anyway. A timeout and an unclassified failure block because neither says what was on offer.</para>
     /// </remarks>
     public static bool DowngradeBlocked(
         IReadOnlyList<MqttEndpointAttempt> attempts, MqttEndpointCandidate candidate)
@@ -98,11 +104,16 @@ public static class MqttEndpointPlan
             if (!attempt.Candidate.Encrypted) continue;
             if (attempt.Candidate.Port != candidate.Port) continue;
             if (attempt.Candidate.Transport != candidate.Transport) continue;
-            if (attempt.Outcome != MqttProbeOutcome.Unreachable) return true;
+            if (!DowngradeSafe(attempt.Outcome)) return true;
         }
 
         return false;
     }
+
+    /// <summary>Whether one encrypted attempt's outcome leaves a clear-text retry of the same endpoint
+    /// open: nothing secure was on offer, and nothing secret was sent. Pure.</summary>
+    public static bool DowngradeSafe(MqttProbeOutcome outcome) =>
+        outcome is MqttProbeOutcome.Unreachable or MqttProbeOutcome.TlsUnsupported;
 
     /// <summary>Whether to ask the endpoint for encryption, in the order to ask. Pure.</summary>
     /// <remarks>

@@ -13,6 +13,14 @@ public static class MqttPayload
 
     public const string Off = "OFF";
 
+    /// <summary>The payload that says there is no reading. A receiver ignores a zero-length payload on
+    /// sensor, binary sensor, switch, number and select and goes on showing the last value it saw, so
+    /// an absent reading has to arrive as this literal.</summary>
+    /// <remarks>It collides with a text-valued sensor whose genuine reading is the word <c>None</c>:
+    /// that reading and no reading at all are the same bytes. Unavoidable — the receiver reserves the
+    /// literal and offers no second form.</remarks>
+    public const string None = "None";
+
     /// <summary>A boolean reading, or null when there is none.</summary>
     public static string? Flag(bool? value) => value switch
     {

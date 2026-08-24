@@ -12,8 +12,13 @@ public sealed class MqttNumber : MqttCommandEntity
 {
     public override string Platform => "number";
 
-    /// <summary>An empty payload reads as no value, as on a sensor.</summary>
-    public override string? NoValuePayload => null;
+    /// <summary>A receiver ignores an empty payload here and keeps the value it already has, so an
+    /// absent reading is published as <see cref="MqttPayload.None"/>.</summary>
+    public override string? NoValuePayload => MqttPayload.None;
+
+    /// <summary>The smallest step the receiver's schema accepts. A smaller one drops the whole
+    /// component from the document with nothing to see locally.</summary>
+    public const double MinimumStep = 0.001;
 
     /// <summary>The current reading, or null when there is none.</summary>
     public required Func<double?> Read { get; init; }
@@ -42,8 +47,13 @@ public sealed class MqttNumber : MqttCommandEntity
             : Apply(value);
     }
 
-    internal override string? Validate() =>
-        Max < Min ? $"Entity '{EntityId}' declares a maximum below its minimum." : base.Validate();
+    internal override string? Validate() => this switch
+    {
+        _ when Max < Min => $"Entity '{EntityId}' declares a maximum below its minimum.",
+        _ when !(Step >= MinimumStep) =>
+            $"Entity '{EntityId}' declares a step below {MqttPayload.Number(MinimumStep)}, which the receiver's schema rejects.",
+        _ => base.Validate(),
+    };
 
     private protected override string? ReadPayload() => MqttPayload.Number(Read());
 
