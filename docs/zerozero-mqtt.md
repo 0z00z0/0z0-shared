@@ -189,6 +189,33 @@ The same shape applies to the discovery ledger — `IDiscoveryLedgerStore`, two 
 `DiscoveryLedgerFile.In(directory)` as the file-backed form, writing `mqtt-discovery.json` beside
 the settings rather than inside them. See [The ledger](#the-ledger).
 
+#### Retiring an enum member breaks every file that already names it
+
+**A value no enum member answers to fails the whole document, not the one field it sits in.**
+`MqttSettings` is read as a single deserialisation, so one unrecognised name costs every unrelated
+setting beside it — the broker host, the port, the credentials and the group switches all revert to
+their declared defaults. Three settings are enum-typed and carry this risk: `TransportMode`,
+`EncryptionMode` and `CertificateTrust`.
+
+The original is copied aside as `mqtt.<timestamp>.bad.json` beside the settings file, the three most
+recent copies are kept, and **the defaults are written over the original immediately** — as the
+store is constructed, not on the next `Update`. That copy is the only surviving record of what the
+user had.
+
+**Nothing surfaces it.** The panel opens with a blank broker host and an inert connection, which is
+exactly what a missing file looks like. The path is available as
+`MqttSettingsFile.File.LastQuarantinePath`, null when nothing has been quarantined, and a host that
+wants the user told that a document was set aside reads it once after opening the store.
+
+So **removing or renaming an enum member is a breaking change for every installation whose file
+names it**, and what it costs is the document rather than the member's own setting. Widen an enum
+rather than narrow it, and keep a retired name readable even where it no longer selects anything.
+The same trap catches a carry-across that writes a name the target does not declare: the next read
+discards the document the move just wrote.
+
+A number left by an older writer still reads, but the module writes member names, so it is a name
+that is on disk and a name that has to keep resolving.
+
 ### 3. Declare the publish groups
 
 A publish group is a user-facing switch over part of the published surface. The module declares
