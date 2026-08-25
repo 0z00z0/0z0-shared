@@ -7,12 +7,8 @@ public enum MqttPayloadStatus
     /// <summary>A value, ready to publish.</summary>
     Value,
 
-    /// <summary>No current reading. The topic is emptied, so a consumer connecting later sees
-    /// nothing rather than a value of unknown age.</summary>
-    /// <remarks>Reached only for a channel whose payload function has nothing to hand back. An entity
-    /// declared through the discovery layer answers with its own reset literal instead, because a
-    /// receiver ignores a zero-length payload on most platforms and goes on showing the last value —
-    /// so the emptied topic would say nothing at all there.</remarks>
+    /// <summary>No current reading. The channel's <see cref="MqttChannel.NoValuePayload"/> goes out,
+    /// so a consumer connecting later sees no value rather than one of unknown age.</summary>
     None,
 
     /// <summary>The payload function threw. Nothing is known about the current value, so the last
@@ -34,13 +30,30 @@ public enum MqttPayloadStatus
 /// <param name="RepublishLastOnConnect">On connect, when <paramref name="Payload"/> yields nothing,
 /// whether the last payload published is sent again. True for a channel whose producer has a first
 /// reading to wait for; false for one that is always readable.</param>
+/// <param name="NoValuePayload">What goes out when <paramref name="Payload"/> hands back nothing.
+/// Defaults to <see cref="MqttChannelPayload.None"/>, because a receiver ignores a zero-length
+/// payload and goes on showing the last value it saw, so an emptied topic leaves a stale reading
+/// standing for ever. Empty string empties the topic instead, for a channel where an empty payload
+/// is the right answer — a text value, or a receiver that reads a cleared retained topic as no
+/// value. The discovery layer sets it per platform.</param>
 public sealed record MqttChannel(
     string Key,
     Func<string?> Payload,
     bool Retain = true,
     MqttQos Qos = MqttQos.AtLeastOnce,
     TimeSpan Debounce = default,
-    bool RepublishLastOnConnect = false);
+    bool RepublishLastOnConnect = false,
+    string NoValuePayload = MqttChannelPayload.None);
+
+/// <summary>The one payload literal the core carries. Receiver vocabulary, and here because a
+/// channel declared without the discovery layer has nowhere else to take it from.</summary>
+public static class MqttChannelPayload
+{
+    /// <summary>What says "no reading" to a receiver that ignores a zero-length payload. The
+    /// discovery layer's <c>MqttPayload.None</c> is this same constant, named for the entity
+    /// model.</summary>
+    public const string None = "None";
+}
 
 /// <summary>The declared channels, the dedupe cache across all of them, and one coalescing gate per
 /// channel. Guarded by a single lock, because the producer threads, the command worker and the

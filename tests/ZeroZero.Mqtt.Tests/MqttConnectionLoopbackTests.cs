@@ -212,10 +212,11 @@ public class MqttConnectionLoopbackTests
         Assert.Equal("online", message.Payload);
     }
 
-    /// <summary>No current reading empties the topic, so a consumer connecting later sees nothing
-    /// rather than a value of unknown age — and it does so once, not on every pass.</summary>
+    /// <summary>No current reading sends the channel's no-value payload, which by default is the
+    /// literal a receiver reads as "no value" rather than a zero-length payload it ignores — and it
+    /// does so once, not on every pass.</summary>
     [Fact]
-    public async Task AChannelWithNoCurrentReadingEmptiesItsTopicExactlyOnce()
+    public async Task AChannelWithNoCurrentReadingSendsItsNoValuePayloadExactlyOnce()
     {
         using var broker = new FakeBroker();
         string? reading = "42";
@@ -224,12 +225,31 @@ public class MqttConnectionLoopbackTests
 
         reading = null;
         connection.RequestPublish("cpu_load");
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("cpu_load")) == ""));
+        Assert.True(await FakeBroker.WaitAsync(
+            () => broker.LastPayload(Topic("cpu_load")) == MqttChannelPayload.None));
 
         connection.RequestPublish("cpu_load");
         await Task.Delay(300);
 
         Assert.Equal(2, broker.CountOn(Topic("cpu_load")));
+    }
+
+    /// <summary>A channel that declares an empty no-value payload empties its topic instead — the
+    /// opt-out for a consumer whose receiver reads a cleared retained topic as no value, and what the
+    /// discovery layer declares for a text entity, where an empty string is a value.</summary>
+    [Fact]
+    public async Task AChannelDeclaringAnEmptyNoValuePayloadEmptiesItsTopic()
+    {
+        using var broker = new FakeBroker();
+        string? reading = "42";
+        using var connection = await ConnectAsync(
+            broker, Setup([new("cpu_load", () => reading, NoValuePayload: "")]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("cpu_load")) == 1));
+
+        reading = null;
+        connection.RequestPublish("cpu_load");
+
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("cpu_load")) == ""));
     }
 
     /// <summary>A channel whose producer has a first reading to wait for keeps what it last published

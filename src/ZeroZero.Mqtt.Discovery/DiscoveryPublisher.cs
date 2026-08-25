@@ -1,5 +1,26 @@
 namespace ZeroZero.Mqtt.Discovery;
 
+/// <summary>The deliberate no-ops for a publisher that drives no connection, or one whose published
+/// surface is fixed for the life of the process.</summary>
+/// <remarks>Named rather than left to null, because the two hand-overs are required. A missing one
+/// fails silently — the document rebuilds correctly while the channel set and the command router
+/// stay as they were — so the opt-out has to say at the declaration what it costs.</remarks>
+public static class DiscoveryWiring
+{
+    /// <summary>Hands the announced channel set nowhere. The connection keeps the channels it was
+    /// declared with, so an entity set, a group toggle or an <see cref="MqttEntity.Include"/> that
+    /// changes at runtime no longer changes what is published: an entity announced later never has
+    /// its topic written, and one withdrawn goes on publishing.</summary>
+    public static readonly Func<IReadOnlyList<MqttChannel>, CancellationToken, Task> NoChannelHandover =
+        static (_, _) => Task.CompletedTask;
+
+    /// <summary>Hands the announced command targets nowhere. The router keeps the targets it was
+    /// declared with, so a command addressed to an entity announced later is refused as
+    /// unrecognised, and one addressed to an entity since withdrawn is still acted on.</summary>
+    public static readonly Action<IReadOnlyList<MqttCommandTarget>> NoCommandHandover =
+        static _ => { };
+}
+
 /// <summary>Everything the publisher needs that does not vary with the broker settings.</summary>
 public sealed record DiscoveryPublisherSetup
 {
@@ -24,8 +45,11 @@ public sealed record DiscoveryPublisherSetup
     /// durable form and <see cref="TransientLedgerStore"/> for what is given up without it.</summary>
     public required IDiscoveryLedgerStore Ledger { get; init; }
 
-    /// <summary>The publish groups, or null for a consumer that declares none.</summary>
-    public PublishGroupSet? Groups { get; init; }
+    /// <summary>The publish groups, or null for a consumer that declares none. Required, and with no
+    /// default, because a set declared to the panel but not to the publisher fails silently: the
+    /// toggle writes to settings, the panel shows the new state, and nothing on the wire
+    /// changes.</summary>
+    public required PublishGroupSet? Groups { get; init; }
 
     /// <summary>Entities withdrawn in an earlier version of the consumer, whose retained
     /// per-component configs are emptied once and then written down.</summary>
@@ -40,12 +64,20 @@ public sealed record DiscoveryPublisherSetup
     /// hand-rolled or shared-payload predecessor published on under this same topic root.</summary>
     public IReadOnlyList<RetiredChannel> RetiredChannels { get; init; } = [];
 
-    /// <summary>Where the announced channel set is handed to the connection. Null for a consumer that
-    /// declares its channels itself.</summary>
-    public Func<IReadOnlyList<MqttChannel>, CancellationToken, Task>? SetChannelsAsync { get; init; }
+    /// <summary>Where the announced channel set is handed to the connection — normally
+    /// <see cref="MqttConnection.SetChannelsAsync"/>. Required, and with no default: without it the
+    /// document names entities the connection has no channel for, and they stay unknown on the
+    /// receiver for ever. <see cref="DiscoveryWiring.NoChannelHandover"/> is the deliberate
+    /// opt-out.</summary>
+    public required Func<IReadOnlyList<MqttChannel>, CancellationToken, Task>
+        SetChannelsAsync { get; init; }
 
-    /// <summary>Where the announced command targets are handed to the connection.</summary>
-    public Action<IReadOnlyList<MqttCommandTarget>>? SetCommandTargets { get; init; }
+    /// <summary>Where the announced command targets are handed to the connection — normally
+    /// <see cref="MqttConnection.SetCommandTargets"/>. Required, and with no default: without it the
+    /// document declares command topics the router cannot resolve, and every command on them is
+    /// refused as unrecognised. <see cref="DiscoveryWiring.NoCommandHandover"/> is the deliberate
+    /// opt-out.</summary>
+    public required Action<IReadOnlyList<MqttCommandTarget>> SetCommandTargets { get; init; }
 
     /// <summary>The availability payloads the document declares at its root. The same values the
     /// connection was given.</summary>
@@ -200,9 +232,8 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
 
             var (published, withheld) = entities.Resolve(groups, ledger.Find(identity.DeviceId));
 
-            _setup.SetCommandTargets?.Invoke(MqttEntitySet.CommandTargets(published));
-            if (_setup.SetChannelsAsync is { } setChannels)
-                await setChannels(MqttEntitySet.Channels(published), ct).ConfigureAwait(false);
+            _setup.SetCommandTargets(MqttEntitySet.CommandTargets(published));
+            await _setup.SetChannelsAsync(MqttEntitySet.Channels(published), ct).ConfigureAwait(false);
 
             if (publisher is null || identity.DeviceId.Length == 0 || !_setup.IsConnected()) return;
 

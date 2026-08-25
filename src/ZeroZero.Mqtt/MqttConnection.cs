@@ -955,10 +955,11 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
                         ? Compose(channel, last)
                         : null;
 
-                // Otherwise no reading means an empty topic: a consumer connecting later sees nothing
-                // rather than a value of unknown age. Deduped, so it is emptied once and not on
-                // every pass.
-                return _channels.Accept(channel.Key, "") ? Compose(channel, "") : null;
+                // Otherwise no reading is announced as no reading, in whatever the channel says that
+                // is. Deduped, so it goes out once and not on every pass.
+                return _channels.Accept(channel.Key, channel.NoValuePayload)
+                    ? Compose(channel, channel.NoValuePayload)
+                    : null;
 
             default:
                 // The reader failed, so nothing is known about the current value. What stands, stands,

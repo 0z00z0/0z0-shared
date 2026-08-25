@@ -167,6 +167,15 @@ public class MqttEntitySetTests
     }
 
     [Fact]
+    public void AChannelTakesItsNoValuePayloadFromThePlatform()
+    {
+        // The core's own default is the sentinel, which is right for every platform that ignores a
+        // zero-length payload and wrong for text, where an empty string is a value.
+        Assert.Equal(MqttPayload.None, MqttEntitySet.Channels([Sample.Sensor()])[0].NoValuePayload);
+        Assert.Equal("", MqttEntitySet.Channels([Sample.Text()])[0].NoValuePayload);
+    }
+
+    [Fact]
     public void ADeclaredReadingReachesTheChannelEitherWay()
     {
         Assert.Equal("12", MqttEntitySet.Channels([Waiting("12", keepsLastValue: false)])[0].Payload());

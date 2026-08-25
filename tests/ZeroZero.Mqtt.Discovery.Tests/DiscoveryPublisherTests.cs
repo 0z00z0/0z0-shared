@@ -691,6 +691,32 @@ public class DiscoveryPublisherTests
         Assert.Equal(1, harness.Broker.CountOn(Sample.ConfigTopic));
     }
 
+    /// <summary>The named opt-out announces the document and hands nothing to a connection. What a
+    /// consumer whose published surface is fixed for the life of the process declares, and the only
+    /// way past the two required hand-overs.</summary>
+    [Fact]
+    public async Task TheNamedOptOutAnnouncesTheDocumentAndDrivesNoConnection()
+    {
+        var broker = new RecordingPublisher();
+        using var publisher = new DiscoveryPublisher(new DiscoveryPublisherSetup
+        {
+            IsConnected = () => true,
+            TopicRoot = Sample.TopicRoot,
+            Device = Sample.Device,
+            Origin = Sample.Origin,
+            Entities = new MqttEntitySet([Sample.Sensor(), Sample.Switch()]),
+            Ledger = new RecordingLedgerStore(),
+            Groups = null,
+            SetChannelsAsync = DiscoveryWiring.NoChannelHandover,
+            SetCommandTargets = DiscoveryWiring.NoCommandHandover,
+        });
+
+        await ((IMqttConnectionListener)publisher).OnConnectedAsync(
+            broker, Sample.Identity, CancellationToken.None);
+
+        Assert.Equal(1, broker.CountOn(Sample.ConfigTopic));
+    }
+
     private static async Task WaitForAsync(Func<bool> condition)
     {
         for (int i = 0; i < 200 && !condition(); i++) await Task.Delay(10);

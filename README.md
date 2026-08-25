@@ -92,7 +92,7 @@ that one reference on this project delivers the whole module. Contains:
   font family — defaulting to the stock WinUI theme.
 
 [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) is the implementation guide for the whole module —
-the four assemblies, the six wiring steps, the entity model, identity, the encryption model and the
+the six assemblies, the six wiring steps, the entity model, identity, the encryption model and the
 panel. [`consume-mqtt-settings-panel.md`](consume-mqtt-settings-panel.md) is the shorter adoption
 checklist for the panel alone.
 
@@ -249,7 +249,7 @@ pinned build wants because `checkout --detach` takes an exact ref:
 
 ### 3. Pin a tag
 
-Every consumer-visible change is released under a `v`-prefixed tag — `v0.1.0`, `v0.2.0`, `v0.2.1` — and
+Every consumer-visible change is released under a `v`-prefixed tag — `v0.1.0`, `v0.2.0`, `v0.2.1`, `v0.3.0` — and
 **a tag is the ref to pin, not a raw commit SHA.** A tag reads as a version, so a pin bump is a
 legible diff and a reviewable decision; a SHA says only that something moved. Each tag carries
 release notes listing what changed, so **a consumer raising its pin reads the notes for that tag
@@ -270,12 +270,12 @@ it as the second checkout's `ref`:
         with:
           repository: 0z00z0/0z0-shared
           path: 0z0-shared
-          ref: v0.2.1
+          ref: v0.3.0
 ```
 
 The **sibling clone** shape needs no change at all — a full `git clone` fetches tags, so
 `checkout --detach $ref` resolves one. Shallow is the one thing to watch: `--depth 1` alone leaves
-no tag to check out, so it comes with `--branch v0.2.1`.
+no tag to check out, so it comes with `--branch v0.3.0`.
 
 Local dev builds against the live sibling checkout while CI builds the pinned tag, so a consumer
 that adopts a newly added shared type builds green locally and fails CI with `CS0234`. A consumer
@@ -409,7 +409,7 @@ the Windows App SDK runtime that is actually resolved for the whole build.
 
 | Document | Covers |
 |---|---|
-| [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) | The MQTT module end to end: the four assemblies, the six wiring steps, the entity model, identity and what it guarantees, the encryption model, and the settings panel. |
+| [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) | The MQTT module end to end: the six assemblies, the six wiring steps, the entity model, identity and what it guarantees, the encryption model, and the settings panel. |
 | [`consume-mqtt-settings-panel.md`](consume-mqtt-settings-panel.md) | The panel alone, as an adoption checklist. |
 | [`consume-brand-about-control.md`](consume-brand-about-control.md) | `BrandAboutControl`, as an adoption checklist. |
 | [`docs/release-notes/`](docs/release-notes) | One file per tag, named for it. What a release contains and what it breaks; the release workflow publishes the file matching the tag and fails when it is absent. |

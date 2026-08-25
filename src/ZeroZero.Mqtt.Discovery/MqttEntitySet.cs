@@ -115,5 +115,8 @@ public sealed class MqttEntitySet
             entity.RepublishLastOnConnect ? entity.ReadStateWithoutSentinel : entity.ReadState,
             Retain: entity.Retain,
             Debounce: entity.Debounce,
-            RepublishLastOnConnect: entity.RepublishLastOnConnect);
+            RepublishLastOnConnect: entity.RepublishLastOnConnect,
+            // The platform decides, and a platform that keeps null wants the topic emptied — the
+            // channel's own default would put the sentinel on a text topic, where it is a value.
+            NoValuePayload: entity.NoValuePayload ?? "");
 }

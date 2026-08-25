@@ -33,6 +33,7 @@ public class DiscoveryLoopbackTests
             Origin = new DiscoveryOrigin("Example App", "1.4.0"),
             Entities = entities,
             Ledger = ledger ?? new TransientLedgerStore(),
+            Groups = null,
             SetChannelsAsync = (channels, ct) => connection!.SetChannelsAsync(channels, ct),
             SetCommandTargets = targets => connection!.SetCommandTargets(targets),
         });

@@ -19,7 +19,7 @@ public static class MqttPayload
     /// <remarks>It collides with a text-valued sensor whose genuine reading is the word <c>None</c>:
     /// that reading and no reading at all are the same bytes. Unavoidable — the receiver reserves the
     /// literal and offers no second form.</remarks>
-    public const string None = "None";
+    public const string None = MqttChannelPayload.None;
 
     /// <summary>A boolean reading, or null when there is none.</summary>
     public static string? Flag(bool? value) => value switch

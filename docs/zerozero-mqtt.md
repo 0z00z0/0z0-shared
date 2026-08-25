@@ -1,9 +1,10 @@
 # The MQTT module
 
-Four assemblies that put a Windows desktop application on an MQTT broker and, above that, into a
+Six assemblies that put a Windows desktop application on an MQTT broker and, above that, into a
 discovery-aware receiver as one device with entities. `ZeroZero.Config` stores settings.
 `ZeroZero.Mqtt` speaks the protocol. `ZeroZero.Mqtt.Discovery` adds the entity and document layer.
-`ZeroZero.Mqtt.WinUI` is the settings panel a host embeds.
+`ZeroZero.Mqtt.WinUI` is the settings panel a host embeds, and it draws its typography, colours and
+info icon from `ZeroZero.Brand.WinUI`, which sits over `ZeroZero.Brand.Core`.
 
 This document is the implementation guide. It states what the module does and what an application
 must supply; the rationale behind a given rule lives in the source comment beside it.
@@ -17,13 +18,15 @@ must supply; the rationale behind a given rule lives in the source comment besid
 | Receiver | Home Assistant 2024.11.0 or later. Device-based discovery sets that floor: an older receiver never subscribes to the device topic and sees no entities at all. |
 | Panel | Windows 10 1809 (build 10.0.17763) or later, with the Windows App SDK. |
 
-## The four assemblies
+## The six assemblies
 
 | Assembly | Target | References | Knows about |
 |---|---|---|---|
 | `ZeroZero.Config` | `net10.0` | — | Atomic JSON files, snapshot reads, mutation under one lock, quarantine of an unreadable file |
+| `ZeroZero.Brand.Core` | `net10.0` | — | The studio's branding constants and the About-window data contracts |
 | `ZeroZero.Mqtt` | `net10.0` | `ZeroZero.Config`, `MQTTnet` | Topics, payloads, QoS, retain, the Last Will, transports, endpoint search, certificate trust, command routing, publish groups |
 | `ZeroZero.Mqtt.Discovery` | `net10.0` | `ZeroZero.Mqtt`, `ZeroZero.Config` | Entities, component types, the device document, availability, eviction |
+| `ZeroZero.Brand.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Brand.Core` | The About control and window, the info icon, the shared theme keys |
 | `ZeroZero.Mqtt.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Mqtt`, `ZeroZero.Mqtt.Discovery`, `ZeroZero.Brand.WinUI` | Rendering the settings a user edits |
 
 The dependency runs one way. `ZeroZero.Mqtt` contains no entity vocabulary and no receiver
@@ -32,10 +35,11 @@ gets a broker connection with nothing above it. `ZeroZero.Mqtt.Discovery` is Win
 entity table composes in a plain `net10.0` test project with no broker and no UI present.
 
 **A consumer takes one project reference.** Referencing `ZeroZero.Mqtt.Discovery` brings the core
-and the settings assembly transitively; referencing `ZeroZero.Mqtt.WinUI` brings all three of those
-**and** the panel, so an application with a settings page declares its entity table and hosts the
-panel from that single reference. The panel compiles against none of the entity vocabulary — it
-carries the reference because the whole module is what one reference is expected to deliver.
+and the settings assembly transitively; referencing `ZeroZero.Mqtt.WinUI` brings those three **and**
+the panel, and the two brand assemblies with it, so an application with a settings page declares its
+entity table, hosts the panel and gets the About control from that single reference. The panel
+compiles against none of the entity vocabulary — it carries the reference because the whole module
+is what one reference is expected to deliver.
 
 A headless or test consumer references `ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` directly and
 never pulls WinUI in — which is what keeps the entity model testable on a machine with no desktop.
@@ -287,6 +291,16 @@ connection = new MqttConnection(new MqttConnectionSetup
 connection.Apply(settings.Read().Connect());
 settings.Changed += () => connection.Apply(settings.Read().Connect());
 ```
+
+**The two hand-overs and the group set are required, and have no default.** `SetChannelsAsync`
+gives the publisher somewhere to put the channel set it just rebuilt; `SetCommandTargets` does the
+same for the command router; `Groups` is the group state the pass reads. Left out, each fails
+silently and totally — the document is announced correctly and the entities in it stay unknown for
+ever, commands on them are refused as unrecognised, and a group toggle writes to settings and
+changes nothing on the wire. `Groups = null` is the answer for a consumer that declares no groups,
+and `DiscoveryWiring.NoChannelHandover` and `DiscoveryWiring.NoCommandHandover` are the named
+opt-outs for a publisher that drives no connection: the published surface is then whatever the
+connection was declared with, for the life of the process.
 
 **Three declarations describe what the installed base already has on the broker**, and all three are
 empty for an application publishing to MQTT for the first time. `Migrating` hands an entity over
@@ -689,6 +703,14 @@ returns null.
 
 `None` collides with a text-valued sensor whose genuine reading is the word `None`. That is
 unavoidable: the receiver reserves the literal and offers no second form.
+
+**A consumer on `ZeroZero.Mqtt` alone gets the same answer.** `MqttChannel.NoValuePayload` is what
+goes out when the payload function hands back nothing, and it defaults to `MqttChannelPayload.None`
+— the same literal, declared in the core because a channel declared without the entity layer has
+nowhere else to take it from. Declaring `NoValuePayload: ""` empties the topic instead, which is
+right wherever an empty payload is the answer: a text value, or a receiver that reads a cleared
+retained topic as no value. The entity layer sets it per platform, so an entity table gets the
+platform's own answer and declares nothing.
 
 **Root-level availability is inherited by every component.** It is written once at the document root
 and no component repeats it. The only component that carries its own is one being withheld, whose
