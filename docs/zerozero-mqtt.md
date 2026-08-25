@@ -820,8 +820,8 @@ icon rather than an empty one:
 Six keys, declared in the application's own resources to override: five brushes —
 `MqttPanelHeadingBrush`, `MqttPanelBodyBrush`, `MqttPanelSecondaryBrush`, `MqttPanelAccentBrush`,
 `MqttPanelCardBackgroundBrush` — and one typeface, `MqttPanelFontFamily`. Keys left alone keep the
-stock WinUI theme. The module's defaults are merged into `Application.Resources.MergedDictionaries`,
-so a key declared directly in `Application.Resources` wins.
+stock WinUI theme. **Where an override is declared decides whether it is seen at all**, and
+[Where an override goes](#where-an-override-goes) is the whole of that rule.
 
 `MqttPanelFontFamily` is the only route to the panel's typeface. Every element the panel styles
 carries an explicit style, and an explicit style means a host's *implicit* `TextBlock` style is never
@@ -831,6 +831,62 @@ built in code inherit it. The one exception is a toolkit `SettingsCard`'s own **
 carries the family through the toolkit's style and so keeps the stock face; everything else on the
 panel — section headings, descriptions, status labels and values, and the field controls — follows
 the key.
+
+#### Where an override goes
+
+**The six keys are declared as immediate children of the application's own `Application.Resources`
+dictionary** — the same level as any other resource that dictionary declares itself, and no deeper.
+The module adds its defaults to `Application.Resources.MergedDictionaries` when the first panel is
+constructed, and a dictionary's own entries outrank everything it merges, so an entry at that level
+is the one that wins.
+
+```xml
+<Application.Resources>
+    <ResourceDictionary>
+
+        <ResourceDictionary.MergedDictionaries>
+            <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/>
+            <!-- The application's own per-theme colours live here, keyed by its own names. -->
+            <ResourceDictionary Source="ms-appx:///Themes/BrandColours.xaml"/>
+        </ResourceDictionary.MergedDictionaries>
+
+        <!-- The panel's six keys, directly in Application.Resources. -->
+        <SolidColorBrush x:Key="MqttPanelHeadingBrush"        Color="{ThemeResource BrandHeadingColour}"/>
+        <SolidColorBrush x:Key="MqttPanelBodyBrush"           Color="{ThemeResource BrandBodyColour}"/>
+        <SolidColorBrush x:Key="MqttPanelSecondaryBrush"      Color="{ThemeResource BrandSecondaryColour}"/>
+        <SolidColorBrush x:Key="MqttPanelAccentBrush"         Color="{ThemeResource BrandAccentColour}"/>
+        <SolidColorBrush x:Key="MqttPanelCardBackgroundBrush" Color="{ThemeResource BrandCardColour}"/>
+        <FontFamily x:Key="MqttPanelFontFamily">Segoe UI Variable Text</FontFamily>
+
+    </ResourceDictionary>
+</Application.Resources>
+```
+
+**The theme variation lives in the colour each brush resolves, not in where the brush is declared.**
+That is how the module's own defaults are built, and it is what keeps the six keys at the one level
+the lookup reads while still giving light and dark different values.
+
+**Two placements do not work, and both look reasonable:**
+
+- **Inside `Application.Resources.ThemeDictionaries`.** This is one level below what the panel
+  resolves, so nothing declared there reaches it. It is the placement to check first, because a host
+  that already keeps its own palette in theme dictionaries will put the panel's keys beside them.
+- **Inside a dictionary the application merges into `Application.Resources.MergedDictionaries`.**
+  The module's defaults are merged when the first panel is constructed, which is after the
+  application's own merges, and the later merge wins. A host dictionary merged in `App.xaml`
+  therefore loses to the default it is meant to replace.
+
+**Both failures are silent and total.** There is no error, no warning and no log line: the lookup
+never sees the key, **every one of the six falls back to the module's stock default**, and the panel
+renders in the stock WinUI theme beside pages carrying the host's own. The build is green. The
+symptom reads as the module ignoring the host's branding rather than as a misplaced declaration,
+which is why it is worth measuring rather than assuming — a partial effect would point at the keys,
+and a total one points at the placement.
+
+**Sample the panel's heading and the application's own heading in the same frame.** An override that
+arrived makes the two identical, byte for byte. One that fell back leaves the panel's heading at the
+stock theme's colour, which against a branded ground is a visibly different shade and, in dark, is
+usually plain white.
 
 #### Overriding a key safely
 
@@ -846,6 +902,13 @@ renders the text at nearly the ground's own colour.
 against the background it sits on and compute the contrast ratio. Below about 4.5:1 fails, and this
 particular failure lands close to 1:1, so the measurement separates the two cases sharply instead of
 leaving it to judgement. The module's own defaults measure 6.17:1 in light and 9.09:1 in dark.
+
+**The same measurement catches a misplaced key**, which is the other reason to take it rather than
+look. A key that fell back reads as the module's own default instead of the host's, so a panel
+sampling the defaults' own figures — or a heading that matches nothing else on the page — is a
+placement problem rather than a palette one, and [Where an override goes](#where-an-override-goes)
+is what to re-read. A branded set that arrived measures against the host's own ground: the first
+consumer to override all six measures 11.07:1 on the status values and 14.47:1 on the labels.
 
 ### Translation
 

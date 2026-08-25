@@ -84,8 +84,47 @@ touch no store and stay silent.
 Six keys, declared in the application's own resources to override: `MqttPanelHeadingBrush`,
 `MqttPanelBodyBrush`, `MqttPanelSecondaryBrush`, `MqttPanelAccentBrush`,
 `MqttPanelCardBackgroundBrush` and `MqttPanelFontFamily`. Keys left alone keep the stock WinUI
-theme. The module's defaults are merged into `Application.Resources.MergedDictionaries`, so a key
-declared directly in `Application.Resources` wins.
+theme.
+
+**Declare them as immediate children of `Application.Resources`, and nowhere deeper.** The module
+merges its defaults into `Application.Resources.MergedDictionaries` when the first panel is
+constructed, and a dictionary's own entries outrank everything it merges.
+
+```xml
+<Application.Resources>
+    <ResourceDictionary>
+
+        <ResourceDictionary.MergedDictionaries>
+            <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/>
+            <!-- The application's own per-theme colours live here, keyed by its own names. -->
+            <ResourceDictionary Source="ms-appx:///Themes/BrandColours.xaml"/>
+        </ResourceDictionary.MergedDictionaries>
+
+        <!-- The panel's six keys, directly in Application.Resources. -->
+        <SolidColorBrush x:Key="MqttPanelHeadingBrush"        Color="{ThemeResource BrandHeadingColour}"/>
+        <SolidColorBrush x:Key="MqttPanelBodyBrush"           Color="{ThemeResource BrandBodyColour}"/>
+        <SolidColorBrush x:Key="MqttPanelSecondaryBrush"      Color="{ThemeResource BrandSecondaryColour}"/>
+        <SolidColorBrush x:Key="MqttPanelAccentBrush"         Color="{ThemeResource BrandAccentColour}"/>
+        <SolidColorBrush x:Key="MqttPanelCardBackgroundBrush" Color="{ThemeResource BrandCardColour}"/>
+        <FontFamily x:Key="MqttPanelFontFamily">Segoe UI Variable Text</FontFamily>
+
+    </ResourceDictionary>
+</Application.Resources>
+```
+
+The theme variation belongs to the colour each brush resolves, not to where the brush is declared —
+which is what keeps the keys at the one level the panel reads while light and dark still differ.
+
+**Two placements silently do nothing.** Inside `Application.Resources.ThemeDictionaries` is one
+level below what the panel resolves. Inside a dictionary the application merges itself is merged
+before the module's own and loses to it. Either way **all six keys fall back to stock**, with no
+warning and no build error, and the panel looks as though it ignores the host's theme entirely.
+
+**Measure after overriding**, in both themes: sample the panel's heading and the application's own
+heading in the same frame — an override that arrived makes them identical, byte for byte — and
+compute the contrast of the panel's text against its ground, where below about 4.5:1 fails. A key
+that fell back reads as the module's own default, which is exactly what the measurement separates
+from a palette that is merely poor.
 
 `MqttPanelFontFamily` is the only route to the panel's typeface: every element the panel styles
 carries an explicit style, and an explicit style means a host's implicit `TextBlock` style is never
