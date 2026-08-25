@@ -1,10 +1,24 @@
-# ZeroZero Software — shared branding library
+# ZeroZero Software — shared library
 
-Shared visual identity and About-window plumbing for ZeroZero Software's desktop apps
-(currently [ChargeKeeper](https://github.com/0z00z0/ChargeKeeper) and
-[HyperVManagerTray](https://github.com/0z00z0/HyperVManagerTray)). One parameterised About
-component, plus the studio's brand constants (name, tagline, palette, links) in one place so an
-app never re-types them.
+The building blocks ZeroZero Software's desktop apps share (currently
+[ChargeKeeper](https://github.com/0z00z0/ChargeKeeper) and
+[HyperVManagerTray](https://github.com/0z00z0/HyperVManagerTray)), so no app re-types them. Seven
+projects in two modules:
+
+- **The brand module** — the studio's visual identity and About plumbing: the brand constants
+  (name, tagline, palette, links), one parameterised About component, and the settings-row info
+  icon. `ZeroZero.Brand.Core` and `ZeroZero.Brand.WinUI`.
+- **The MQTT module** — atomic JSON settings, an MQTT 5.0 connection, and above it a device
+  document that puts the application into a discovery-aware receiver as one device with entities,
+  plus the settings panel a host embeds. `ZeroZero.Config`, `ZeroZero.Mqtt`,
+  `ZeroZero.Mqtt.Discovery` and `ZeroZero.Mqtt.WinUI`, with
+  [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) as its implementation guide.
+
+`ZeroZero.Brand.WinUI.TestHarness` is an interactive exe that opens either surface on screen.
+
+Third-party packages are the Windows App SDK, the Community Toolkit's settings controls, and
+**MQTTnet** — the last confined to `ZeroZero.Mqtt`, where no MQTTnet type reaches a public
+signature. `ZeroZero.Brand.Core` and `ZeroZero.Config` reference nothing at all.
 
 MIT licensed, public.
 
@@ -16,7 +30,9 @@ git clone https://github.com/0z00z0/0z0-shared.git
 
 Consuming apps reference this repo by relative path, so it is cloned as a **sibling** of the
 consuming app's own checkout — `..\0z0-shared` from the consumer's project directory. See
-[Integrating the About dialogue](#integrating-the-about-dialogue) for the reference and CI recipe.
+[Integrating the About dialogue](#integrating-the-about-dialogue) for the reference and CI recipe,
+which is the same one for either module; [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) carries
+the MQTT module's wiring on top of it.
 
 Requirements:
 
@@ -24,8 +40,11 @@ Requirements:
 - **Windows 10 1809 (build 10.0.17763) or later**, with the Windows App SDK. The Windows App SDK
   and SDK build tools arrive as NuGet packages, so `dotnet restore` is enough.
 
-`ZeroZero.Brand.WinUI` and the test harness target `net10.0-windows10.0.26100.0`, so the solution
-builds on Windows only. `ZeroZero.Brand.Core` is plain `net10.0` and is portable in isolation.
+Three projects target `net10.0-windows10.0.26100.0` — `ZeroZero.Brand.WinUI`, `ZeroZero.Mqtt.WinUI`
+and the test harness — so the solution builds on Windows only. The other four,
+`ZeroZero.Brand.Core`, `ZeroZero.Config`, `ZeroZero.Mqtt` and `ZeroZero.Mqtt.Discovery`, are plain
+`net10.0` and portable in isolation, as are all four test projects. The MQTT module additionally
+needs an MQTT 5.0 broker at run time, and Home Assistant 2024.11.0 or later for discovery.
 
 ## Projects
 
@@ -50,9 +69,9 @@ app or any other .NET target. Contains:
 `ZeroZero.Brand.Core`. Contains:
 
 - **`BrandAboutControl`** — a `UserControl` holding the actual About *content*: the `[Ø]` studio
-  mark + brand header band, company name/tagline (linked to the studio site), app description,
-  three co-equal link buttons (repository / website / donate), an expandable external-libraries
-  credit list, and a copyright footer. Owns no window chrome, sizing, or update/exit flow — hosts
+  mark + brand header band, the company name and tagline as plain non-interactive text, app
+  description, three co-equal link buttons (repository / website / donate), an expandable
+  external-libraries credit list, and a copyright footer. Owns no window chrome, sizing, or update/exit flow — hosts
   either inside `BrandAboutWindow` (tray-app popup) or directly inside a host app's own
   in-navigation page (a full windowed app with no separate About window and no update concept).
   Call `SetInfo(AboutInfo)` after construction to populate it (a method, not a settable property —
@@ -67,12 +86,77 @@ app or any other .NET target. Contains:
   callback (omit it to hide the "Check for Updates" button entirely — a console-only tool or a
   build without an update channel just doesn't pass one), and an optional `OnBeforeExit` hook for
   apps that need to self-exit cleanly before an installer-triggered relaunch.
+- **`InfoIcon`** — a small "(i)" button that opens its explanation in a flyout, for the settings row
+  whose how-it-works detail would otherwise sit in the visible copy. `Info`, `Subject` and
+  `GlyphCode` are dependency properties, so a row built in code can bind them.
+  `ZeroZero.Mqtt.WinUI` uses it, and it carries no MQTT vocabulary.
 
 Deliberately **not** shared: each app's own update-check networking/dialogue plumbing
 (`UpdateCheckService`, `UpdateChecker`, `UpdatePrompt`, etc.). Only the window chrome and layout
 are unified — `OnCheckForUpdates` is a plain `Func<Task<bool>>` the consumer wires up to its own
 existing update flow (returning `true` when an update was applied so the window owns the
 clean-exit-before-relaunch step via `OnBeforeExit`).
+
+### `src/ZeroZero.Config`
+
+Plain `net10.0`, no package references — the settings store the MQTT module reads and writes, and
+usable on its own by anything that keeps a JSON document on disk. Contains:
+
+- **`SettingsFile<T>`** — an atomic JSON file: a typed snapshot read, mutation under one lock, a
+  write that lands whole or not at all, and a change event. The snapshot is what callers hold, so a
+  reader never observes a half-applied edit.
+- **`SettingsFileOptions`** — where the file lives, how it serialises, and what to do on failure.
+- **`SettingsFileQuarantine`** — what happens to a file that cannot be parsed: it is moved aside
+  rather than overwritten, so a corrupt document is recoverable instead of silently replaced by
+  defaults.
+- **`SettingsSaveFailedEventArgs`** and `SettingsSaveResult` — a failed write is reported, never
+  swallowed.
+
+### `src/ZeroZero.Mqtt`
+
+Plain `net10.0`, references `ZeroZero.Config` and **MQTTnet** — the repository's one third-party
+protocol dependency, and the reason this is a project of its own rather than an addition to
+`ZeroZero.Brand.Core`'s zero-dependency rule. No MQTTnet type reaches a public signature: the
+module's own `MqttQos`, `MqttConnackCode` and `MqttPubackCode` stand in front of it. This layer is
+protocol-only and names no entity, sensor or device class. Contains:
+
+- **`MqttConnection`** — the connection engine: connect, transport sweep, backoff with flap
+  escalation, publish and subscribe, QoS, retain, the Last Will, and a bounded dispose. `Apply` is
+  idempotent, so applying on every settings change costs nothing.
+- **`MqttChannel`** / **`MqttChannelSet`** — a topic key plus a payload provider, with a debounce,
+  a dedupe and a retain policy. It publishes whatever string its provider returns.
+- **`MqttCommandTarget`** / **`MqttCommandRouter`** — an entity id and the handler an inbound
+  payload reaches, with a refusal reported rather than swallowed.
+- **`MqttSettings`**, **`MqttSettingsFile`**, **`IMqttSettingsStore`** — the configuration record,
+  a file-backed store over `ZeroZero.Config`, and the interface a host implements over its own
+  document instead.
+- **`MqttProbe`**, **`MqttEndpoint`**, **`MqttEndpointPlan`**, **`MqttCertificateTrust`** — endpoint
+  search within a caller-supplied budget, the three encryption modes, and the trust decision that
+  governs whether an automatic downgrade is allowed.
+- **`PublishGroup`** / **`PublishGroupSet`** — the host-declared publish groups whose state persists
+  per key, never per index.
+- **`MqttStrings`**, **`MqttPanelText`**, **`MqttStatusText`** — the module's built-in en-GB wording,
+  which is what the panel falls back to.
+
+### `src/ZeroZero.Mqtt.Discovery`
+
+Plain `net10.0`, references `ZeroZero.Mqtt` and `ZeroZero.Config` — WinUI-free, so an entity table
+composes in a plain `net10.0` test project with no broker and no desktop present. Everything the
+receiver's specification owns rather than MQTT's. Contains:
+
+- **`MqttEntity`** and the seven component types — `MqttSensor`, `MqttBinarySensor`, `MqttSwitch`,
+  `MqttButton`, `MqttNumber`, `MqttSelect`, `MqttText`. One declaration per entity carries its
+  discovery keys, its reader and, where it is writable, what an inbound payload does. Bounds are
+  declared once and enforced twice — the receiver's control and `Accept` both hold to them.
+- **`MqttEntitySet`** — the declared table, read on every announcement pass.
+- **`DiscoveryDocument`**, **`DiscoveryDevice`**, **`DiscoveryTopics`** — one retained device
+  document at `<prefix>/device/<deviceId>/config`, with root-level availability every component
+  inherits, and one bare topic per entity carrying a plain value.
+- **`DiscoveryPublisher`** / **`DiscoveryPublisherSetup`** — the announcement pass: what to publish,
+  what to withhold, and what to evict.
+- **`DiscoveryLedger`**, **`DiscoveryLedgerFile`**, **`IDiscoveryLedgerStore`** — the record of what
+  was last announced, so eviction survives a process restart rather than depending on what happens
+  to be declared now.
 
 ### `src/ZeroZero.Mqtt.WinUI`
 
@@ -86,8 +170,10 @@ that one reference on this project delivers the whole module. Contains:
   subject matter; everything domain-shaped arrives through `MqttPanelSetup` and every edit reports
   back as a callback.
 - **`MqttPanelSetup`** — everything the panel needs from its host, in one object initialiser.
-- **`MqttResourceStrings`** — the module's own `.resw`, read through `ResourceLoader`, with the
-  built-in en-GB in `MqttStrings` as the floor.
+- **`MqttResourceStrings`** — the module's own `.resw`, read through the Windows App SDK's
+  `ResourceManager` and the `ResourceMap`s below it, with the built-in en-GB in `MqttStrings` as
+  the floor. Several maps are tried, because where a library's strings land in the index depends on
+  how the consuming application builds; a key none of them answers falls back to the built-in text.
 - **`Themes/MqttPanelResources.xaml`** — six theme keys a host may override — five brushes and a
   font family — defaulting to the stock WinUI theme.
 
@@ -112,7 +198,7 @@ Demo") — simulating a full windowed app's in-navigation About page.
 
 #### Scripts
 
-Two PowerShell scripts in the repo root drive that harness:
+Three PowerShell scripts in the repo root drive that harness:
 
 - **`Show live 'About' dialogue.ps1`** — builds the harness if its exe is missing, then launches
   it, so both windows can be inspected on screen.
@@ -146,25 +232,33 @@ component per run, so unrelated windows never land on top of each other.
 |---|---|
 | ![MQTT panel, light](docs/screenshots/mqtt-panel-light.png) | ![MQTT panel, dark](docs/screenshots/mqtt-panel-dark.png) |
 
-With the Broker group open, and with the publish list open:
+With the Broker group open:
 
-| Broker | Publish groups |
+| Light | Dark |
 |---|---|
-| ![MQTT panel, broker group open](docs/screenshots/mqtt-panel-light-broker.png) | ![MQTT panel, publish list open](docs/screenshots/mqtt-panel-light-groups.png) |
+| ![MQTT panel, broker group open, light](docs/screenshots/mqtt-panel-light-broker.png) | ![MQTT panel, broker group open, dark](docs/screenshots/mqtt-panel-dark-broker.png) |
+
+With the publish list open:
+
+| Light | Dark |
+|---|---|
+| ![MQTT panel, publish list open, light](docs/screenshots/mqtt-panel-light-groups.png) | ![MQTT panel, publish list open, dark](docs/screenshots/mqtt-panel-dark-groups.png) |
 
 An unapplied broker edit is marked beside the section heading, so a closed group cannot hide it:
 
-![MQTT panel, unapplied edit](docs/screenshots/mqtt-panel-light-edited.png)
+| Light | Dark |
+|---|---|
+| ![MQTT panel, unapplied edit, light](docs/screenshots/mqtt-panel-light-edited.png) | ![MQTT panel, unapplied edit, dark](docs/screenshots/mqtt-panel-dark-edited.png) |
 
-All images are the capture scripts' output, so they show the surfaces as they actually render
-rather than what the XAML claims.
+All ten images are the capture scripts' output — every PNG those scripts write is embedded here — so
+they show the surfaces as they actually render rather than what the XAML claims.
 
 ## Integrating the About dialogue
 
 ### 1. Reference the library
 
 There is no NuGet feed yet — tracked in
-[issue #1](https://github.com/0z00z0/0z0-shared/issues/1) — so a consumer takes a
+[issue #14](https://github.com/0z00z0/0z0-shared/issues/14) — so a consumer takes a
 `ProjectReference` on a checkout of this repo. Route it through an MSBuild property that defaults
 to the sibling folder, so CI can point the same reference somewhere else without editing the
 `.csproj`:
@@ -287,8 +381,11 @@ sibling clone is absent. ChargeKeeper's `.github/0z0-shared-ref` plus its `Check
 and `scripts/check-shared-pin.ps1` are the working example. Put the tag in that file rather than
 the SHA it resolves to, and let the guard resolve it — the pin is then readable where it is edited.
 
-There is no NuGet feed to pin instead. `ZeroZero.Brand.WinUI` cannot be packed, so a release is the
-tag and its notes, which is all a `ProjectReference` on a pinned checkout needs.
+There is no NuGet feed to pin instead. Neither WinUI assembly can be packed —
+`ZeroZero.Brand.WinUI` and `ZeroZero.Mqtt.WinUI` both compile XAML to binary form, and
+`ZeroZero.Mqtt.WinUI` additionally indexes a `.resw` into a `.pri`; `dotnet pack` carries none of it
+— so a release is the tag and its notes, which is all a `ProjectReference` on a pinned checkout
+needs.
 
 ### 4. Pick the hosting style
 
@@ -396,14 +493,32 @@ single source of truth — only its *rendering* moves to the shared control, not
   supplied by the consumer.
 - The reference and CI recipe above applies here too: the consuming app's own workflow needs one of
   the two checkout shapes, pinned to a tag — or a NuGet pin, once
-  [issue #14](https://github.com/0z00z0/0z0-shared/issues/14) makes the WinUI assembly packable.
+  [issue #14](https://github.com/0z00z0/0z0-shared/issues/14) makes the WinUI assemblies packable.
 
 ## Package versions
 
-The library pins `Microsoft.WindowsAppSDK` `2.2.0` and `Microsoft.Windows.SDK.BuildTools`
-`10.0.28000.2270`. Those pins are a floor, not a lock: a consuming app may pin higher, and NuGet
+Every version is declared centrally, in `Directory.Packages.props`. Three of the four pins behave
+differently from one another, and the difference is what a consumer needs:
+
+| Package | Version | What the pin is |
+|---|---|---|
+| `Microsoft.WindowsAppSDK` | `2.2.0` | A **floor**. |
+| `Microsoft.Windows.SDK.BuildTools` | `10.0.28000.2270` | A **floor**. |
+| `CommunityToolkit.WinUI.Controls.SettingsControls` | `8.2.251219` | A **ceiling**. |
+| `MQTTnet` | `5.2.0.1603` | Transitive only, and no type of it reaches a public signature. |
+
+**The two Windows App SDK pins are a floor, not a lock.** A consuming app may pin higher, and NuGet
 unifies a package graph on the version nearest the consuming project, so the app's own pin governs
 the Windows App SDK runtime that is actually resolved for the whole build.
+
+**The Community Toolkit pin is a ceiling and behaves the opposite way.** A consuming app holding a
+direct reference *below* this version fails to restore with **NU1605**, an error rather than a
+warning, because a direct reference below a transitive one is a downgrade. Raise both or neither.
+
+**MQTTnet reaches a consumer transitively, through `ZeroZero.Mqtt`, and nothing requires the
+consumer to reference it.** The module's own `MqttQos`, `MqttMessage`, `MqttConnackCode` and
+`MqttPubackCode` stand in front of it, so an app never names an MQTTnet type and a version bump here
+is not a consumer-visible API change.
 
 ## Documentation
 

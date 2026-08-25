@@ -302,6 +302,12 @@ and `DiscoveryWiring.NoChannelHandover` and `DiscoveryWiring.NoCommandHandover` 
 opt-outs for a publisher that drives no connection: the published surface is then whatever the
 connection was declared with, for the life of the process.
 
+**Being required is the whole guard, and a consumer that compiles cannot demonstrate it.** The
+failure these members prevent is the one where they are absent, so code that already supplies them
+has been enforcing the rule from the moment it built — a green build is the guard working, not
+evidence about it. There is nothing to verify at run time and nothing to test for; removing a
+member to watch it fail is a compile error, which is the point.
+
 **Three declarations describe what the installed base already has on the broker**, and all three are
 empty for an application publishing to MQTT for the first time. `Migrating` hands an entity over
 from its own single-component config to the device document, keeping everything the user set on it.
@@ -507,7 +513,7 @@ Members each component adds of its own:
 | `MqttSwitch` | `PayloadOn`, `PayloadOff` |
 | `MqttButton` | `PayloadPress`, defaulting to `MqttButton.DefaultPress` (`PRESS`) |
 | `MqttNumber` | `Min` and `Max` (both required), `Step`, `Unit`, `Mode` |
-| `MqttSelect` | — |
+| `MqttSelect` | `Options` (required) — a function, read on every pass, so a list composed from what the machine currently holds stays current |
 | `MqttText` | `MinLength`, `MaxLength` (ceiling `MqttText.MaxLengthCeiling`, 255), `Mode`, `Pattern` |
 
 Bounds are declared once and enforced twice: the receiver keeps its own control inside them, and
