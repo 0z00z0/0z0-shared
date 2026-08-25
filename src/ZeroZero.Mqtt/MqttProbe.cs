@@ -10,7 +10,8 @@ public enum MqttProbeOutcome
     /// <summary>CONNACK accepted the session.</summary>
     Success,
 
-    /// <summary>DNS or TCP never got us a broker: unknown host, refused, no route.</summary>
+    /// <summary>DNS or TCP never got us a broker: unknown host, refused, no route, or a socket stage
+    /// that ran out of budget with nothing at all having come back.</summary>
     Unreachable,
 
     /// <summary>Something is at that address but it never answered within the budget.</summary>
@@ -108,6 +109,29 @@ public static class MqttProbe
     /// over a minute away. 4 s still clears a LAN round trip and a TLS handshake by a wide margin.</summary>
     public static readonly TimeSpan SweepTimeout = TimeSpan.FromSeconds(4);
 
+    /// <summary>What the stage that opens a socket gets from a candidate that has said nothing
+    /// whatsoever. It bounds that stage alone: a candidate that answered and then failed keeps the
+    /// full budget, because one that answered is worth waiting on.</summary>
+    /// <remarks>A refusal comes back at once and costs nothing, so this is the budget of a dropped
+    /// SYN — a broker behind a front end that filters the MQTT ports rather than refusing them, where
+    /// every filtered candidate spends its whole budget in <c>SYN_SENT</c> before the one that works
+    /// is reached. 3 s is far longer than a broker that is there needs: a handshake is a millisecond
+    /// on a LAN and a few hundred across the world. Shorter would start cutting off a congested mobile
+    /// link; longer buys nothing, because a candidate silent for 3 s is answered for by the next
+    /// round, which opens its sockets under the full budget.</remarks>
+    public static readonly TimeSpan SilentTimeout = TimeSpan.FromSeconds(3);
+
+    /// <summary>How long the socket stage may wait, from how many candidates there are to move on to
+    /// and whether a whole round has already gone by with nothing answering. Pure.</summary>
+    /// <remarks>The short budget is only affordable where there is somewhere else to go. A sweep of
+    /// exactly one candidate — the port, the transport and the encryption all pinned — has nothing to
+    /// move on to, so cutting it short would turn a slow broker into no broker rather than into a
+    /// later candidate. <paramref name="escalated"/> is the same guarantee across rounds: a link that
+    /// needs longer than <see cref="SilentTimeout"/> connects on the round after, and the endpoint it
+    /// connected on then leads the sweep, so the cost is paid once rather than for ever.</remarks>
+    public static TimeSpan SocketBudget(int candidates, bool escalated) =>
+        escalated || candidates <= 1 ? Timeout : SilentTimeout;
+
     /// <summary>The probe's client id — never the publisher's, see the class note.</summary>
     public static string ProbeClientId(string deviceId) => $"{deviceId}_probe";
 
@@ -122,8 +146,13 @@ public static class MqttProbe
         if (string.IsNullOrWhiteSpace(target.Host)) return new([]);
 
         var request = target.Request;
-        var budgetPerCandidate =
-            MqttEndpointPlan.Sweep(request, target.Memory).Count > 1 ? SweepTimeout : Timeout;
+        int candidates = MqttEndpointPlan.Sweep(request, target.Memory).Count;
+        var budgetPerCandidate = candidates > 1 ? SweepTimeout : Timeout;
+
+        // The socket stage is bounded inside that, so a filtered port cannot spend the CONNECT
+        // stage's budget saying nothing. Never escalated here: a run is one go, and pressing the
+        // button again is what asks for another.
+        var socketBudget = SocketBudget(candidates, escalated: false);
 
         var attempts = new List<MqttEndpointAttempt>();
         while (MqttEndpointPlan.NextEndpoint(request, target.Memory, attempts) is { } candidate)
@@ -131,7 +160,8 @@ public static class MqttProbe
             // A fresh budget per candidate: one dead endpoint must not eat the next one's chance.
             using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
             budget.CancelAfter(budgetPerCandidate);
-            var result = await RunOneAsync(target, candidate, progress, budget.Token, ct).ConfigureAwait(false);
+            var result = await RunOneAsync(target, candidate, socketBudget, progress, budget.Token, ct)
+                .ConfigureAwait(false);
             attempts.Add(new(candidate, result));
 
             if (ct.IsCancellationRequested) break;   // cancelled; the remaining candidates are moot
@@ -142,13 +172,19 @@ public static class MqttProbe
     /// <summary>Both stages against one candidate. The two stages are reported separately because
     /// they fail for different reasons, and a panel says which one is running.</summary>
     private static async Task<MqttProbeResult> RunOneAsync(
-        MqttProbeTarget target, MqttEndpointCandidate candidate,
+        MqttProbeTarget target, MqttEndpointCandidate candidate, TimeSpan socketBudget,
         IProgress<MqttSearchProgress>? progress, CancellationToken budget, CancellationToken ct)
     {
         var address = MqttEndpoint.Resolve(target.Host, candidate);
 
         progress?.Report(new(MqttSearchStage.Port, address.Port, candidate.Transport));
-        if (await ProbeTcpAsync(address.Host, address.Port, budget, ct).ConfigureAwait(false) is { } closed)
+
+        // Nested inside the candidate's own budget, so the socket stage is the shorter of the two and
+        // both stages together still cost no more than one candidate is allowed.
+        using var socket = CancellationTokenSource.CreateLinkedTokenSource(budget);
+        socket.CancelAfter(socketBudget);
+        if (await ProbeTcpAsync(address.Host, address.Port, socket.Token, ct).ConfigureAwait(false)
+            is { } closed)
         {
             progress?.Report(new(MqttSearchStage.Finished, address.Port, candidate.Transport, closed));
             return closed;
@@ -161,7 +197,17 @@ public static class MqttProbe
         return result;
     }
 
+    /// <summary>The verdict on a socket that never opened and was never refused either. The far end
+    /// dropped the packet, so nothing is known to be at the address at all.</summary>
+    private static readonly MqttProbeResult Silent =
+        new(MqttProbeOutcome.Unreachable, "nothing answered on that port");
+
     /// <summary>Stage 1 — can a socket be opened at all. Returns null when it can (i.e. carry on).</summary>
+    /// <remarks>An expired <paramref name="budget"/> is <see cref="MqttProbeOutcome.Unreachable"/> and
+    /// not <see cref="MqttProbeOutcome.TimedOut"/>. Nothing has answered at this stage, so nothing is
+    /// known to be at the address, which is the distinction the two outcomes are drawn on. It is also
+    /// what makes the verdict downgrade-safe, and correctly so: a socket that never opened offered no
+    /// encryption and carried no credential, because the handshake never began.</remarks>
     internal static async Task<MqttProbeResult?> ProbeTcpAsync(
         string host, int port, CancellationToken budget, CancellationToken ct)
     {
@@ -172,7 +218,9 @@ public static class MqttProbe
             return null;
         }
         catch (SocketException ex) { return ClassifySocketError(ex.SocketErrorCode); }
-        catch (OperationCanceledException) { return Cancelled(ct); }
+        // The caller giving up and the budget expiring are different facts, and only the first is a
+        // cancellation. The second is the far end having said nothing within the time it was given.
+        catch (OperationCanceledException) { return ct.IsCancellationRequested ? Cancelled(ct) : Silent; }
         catch (Exception ex) { return new(MqttProbeOutcome.Failed, Describe(ex)); }
     }
 

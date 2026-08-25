@@ -58,6 +58,11 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     // Honoured on the maintain-loop thread, so the forced socket drop cannot race its own connect.
     private volatile bool _reconnectRequested;
 
+    // Whether the socket stage takes the full budget because a whole round went by with nothing
+    // answering anywhere. Written under _gate on an apply and on the maintain-loop thread on a
+    // connect, read there once per round.
+    private volatile bool _socketBudgetEscalated;
+
     // Cuts the maintain loop's inter-poll delay short. Volatile: swapped for a fresh instance on use.
     private volatile TaskCompletionSource _wake = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -76,8 +81,9 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
 
     private static readonly TimeSpan InitialBackoff = TimeSpan.FromSeconds(3);
 
-    // What one unreachable transport costs before the next is tried. Same budget the connection check
-    // gives each transport, so the two agree on how long "no answer" takes.
+    // What one candidate's handshake costs before the next is tried. Same budget the connection check
+    // gives each transport, so the two agree on how long "no answer" takes. The stage that opens the
+    // socket is bounded separately and usually far more tightly — see MqttProbe.SocketBudget.
     private static readonly TimeSpan ConnectTimeout = MqttProbe.Timeout;
 
     private const double MaxBackoffSeconds = 60;
@@ -163,6 +169,10 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             _parameters = parameters;
             _memory = _setup.RecallEndpoint?.Invoke() ?? _memory;
 
+            // These are different values against a possibly different network, so what an earlier one
+            // had to be given the full socket budget for says nothing here.
+            _socketBudgetEscalated = false;
+
             string machine = Environment.MachineName;
             var previousIdentity = _identity;
             string deviceId = MqttIdentity.Effective(parameters.DeviceId, _setup.TopicRoot, machine);
@@ -225,12 +235,17 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         var request = parameters.Request;
         var attempts = new List<MqttEndpointAttempt>();
 
+        // Fixed for the round, so every candidate in it is judged by the same rule, and the sweep's
+        // own length is what says whether there is anywhere else to move on to.
+        var socketBudget = MqttProbe.SocketBudget(
+            MqttEndpointPlan.Sweep(request, RememberedEndpoint).Count, _socketBudgetEscalated);
+
         while (MqttEndpointPlan.NextEndpoint(request, RememberedEndpoint, attempts) is { } candidate)
         {
             var address = MqttEndpoint.Resolve(parameters.Host, candidate);
             MqttProbeResult result;
 
-            if (await CheckListenerAsync(parameters, candidate, address, ct).ConfigureAwait(false)
+            if (await CheckListenerAsync(address, socketBudget, ct).ConfigureAwait(false)
                 is { } unreachable)
             {
                 attempts.Add(new(candidate, unreachable));
@@ -258,6 +273,9 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
 
             if (result.Outcome == MqttProbeOutcome.Success)
             {
+                // A link that works owes nothing to whatever an earlier round had to be given longer
+                // for, and the endpoint just remembered leads the next sweep anyway.
+                _socketBudgetEscalated = false;
                 RememberEndpoint(request, candidate);
                 attempts.Add(new(candidate, result));
                 return new(true, attempts);
@@ -269,6 +287,10 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             attempts.Add(new(candidate, result));
         }
 
+        // Nothing anywhere answered, so the short socket budget is a candidate for why: the next round
+        // opens its sockets under the full one.
+        if (ShouldEscalateSocketBudget(attempts)) _socketBudgetEscalated = true;
+
         // One line per failed round, naming every candidate tried — the log's whole account of why
         // nothing is publishing. The details are OS or broker text, never a staged credential.
         _log.Error("MqttConnection.Connect: no endpoint connected — " +
@@ -278,24 +300,38 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         return new(false, attempts);
     }
 
-    /// <summary>Whether nothing is listening on an encrypted candidate, so the plan may fall back to
-    /// a plain one. Null means carry on and speak MQTT.</summary>
+    /// <summary>Whether the next round's socket stage should take the full budget: this one tried
+    /// something and nothing answered at all. Pure.</summary>
+    /// <remarks>A round the broker answered in was reached, and what it said back is not a question of
+    /// timing, so escalating there would buy nothing. A round nothing answered in is the one case the
+    /// short budget could have caused, and escalating is what keeps a broker on a link slower than
+    /// <see cref="MqttProbe.SilentTimeout"/> reachable at all rather than never: it connects on the
+    /// round after, and the endpoint it connected on then leads the sweep.</remarks>
+    public static bool ShouldEscalateSocketBudget(IReadOnlyList<MqttEndpointAttempt> attempts) =>
+        attempts.Count > 0 && !attempts.Any(a => MqttEndpointPlan.Answered(a.Outcome));
+
+    /// <summary>Whether nothing is listening on a candidate at all, so the sweep may write it off
+    /// without speaking MQTT to it. Null means carry on and speak MQTT.</summary>
     /// <remarks>
-    /// Only run where the answer changes something: an encrypted candidate under Automatic, which is
-    /// the one case where a plain candidate sits behind it. The connect path has no stage-1 socket
-    /// check of its own, and without one a TLS handshake failure and an empty port are the same
-    /// verdict — which is what would send the password to the broker in clear text.
+    /// <para>Every candidate, not only an encrypted one under Automatic. A far end that drops the
+    /// packet rather than refusing it says nothing and costs the whole connect budget doing it, and a
+    /// candidate that has said nothing whatsoever is the least likely to be the right one — a broker
+    /// that is there answers a socket quickly on a LAN and quickly enough over a WAN.
+    /// <paramref name="budget"/> is what bounds this stage, and is short exactly where there is
+    /// another candidate to move on to.</para>
+    /// <para>An <see cref="MqttProbeOutcome.Unreachable"/> verdict is the only one that short-circuits
+    /// the candidate. Everything else falls through to the handshake, so a TLS failure is reported as
+    /// a TLS failure and never as an empty port — which is what decides whether the plain candidate
+    /// behind an encrypted one may be tried at all, and reading one as the other is what would send
+    /// the password to the broker in clear text.</para>
     /// </remarks>
     private static async Task<MqttProbeResult?> CheckListenerAsync(
-        MqttConnectParameters parameters, MqttEndpointCandidate candidate,
-        MqttEndpointAddress address, CancellationToken ct)
+        MqttEndpointAddress address, TimeSpan budget, CancellationToken ct)
     {
-        if (parameters.EncryptionMode != MqttEncryptionMode.Auto || !candidate.Encrypted) return null;
-
-        using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        budget.CancelAfter(ConnectTimeout);
+        using var socket = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        socket.CancelAfter(budget);
         var result = await MqttProbe
-            .ProbeTcpAsync(address.Host, address.Port, budget.Token, ct).ConfigureAwait(false);
+            .ProbeTcpAsync(address.Host, address.Port, socket.Token, ct).ConfigureAwait(false);
 
         // Anything other than "nothing is there" is left to the handshake to report properly.
         return result is { Outcome: MqttProbeOutcome.Unreachable } ? result : null;
@@ -514,6 +550,21 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         await PublishAsync(_availabilityTopic, _setup.OnlinePayload, retain: true, ct: ct).ConfigureAwait(false);
         await SubscribeAsync(ct).ConfigureAwait(false);
         await PublishChannelsAsync(_channels.Channels, force: true, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Drops the command wildcard, so nothing published under it is delivered back to this
+    /// connection. Best-effort on its own: a broker that will not take the unsubscribe costs the log
+    /// some noise, and losing the removal over that would be the worse trade.</summary>
+    private async Task UnsubscribeCommandsAsync(CancellationToken ct)
+    {
+        try
+        {
+            var options = new MqttClientUnsubscribeOptionsBuilder()
+                .WithTopicFilter(MqttTopics.CommandFilter(_setup.TopicRoot, _identity.DeviceId))
+                .Build();
+            await _client.UnsubscribeAsync(options, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) { _log.Error("MqttConnection.Unsubscribe", Sanitise(ex)); }
     }
 
     /// <summary>One wildcard covers every command entity; the router resolves by entity id. Anything
@@ -959,6 +1010,15 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
 
             if (remove)
             {
+                // The command wildcard goes before the command topics are emptied. This connection is
+                // subscribed to its own commands, so the broker hands every clear straight back as a
+                // zero-length payload on a command topic — which for a text entity is a value, and for
+                // the rest is one refusal in the host's log per command the device owns. Unsubscribing
+                // stops the broker sending them at all, rather than filtering them once they arrive,
+                // and it misses no genuine command: a removal ends in a disconnect, so nothing is
+                // listening a moment later either.
+                await UnsubscribeCommandsAsync(ct).ConfigureAwait(false);
+
                 // Empty every retained topic the device owns, payloads and command topics included,
                 // so a consumer drops the device and no stuck retained command outlives it. An
                 // "offline" publish here would re-retain what this cleared.
