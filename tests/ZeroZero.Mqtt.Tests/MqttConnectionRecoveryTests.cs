@@ -68,6 +68,37 @@ public class MqttConnectionRecoveryTests
         Assert.True(Volatile.Read(ref listener.Calls) >= 2);
     }
 
+    /// <summary>The backoff has to survive the very path that needs it. The loop drops the socket
+    /// itself when the connect sequence throws, MQTTnet raises that as a disconnect with the "was
+    /// connected" flag set, and a wake armed on it cancels the wait the failed round had just
+    /// earned — every round, so the retry rate is whatever a loopback socket costs rather than the
+    /// escalating delay. Measured at 111 CONNECTs in three seconds before the fix, against a design
+    /// that intends at most one.</summary>
+    /// <remarks>Counted at the broker rather than read off the connection: the state oscillates far
+    /// faster than anything can sample it, so a flag or a status line says nothing. The window is
+    /// wall-clock and the count is monotonic, so a slow machine only ever lowers it.</remarks>
+    [Fact]
+    public async Task AThrowingConnectSequenceRetriesOnTheBackoffRatherThanContinuously()
+    {
+        using var broker = new FakeBroker();
+        var listener = new ThrowingListener();
+
+        using var connection = new MqttConnection(Setup(listener));
+        await connection.ApplyAsync(Parameters(broker.Port));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Connects >= 1), "it never connected at all");
+
+        int before = broker.Connects;
+        await Task.Delay(TimeSpan.FromSeconds(3));
+        int inTheWindow = broker.Connects - before;
+
+        Assert.True(inTheWindow <= 2,
+            $"{inTheWindow} CONNECTs in three seconds; the backoff intends at most one");
+
+        // And it is a backoff, not a stall: the round after still comes.
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Connects > before, TimeSpan.FromSeconds(20)),
+            "the loop stopped retrying altogether");
+    }
+
     /// <summary>The status callback runs inside the connect sequence, so a host whose handler throws
     /// once — a disposed control, a marshalling error — would otherwise have its own exception read as
     /// a connect failure and its socket dropped, on every pass, for ever.</summary>

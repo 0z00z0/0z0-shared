@@ -86,6 +86,26 @@ generates a merged PRI from resources of its own still has MakePRI comparing the
 `v`-prefixed tag, and the notes for that tag state what it breaks — the module is pre-1.0, so a
 minor bump may. The README's [Pin a tag](../README.md#3-pin-a-tag) carries both CI shapes.
 
+**A pin protects CI. It does not protect a local build.** The reference above resolves through
+`ZeroZeroSharedDir`, which defaults to the sibling folder, and nothing reads the pinned-ref file to
+decide which sources are compiled — the drift guard that reads it raises a warning and changes
+nothing. Both documented CI shapes place the pinned revision where the property points; a developer's
+machine places whatever the sibling working tree currently holds there instead. So a local build, a
+local test run and an installer built on that machine carry the working tree, pin file
+notwithstanding.
+
+Three consequences worth stating plainly:
+
+- **A consumer wanting the pinned revision locally checks the sibling clone out at that revision.**
+  The pin file records the intent; the working tree decides the build.
+- **"Wait for the next tag" is insufficient advice for a consumer that builds locally.** What
+  protects such a consumer against a defect fixed here is the fix being committed to the sibling tree
+  they compile against — not the tag that later contains it. A consumer can hold a pin, believe they
+  are insulated, and ship the defect from their own machine.
+- **Build against a clean sibling at a known revision, never one mid-edit.** While work is in flight
+  in the shared tree, a local build takes a partially applied change set, which is worse than either
+  the old state or the new one.
+
 `CommunityToolkit.WinUI.Controls.SettingsControls` is a ceiling, not a preference. The panel holds
 it at or below `8.2.251219`, because a consuming app holds a direct reference at that version and a
 direct reference below a transitive one is NU1605, an error. Raise both or neither.
@@ -802,6 +822,32 @@ exactly and is never reached around, remembered entry included.
 A probe runs only on `BrokerSettingChanged`, `TestConnection` or `Apply`, and only while publishing
 is enabled and a host is set. Showing a settings page is deliberately not a trigger: a probe costs
 real seconds and puts the machine on the network.
+
+### Reconnect, and what a broker is charged
+
+The wait between rounds is **3, 6, 12, 24, 48, 60, 60 …** seconds. The floor is the first wait, not
+the base the first double starts from: a transient drop retries at three seconds, and only a repeat
+costs more. The cap is sixty.
+
+Three rules move it:
+
+- **A round that connected nowhere** charges the ladder one step.
+- **A session that died inside thirty seconds is a flap**, and charges a step rather than resetting.
+  A peer that accepts a connection and drops it again cannot otherwise pull the retry rate back to
+  continuous by having each connect read as a success.
+- **A session that outlives thirty seconds is stable**, and drops the ladder back to the floor, so
+  one bad minute does not leave a healthy link reconnecting a minute late for the rest of the
+  session. A resume from standby does the same, because the suspend killed the socket and the
+  session that ended with it was not the broker's doing.
+
+**A disconnect the connection caused itself never shortens the wait.** The maintain loop drops its
+own socket whenever the connect sequence throws — a listener, the subscription, an eviction — and the
+client library raises that as an ordinary disconnect with the "was connected" flag set, which is
+indistinguishable from the peer going away. Only the long poll of a session that was up may be cut
+short by a drop; the backoff wait is left to run. Without that separation the loop cancels the wait
+the failed round has just earned, on every round, and the retry rate becomes whatever a socket
+costs — measured at 361 CONNECTs in three seconds against a broker that would rate-limit or ban a
+client for it. It is invisible in development, because it needs a throwing connect sequence.
 
 ---
 

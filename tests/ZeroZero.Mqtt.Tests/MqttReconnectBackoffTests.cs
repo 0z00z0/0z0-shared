@@ -36,8 +36,24 @@ public class MqttReconnectBackoffTests
         }
 
         TimeSpan[] ladder =
-            [Seconds(6), Seconds(12), Seconds(24), Seconds(48), Seconds(60), Seconds(60), Seconds(60)];
+            [Seconds(3), Seconds(6), Seconds(12), Seconds(24), Seconds(48), Seconds(60), Seconds(60)];
         Assert.Equal(ladder, waits);
+    }
+
+    /// <summary>The floor is the first wait, not the base the first double starts from. Doubling
+    /// before the wait rather than after it makes the shortest retry twice the floor — a transient
+    /// drop costing six seconds where the constant says three — and leaves
+    /// <c>InitialBackoff</c> a value nothing ever waits.</summary>
+    [Fact]
+    public void TheFirstWaitIsTheFloorRatherThanTwiceIt()
+    {
+        var failed = new MqttReconnectBackoff();
+        failed.Failed();
+        Assert.Equal(Seconds(3), failed.Delay);
+
+        var flapped = new MqttReconnectBackoff();
+        flapped.Connected(Start);
+        Assert.Equal(Seconds(3), flapped.BeforeConnect(Start + Seconds(5)));
     }
 
     /// <summary>The whole point of the mechanism: a peer that accepts the connection and drops it
@@ -62,7 +78,7 @@ public class MqttReconnectBackoffTests
         }
 
         TimeSpan[] ladder =
-            [Seconds(6), Seconds(12), Seconds(24), Seconds(48), Seconds(60), Seconds(60)];
+            [Seconds(3), Seconds(6), Seconds(12), Seconds(24), Seconds(48), Seconds(60)];
         Assert.Equal(ladder, waits);
     }
 
@@ -77,7 +93,7 @@ public class MqttReconnectBackoffTests
         Assert.Null(backoff.BeforeConnect(Start + Seconds(45)));
 
         backoff.Failed();
-        Assert.Equal(Seconds(6), backoff.Delay);   // the ladder starts where it always does
+        Assert.Equal(Seconds(3), backoff.Delay);   // the ladder starts where it always does
     }
 
     /// <summary>A blip that pushed the wait most of the way to the cap must not still be charged once
@@ -88,14 +104,14 @@ public class MqttReconnectBackoffTests
     {
         var backoff = new MqttReconnectBackoff();
         for (int round = 0; round < 4; round++) backoff.Failed();
-        Assert.Equal(Seconds(48), backoff.Delay);
+        Assert.Equal(Seconds(24), backoff.Delay);
 
         backoff.Connected(Start);
         backoff.SettleIfStable(Start + Seconds(31));
 
         Assert.Null(backoff.BeforeConnect(Start + Seconds(31)));   // that session was no flap
         backoff.Failed();
-        Assert.Equal(Seconds(6), backoff.Delay);                   // and the ladder restarts at the floor
+        Assert.Equal(Seconds(3), backoff.Delay);                   // and the ladder restarts at the floor
     }
 
     /// <summary>Where the flap window ends. A session exactly as long as the window counts as stable;
@@ -115,7 +131,7 @@ public class MqttReconnectBackoffTests
         justInside.Failed();
         justInside.Connected(Start);
         justInside.SettleIfStable(Start + Seconds(29.9));
-        Assert.Equal(Seconds(24), justInside.BeforeConnect(Start + Seconds(29.9)));
+        Assert.Equal(Seconds(12), justInside.BeforeConnect(Start + Seconds(29.9)));
     }
 
     /// <summary>A resume from standby killed the socket, so the session that ended with it was not

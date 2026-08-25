@@ -34,6 +34,16 @@ public class MqttConnectionLoopbackTests
         return connection;
     }
 
+    /// <summary>Waits until the broker has the command wildcard on its live filter list. A link is up
+    /// several steps before that — the subscription is the last thing the connect sequence does — and
+    /// a broker with no filter yet delivers nothing back, so a test about what the connection hears
+    /// itself say would otherwise assert against silence.</summary>
+    private static async Task SubscribedAsync(FakeBroker broker) =>
+        Assert.True(
+            await FakeBroker.WaitAsync(
+                () => broker.Subscriptions.Contains(MqttTopics.CommandFilter(Root, Device))),
+            "the command subscription was never registered");
+
     private static MqttConnectionSetup Setup(
         IEnumerable<MqttChannel>? channels = null,
         IEnumerable<MqttCommandTarget>? commands = null,
@@ -51,6 +61,11 @@ public class MqttConnectionLoopbackTests
 
     /// <summary>A command entity that takes only the two payloads its kind has, as a real one does.
     /// What makes an empty payload a refusal rather than something quietly accepted.</summary>
+    /// <summary>A command entity that takes any payload, as a text one does — including the empty
+    /// string, which is a value there and not an absence.</summary>
+    private static MqttCommandTarget Text(string entityId, Action<string> applied) =>
+        new(entityId, payload => MqttCommandVerdict.Accept(() => applied(payload)));
+
     private static MqttCommandTarget Switch(string entityId, Action<string>? applied = null) =>
         new(entityId, payload => payload is "ON" or "OFF"
             ? MqttCommandVerdict.Accept(() => applied?.Invoke(payload))
@@ -317,6 +332,18 @@ public class MqttConnectionLoopbackTests
         Assert.Equal(2, broker.CountOn(Topic("quiet_mode")));
     }
 
+    /// <summary>Nothing to publish is not a failed publish. A device that declares only commands, or
+    /// whose groups are all switched off, has an empty channel set, and a panel reading the answer
+    /// tells the user the broker refused them when nothing was ever sent.</summary>
+    [Fact]
+    public async Task PublishNow_OverAConnectionWithNoChannelsSucceeds()
+    {
+        using var broker = new FakeBroker();
+        using var connection = await ConnectAsync(broker, Setup());
+
+        Assert.True(await connection.PublishNowAsync());
+    }
+
     /// <summary>A group toggle rebuilds the channel set, and the entities that left have to be
     /// evicted in one pass rather than one sequential retained publish each.</summary>
     [Fact]
@@ -371,6 +398,28 @@ public class MqttConnectionLoopbackTests
         Assert.Equal(broker.Port, remembered!.Port);
         Assert.Equal(MqttTransport.Tcp, remembered.Transport);
         Assert.False(remembered.Encrypted);
+    }
+
+    /// <summary>An endpoint that has not moved is not handed over again. A consumer persists what
+    /// this hands it, and a consumer that re-applies on a settings change would then reconnect on the
+    /// strength of its own success — a loop with no local symptom, because every part of it is
+    /// working exactly as designed.</summary>
+    [Fact]
+    public async Task AnEndpointThatHasNotMovedIsNotHandedOverAgain()
+    {
+        using var broker = new FakeBroker();
+        var handed = new List<MqttEndpointMemory>();
+        using var connection = await ConnectAsync(
+            broker, Setup(remember: m => { lock (handed) handed.Add(m); }));
+        Assert.True(await FakeBroker.WaitAsync(() => { lock (handed) return handed.Count == 1; }));
+
+        connection.OnPowerResume();
+
+        // The second announcement is what says the reconnect got past the point the endpoint is
+        // handed over at, so the absence below is a decision rather than a race.
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Availability) >= 2),
+            "the socket never bounced");
+        lock (handed) Assert.Single(handed);
     }
 
     [Fact]
@@ -431,6 +480,58 @@ public class MqttConnectionLoopbackTests
         await connection.ApplyAsync(Parameters(broker));
 
         Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("gpu_load")) == ""));
+    }
+
+    /// <summary>An eviction batch the token cancelled loses exactly what a refused one does: the
+    /// keys are taken out of the pending set before the send, and a throw past the rollback leaves
+    /// nothing anywhere that knows the topic was ever published. The value then stays retained on the
+    /// broker for ever, under an entity the document no longer declares.</summary>
+    [Fact]
+    public async Task AnEvictionBatchTheTokenCancelledIsPutBackRatherThanLost()
+    {
+        using var broker = new FakeBroker();
+        using var connection = await ConnectAsync(broker, Setup([
+            new("cpu_load", () => "42"),
+            new("gpu_load", () => "7"),
+        ]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("gpu_load")) == "7"));
+
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => connection.SetChannelsAsync([new("cpu_load", () => "42")], cancelled.Token));
+
+        // Any later pass over the pending set is what has to find it still there.
+        await connection.SetChannelsAsync([new("cpu_load", () => "42")]);
+
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("gpu_load")) == ""),
+            "a cancelled eviction was dropped rather than retried");
+    }
+
+    /// <summary>A refused eviction of a superseded device id is retried on the next connect. The old
+    /// id is gone from everything else by then, so discarding the answer leaves a ghost device on the
+    /// receiver with every retained value intact and nothing in the process that knows it exists —
+    /// which is the one thing the retirement slot exists to prevent.</summary>
+    [Fact]
+    public async Task ARefusedEvictionOfASupersededDeviceIdIsTriedAgain()
+    {
+        using var broker = new FakeBroker
+        {
+            // Everything the superseded id owns is refused; the id replacing it publishes normally.
+            PubackFor = topic => topic.StartsWith($"{Root}/{Device}/", StringComparison.Ordinal)
+                ? MqttPubackCode.NotAuthorised
+                : MqttPubackCode.Success,
+        };
+        using var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => "42")]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("cpu_load")) >= 1));
+
+        await connection.ApplyAsync(Parameters(broker) with { DeviceId = "desk02" });
+
+        int Evictions() => broker.Published.Count(
+            p => p.Topic == MqttTopics.Availability(Root, Device) && p.Payload.Length == 0);
+
+        Assert.True(await FakeBroker.WaitAsync(() => Evictions() >= 2),
+            "a refused eviction of the old device id was recorded as done");
     }
 
     [Fact]
@@ -499,6 +600,78 @@ public class MqttConnectionLoopbackTests
         Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(topic) == ""));
         Assert.Equal(0, applied);
         lock (refusals) Assert.Contains(refusals, r => r.Outcome == MqttCommandOutcome.Retained);
+    }
+
+    /// <summary>The clear above comes straight back: this connection is subscribed to its own command
+    /// subtree, and the broker delivers it with the retain flag down and a zero-length payload, which
+    /// is indistinguishable on the wire from somebody sending an empty command. For a text entity an
+    /// empty string is a value, so a discriminator that fails turns "clear a stuck command" into "set
+    /// the entity to empty" — on this connect, and on every reconnect after it.</summary>
+    [Fact]
+    public async Task TheEchoOfItsOwnRetainedClearIsNotTakenAsACommand()
+    {
+        using var broker = new FakeBroker();
+        var applied = new List<string>();
+        using var connection = await ConnectAsync(broker, Setup(
+            commands: [Text("message", p => { lock (applied) applied.Add(p); })]));
+        string topic = MqttTopics.Command(Root, Device, "message");
+        await SubscribedAsync(broker);
+
+        await broker.SendAsync(topic, "hello", retained: true);
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(topic) == ""));
+        await Task.Delay(300);   // the echo is on its way back before the next command is sent
+
+        // A genuine command behind it. The socket delivers in order and the queue has one reader, so
+        // this having run is what says the echo was routed and not merely late.
+        await broker.SendAsync(topic, "world");
+
+        Assert.True(await FakeBroker.WaitAsync(() => { lock (applied) return applied.Count > 0; }));
+        lock (applied) Assert.Equal(["world"], applied);
+    }
+
+    /// <summary>And the note is spent on the one message. A discriminator that stands for ever swaps
+    /// the fault round: every genuine empty command on that topic is swallowed instead, which for a
+    /// text entity is the one value it can never be set to again.</summary>
+    [Fact]
+    public async Task AnEmptyCommandIsAValueOnceTheNoteFromItsOwnClearIsSpent()
+    {
+        using var broker = new FakeBroker();
+        var applied = new List<string>();
+        using var connection = await ConnectAsync(broker, Setup(
+            commands: [Text("message", p => { lock (applied) applied.Add(p); })]));
+        string topic = MqttTopics.Command(Root, Device, "message");
+        await SubscribedAsync(broker);
+
+        await broker.SendAsync(topic, "hello", retained: true);
+        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(topic) == ""));
+        await Task.Delay(300);   // and the echo it earned has come and gone
+
+        await broker.SendAsync(topic, "");
+
+        Assert.True(await FakeBroker.WaitAsync(() => { lock (applied) return applied.Count > 0; }),
+            "an empty command this connection did not clear was swallowed");
+        lock (applied) Assert.Equal([""], applied);
+    }
+
+    /// <summary>The work queue has one reader so a command's read-modify-write finishes before the
+    /// next starts, which makes it a single point of failure: a handler that throws and is not caught
+    /// ends the reader, and every command after it is enqueued into a queue nothing drains. The
+    /// symptom is a device that answers nothing, with no error anywhere after the first.</summary>
+    [Fact]
+    public async Task AThrowingCommandHandlerDoesNotEndTheWorkQueue()
+    {
+        using var broker = new FakeBroker();
+        var ran = new TaskCompletionSource();
+        using var connection = await ConnectAsync(broker, Setup(commands: [
+            new("boom", _ => MqttCommandVerdict.Accept(
+                () => throw new InvalidOperationException("the application's handler is gone"))),
+            new("quiet_mode", _ => MqttCommandVerdict.Accept(() => ran.TrySetResult())),
+        ]));
+
+        await broker.SendAsync(MqttTopics.Command(Root, Device, "boom"), "ON");
+        await broker.SendAsync(MqttTopics.Command(Root, Device, "quiet_mode"), "ON");
+
+        await ran.Task.WaitAsync(TimeSpan.FromSeconds(10));   // the reader is still draining
     }
 
     [Fact]

@@ -11,6 +11,11 @@ internal sealed class MqttReconnectBackoff
 {
     private DateTimeOffset? _connectedSince;
 
+    // Whether the current delay has already been charged for a failure. The floor is the first wait,
+    // not the base the first double starts from: doubling before the wait would make the shortest
+    // retry twice the floor and leave InitialBackoff a value nothing ever waits.
+    private bool _escalated;
+
     /// <summary>What the next wait costs while the connection is down.</summary>
     public TimeSpan Delay { get; private set; } = MqttConnection.InitialBackoff;
 
@@ -19,7 +24,7 @@ internal sealed class MqttReconnectBackoff
     public void Resume()
     {
         _connectedSince = null;
-        Delay = MqttConnection.InitialBackoff;
+        Settle();
     }
 
     /// <summary>Consumes the ended session ahead of a reconnect: the escalated delay to wait out when
@@ -30,26 +35,37 @@ internal sealed class MqttReconnectBackoff
         _connectedSince = null;
         if (!flapped) return null;
 
-        Delay = MqttConnection.NextBackoff(Delay);
+        Escalate();
         return Delay;
     }
 
     /// <summary>Starts a live session at <paramref name="now"/>.</summary>
     public void Connected(DateTimeOffset now) => _connectedSince = now;
 
-    /// <summary>Lengthens the wait after a round that connected nowhere, and after a connect sequence
-    /// that threw with the socket up.</summary>
+    /// <summary>Charges a round that connected nowhere, and a connect sequence that threw with the
+    /// socket up. The first costs the floor; each one after it doubles.</summary>
     public void Failed()
     {
         _connectedSince = null;
-        Delay = MqttConnection.NextBackoff(Delay);
+        Escalate();
     }
 
     /// <summary>Drops back to the floor once the live session has outlived the flap window, so the
     /// next genuine drop reconnects fast.</summary>
     public void SettleIfStable(DateTimeOffset now)
     {
-        if (_connectedSince is { } since && MqttConnection.IsStableConnection(now - since))
-            Delay = MqttConnection.InitialBackoff;
+        if (_connectedSince is { } since && MqttConnection.IsStableConnection(now - since)) Settle();
+    }
+
+    private void Escalate()
+    {
+        if (_escalated) Delay = MqttConnection.NextBackoff(Delay);
+        _escalated = true;
+    }
+
+    private void Settle()
+    {
+        Delay = MqttConnection.InitialBackoff;
+        _escalated = false;
     }
 }

@@ -344,7 +344,7 @@ pinned build wants because `checkout --detach` takes an exact ref:
 ### 3. Pin a tag
 
 Every consumer-visible change is released under a `v`-prefixed tag — `v0.1.0`, `v0.2.0`, `v0.2.1`,
-`v0.3.0`, `v0.3.1` — and **a tag is the ref to pin, not a raw commit SHA.** A tag reads as a version,
+`v0.3.0`, `v0.3.1`, `v0.3.2` — and **a tag is the ref to pin, not a raw commit SHA.** A tag reads as a version,
 so a pin bump is a legible diff and a reviewable decision; a SHA says only that something moved. Each
 tag carries
 release notes listing what changed, so **a consumer raising its pin reads the notes for that tag
@@ -365,12 +365,12 @@ it as the second checkout's `ref`:
         with:
           repository: 0z00z0/0z0-shared
           path: 0z0-shared
-          ref: v0.3.1
+          ref: v0.3.2
 ```
 
 The **sibling clone** shape needs no change at all — a full `git clone` fetches tags, so
 `checkout --detach $ref` resolves one. Shallow is the one thing to watch: `--depth 1` alone leaves
-no tag to check out, so it comes with `--branch v0.3.1`.
+no tag to check out, so it comes with `--branch v0.3.2`.
 
 Local dev builds against the live sibling checkout while CI builds the pinned tag, so a consumer
 that adopts a newly added shared type builds green locally and fails CI with `CS0234`. A consumer
@@ -381,6 +381,13 @@ file and raises a warning, never an error, and skips entirely when either the re
 sibling clone is absent. ChargeKeeper's `.github/0z0-shared-ref` plus its `CheckSharedPin` target
 and `scripts/check-shared-pin.ps1` are the working example. Put the tag in that file rather than
 the SHA it resolves to, and let the guard resolve it — the pin is then readable where it is edited.
+
+**The guard warns; it never redirects.** Nothing reads the ref file to decide which sources compile,
+so a pin protects CI and nothing else: a local build, a local test run and an installer built on a
+developer's machine all carry the sibling working tree. A consumer wanting the pinned revision
+locally checks the sibling clone out at it. The MQTT guide's
+[Take the reference](docs/zerozero-mqtt.md#1-take-the-reference) states what that means when a defect
+is fixed here.
 
 There is no NuGet feed to pin instead. Neither WinUI assembly can be packed —
 `ZeroZero.Brand.WinUI` and `ZeroZero.Mqtt.WinUI` both compile XAML to binary form, and
