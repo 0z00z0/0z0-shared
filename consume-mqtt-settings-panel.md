@@ -5,14 +5,20 @@ structure; the host supplies the content and receives every edit as a callback.
 
 ## Reference
 
-`ZeroZero.Mqtt.WinUI` (`net10.0-windows10.0.26100.0`), which pulls in `ZeroZero.Mqtt` and
-`ZeroZero.Brand.WinUI` transitively. Same reference recipe as the About control — a
+`ZeroZero.Mqtt.WinUI` (`net10.0-windows10.0.26100.0`), which pulls in `ZeroZero.Mqtt`,
+`ZeroZero.Mqtt.Discovery`, `ZeroZero.Config` and `ZeroZero.Brand.WinUI` transitively — the one
+reference is the whole module, entity table included. Same reference recipe as the About control — a
 `ProjectReference` on a sibling checkout, carrying
 `<UndefineProperties>WindowsAppSDKSelfContained</UndefineProperties>`.
 
 `CommunityToolkit.WinUI.Controls.SettingsControls` is held at or below `8.2.251219`: a consuming app
 holds a direct reference at that version, and a direct reference below a transitive one is NU1605,
 an error. Raise both or neither.
+
+An app that ships its own language-folder resources declares `<DefaultLanguage>en-GB</DefaultLanguage>`
+in its own project. The panel declares it for its own `.resw`, but a merged app PRI is built from the
+app's resources and no library can declare the default on its behalf — without it MakePRI compares
+them against `en-US` and warns `PRI257`.
 
 ## Host it
 
@@ -63,19 +69,28 @@ entities.
 
 | Call | When |
 |---|---|
-| `Initialise(setup)` | Once, on the UI thread. |
-| `Reload()` | Whenever the host re-shows the page. Keeps whatever is being typed. |
+| `Initialise(setup)` | Once, on the UI thread, before anything else. |
+| `Reload()` | Whenever the host re-shows the page. Keeps whatever is being typed. Throws before `Initialise`. |
 | `Refresh()` | When the page comes back on screen with nothing edited. |
-| `Revert()` | Only behind an explicit control: it discards staged broker edits. |
+| `Revert()` | Only behind an explicit control: it discards staged broker edits. Throws before `Initialise`. |
 | `Cancel()` | On window close, and when navigating away — an in-flight probe outlives the window. |
+
+`Reload` and `Revert` read the settings store the panel is handed on `Initialise`, so both throw an
+`InvalidOperationException` naming the ordering when it has not been called. `Refresh` and `Cancel`
+touch no store and stay silent.
 
 ## Theming
 
-Five keys, declared in the application's own resources to override: `MqttPanelHeadingBrush`,
+Six keys, declared in the application's own resources to override: `MqttPanelHeadingBrush`,
 `MqttPanelBodyBrush`, `MqttPanelSecondaryBrush`, `MqttPanelAccentBrush`,
-`MqttPanelCardBackgroundBrush`. Keys left alone keep the stock WinUI theme. The module's defaults
-are merged into `Application.Resources.MergedDictionaries`, so a key declared directly in
-`Application.Resources` wins.
+`MqttPanelCardBackgroundBrush` and `MqttPanelFontFamily`. Keys left alone keep the stock WinUI
+theme. The module's defaults are merged into `Application.Resources.MergedDictionaries`, so a key
+declared directly in `Application.Resources` wins.
+
+`MqttPanelFontFamily` is the only route to the panel's typeface: every element the panel styles
+carries an explicit style, and an explicit style means a host's implicit `TextBlock` style is never
+applied. A toolkit `SettingsCard`'s own header keeps the stock face — the toolkit's style carries the
+family — and everything else on the panel follows the key.
 
 ## Translation
 

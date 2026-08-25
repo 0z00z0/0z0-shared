@@ -8,6 +8,12 @@
     <!-- Required by the LibraryImport source generator's generated marshalling code (NativeMethods). -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
+    <!-- The merged app PRI is built from the app's own resources, so an app declares this even
+         where every library it references already has: without it MakePRI measures the en-GB
+         resources reaching it against its en-US assumption and reports PRI257. The same property a
+         consuming app needs, on the repository's own app. -->
+    <DefaultLanguage>en-GB</DefaultLanguage>
+
     <!-- Interactive manual test rig only: launches BrandAboutWindow with this repo's own sample
          data so it can be eyeballed without building/running ChargeKeeper or HyperVManagerTray.
          Not published, not referenced by consumers, not part of the public library surface. -->

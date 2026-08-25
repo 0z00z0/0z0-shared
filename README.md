@@ -2,7 +2,7 @@
 
 Shared visual identity and About-window plumbing for ZeroZero Software's desktop apps
 (currently [ChargeKeeper](https://github.com/0z00z0/ChargeKeeper) and
-[HyperVManagerTray](https://github.com/0z00z0/HyperVManagerTray)). One parameterized About
+[HyperVManagerTray](https://github.com/0z00z0/HyperVManagerTray)). One parameterised About
 component, plus the studio's brand constants (name, tagline, palette, links) in one place so an
 app never re-types them.
 
@@ -58,7 +58,7 @@ app or any other .NET target. Contains:
   Call `SetInfo(AboutInfo)` after construction to populate it (a method, not a settable property —
   the WinUI XAML compiler needs a parameterless constructor for any type exposed as a public
   property on a XAML class, which `AboutInfo`'s `required` members deliberately don't have).
-- **`BrandAboutWindow`** — the shared, parameterized About popup (320px wide, Mica backdrop,
+- **`BrandAboutWindow`** — the shared, parameterised About popup (320px wide, Mica backdrop,
   centred on the monitor under the cursor, no title bar, always-on-top). A thin shell hosting
   `BrandAboutControl` plus the tray-app-only "Check for Updates" button. Carries its own minimal
   Win32 P/Invoke for monitor/DPI metrics, so it has no dependency on a consuming app's own
@@ -77,7 +77,8 @@ clean-exit-before-relaunch step via `OnBeforeExit`).
 ### `src/ZeroZero.Mqtt.WinUI`
 
 `net10.0-windows10.0.26100.0`, WinUI 3 / Windows App SDK, unpackaged. References `ZeroZero.Mqtt`
-for the protocol module and `ZeroZero.Brand.WinUI` for `InfoIcon`. Contains:
+for the protocol module, `ZeroZero.Brand.WinUI` for `InfoIcon`, and `ZeroZero.Mqtt.Discovery` so
+that one reference on this project delivers the whole module. Contains:
 
 - **`MqttSettingsPanel`** — the settings page for the MQTT module: a master switch, a live status
   block, the device identity, a staged broker block behind an Apply, and one row per
@@ -87,8 +88,8 @@ for the protocol module and `ZeroZero.Brand.WinUI` for `InfoIcon`. Contains:
 - **`MqttPanelSetup`** — everything the panel needs from its host, in one object initialiser.
 - **`MqttResourceStrings`** — the module's own `.resw`, read through `ResourceLoader`, with the
   built-in en-GB in `MqttStrings` as the floor.
-- **`Themes/MqttPanelResources.xaml`** — five theme keys a host may override, defaulting to the
-  stock WinUI theme.
+- **`Themes/MqttPanelResources.xaml`** — six theme keys a host may override — five brushes and a
+  font family — defaulting to the stock WinUI theme.
 
 [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) is the implementation guide for the whole module —
 the four assemblies, the six wiring steps, the entity model, identity, the encryption model and the
@@ -268,12 +269,12 @@ it as the second checkout's `ref`:
         with:
           repository: 0z00z0/0z0-shared
           path: 0z0-shared
-          ref: v0.1.0
+          ref: v0.2.0
 ```
 
 The **sibling clone** shape needs no change at all — a full `git clone` fetches tags, so
 `checkout --detach $ref` resolves one. Shallow is the one thing to watch: `--depth 1` alone leaves
-no tag to check out, so it comes with `--branch v0.1.0`.
+no tag to check out, so it comes with `--branch v0.2.0`.
 
 Local dev builds against the live sibling checkout while CI builds the pinned tag, so a consumer
 that adopts a newly added shared type builds green locally and fails CI with `CS0234`. A consumer

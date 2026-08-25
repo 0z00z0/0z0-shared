@@ -24,7 +24,7 @@ must supply; the rationale behind a given rule lives in the source comment besid
 | `ZeroZero.Config` | `net10.0` | — | Atomic JSON files, snapshot reads, mutation under one lock, quarantine of an unreadable file |
 | `ZeroZero.Mqtt` | `net10.0` | `ZeroZero.Config`, `MQTTnet` | Topics, payloads, QoS, retain, the Last Will, transports, endpoint search, certificate trust, command routing, publish groups |
 | `ZeroZero.Mqtt.Discovery` | `net10.0` | `ZeroZero.Mqtt`, `ZeroZero.Config` | Entities, component types, the device document, availability, eviction |
-| `ZeroZero.Mqtt.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Mqtt`, `ZeroZero.Brand.WinUI` | Rendering the settings a user edits |
+| `ZeroZero.Mqtt.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Mqtt`, `ZeroZero.Mqtt.Discovery`, `ZeroZero.Brand.WinUI` | Rendering the settings a user edits |
 
 The dependency runs one way. `ZeroZero.Mqtt` contains no entity vocabulary and no receiver
 vocabulary beyond the default discovery prefix; a console tool or a service references it alone and
@@ -32,7 +32,11 @@ gets a broker connection with nothing above it. `ZeroZero.Mqtt.Discovery` is Win
 entity table composes in a plain `net10.0` test project with no broker and no UI present.
 
 **A consumer takes one project reference.** Referencing `ZeroZero.Mqtt.Discovery` brings the core
-and the settings assembly transitively; referencing `ZeroZero.Mqtt.WinUI` brings the panel as well.
+and the settings assembly transitively; referencing `ZeroZero.Mqtt.WinUI` brings all three of those
+**and** the panel, so an application with a settings page declares its entity table and hosts the
+panel from that single reference. The panel compiles against none of the entity vocabulary — it
+carries the reference because the whole module is what one reference is expected to deliver.
+
 A headless or test consumer references `ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` directly and
 never pulls WinUI in — which is what keeps the entity model testable on a machine with no desktop.
 
@@ -65,6 +69,15 @@ through an MSBuild property so CI can point it elsewhere without editing the `.c
 `WindowsAppSDKSelfContained` set as a global property: MSBuild propagates a global property into
 every project reference, and the Windows App SDK targets reject it on a class library.
 
+**A consuming app that ships its own language-folder resources declares `DefaultLanguage` itself.**
+The panel declares `en-GB` for its own `.resw`, so nothing in the module warns any more. An app that
+generates a merged PRI from resources of its own still has MakePRI comparing them against its
+`en-US` assumption, which is `PRI257`, and no library can declare that on the app's behalf:
+
+```xml
+<DefaultLanguage>en-GB</DefaultLanguage>
+```
+
 **Pin the checkout to a tag, not a commit.** Every consumer-visible API change is released under a
 `v`-prefixed tag, and the notes for that tag state what it breaks — the module is pre-1.0, so a
 minor bump may. The README's [Pin a tag](../README.md#3-pin-a-tag) carries both CI shapes.
@@ -95,6 +108,13 @@ name (`mqtt.json`); the host owns the directory:
 ```csharp
 var settings = MqttSettingsFile.In(appDataDirectory);
 ```
+
+**Constructing the store does not create the file.** The constructor reads the file if it is there
+and takes the declared defaults if it is not; nothing is written until an `Update` changes something
+or `File.Save()` is called explicitly, and an `Update` that serialises to what is already held
+writes nothing at all. So the file exists exactly when something has been stored, never merely
+because the application started, and `MqttSettingsFile.FilePath` is a sound basis for a host's own
+first-run or has-this-migrated gate. The same holds for `DiscoveryLedgerFile`.
 
 A host whose configuration is one document with several unrelated sections implements the three
 members over that document instead and never constructs `MqttSettingsFile`. Nothing else in the
@@ -242,7 +262,9 @@ var publisher = new DiscoveryPublisher(new DiscoveryPublisherSetup
     Entities          = entities,
     Ledger            = DiscoveryLedgerFile.In(appDataDirectory),
     Groups            = groups,
+    Migrating         = migratingEntities,
     Retired           = retiredEntities,
+    RetiredChannels   = retiredChannels,
     SetChannelsAsync  = (channels, ct) => connection!.SetChannelsAsync(channels, ct),
     SetCommandTargets = targets => connection!.SetCommandTargets(targets),
     Log               = log,
@@ -265,6 +287,14 @@ connection = new MqttConnection(new MqttConnectionSetup
 connection.Apply(settings.Read().Connect());
 settings.Changed += () => connection.Apply(settings.Read().Connect());
 ```
+
+**Three declarations describe what the installed base already has on the broker**, and all three are
+empty for an application publishing to MQTT for the first time. `Migrating` hands an entity over
+from its own single-component config to the device document, keeping everything the user set on it.
+`Retired` empties the single-component config of an entity that no longer exists anywhere.
+`RetiredChannels` empties a value topic a predecessor published on that no entity claims any more.
+For a consumer with an installed base these lists are the migration itself, not a footnote to it —
+see [Declaring the migration](#declaring-the-migration).
 
 **The topic root is the application's own segment** at the head of every state and command topic,
 and it is the stem of the default device id. The same value goes to both setups. Nothing in the
@@ -357,11 +387,17 @@ state, because the announced entity set is baked into the retained document.
 
 | Call | When |
 |---|---|
-| `Initialise(setup)` | Once, on the UI thread. |
-| `Reload()` | Whenever the host re-shows the page. Keeps whatever is being typed. |
+| `Initialise(setup)` | Once, on the UI thread, before anything else. |
+| `Reload()` | Whenever the host re-shows the page. Keeps whatever is being typed. Throws before `Initialise`. |
 | `Refresh()` | When the page comes back on screen with nothing edited. |
-| `Revert()` | Only behind an explicit control: it discards staged broker edits. |
+| `Revert()` | Only behind an explicit control: it discards staged broker edits. Throws before `Initialise`. |
 | `Cancel()` | On window close, and when navigating away — an in-flight probe outlives the window. |
+
+**`Reload` and `Revert` throw an `InvalidOperationException` if the panel has not been initialised**,
+naming the ordering. Both read the settings store the panel is handed on `Initialise`, so neither
+can do anything without it, and a host calling one from a general refresh step ahead of its own
+wiring would otherwise get silence and then a blank panel with nothing to trace it to. `Refresh` and
+`Cancel` are display and lifetime operations, do not read the store, and stay silent.
 
 `BrokerExpanded` and `PublishExpanded` read and write the two expanders, so a host restores the
 section a user left open.
@@ -429,12 +465,24 @@ Members common to every entity:
 | `Debounce` | How long a requested publish waits before reading, so a burst collapses into one read. `MqttConnection.ReflectDebounce` is the 250 ms constant for a value signalled by something that has just written to it. |
 | `EnabledByDefault` | Whether the receiver enables the entity when it first appears. |
 | `Retain` | Whether the state topic is published retained. Set it false on anything declaring `ExpireAfter`: a retained value is replayed on every subscribe, so an expiry that already elapsed comes back looking current. |
+| `RepublishLastOnConnect` | Whether an absent reading keeps the last published value instead of announcing itself absent. Off by default. |
 | `Extra` | Discovery keys this model has no property for, merged into the component entry last. The escape hatch, and deliberately small. |
 
 **`Include` may fail as well as answer.** It runs on the announcement thread and usually reads live
 hardware, so a throw is not a false: it says the capability could not be read, which is not the same
 as absent. An entity whose predicate throws keeps whatever the record already says about it, and one
 unanswered read cannot rewrite the document.
+
+**`RepublishLastOnConnect` changes what an absent reading means for that one entity.** By default an
+absent reading is announced as absent — `MqttPayload.None` on every platform but text — which is
+right for a value that genuinely goes away and wrong for one that simply has not been sampled yet:
+a producer sampling on an interval, or a first reading that waits on hardware, shows a visible
+unknown on every connect before the first real value arrives. Declared, the entity instead keeps
+whatever it last published: an absent reading publishes nothing, and a (re)connect re-sends the last
+payload so a receiver that restarted has it. Two consequences follow, and both are the point rather
+than a side effect — the entity no longer clears when its reading goes away, on any pass and not
+only on connect; and an entity that has never had a reading publishes nothing at all, so it reads as
+unknown until its first real value rather than being announced absent.
 
 Members each component adds of its own:
 
@@ -570,6 +618,10 @@ another.
 | **Migrating** | Declared `MigratingEntity` | The single-component config gets `{"migrate_discovery":true}` before the document, and is emptied after it | n/a — a one-way handover, recorded once |
 | **Retired** | Declared `RetiredEntity` | The single-component config is emptied once, and the fact is written down | n/a — permanent by declaration |
 
+**Migrating is not an exotic case.** For a consumer with an installed base it is the whole migration,
+declared once for every entity currently published — see
+[Declaring the migration](#declaring-the-migration).
+
 **Withheld is availability, never removal.** A group toggle is a settings checkbox that commits on
 the spot, and a capability predicate goes false whenever hardware goes away; announcing either as a
 deletion would churn the receiver's registry for a state that reverses in a second. A withheld
@@ -587,6 +639,16 @@ state topic and every command topic, and it deletes every registry entry the dev
 the names, entity ids and areas the user chose. Nothing a user does to the settings can reach it.
 Switching publishing off, or blanking the host so the configuration stops being complete, publishes
 offline and leaves everything standing.
+
+**A value topic no entity claims is reached by `RetiredChannel`.** The four intents above all
+concern a discovery config; a retained payload left behind by an earlier implementation — the shared
+payload topic of a JSON-per-device design, or a state topic under a key no entity carries now — has
+no entity to express it. `RetiredChannel` names a channel key under `<topicRoot>/<deviceId>/`, the
+topic is emptied once per identity and the composed topic is written down, exactly as a retirement
+is. A key naming a live entity that has state is refused at declaration, and a key that would not be
+publishable as a channel is refused with it. Its reach is this application's own topic root and
+device id: an implementation that published under a different root is a different identity, and
+nothing here composes a topic outside the current one.
 
 ### The ledger
 
@@ -753,13 +815,39 @@ icon rather than an empty one:
 | `PublishGroupsInfo` | The "What to publish" heading's icon. No fallback. |
 | `DeviceIdConsequence` | An application-specific consequence, shown in the device-id dialogue under the module's own |
 
-### Theming and translation
+### Theming
 
-Five brush keys, declared in the application's own resources to override:
+Six keys, declared in the application's own resources to override: five brushes —
 `MqttPanelHeadingBrush`, `MqttPanelBodyBrush`, `MqttPanelSecondaryBrush`, `MqttPanelAccentBrush`,
-`MqttPanelCardBackgroundBrush`. Keys left alone keep the stock WinUI theme. The module's defaults
-are merged into `Application.Resources.MergedDictionaries`, so a key declared directly in
-`Application.Resources` wins.
+`MqttPanelCardBackgroundBrush` — and one typeface, `MqttPanelFontFamily`. Keys left alone keep the
+stock WinUI theme. The module's defaults are merged into `Application.Resources.MergedDictionaries`,
+so a key declared directly in `Application.Resources` wins.
+
+`MqttPanelFontFamily` is the only route to the panel's typeface. Every element the panel styles
+carries an explicit style, and an explicit style means a host's *implicit* `TextBlock` style is never
+applied — so a studio's own face reaches the panel through this key and through nothing else. One
+key covers the panel: the styles that render text set it, and the panel root sets it so the rows
+built in code inherit it. The one exception is a toolkit `SettingsCard`'s own **header**, which
+carries the family through the toolkit's style and so keeps the stock face; everything else on the
+panel — section headings, descriptions, status labels and values, and the field controls — follows
+the key.
+
+#### Overriding a key safely
+
+An override is supplied **in every theme the host supports**, not only the one being designed
+against. A key defined for one theme and missing for another falls back to the module's default,
+which is benign. A key defined once and reused across themes is the one that goes wrong: one shade
+cannot be legible against both grounds, and the light theme is where it fails.
+
+The failure is silent. The build is green, the theme being worked in looks right, and the other one
+renders the text at nearly the ground's own colour.
+
+**Check both themes on screen, and measure rather than look.** Sample the darkest glyph pixel
+against the background it sits on and compute the contrast ratio. Below about 4.5:1 fails, and this
+particular failure lands close to 1:1, so the measurement separates the two cases sharply instead of
+leaving it to judgement. The module's own defaults measure 6.17:1 in light and 9.09:1 in dark.
+
+### Translation
 
 Every user-facing string the module owns is in `MqttStrings`, keyed, with its en-GB text built in
 and exposed as `MqttStrings.Builtin` for a consumer generating a translation template. A consumer
@@ -778,6 +866,76 @@ tray tooltip or a log line.
 
 A consumer with code written against a per-component, shared-payload implementation meets the
 following. Each is a compile error or a topic move, not a silent behaviour change.
+
+### Declaring the migration
+
+The tables below are the compile-time half. The wire half is one declaration: **for an installation
+that already publishes under a per-component implementation, declaring every current entity as a
+`MigratingEntity` is the migration.** Nothing else carries an existing entity across. An entity left
+undeclared is announced in the device document as a new one while its old single-component config
+stays retained beside it — two entries for one thing, and everything the user set attached to the
+one that is going away.
+
+```csharp
+var migratingEntities = entities.All
+    .Select(e => new MigratingEntity(e.Platform, e.EntityId))
+    .ToList();
+```
+
+The pair is `(component, entityId)` **as the earlier implementation published it**. Where the
+component type or the id also changed, the declaration names the old pair, because the old config
+topic is the thing being handed over; the document then announces the entity under whatever it is
+now. [Identity, and what it guarantees](#identity-and-what-it-guarantees) is what decides whether
+the user keeps their settings across that.
+
+`RetiredEntity` is the same list for the other case: an entity the earlier implementation published
+and this one does not publish at all. `RetiredChannel` covers the value topics — the shared payload
+topic of a JSON-per-device implementation, or a state topic under a key no entity carries any more.
+A pair may not be both migrating and retired; the two write one topic with opposite intent, and the
+declaration is refused.
+
+**Whether the old availability topic needs anything depends on the identity, and only on that.** A
+consumer that keeps its topic root and its device id declares only the value topics its predecessor
+published. `<topicRoot>/<deviceId>/availability` is composed identically to what the old
+implementation used, so the module takes that topic over rather than orphaning it — which is also
+why the Last Will goes on working across the upgrade instead of leaving a stale `online` payload
+standing behind a device that has gone. Keeping the identity is the point of preserving `unique_id`
+in the first place, so this is the ordinary case.
+
+A consumer that takes the migration as an opportunity to **rename its topic root or its device id**
+is in the other case, and `RetiredChannel` does not reach it: a key is composed under the identity in
+force, and the topic to be emptied belongs to one that is no longer held. **Migrate first, rename
+afterwards** — two releases, or at least two connects. Once the module has published under the old
+identity and written it down, the record is what clears the old topics: a changed device id abandons
+the recorded identity outright, and a changed topic root under the same device id empties the
+availability topics it left behind. Neither needs a declaration. Renaming in the same step as the
+migration is the case nothing covers, because there is no record of the predecessor to clear from,
+and nothing surfaces it: the migration reports success and the orphan is invisible until someone
+sweeps the broker.
+
+**On a fresh install, every migration declaration fires against a topic that never existed.** The
+flag is published once to each single-component path, the path is emptied after the document lands,
+and the ledger records it — so the whole set costs one round of publishes on the first connect and
+never repeats. That is the accepted price of one declaration serving both an upgrade and a fresh
+install. There is nothing to work around and no first-run gate worth writing.
+
+### The first migration against a real installation
+
+The first announcement against an installation that already has entities happens **once, and there
+is no undo**. Every run after it reads the ledger and does nothing.
+
+**Take a receiver backup before that first run.** A deleted entity's record — its name, entity id,
+area, labels, aliases, flags and registry id — is kept and serialised, so a backup makes the whole
+operation reversible, which turns a one-shot irreversible step into a cheap and recoverable one.
+
+A passing validation covers less than it appears to. Exercising the module against a broker and a
+receiver under a test device establishes that it connects, publishes, accepts commands and evicts
+correctly. It establishes nothing about one installation's accumulated customisations — renames made
+months ago, entities moved between areas, ones hidden or disabled, entity ids chosen by hand. A test
+device's entities are entities on a test device; they are not the population a first migration puts
+at risk, and the backup is what stands in for that difference.
+
+### The compile-time differences
 
 **Assemblies and namespaces**
 
