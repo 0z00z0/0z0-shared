@@ -49,6 +49,13 @@ public class MqttConnectionLoopbackTests
             RememberEndpoint = remember,
         };
 
+    /// <summary>A command entity that takes only the two payloads its kind has, as a real one does.
+    /// What makes an empty payload a refusal rather than something quietly accepted.</summary>
+    private static MqttCommandTarget Switch(string entityId, Action<string>? applied = null) =>
+        new(entityId, payload => payload is "ON" or "OFF"
+            ? MqttCommandVerdict.Accept(() => applied?.Invoke(payload))
+            : MqttCommandVerdict.Malformed($"'{payload}' is not ON or OFF."));
+
     [Fact]
     public async Task AConnectAnnouncesItselfOnlineAndSubscribesToTheCommandSubtree()
     {
@@ -505,6 +512,66 @@ public class MqttConnectionLoopbackTests
         Assert.True(await FakeBroker.WaitAsync(() => connection.IsConnected), "the connection never came up");
         Assert.Equal(false, remembered?.Encrypted);
         Assert.Equal(broker.Port, remembered?.Port);
+    }
+
+    /// <summary>The socket stage runs for every candidate, not only for an encrypted one under
+    /// Automatic. A far end that drops the packet rather than refusing it says nothing and spends the
+    /// whole connect budget doing so, and no candidate may be allowed to spend that where there is
+    /// another one to move on to.</summary>
+    [Fact]
+    public async Task EveryCandidateOpensASocketBeforeAnyMqttIsSpoken()
+    {
+        // Plain TCP, pinned: the shape the check used to skip entirely.
+        using var broker = new FakeBroker();
+        using var connection = await ConnectAsync(broker, Setup());
+
+        Assert.Equal(1, broker.Connects);
+        Assert.True(broker.Accepts > broker.Connects,
+            "the candidate spoke MQTT without a socket having been opened first");
+    }
+
+    /// <summary>A removal empties the command topics while this connection is still subscribed to its
+    /// own command wildcard, so without the unsubscribe the broker hands every clear straight back and
+    /// the router refuses each one — a burst of the module's own messages in the host's log at exactly
+    /// the moment something notable is happening.</summary>
+    [Fact]
+    public async Task RemovingTheDeviceReportsNoCommandOfItsOwn()
+    {
+        using var broker = new FakeBroker();
+        var refusals = new List<MqttCommandRefusal>();
+        var commands = Enumerable.Range(0, 8).Select(i => Switch($"quiet_mode_{i}")).ToList();
+
+        using var connection = await ConnectAsync(
+            broker,
+            Setup([new("cpu_load", () => "42")], commands,
+                  refused: r => { lock (refusals) refusals.Add(r); }));
+        Assert.True(await FakeBroker.WaitAsync(
+            () => broker.Subscriptions.Contains(MqttTopics.CommandFilter(Root, Device))));
+
+        Assert.True(await connection.RemoveDeviceAsync());
+
+        // The clears landed, so whatever they would have been handed back has had its chance.
+        Assert.Equal("", broker.LastPayload(MqttTopics.Command(Root, Device, "quiet_mode_7")));
+        await Task.Delay(300);
+        lock (refusals) Assert.Empty(refusals);
+    }
+
+    /// <summary>Outside a removal a zero-length payload on a command topic is a message like any
+    /// other, and reporting it is how a retained command being cleared is accounted for. The removal's
+    /// silence must not become a general one.</summary>
+    [Fact]
+    public async Task AZeroLengthCommandOutsideARemovalIsStillReported()
+    {
+        using var broker = new FakeBroker();
+        var refusals = new List<MqttCommandRefusal>();
+        using var connection = await ConnectAsync(
+            broker,
+            Setup(commands: [Switch("quiet_mode")], refused: r => { lock (refusals) refusals.Add(r); }));
+
+        await broker.SendAsync(MqttTopics.Command(Root, Device, "quiet_mode"), "");
+
+        Assert.True(await FakeBroker.WaitAsync(() => { lock (refusals) return refusals.Count == 1; }));
+        lock (refusals) Assert.Equal(MqttCommandOutcome.Malformed, refusals[0].Outcome);
     }
 
     [Fact]
