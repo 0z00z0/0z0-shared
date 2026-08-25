@@ -7,7 +7,8 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:brand="using:ZeroZero.Brand.WinUI"
     xmlns:controls="using:CommunityToolkit.WinUI.Controls"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    FontFamily="{ThemeResource MqttPanelFontFamily}">
 
     <!-- The alignment contract for the panel. Every field is one width, every card right-aligns its
          content, and an InfoIcon always sits to the LEFT of the field it explains — so no adornment
@@ -16,7 +17,14 @@
 
          No user-facing text lives in this file. Every string comes from MqttStrings through the
          panel's own resolver, so the module's prose has one home, one fallback and one translation
-         mechanism rather than a second set of literals here that could drift from it. -->
+         mechanism rather than a second set of literals here that could drift from it.
+
+         FontFamily sits on the root so the rows the code-behind builds inherit the host's face
+         without a style of their own, and every keyed style below that renders text repeats the
+         key, because an element carrying an explicit style takes the style's value over the
+         inherited one. A toolkit card's own header is the one thing outside the key's reach and
+         stays on the stock face: the card carries the family through its own style, which outranks
+         the value it would otherwise inherit. -->
     <UserControl.Resources>
         <x:Double x:Key="MqttFieldWidth">240</x:Double>
 
@@ -26,6 +34,7 @@
         <x:Double x:Key="SettingsCardMinHeight">52</x:Double>
 
         <Style x:Key="MqttTextFieldStyle" TargetType="TextBox">
+            <Setter Property="FontFamily" Value="{ThemeResource MqttPanelFontFamily}"/>
             <Setter Property="Width" Value="{StaticResource MqttFieldWidth}"/>
             <Setter Property="HorizontalAlignment" Value="Right"/>
             <Setter Property="TextAlignment" Value="Right"/>
@@ -34,11 +43,13 @@
              instead, which is why this style differs from the TextBox one by a property name rather
              than by intent. -->
         <Style x:Key="MqttPasswordFieldStyle" TargetType="PasswordBox">
+            <Setter Property="FontFamily" Value="{ThemeResource MqttPanelFontFamily}"/>
             <Setter Property="Width" Value="{StaticResource MqttFieldWidth}"/>
             <Setter Property="HorizontalAlignment" Value="Right"/>
             <Setter Property="HorizontalContentAlignment" Value="Right"/>
         </Style>
         <Style x:Key="MqttComboFieldStyle" TargetType="ComboBox">
+            <Setter Property="FontFamily" Value="{ThemeResource MqttPanelFontFamily}"/>
             <Setter Property="Width" Value="{StaticResource MqttFieldWidth}"/>
             <Setter Property="HorizontalAlignment" Value="Right"/>
         </Style>
@@ -46,6 +57,7 @@
         <!-- The one small toned-down label used for every row's sub-text and for the panel's status
              lines, so the secondary tier is defined once. -->
         <Style x:Key="MqttHintStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{ThemeResource MqttPanelFontFamily}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Foreground" Value="{ThemeResource MqttPanelSecondaryBrush}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
@@ -56,6 +68,7 @@
              a parse failure, not a fallback. What a host does rebrand is the colour, through the one
              theme key. -->
         <Style x:Key="MqttSubHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{ThemeResource MqttPanelFontFamily}"/>
             <Setter Property="FontSize" Value="15"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="CharacterSpacing" Value="40"/>
@@ -74,6 +87,7 @@
              value is the field width every other row on this panel uses, so the right edge is the
              panel's right edge here too. -->
         <Style x:Key="MqttStatusLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{ThemeResource MqttPanelFontFamily}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="TextWrapping" Value="NoWrap"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
