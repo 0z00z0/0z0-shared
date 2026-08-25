@@ -140,6 +140,39 @@ public class MqttEntitySetTests
         Assert.Equal(TimeSpan.FromMilliseconds(250), MqttEntitySet.Channels([sensor])[0].Debounce);
     }
 
+    private static MqttSensor Waiting(string? reading, bool keepsLastValue) => new()
+    {
+        EntityId = "cpu_load",
+        Name = "CPU load",
+        Read = () => reading,
+        RepublishLastOnConnect = keepsLastValue,
+    };
+
+    [Fact]
+    public void AChannelKeepsItsLastValueOnlyWhereTheEntityDeclaresIt()
+    {
+        Assert.False(MqttEntitySet.Channels([Sample.Sensor()])[0].RepublishLastOnConnect);
+        Assert.True(MqttEntitySet.Channels([Waiting("12", keepsLastValue: true)])[0].RepublishLastOnConnect);
+    }
+
+    [Fact]
+    public void AnAbsentReadingIsTheSentinelUnlessTheChannelKeepsItsLastValue()
+    {
+        // The sentinel and keeping the last value are contradictory answers to one absent reading.
+        // Read through the sentinel, a channel that keeps its last value is never told there is
+        // nothing to publish, and the branch that keeps the value is unreachable.
+        Assert.Equal(
+            MqttPayload.None, MqttEntitySet.Channels([Waiting(null, keepsLastValue: false)])[0].Payload());
+        Assert.Null(MqttEntitySet.Channels([Waiting(null, keepsLastValue: true)])[0].Payload());
+    }
+
+    [Fact]
+    public void ADeclaredReadingReachesTheChannelEitherWay()
+    {
+        Assert.Equal("12", MqttEntitySet.Channels([Waiting("12", keepsLastValue: false)])[0].Payload());
+        Assert.Equal("12", MqttEntitySet.Channels([Waiting("12", keepsLastValue: true)])[0].Payload());
+    }
+
     [Fact]
     public void OnlyCommandEntitiesBecomeTargets()
     {

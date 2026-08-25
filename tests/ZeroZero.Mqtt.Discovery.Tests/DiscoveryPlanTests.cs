@@ -15,10 +15,12 @@ public class DiscoveryPlanTests
         IReadOnlyList<MqttEntity>? withheld = null,
         IReadOnlyList<RetiredEntity>? retired = null,
         IReadOnlyList<MigratingEntity>? migrating = null,
+        IReadOnlyList<RetiredChannel>? retiredChannels = null,
         MqttDeviceIdentity? identity = null) =>
         DiscoveryPlan.Announce(
             ledger, Sample.TopicRoot, identity ?? Sample.Identity, Sample.Device, Sample.Origin,
-            published, withheld ?? [], retired ?? [], migrating ?? [], "online", "offline");
+            published, withheld ?? [], retired ?? [], migrating ?? [], retiredChannels ?? [],
+            "online", "offline");
 
     private static DiscoveryLedger LedgerWith(params PublishedEntity[] entities) => new()
     {
@@ -336,6 +338,70 @@ public class DiscoveryPlanTests
     }
 
     [Fact]
+    public void ARetiredChannelIsEmptiedInTheSweepRatherThanAmongTheEvictions()
+    {
+        // A value topic, not a config: nothing about it has to precede the document, so it goes with
+        // the other value topics the sweep empties.
+        var pass = Announce(
+            new DiscoveryLedger(), [Sample.Sensor()], retiredChannels: [new RetiredChannel("legacy_state")]);
+
+        Assert.Empty(pass.Evictions);
+        Assert.Equal([Sample.State("legacy_state")], pass.Sweep.Select(m => m.Topic));
+        Assert.Equal("", pass.Sweep[0].Payload);
+        Assert.True(pass.Sweep[0].Retain);
+    }
+
+    [Fact]
+    public void ARetiredChannelIsEmptiedOnceAndWrittenDownAsATopic()
+    {
+        // As with a retirement: repeating it on every connect spends a publish each time and re-runs
+        // a removal against a key a consumer may since have started using again.
+        var retiredChannels = new[] { new RetiredChannel("legacy_state") };
+
+        var first = Announce(new DiscoveryLedger(), [Sample.Sensor()], retiredChannels: retiredChannels);
+        var second = Announce(first.Ledger, [Sample.Sensor()], retiredChannels: retiredChannels);
+
+        Assert.Equal([Sample.State("legacy_state")], first.Ledger.Find(Sample.DeviceId)!.RetiredChannels);
+        Assert.Empty(second.Sweep);
+        Assert.Empty(second.Evictions);
+    }
+
+    [Fact]
+    public void ARetiredChannelIsKeptApartFromTheRetiredConfigTopics()
+    {
+        // Two different subtrees. One list read as the other would empty a path nothing published on.
+        var pass = Announce(
+            new DiscoveryLedger(), [Sample.Sensor()],
+            retired: [new RetiredEntity("sensor", "old_name")],
+            retiredChannels: [new RetiredChannel("legacy_state")]);
+
+        var recorded = pass.Ledger.Find(Sample.DeviceId)!;
+        Assert.Equal(
+            [DiscoveryTopics.Component(Sample.Prefix, "sensor", Sample.DeviceId, "old_name")],
+            recorded.Retired);
+        Assert.Equal([Sample.State("legacy_state")], recorded.RetiredChannels);
+    }
+
+    [Fact]
+    public void WithdrawEmptiesARetiredChannelWhetherOrNotTheRecordHasIt()
+    {
+        // A removal is final, so it does not depend on the record being complete.
+        var recorded = LedgerWith(Recorded("cpu_load"));
+        recorded.Find(Sample.DeviceId)!.RetiredChannels.Add(Sample.State("legacy_state"));
+
+        var (fromRecord, _) = DiscoveryPlan.Withdraw(
+            recorded, Sample.TopicRoot, Sample.Identity, [Sample.Sensor()], [], [],
+            [new RetiredChannel("legacy_state")]);
+        var (fromNothing, _) = DiscoveryPlan.Withdraw(
+            new DiscoveryLedger(), Sample.TopicRoot, Sample.Identity, [Sample.Sensor()], [], [],
+            [new RetiredChannel("legacy_state")]);
+
+        Assert.Contains(Sample.State("legacy_state"), fromRecord.Select(m => m.Topic));
+        Assert.Contains(Sample.State("legacy_state"), fromNothing.Select(m => m.Topic));
+        Assert.All(fromNothing, m => Assert.Equal("", m.Payload));
+    }
+
+    [Fact]
     public void AMigrationFlagsTheOldTopicBeforeTheDocumentAndEmptiesItAfter()
     {
         string topic = DiscoveryTopics.Component(Sample.Prefix, "sensor", Sample.DeviceId, "cpu_load");
@@ -390,7 +456,7 @@ public class DiscoveryPlanTests
         var (messages, ledger) = DiscoveryPlan.Withdraw(
             LedgerWith(Recorded("cpu_load"), Recorded("restart", "button")),
             Sample.TopicRoot, Sample.Identity, [Sample.Sensor(), Sample.Button()],
-            [new RetiredEntity("sensor", "old_name")], []);
+            [new RetiredEntity("sensor", "old_name")], [], []);
 
         Assert.Equal(
             [
@@ -413,7 +479,7 @@ public class DiscoveryPlanTests
         // This layer publishes nothing there, but something else can leave a retained command
         // standing, and it is redelivered the moment anything subscribes again.
         var (messages, _) = DiscoveryPlan.Withdraw(
-            new DiscoveryLedger(), Sample.TopicRoot, Sample.Identity, [Sample.Switch()], [], []);
+            new DiscoveryLedger(), Sample.TopicRoot, Sample.Identity, [Sample.Switch()], [], [], []);
 
         Assert.Contains(Sample.Command("quiet_mode"), messages.Select(m => m.Topic));
     }
@@ -424,7 +490,7 @@ public class DiscoveryPlanTests
         // A first run, or a record that was lost. Clearing only the document would leave the
         // availability topic and every value under it standing on the broker.
         var (messages, _) = DiscoveryPlan.Withdraw(
-            new DiscoveryLedger(), Sample.TopicRoot, Sample.Identity, [Sample.Sensor()], [], []);
+            new DiscoveryLedger(), Sample.TopicRoot, Sample.Identity, [Sample.Sensor()], [], [], []);
 
         Assert.Equal(
             [Sample.ConfigTopic, Sample.Availability, Sample.Withheld, Sample.State("cpu_load")],

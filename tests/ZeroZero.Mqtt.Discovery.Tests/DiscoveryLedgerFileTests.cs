@@ -56,6 +56,24 @@ public class DiscoveryLedgerFileTests : IDisposable
     }
 
     [Fact]
+    public void AnEmptiedValueTopicIsReadBackAsAThingAlreadyDone()
+    {
+        // Without the round trip it is emptied again on every start, against a key a consumer may
+        // since have started using again.
+        DiscoveryLedgerFile.In(_directory).Update(ledger => ledger.Devices.Add(new PublishedDevice
+        {
+            DeviceId = Sample.DeviceId,
+            ConfigTopic = Sample.ConfigTopic,
+            RetiredChannels = [Sample.State("legacy_state")],
+        }));
+
+        var reopened = DiscoveryLedgerFile.In(_directory).Read().Find(Sample.DeviceId);
+
+        Assert.NotNull(reopened);
+        Assert.Equal([Sample.State("legacy_state")], reopened.RetiredChannels);
+    }
+
+    [Fact]
     public void ReadHandsBackASnapshot()
     {
         var store = DiscoveryLedgerFile.In(_directory);

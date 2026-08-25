@@ -108,5 +108,12 @@ public sealed class MqttEntitySet
         [.. published.OfType<MqttCommandEntity>().Select(e => new MqttCommandTarget(e.EntityId, e.Accept))];
 
     private static MqttChannel Channel(MqttEntity entity) =>
-        new(entity.EntityId, entity.ReadState, Retain: entity.Retain, Debounce: entity.Debounce);
+        new(entity.EntityId,
+            // The sentinel and keeping the last value are contradictory answers to one absent
+            // reading, so a channel that keeps the last value has to see the absent reading itself.
+            // Read through the sentinel, it would never be told there was nothing to publish.
+            entity.RepublishLastOnConnect ? entity.ReadStateWithoutSentinel : entity.ReadState,
+            Retain: entity.Retain,
+            Debounce: entity.Debounce,
+            RepublishLastOnConnect: entity.RepublishLastOnConnect);
 }

@@ -58,6 +58,15 @@ public sealed class PublishedDevice
     /// opposite intent: replaying a migration as a retirement would remove what the handover kept, and
     /// would do so on the first restart after adoption.</summary>
     public List<string> Migrated { get; set; } = [];
+
+    /// <summary>The value topics that have been emptied, composed. Recorded so a retired channel is
+    /// emptied once and for good rather than on every connect.</summary>
+    /// <remarks>Composed topics, never keys, for the reason <see cref="Retired"/> holds them that way:
+    /// what has to be emptied is exactly what was published. Kept apart from <see cref="Retired"/>
+    /// because that list is single-component config topics and this one is value topics — two
+    /// different subtrees, and one read as the other would empty a path nothing was published
+    /// on.</remarks>
+    public List<string> RetiredChannels { get; set; } = [];
 }
 
 /// <summary>What this installation last put on the broker, across every identity it has published
@@ -108,6 +117,7 @@ public sealed class DiscoveryLedger
                 ],
                 Retired = [.. d.Retired],
                 Migrated = [.. d.Migrated],
+                RetiredChannels = [.. d.RetiredChannels],
             }),
         ],
     };

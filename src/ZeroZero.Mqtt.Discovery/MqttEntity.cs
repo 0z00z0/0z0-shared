@@ -80,6 +80,19 @@ public abstract class MqttEntity
     /// is nothing to empty when the entity goes.</remarks>
     public bool Retain { get; init; } = true;
 
+    /// <summary>Whether an absent reading leaves the last payload published standing instead of the
+    /// absent-reading sentinel, and is sent again on a (re)connect. For an entity whose producer has a
+    /// first reading to wait for — a poll that has not run, hardware that has not answered yet — where
+    /// the sentinel would otherwise show as a visible unknown before the first real value.</summary>
+    /// <remarks>
+    /// <para>It holds on every pass, not only on a connect: an entity that loses its reading keeps the
+    /// value it last published rather than clearing to <see cref="NoValuePayload"/>. Whatever stands
+    /// is the last reading taken, of no stated age.</para>
+    /// <para>An entity that has never had a reading publishes nothing at all rather than the sentinel,
+    /// so the receiver shows it unknown until the first real value arrives.</para>
+    /// </remarks>
+    public bool RepublishLastOnConnect { get; init; }
+
     /// <summary>Discovery keys this model has no property for. Merged into the component entry last,
     /// so an entry here wins.</summary>
     /// <remarks>The escape hatch, and deliberately small: a key that turns out to be worth declaring
@@ -113,6 +126,11 @@ public abstract class MqttEntity
     /// <summary>The payload to publish now, or null to empty the topic. Null from an entity that
     /// always carries a value is impossible: its sentinel stands in.</summary>
     public string? ReadState() => HasState ? ReadPayload() ?? NoValuePayload : null;
+
+    /// <summary>The payload to publish now, with nothing standing in for an absent reading. What a
+    /// channel declaring <see cref="RepublishLastOnConnect"/> reads, because the sentinel would
+    /// otherwise answer the absent reading before the channel could.</summary>
+    internal string? ReadStateWithoutSentinel() => HasState ? ReadPayload() : null;
 
     /// <summary>Whether a given configuration publishes this entity: true to publish, false to
     /// withhold, and null when <see cref="Include"/> could not answer.</summary>

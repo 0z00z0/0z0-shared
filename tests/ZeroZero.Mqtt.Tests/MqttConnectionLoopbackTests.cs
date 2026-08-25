@@ -225,6 +225,35 @@ public class MqttConnectionLoopbackTests
         Assert.Equal(2, broker.CountOn(Topic("cpu_load")));
     }
 
+    /// <summary>A channel whose producer has a first reading to wait for keeps what it last published
+    /// rather than emptying its topic, and sends it again on a connect — so a receiver that came back
+    /// with nothing retained has a value rather than a blank.</summary>
+    [Fact]
+    public async Task AChannelThatKeepsItsLastValueIsNotEmptiedAndIsSentAgainOnConnect()
+    {
+        using var broker = new FakeBroker();
+        string? reading = "42";
+        using var connection = await ConnectAsync(broker, Setup([
+            new("cpu_load", () => reading, RepublishLastOnConnect: true),
+        ]));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(Topic("cpu_load")) == 1));
+
+        reading = null;
+        connection.RequestPublish("cpu_load");
+        await Task.Delay(300);
+
+        Assert.Equal(1, broker.CountOn(Topic("cpu_load")));
+        Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
+
+        // A changed parameter set reconnects, which is the only way this channel is asked again while
+        // its reading is still absent.
+        await connection.ApplyAsync(Parameters(broker) with { DeviceName = "Workshop" });
+
+        Assert.True(await FakeBroker.WaitAsync(
+            () => broker.CountOn(Topic("cpu_load")) == 2, TimeSpan.FromSeconds(30)));
+        Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
+    }
+
     /// <summary>A reader that threw says nothing about the current value, so what stands, stands.
     /// Emptying the topic here would assert "no value" on the strength of a bug in the reader.</summary>
     [Fact]

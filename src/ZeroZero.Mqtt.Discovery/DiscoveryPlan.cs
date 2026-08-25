@@ -47,6 +47,7 @@ internal static class DiscoveryPlan
         IReadOnlyList<MqttEntity> withheld,
         IReadOnlyList<RetiredEntity> retired,
         IReadOnlyList<MigratingEntity> migrating,
+        IReadOnlyList<RetiredChannel> retiredChannels,
         string onlinePayload,
         string offlinePayload)
     {
@@ -87,6 +88,12 @@ internal static class DiscoveryPlan
 
         Retire(current, identity, retired, evictions);
         Migrate(current, identity, migrating, evictions, sweep);
+
+        // In the sweep rather than among the evictions. The eviction list exists for the orderings
+        // that have to precede the document — a config the document replaces, an identity it
+        // supersedes — and a value topic has no such constraint, so it goes with the other value
+        // topics the sweep empties.
+        RetireChannels(current, topicRoot, identity, retiredChannels, sweep);
 
         var recorded = current.Entities;
         var known = recorded.Select(e => e.EntityId).ToHashSet(StringComparer.Ordinal);
@@ -165,7 +172,8 @@ internal static class DiscoveryPlan
         MqttDeviceIdentity identity,
         IReadOnlyList<MqttEntity> known,
         IReadOnlyList<RetiredEntity> retired,
-        IReadOnlyList<MigratingEntity> migrating)
+        IReadOnlyList<MigratingEntity> migrating,
+        IReadOnlyList<RetiredChannel> retiredChannels)
     {
         var next = ledger.Copy();
         var record = next.Find(identity.DeviceId);
@@ -203,6 +211,10 @@ internal static class DiscoveryPlan
         topics.AddRange(migrating.Select(m => DiscoveryTopics.Component(
             identity.DiscoveryPrefix, m.Component, identity.DeviceId, m.EntityId)));
 
+        // And every value topic a predecessor left retained under this identity, on the same terms.
+        topics.AddRange(retiredChannels.Select(r =>
+            MqttTopics.Channel(topicRoot, identity.DeviceId, r.Key)));
+
         if (record is not null) next.Devices.Remove(record);
 
         return ([.. Distinct(topics).Select(MqttMessage.Empty)], next);
@@ -239,6 +251,28 @@ internal static class DiscoveryPlan
 
             current.Retired.Add(topic);
             evictions.Add(MqttMessage.Empty(topic));
+        }
+    }
+
+    /// <summary>The value topics this identity has not yet emptied, and the record of having emptied
+    /// them.</summary>
+    private static void RetireChannels(
+        PublishedDevice current,
+        string topicRoot,
+        MqttDeviceIdentity identity,
+        IReadOnlyList<RetiredChannel> retired,
+        List<MqttMessage> sweep)
+    {
+        foreach (var entry in retired)
+        {
+            string topic = MqttTopics.Channel(topicRoot, identity.DeviceId, entry.Key);
+
+            // Keyed on the composed topic, as a retirement is: that is the thing being emptied, and
+            // the same key under another topic root or device id is another identity's topic.
+            if (current.RetiredChannels.Contains(topic)) continue;
+
+            current.RetiredChannels.Add(topic);
+            sweep.Add(MqttMessage.Empty(topic));
         }
     }
 

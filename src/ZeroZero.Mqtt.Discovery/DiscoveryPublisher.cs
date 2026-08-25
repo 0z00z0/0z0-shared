@@ -35,6 +35,11 @@ public sealed record DiscoveryPublisherSetup
     /// keeping everything the user set on them.</summary>
     public IReadOnlyList<MigratingEntity> Migrating { get; init; } = [];
 
+    /// <summary>Value topics an earlier version of the consumer left retained under this identity,
+    /// emptied once and then written down. What reaches a key no entity declaration composes — one a
+    /// hand-rolled or shared-payload predecessor published on under this same topic root.</summary>
+    public IReadOnlyList<RetiredChannel> RetiredChannels { get; init; } = [];
+
     /// <summary>Where the announced channel set is handed to the connection. Null for a consumer that
     /// declares its channels itself.</summary>
     public Func<IReadOnlyList<MqttChannel>, CancellationToken, Task>? SetChannelsAsync { get; init; }
@@ -85,8 +90,9 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
     // because a change of identity is a different document at a different address.
     private (string Topic, string Json)? _announced;
 
-    /// <exception cref="ArgumentException">An entity is declared both retired and migrating, or a
-    /// retired id names an entity the set still publishes.</exception>
+    /// <exception cref="ArgumentException">An entity is declared both retired and migrating, a retired
+    /// id names an entity the set still publishes, or a retired channel key is unusable or names an
+    /// entity that publishes on that very topic.</exception>
     public DiscoveryPublisher(DiscoveryPublisherSetup setup)
     {
         ArgumentNullException.ThrowIfNull(setup);
@@ -202,7 +208,7 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
 
             var plan = DiscoveryPlan.Announce(
                 ledger, _setup.TopicRoot, identity, _setup.Device, _setup.Origin,
-                published, withheld, _setup.Retired, _setup.Migrating,
+                published, withheld, _setup.Retired, _setup.Migrating, _setup.RetiredChannels,
                 _setup.OnlinePayload, _setup.OfflinePayload);
 
             bool landed = await publisher.PublishAsync(plan.Evictions, ct).ConfigureAwait(false);
@@ -240,7 +246,7 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
         {
             var (messages, ledger) = DiscoveryPlan.Withdraw(
                 _setup.Ledger.Read(), _setup.TopicRoot, identity, Entities.All,
-                _setup.Retired, _setup.Migrating);
+                _setup.Retired, _setup.Migrating, _setup.RetiredChannels);
 
             if (await publisher.PublishAsync(messages, ct).ConfigureAwait(false)) Store(ledger);
             _announced = null;
@@ -276,7 +282,8 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
 
     private static void Validate(MqttEntitySet entities, DiscoveryPublisherSetup setup)
     {
-        if (DiscoveryDeclaration.Validate(entities, setup.Retired, setup.Migrating) is { } error)
+        if (DiscoveryDeclaration.Validate(
+                entities, setup.Retired, setup.Migrating, setup.RetiredChannels) is { } error)
             throw new ArgumentException(error, nameof(entities));
     }
 

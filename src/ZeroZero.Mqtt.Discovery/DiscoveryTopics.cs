@@ -38,6 +38,27 @@ public readonly record struct RetiredEntity(string Component, string EntityId);
 /// </remarks>
 public readonly record struct MigratingEntity(string Component, string EntityId);
 
+/// <summary>One retained value topic that nothing publishes on any more: it is emptied, so no stale
+/// payload is left standing where no declaration reaches.</summary>
+/// <remarks>
+/// <para>The key is the topic segment below <c>&lt;topicRoot&gt;/&lt;deviceId&gt;/</c> — the same
+/// shape as <see cref="MqttChannel.Key"/> and as an entity id — and the topic is composed by
+/// <see cref="MqttTopics.Channel"/>.</para>
+/// <para>What separates this from <see cref="RetiredEntity"/> is what it reaches: a value topic, not a
+/// discovery config. It is the declaration for a consumer moving off a hand-rolled or shared-payload
+/// predecessor, whose retained payloads the ledger has never heard of and no entity declaration
+/// composes.</para>
+/// <para>It names a key under this application's own topic root and device id. A predecessor that
+/// published under a different root is a different identity and is out of reach here.</para>
+/// <para>Emptied once per identity and then written down, exactly as a retirement is: repeating it on
+/// every reconnect, resume and receiver restart spends a publish each time and re-runs a removal
+/// against a key a consumer may since have started using again.</para>
+/// <para>Removing an entry is silent and permanent, as with <see cref="RetiredEntity"/>: an
+/// installation upgrading from before the entry was withdrawn keeps a retained payload with nothing
+/// left to empty it.</para>
+/// </remarks>
+public readonly record struct RetiredChannel(string Key);
+
 /// <summary>Whether a set of declarations can be published together. Pure.</summary>
 public static class DiscoveryDeclaration
 {
@@ -49,7 +70,8 @@ public static class DiscoveryDeclaration
     public static string? Validate(
         MqttEntitySet entities,
         IReadOnlyList<RetiredEntity> retired,
-        IReadOnlyList<MigratingEntity> migrating)
+        IReadOnlyList<MigratingEntity> migrating,
+        IReadOnlyList<RetiredChannel>? retiredChannels = null)
     {
         ArgumentNullException.ThrowIfNull(entities);
 
@@ -74,6 +96,19 @@ public static class DiscoveryDeclaration
             if (retiredPairs.Contains($"{entry.Component}/{entry.EntityId}"))
                 return $"Entity '{entry.Component}/{entry.EntityId}' is declared both retired and "
                      + "migrating, and the two intents cannot both be honoured.";
+        }
+
+        IReadOnlyList<RetiredChannel> channels = retiredChannels ?? [];
+        foreach (var entry in channels)
+        {
+            if (MqttTopics.ValidateChannelKey(entry.Key) is { } unusable) return unusable;
+
+            // A live entity with state publishes on exactly this topic. There is no component segment
+            // here to keep the two apart, so the key alone decides it: only an entity that publishes
+            // nothing — a button — leaves the topic free.
+            if (entities.Find(entry.Key) is { HasState: true })
+                return $"Retired channel '{entry.Key}' is also a live entity, and retiring it would "
+                     + "empty the topic the live entity publishes on.";
         }
 
         return null;

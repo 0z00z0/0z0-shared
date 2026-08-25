@@ -31,6 +31,7 @@ public class DiscoveryPublisherTests
             RecordingLedgerStore? ledger = null,
             IReadOnlyList<RetiredEntity>? retired = null,
             IReadOnlyList<MigratingEntity>? migrating = null,
+            IReadOnlyList<RetiredChannel>? retiredChannels = null,
             params PublishGroup[] groups)
         {
             Ledger = ledger ?? new RecordingLedgerStore();
@@ -45,6 +46,7 @@ public class DiscoveryPublisherTests
                 Groups = Groups,
                 Retired = retired ?? [],
                 Migrating = migrating ?? [],
+                RetiredChannels = retiredChannels ?? [],
                 Ledger = Ledger,
                 SetChannelsAsync = (channels, _) => { ChannelSets.Add(channels); return Task.CompletedTask; },
                 SetCommandTargets = TargetSets.Add,
@@ -159,6 +161,84 @@ public class DiscoveryPublisherTests
             DiscoveryTopics.Component(Sample.Prefix, "binary_sensor", Sample.DeviceId, "smart_charge")));
         Assert.Equal(0, harness.Broker.CountOn(
             DiscoveryTopics.Component(Sample.Prefix, "switch", Sample.DeviceId, "smart_charge")));
+    }
+
+    [Fact]
+    public async Task ARetiredChannelIsEmptiedOnTheFirstConnectAndNotOnEveryOneAfterIt()
+    {
+        // The declaration for a value topic a hand-rolled or shared-payload predecessor left retained
+        // under this identity: nothing in the ledger has heard of it and no entity declaration
+        // composes it.
+        using var harness = new Harness(
+            new MqttEntitySet([Sample.Sensor()]), retiredChannels: [new RetiredChannel("legacy_state")]);
+
+        await harness.ConnectAsync();
+        Assert.True(harness.Broker.Emptied(Sample.State("legacy_state")));
+
+        harness.Broker.Forget();
+        await harness.ConnectAsync();
+
+        Assert.Equal(0, harness.Broker.CountOn(Sample.State("legacy_state")));
+        Assert.Equal(
+            [Sample.State("legacy_state")],
+            harness.Ledger.Read().Find(Sample.DeviceId)!.RetiredChannels);
+    }
+
+    [Fact]
+    public async Task ARetiredChannelWhoseDocumentDidNotLandIsEmptiedOnTheNextPass()
+    {
+        // It rides in the sweep, which is held back behind a document that never arrived. Nothing was
+        // emptied, so nothing may be written down as having been.
+        using var harness = new Harness(
+            new MqttEntitySet([Sample.Sensor()]), retiredChannels: [new RetiredChannel("legacy_state")]);
+        harness.Broker.Refuses = topic => topic == Sample.ConfigTopic;
+
+        await harness.ConnectAsync();
+        Assert.Equal(0, harness.Broker.CountOn(Sample.State("legacy_state")));
+        Assert.Empty(harness.Ledger.Read().Devices);
+
+        harness.Broker.Refuses = _ => false;
+        await harness.Publisher.RepublishAsync();
+
+        Assert.True(harness.Broker.Emptied(Sample.State("legacy_state")));
+        Assert.Equal(
+            [Sample.State("legacy_state")],
+            harness.Ledger.Read().Find(Sample.DeviceId)!.RetiredChannels);
+    }
+
+    [Fact]
+    public void ARetiredChannelKeyMustBeOneATopicCanCarry()
+    {
+        var error = Assert.Throws<ArgumentException>(() => new Harness(
+            new MqttEntitySet([Sample.Sensor()]),
+            retiredChannels: [new RetiredChannel("legacy/state")]));
+
+        Assert.Contains("'/'", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ARetiredChannelMayNotNameALiveEntityThatPublishes()
+    {
+        // No component segment stands between the two here: the key alone is the topic, and it is the
+        // one the live entity's value is retained on.
+        var error = Assert.Throws<ArgumentException>(() => new Harness(
+            new MqttEntitySet([Sample.Sensor("cpu_load")]),
+            retiredChannels: [new RetiredChannel("cpu_load")]));
+
+        Assert.Contains("cpu_load", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ARetiredChannelMayNameALiveButton()
+    {
+        // The boundary the refusal is drawn at: a button declares no state channel and publishes no
+        // payload, so nothing live owns the topic its key composes.
+        using var harness = new Harness(
+            new MqttEntitySet([Sample.Button()]), retiredChannels: [new RetiredChannel("restart")]);
+
+        await harness.ConnectAsync();
+
+        Assert.True(harness.Broker.Emptied(Sample.State("restart")));
     }
 
     [Fact]
@@ -517,6 +597,22 @@ public class DiscoveryPublisherTests
         Assert.True(harness.Broker.Emptied(Sample.Availability));
         Assert.True(harness.Broker.Emptied(Sample.State("cpu_load")));
         Assert.Empty(harness.Ledger.Read().Devices);
+    }
+
+    [Fact]
+    public async Task RemovingTheDeviceEmptiesADeclaredRetiredChannelToo()
+    {
+        // A removal leaves nothing standing, and the record it would otherwise read from goes with
+        // the device — so the declaration, not the ledger, is what reaches this topic here.
+        using var harness = new Harness(
+            new MqttEntitySet([Sample.Sensor()]),
+            retiredChannels: [new RetiredChannel("legacy_state")]);
+        await harness.ConnectAsync();
+        harness.Broker.Forget();
+
+        await harness.RemoveAsync();
+
+        Assert.True(harness.Broker.Emptied(Sample.State("legacy_state")));
     }
 
     [Fact]
