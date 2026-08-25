@@ -8,7 +8,7 @@ using Windows.Graphics;
 namespace ZeroZero.Brand.WinUI;
 
 /// <summary>
-/// The shared, parameterized About popup for ZeroZero Software apps — 320px wide, Mica backdrop,
+/// The shared, parameterised About popup for ZeroZero Software apps — 320px wide, Mica backdrop,
 /// centred on the monitor under the cursor, no title bar, always-on-top. Carries its own minimal
 /// Win32 P/Invoke (<see cref="NativeMethods"/>) for monitor/DPI metrics, so it has no dependency
 /// on a consuming app's own NativeMethods class.
