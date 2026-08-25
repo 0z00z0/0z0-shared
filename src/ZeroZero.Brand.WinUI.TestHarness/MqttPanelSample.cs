@@ -10,6 +10,25 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// </summary>
 internal static class MqttPanelSample
 {
+    /// <summary>Somewhere for the panel to say what went wrong. A WinExe has no console, and the
+    /// panel swallows its own exceptions into this interface — without it a handler that throws is
+    /// indistinguishable from one that did nothing.</summary>
+    private sealed class FileLog : IMqttLog
+    {
+        private static readonly string Path =
+            System.IO.Path.Combine(System.IO.Path.GetTempPath(), "mqtt-harness-log.txt");
+
+        public void Info(string message) => Append($"INFO  {message}");
+
+        public void Error(string source, Exception? ex) => Append($"ERROR {source}: {ex}");
+
+        private static void Append(string line)
+        {
+            try { File.AppendAllText(Path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}  {line}{Environment.NewLine}"); }
+            catch (IOException) { }
+        }
+    }
+
     /// <summary>The store the panel reads and writes. In memory for the life of the rig, so a run
     /// leaves nothing behind on the machine it was seen on.</summary>
     private sealed class MemoryStore : IMqttSettingsStore
@@ -70,6 +89,7 @@ internal static class MqttPanelSample
 
         return new MqttPanelSetup
         {
+            Log = new FileLog(),
             Settings = store,
             Groups = groups,
             TopicRoot = "harness",

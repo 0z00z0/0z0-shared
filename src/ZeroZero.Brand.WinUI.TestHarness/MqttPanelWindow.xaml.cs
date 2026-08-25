@@ -1,6 +1,8 @@
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation.Peers;
+using Microsoft.UI.Xaml.Automation.Provider;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Windows.Graphics;
@@ -25,18 +27,52 @@ public sealed partial class MqttPanelWindow : Window
     private const double MaxWorkAreaFraction = 0.94;
 
     public MqttPanelWindow(
-        string title, ElementTheme theme, bool broker, bool publish, bool edited, int offset)
+        string title, ElementTheme theme, bool broker, bool publish, bool edited, int offset,
+        bool mica = false, bool invalidPort = false)
     {
         InitializeComponent();
         Title = title;
         Root.RequestedTheme = theme;
 
+        if (mica)
+        {
+            // The ground a settings page most often has and a rig least often reproduces: the page
+            // paints nothing, so every translucent surface on the panel composites over the
+            // backdrop rather than over a flat colour.
+            Root.Background = null;
+            SystemBackdrop = new MicaBackdrop();
+        }
+
         Panel.Initialise(MqttPanelSample.Build());
         Panel.BrokerExpanded = broker;
         Panel.PublishExpanded = publish;
         if (edited) Panel.Loaded += (_, _) => StageAnEdit();
+        if (invalidPort) Panel.Loaded += (_, _) => StageInvalidPort();
 
         Resize(offset);
+    }
+
+    /// <summary>The realised root, for the theme probe. A rendered tree is the only place the
+    /// brush that actually reached an element can be read.</summary>
+    internal FrameworkElement ProbeRoot => Root;
+
+    /// <summary>Opens the device-id dialogue through its own button, so a capture can reach the
+    /// text tiers that only exist inside it.</summary>
+    internal void OpenDeviceIdDialogue()
+    {
+        string report = Path.Combine(Path.GetTempPath(), "mqtt-harness-dialogue.txt");
+        try
+        {
+            if (FindDescendant(Panel, "ChangeDeviceIdBtn") is Button button &&
+                FrameworkElementAutomationPeer.CreatePeerForElement(button) is IInvokeProvider invoke)
+                invoke.Invoke();
+            else
+                File.WriteAllText(report, "Change-ID button or its invoke provider not found.");
+        }
+        catch (Exception ex)
+        {
+            File.WriteAllText(report, ex.ToString());
+        }
     }
 
     /// <summary>
@@ -58,6 +94,23 @@ public sealed partial class MqttPanelWindow : Window
         if (FindDescendant(Panel, "HostBox") is TextBox host) host.Text = "";
 
         Panel.BrokerExpanded = wasExpanded;
+    }
+
+    /// <summary>
+    /// Types a port outside the valid range, so the panel's error tier is on screen. The error
+    /// colour is the one tier no ordinary screenshot reaches, and the one nearest the contrast floor.
+    /// </summary>
+    private void StageInvalidPort()
+    {
+        Panel.BrokerExpanded = true;
+        Panel.UpdateLayout();
+
+        // The custom entry is the last one; the typed box only appears once it is selected.
+        if (FindDescendant(Panel, "PortCombo") is ComboBox { Items.Count: > 0 } combo)
+            combo.SelectedIndex = combo.Items.Count - 1;
+        Panel.UpdateLayout();
+
+        if (FindDescendant(Panel, "PortCustomBox") is TextBox box) box.Text = "70000";
     }
 
     /// <summary>The first descendant carrying a given name. The compiled-XAML namescope is not

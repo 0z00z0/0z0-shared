@@ -378,7 +378,9 @@ public sealed partial class MqttSettingsPanel : UserControl
             };
             // The id is sanitised to [a-z0-9_] before it reaches a topic, so echo what will be
             // published — otherwise "Office ThinkPad" silently becomes something else.
-            var previewText = new TextBlock { FontSize = 11, Opacity = 0.7, TextWrapping = TextWrapping.Wrap };
+            // The panel's own secondary tier rather than an opacity: an opacity is a tone no theme
+            // key can reach, so a host that rebrands the panel cannot rebrand these two lines.
+            var previewText = new TextBlock { Style = StyleFor("MqttResultStyle") };
             // Names the mechanism rather than one application's consequence of it: a consumer with no
             // automations still has dashboards, history or nothing at all, and the module cannot know
             // which. A host with a sharper consequence supplies it beside this.
@@ -390,7 +392,11 @@ public sealed partial class MqttSettingsPanel : UserControl
                 Text = _strings.Format("DeviceIdCurrent", current),
                 TextWrapping = TextWrapping.Wrap,
             });
-            body.Children.Add(new TextBlock { Text = _strings.Get("DeviceIdNew"), Opacity = 0.7, FontSize = 12 });
+            body.Children.Add(new TextBlock
+            {
+                Text = _strings.Get("DeviceIdNew"),
+                Style = StyleFor("MqttResultStyle"),
+            });
             body.Children.Add(idBox);
             body.Children.Add(previewText);
             body.Children.Add(errorText);

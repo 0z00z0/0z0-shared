@@ -1,6 +1,11 @@
-# Launches the test harness in its MQTT scenario and captures WINDOW-ONLY screenshots of the eight it
+﻿# Launches the test harness in its MQTT scenario and captures WINDOW-ONLY screenshots of the eight it
 # opens — light and dark, each as the panel opens, each with the Broker group open, each with the
 # publish list open, and each holding a staged edit behind a closed group — to docs\screenshots\.
+#
+# -Branded captures the other two instead: the same panel with a deliberately extreme studio palette
+# declared in the application's own resources, which is what shows how far the module's theme keys
+# reach. The colours are unlike anything the stock theme can produce, so every surface in the image
+# is either obviously overridden or obviously not.
 #
 # Window-aware capture (PrintWindow + PW_RENDERFULLCONTENT) pulls each window's own composited bitmap
 # straight from DWM, so nothing behind the window bleeds into the image. Each window is brought
@@ -10,6 +15,8 @@
 # The display is held awake and the desktop is checked for composition before anything is captured.
 # DWM composes nothing while the display is off, so a capture taken then is uniformly black — and
 # black is not obviously wrong until someone opens the file.
+
+param([switch]$Branded)
 
 $ErrorActionPreference = "Stop"
 
@@ -121,18 +128,26 @@ Write-Host "Desktop is composing; display held awake."
 
 # Maps a window's AppWindow title (set in App.xaml.cs) to the screenshot file it should produce.
 # Anything not in the map is not part of this scenario and is skipped.
-$titleToFile = @{
-    "MQTT Panel Light"        = "mqtt-panel-light.png"
-    "MQTT Panel Dark"         = "mqtt-panel-dark.png"
-    "MQTT Panel Light Broker" = "mqtt-panel-light-broker.png"
-    "MQTT Panel Dark Broker"  = "mqtt-panel-dark-broker.png"
-    "MQTT Panel Light Groups" = "mqtt-panel-light-groups.png"
-    "MQTT Panel Dark Groups"  = "mqtt-panel-dark-groups.png"
-    "MQTT Panel Light Edited" = "mqtt-panel-light-edited.png"
-    "MQTT Panel Dark Edited"  = "mqtt-panel-dark-edited.png"
+$titleToFile = if ($Branded) {
+    @{
+        "MQTT Panel Light Branded" = "mqtt-panel-light-branded.png"
+        "MQTT Panel Dark Branded"  = "mqtt-panel-dark-branded.png"
+    }
+} else {
+    @{
+        "MQTT Panel Light"        = "mqtt-panel-light.png"
+        "MQTT Panel Dark"         = "mqtt-panel-dark.png"
+        "MQTT Panel Light Broker" = "mqtt-panel-light-broker.png"
+        "MQTT Panel Dark Broker"  = "mqtt-panel-dark-broker.png"
+        "MQTT Panel Light Groups" = "mqtt-panel-light-groups.png"
+        "MQTT Panel Dark Groups"  = "mqtt-panel-dark-groups.png"
+        "MQTT Panel Light Edited" = "mqtt-panel-light-edited.png"
+        "MQTT Panel Dark Edited"  = "mqtt-panel-dark-edited.png"
+    }
 }
 
-$p = Start-Process -FilePath $exePath -ArgumentList "--mqtt" -PassThru
+$harnessArgs = if ($Branded) { @("--mqtt", "--brand") } else { @("--mqtt") }
+$p = Start-Process -FilePath $exePath -ArgumentList $harnessArgs -PassThru
 try {
     $handles = @()
     for ($i = 0; $i -lt 40; $i++) {
