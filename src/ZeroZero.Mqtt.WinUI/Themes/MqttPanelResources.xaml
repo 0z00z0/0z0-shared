@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    The panel's whole theming surface: five keys, three themes, and no dependency beyond WinUI's own
-    lightweight styling.
+    The panel's whole theming surface: six keys — five colours and the typeface — three themes, and
+    no dependency beyond WinUI's own lightweight styling.
 
-    Every colour the panel draws with resolves through one of these by ThemeResource. A host rebrands
-    by declaring the same key in its own application resources, which wins because it is nearer the
-    control; keys it leaves alone keep the defaults below. The set is small on purpose — enough to
-    make the panel look like the pages beside it, not a knob per element.
+    Every colour the panel draws with, and every glyph it sets, resolves through one of these by
+    ThemeResource. A host rebrands by declaring the same key in its own application resources, which
+    wins because it is nearer the control; keys it leaves alone keep the defaults below. The set is
+    small on purpose — enough to make the panel look like the pages beside it, not a knob per element.
+
+    The typeface is one key for the whole panel rather than one per role: the panel's own text styles
+    are keyed, so a host's implicit TextBlock style never reaches inside it and this key is the only
+    route a studio has to its own face.
 
     The defaults are the stock WinUI theme, never a brand. A studio's teal headings and monospace face
     belong in that application's overrides, applied through these keys.
@@ -27,6 +31,10 @@
             <SolidColorBrush x:Key="MqttPanelSecondaryBrush"      Color="{ThemeResource TextFillColorSecondary}"/>
             <SolidColorBrush x:Key="MqttPanelAccentBrush"         Color="{ThemeResource SystemAccentColorLight2}"/>
             <SolidColorBrush x:Key="MqttPanelCardBackgroundBrush" Color="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <!-- Declared in all three dictionaries so the set stays symmetric, and aliased to the
+                 stock face rather than named outright: the default has to be whatever the pages
+                 beside the panel are already using. -->
+            <StaticResource x:Key="MqttPanelFontFamily" ResourceKey="ContentControlThemeFontFamily"/>
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Light">
@@ -35,6 +43,7 @@
             <SolidColorBrush x:Key="MqttPanelSecondaryBrush"      Color="{ThemeResource TextFillColorSecondary}"/>
             <SolidColorBrush x:Key="MqttPanelAccentBrush"         Color="{ThemeResource SystemAccentColorDark2}"/>
             <SolidColorBrush x:Key="MqttPanelCardBackgroundBrush" Color="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <StaticResource x:Key="MqttPanelFontFamily" ResourceKey="ContentControlThemeFontFamily"/>
         </ResourceDictionary>
 
         <!-- High contrast takes the system's own colours rather than the palette's: the whole point
@@ -45,6 +54,9 @@
             <SolidColorBrush x:Key="MqttPanelSecondaryBrush"      Color="{ThemeResource SystemColorWindowTextColor}"/>
             <SolidColorBrush x:Key="MqttPanelAccentBrush"         Color="{ThemeResource SystemColorHighlightColor}"/>
             <SolidColorBrush x:Key="MqttPanelCardBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}"/>
+            <!-- The typeface is not a high-contrast concern: the mode replaces colours, and a face
+                 chosen for legibility stays the right one under it. -->
+            <StaticResource x:Key="MqttPanelFontFamily" ResourceKey="ContentControlThemeFontFamily"/>
         </ResourceDictionary>
 
     </ResourceDictionary.ThemeDictionaries>

@@ -100,9 +100,16 @@ public sealed partial class MqttSettingsPanel : UserControl
     /// <remarks>A host may call this whenever it re-shows the page. Losing a typed host to a
     /// re-invocation of the settings window — with the group still open and the text simply gone —
     /// is the failure this signature exists to make impossible.</remarks>
+    /// <exception cref="InvalidOperationException"><see cref="Initialise"/> has not been called. The
+    /// panel has no store to read until it is.</exception>
     public void Reload()
     {
-        if (_setup is not { } setup) return;
+        // Loud rather than silent: there is nothing to read before the store arrives, and a quiet
+        // return turns a host calling this from a general refresh step into a blank panel with no
+        // trail back to the ordering that caused it.
+        if (_setup is not { } setup)
+            throw new InvalidOperationException(
+                "MqttSettingsPanel.Initialise must be called before Reload.");
 
         var saved = setup.Settings.Read();
         _edits.Reload(saved);
@@ -164,9 +171,15 @@ public sealed partial class MqttSettingsPanel : UserControl
 
     /// <summary>Discards every staged broker edit and takes the store's values instead. The explicit
     /// reset a host offers behind its own control; nothing else on the panel throws work away.</summary>
+    /// <exception cref="InvalidOperationException"><see cref="Initialise"/> has not been called. The
+    /// panel has no store to read until it is.</exception>
     public void Revert()
     {
-        if (_setup is not { } setup) return;
+        // Reads the same store as Reload, so it carries the same ordering requirement; one of the
+        // two throwing while the other returned quietly would be a difference with no meaning.
+        if (_setup is not { } setup)
+            throw new InvalidOperationException(
+                "MqttSettingsPanel.Initialise must be called before Revert.");
 
         _edits.Load(setup.Settings.Read());
         WithUpdatingSuppressed(PushBrokerFields);

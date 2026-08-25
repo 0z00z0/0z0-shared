@@ -10,6 +10,12 @@
     <UseWinUI>true</UseWinUI>
     <WinUISDKReferences>false</WinUISDKReferences>
 
+    <!-- MakePRI's own notion of the default language, distinct from NeutralLanguage in
+         Directory.Build.props: the resources sit under a language folder, so without a declared
+         default MakePRI compares them against its en-US assumption and every build that consumes
+         this project reports PRI257. -->
+    <DefaultLanguage>en-GB</DefaultLanguage>
+
     <AssemblyTitle>ZeroZero.Mqtt.WinUI</AssemblyTitle>
     <Product>ZeroZero.Mqtt.WinUI</Product>
     <Description>The MQTT settings panel: master switch, live status, device identity, a staged broker block and one row per application-declared publish group.</Description>
@@ -28,6 +34,11 @@
     <!-- InfoIcon lives in the brand assembly: it carries no MQTT vocabulary, and both consumers of
          this panel already reference that assembly for the About window. -->
     <ProjectReference Include="..\ZeroZero.Brand.WinUI\ZeroZero.Brand.WinUI.csproj" />
+    <!-- The panel compiles against nothing in the discovery assembly. It is referenced because this
+         project is the module's entry point: one project reference is the documented contract, so
+         the chain below it has to be complete here or a consumer that took that one reference is
+         short an assembly it was told it already had. -->
+    <ProjectReference Include="..\ZeroZero.Mqtt.Discovery\ZeroZero.Mqtt.Discovery.csproj" />
   </ItemGroup>
 
   <!--
