@@ -338,6 +338,45 @@ public class DiscoveryPlanTests
     }
 
     [Fact]
+    public void AMovedTopicRootEmptiesTheAvailabilityTopicItLeftBehind()
+    {
+        // The device id is unchanged, so abandonment — which is keyed on it — does not cover this.
+        // Left standing, the old topic keeps a retained "online" for a device that is no longer
+        // there, and no declaration reaches it: a channel key composes under the identity in force.
+        var recorded = LedgerWith(Recorded("cpu_load"));
+        recorded.Find(Sample.DeviceId)!.WithheldTopic = Sample.Withheld;
+
+        var pass = DiscoveryPlan.Announce(
+            recorded, "renamedapp", Sample.Identity, Sample.Device, Sample.Origin,
+            [Sample.Sensor()], [], [], [], [], "online", "offline");
+
+        var swept = pass.Sweep.Select(m => m.Topic).ToList();
+        Assert.Contains(Sample.Availability, swept);
+        Assert.Contains(Sample.Withheld, swept);
+        Assert.All(pass.Sweep, m => Assert.Equal("", m.Payload));
+
+        // Recorded at the new address, so the next pass has nothing left to move.
+        var moved = pass.Ledger.Find(Sample.DeviceId)!;
+        Assert.Equal(MqttTopics.Availability("renamedapp", Sample.DeviceId), moved.AvailabilityTopic);
+        Assert.Equal("", moved.WithheldTopic);
+    }
+
+    [Fact]
+    public void AnUnmovedTopicRootLeavesTheAvailabilityTopicAlone()
+    {
+        // The ordinary upgrade: the topic is composed identically, so it is taken over rather than
+        // emptied — which is what keeps the Last Will working across the change.
+        var recorded = LedgerWith(Recorded("cpu_load"));
+        recorded.Find(Sample.DeviceId)!.WithheldTopic = Sample.Withheld;
+
+        var pass = Announce(recorded, [Sample.Sensor()]);
+
+        Assert.DoesNotContain(Sample.Availability, pass.Sweep.Select(m => m.Topic));
+        Assert.DoesNotContain(Sample.Withheld, pass.Sweep.Select(m => m.Topic));
+        Assert.Equal(Sample.Withheld, pass.Ledger.Find(Sample.DeviceId)!.WithheldTopic);
+    }
+
+    [Fact]
     public void ARetiredChannelIsEmptiedInTheSweepRatherThanAmongTheEvictions()
     {
         // A value topic, not a config: nothing about it has to precede the document, so it goes with

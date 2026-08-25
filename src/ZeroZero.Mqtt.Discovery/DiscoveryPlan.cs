@@ -52,6 +52,7 @@ internal static class DiscoveryPlan
         string offlinePayload)
     {
         string configTopic = DiscoveryTopics.Device(identity.DiscoveryPrefix, identity.DeviceId);
+        string availabilityTopic = MqttTopics.Availability(topicRoot, identity.DeviceId);
         string withheldTopic = MqttTopics.WithheldAvailability(topicRoot, identity.DeviceId);
         var next = ledger.Copy();
 
@@ -85,6 +86,25 @@ internal static class DiscoveryPlan
         if (current.ConfigTopic is { Length: > 0 } previous
             && !string.Equals(previous, configTopic, StringComparison.Ordinal))
             sweep.Add(MqttMessage.Empty(previous));
+
+        // The topic root moved under an unchanged device id, so the availability topics have moved
+        // without the identity changing — the one case abandonment does not cover, because that is
+        // keyed on the device id and this is the same device. Left alone, the old availability topic
+        // keeps its retained payload for ever, asserting a device that has gone is online; and no
+        // declaration reaches it, because a channel key composes under the identity in force.
+        if (current.AvailabilityTopic is { Length: > 0 } previousAvailability
+            && !string.Equals(previousAvailability, availabilityTopic, StringComparison.Ordinal))
+            sweep.Add(MqttMessage.Empty(previousAvailability));
+
+        if (current.WithheldTopic is { Length: > 0 } previousWithheld
+            && !string.Equals(previousWithheld, withheldTopic, StringComparison.Ordinal))
+        {
+            sweep.Add(MqttMessage.Empty(previousWithheld));
+            // Cleared rather than repointed, so the block below re-retains the offline payload at the
+            // new address when something is actually withheld — and so the next pass does not empty
+            // a topic this one already has.
+            current.WithheldTopic = "";
+        }
 
         Retire(current, identity, retired, evictions);
         Migrate(current, identity, migrating, evictions, sweep);
@@ -145,7 +165,7 @@ internal static class DiscoveryPlan
         }
 
         current.ConfigTopic = configTopic;
-        current.AvailabilityTopic = MqttTopics.Availability(topicRoot, identity.DeviceId);
+        current.AvailabilityTopic = availabilityTopic;
         current.Entities = entities;
 
         return new DiscoveryPass(
