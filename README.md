@@ -106,9 +106,11 @@ usable on its own by anything that keeps a JSON document on disk. Contains:
   write that lands whole or not at all, and a change event. The snapshot is what callers hold, so a
   reader never observes a half-applied edit.
 - **`SettingsFileOptions`** — where the file lives, how it serialises, and what to do on failure.
-- **`SettingsFileQuarantine`** — what happens to a file that cannot be parsed: it is moved aside
-  rather than overwritten, so a corrupt document is recoverable instead of silently replaced by
-  defaults.
+- **`SettingsFileQuarantine`** — what happens to a file that cannot be parsed: it is copied aside,
+  timestamped and marked `.bad`, *and* the original is overwritten with defaults immediately, as the
+  store is constructed. The copy is the only surviving record and the three most recent are kept.
+  Nothing surfaces it: `SettingsFile<T>.LastQuarantinePath` names the copy for a host that wants to
+  tell its user.
 - **`SettingsSaveFailedEventArgs`** and `SettingsSaveResult` — a failed write is reported, never
   swallowed.
 
@@ -344,11 +346,11 @@ pinned build wants because `checkout --detach` takes an exact ref:
 ### 3. Pin a tag
 
 Every consumer-visible change is released under a `v`-prefixed tag — `v0.1.0`, `v0.2.0`, `v0.2.1`,
-`v0.3.0`, `v0.3.1`, `v0.3.2`, `v0.3.3` — and **a tag is the ref to pin, not a raw commit SHA.** A tag
-reads as a version, so a pin bump is a legible diff and a reviewable decision; a SHA says only that
-something moved. Each tag carries release notes listing what changed, so **a consumer raising its
-pin reads the notes for that tag first** — the breaking changes are stated there, and there is no
-other place they are collected.
+`v0.3.0`, `v0.3.1`, `v0.3.2`, `v0.3.3`, `v0.3.4` — and **a tag is the ref to pin, not a raw commit
+SHA.** A tag reads as a version, so a pin bump is a legible diff and a reviewable decision; a SHA
+says only that something moved. Each tag carries release notes listing what changed, so **a consumer
+raising its pin reads the notes for that tag first** — the breaking changes are stated there, and
+there is no other place they are collected.
 
 The scheme is [semantic versioning](https://semver.org) and the library is **pre-1.0**: while the
 major stays `0`, a **minor** bump may break the API and a **patch** never does. Tags are cut on a
@@ -365,12 +367,12 @@ it as the second checkout's `ref`:
         with:
           repository: 0z00z0/0z0-shared
           path: 0z0-shared
-          ref: v0.3.3
+          ref: v0.3.4
 ```
 
 The **sibling clone** shape needs no change at all — a full `git clone` fetches tags, so
 `checkout --detach $ref` resolves one. Shallow is the one thing to watch: `--depth 1` alone leaves
-no tag to check out, so it comes with `--branch v0.3.3`.
+no tag to check out, so it comes with `--branch v0.3.4`.
 
 Local dev builds against the live sibling checkout while CI builds the pinned tag, so a consumer
 that adopts a newly added shared type builds green locally and fails CI with `CS0234`. A consumer
