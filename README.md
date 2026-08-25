@@ -109,8 +109,9 @@ usable on its own by anything that keeps a JSON document on disk. Contains:
 - **`SettingsFileQuarantine`** — what happens to a file that cannot be parsed: it is copied aside,
   timestamped and marked `.bad`, *and* the original is overwritten with defaults immediately, as the
   store is constructed. The copy is the only surviving record and the three most recent are kept.
-  Nothing surfaces it: `SettingsFile<T>.LastQuarantinePath` names the copy for a host that wants to
-  tell its user.
+  Nothing surfaces it, so a host should: `SettingsFile<T>.LastQuarantinePath` names the copy, and a
+  host that leaves it unread leaves its user without a configuration and with nothing on screen to
+  say so.
 - **`SettingsSaveFailedEventArgs`** and `SettingsSaveResult` — a failed write is reported, never
   swallowed.
 

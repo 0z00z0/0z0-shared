@@ -202,10 +202,11 @@ recent copies are kept, and **the defaults are written over the original immedia
 store is constructed, not on the next `Update`. That copy is the only surviving record of what the
 user had.
 
-**Nothing surfaces it.** The panel opens with a blank broker host and an inert connection, which is
-exactly what a missing file looks like. The path is available as
-`MqttSettingsFile.File.LastQuarantinePath`, null when nothing has been quarantined, and a host that
-wants the user told that a document was set aside reads it once after opening the store.
+**Nothing surfaces it, so the host must.** The path is available as
+`MqttSettingsFile.File.LastQuarantinePath`, null when nothing has been quarantined, and a host
+should read it once after opening the store and tell the user a document was set aside, naming the
+copy. Without that, an installation loses its whole configuration silently: the panel opens with a
+blank broker host and an inert connection, indistinguishable from never having been configured.
 
 So **removing or renaming an enum member is a breaking change for every installation whose file
 names it**, and what it costs is the document rather than the member's own setting. Widen an enum
