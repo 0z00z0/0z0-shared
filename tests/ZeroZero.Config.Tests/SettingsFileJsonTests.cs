@@ -44,6 +44,23 @@ public class SettingsFileJsonTests : SettingsFileTestBase
     }
 
     [Fact]
+    public void Enums_AnUnknownMemberNameCostsEveryOtherSettingInTheFile()
+    {
+        // The blast radius is the file, not the field: a name no member answers to fails the whole
+        // deserialisation, so the file is quarantined and every unrelated setting beside it reverts
+        // to its default. Retiring an enum member therefore drops the user's other settings on
+        // upgrade — the copy left aside is the only thing standing between that and outright loss.
+        File.WriteAllText(FilePath, "{ \"Label\": \"kept-by-the-user\", \"Mode\": \"Tepid\" }");
+
+        var file = Create();
+
+        Assert.Equal(string.Empty, file.Read().Label);
+        Assert.Equal(SampleMode.Automatic, file.Read().Mode);
+        Assert.Single(QuarantineCopies());
+        Assert.Contains("kept-by-the-user", File.ReadAllText(QuarantineCopies()[0]));
+    }
+
+    [Fact]
     public void PropertyNames_ReadCaseInsensitively()
     {
         File.WriteAllText(FilePath, "{ \"label\": \"desk\", \"RETRIES\": 9 }");
