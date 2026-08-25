@@ -79,7 +79,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     // seconds for nothing.
     private static readonly TimeSpan ConnectedPoll = TimeSpan.FromSeconds(60);
 
-    private static readonly TimeSpan InitialBackoff = TimeSpan.FromSeconds(3);
+    internal static readonly TimeSpan InitialBackoff = TimeSpan.FromSeconds(3);
 
     // What one candidate's handshake costs before the next is tried. Same budget the connection check
     // gives each transport, so the two agree on how long "no answer" takes. The stage that opens the
@@ -378,8 +378,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
 
     private async Task MaintainConnectionAsync(CancellationToken ct)
     {
-        var backoff = InitialBackoff;
-        DateTimeOffset? connectedSince = null;   // when the current live session started
+        var backoff = new MqttReconnectBackoff();
 
         while (!ct.IsCancellationRequested && _enabled)
         {
@@ -390,8 +389,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
                 _reconnectRequested = false;
                 try { if (_client.IsConnected) await _client.DisconnectAsync().ConfigureAwait(false); }
                 catch { /* about to reconnect anyway */ }
-                connectedSince = null;
-                backoff = InitialBackoff;
+                backoff.Resume();
             }
 
             try
@@ -401,14 +399,11 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
                     // A session that died young is a flap; wait out the escalating backoff before
                     // retrying. A drop of a session that lasted, or a first attempt, reconnects at
                     // once.
-                    if (connectedSince is { } since && DateTimeOffset.UtcNow - since < StableConnection)
+                    if (backoff.BeforeConnect(DateTimeOffset.UtcNow) is { } flapWait)
                     {
-                        backoff = NextBackoff(backoff);
-                        connectedSince = null;
                         SetState(MqttConnectionState.Retrying);
-                        if (!await DelayOrWake(backoff, ct).ConfigureAwait(false)) break;
+                        if (!await DelayOrWake(flapWait, ct).ConfigureAwait(false)) break;
                     }
-                    connectedSince = null;
 
                     SetState(MqttEndpointPlan.Sweep(parameters.Request, RememberedEndpoint).Count > 1
                         ? MqttConnectionState.Searching
@@ -418,25 +413,23 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
                     if (round.Connected)
                     {
                         await OnConnectedAsync(ct).ConfigureAwait(false);
-                        connectedSince = DateTimeOffset.UtcNow;
+                        backoff.Connected(DateTimeOffset.UtcNow);
                         SetState(MqttConnectionState.Connected);
                     }
                     else
                     {
                         // Every candidate failed; wait longer before the next round. A broker that
                         // answered and refused says waiting will not help.
-                        backoff = NextBackoff(backoff);
+                        backoff.Failed();
                         SetState(round.Attempts.Any(a => MqttEndpointPlan.Answered(a.Outcome))
                             ? MqttConnectionState.Failed
                             : MqttConnectionState.Retrying);
                     }
                 }
-                else if (_client.IsConnected
-                      && connectedSince is { } stable
-                      && DateTimeOffset.UtcNow - stable >= StableConnection)
+                else if (_client.IsConnected)
                 {
                     // Proven stable, so the next genuine drop reconnects fast.
-                    backoff = InitialBackoff;
+                    backoff.SettleIfStable(DateTimeOffset.UtcNow);
                 }
             }
             catch (OperationCanceledException) { break; }
@@ -448,14 +441,13 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
                 // availability or subscription. Drop it so the next pass retries.
                 try { if (_client.IsConnected) await _client.DisconnectAsync().ConfigureAwait(false); }
                 catch { /* the next pass reconnects */ }
-                backoff = NextBackoff(backoff);
-                connectedSince = null;
+                backoff.Failed();
                 SetState(MqttConnectionState.Retrying);
             }
 
             // Long re-poll while healthy, backoff while failing; a drop or a resume cuts the wait
             // short.
-            if (!await DelayOrWake(_client.IsConnected ? ConnectedPoll : backoff, ct).ConfigureAwait(false))
+            if (!await DelayOrWake(_client.IsConnected ? ConnectedPoll : backoff.Delay, ct).ConfigureAwait(false))
                 break;
         }
     }
@@ -475,7 +467,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     public static bool IsStableConnection(TimeSpan lifetime) => lifetime >= StableConnection;
 
     /// <summary>Waits up to <paramref name="delay"/>, early on a wake. False on cancel.</summary>
-    private async Task<bool> DelayOrWake(TimeSpan delay, CancellationToken ct)
+    internal async Task<bool> DelayOrWake(TimeSpan delay, CancellationToken ct)
     {
         var wake = _wake.Task;
         // Linked source so a winning wake cancels the losing delay rather than abandoning its timer.
@@ -499,7 +491,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         catch (OperationCanceledException) { return false; }
     }
 
-    private void Wake() => _wake.TrySetResult();
+    internal void Wake() => _wake.TrySetResult();
 
     /// <summary>Wakes the maintain loop on a disconnect so it reconnects and republishes "online" at
     /// once, shrinking the window where a consumer shows the Last Will "offline" while the machine is

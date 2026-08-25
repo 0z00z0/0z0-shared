@@ -343,9 +343,10 @@ pinned build wants because `checkout --detach` takes an exact ref:
 
 ### 3. Pin a tag
 
-Every consumer-visible change is released under a `v`-prefixed tag — `v0.1.0`, `v0.2.0`, `v0.2.1`, `v0.3.0` — and
-**a tag is the ref to pin, not a raw commit SHA.** A tag reads as a version, so a pin bump is a
-legible diff and a reviewable decision; a SHA says only that something moved. Each tag carries
+Every consumer-visible change is released under a `v`-prefixed tag — `v0.1.0`, `v0.2.0`, `v0.2.1`,
+`v0.3.0`, `v0.3.1` — and **a tag is the ref to pin, not a raw commit SHA.** A tag reads as a version,
+so a pin bump is a legible diff and a reviewable decision; a SHA says only that something moved. Each
+tag carries
 release notes listing what changed, so **a consumer raising its pin reads the notes for that tag
 first** — the breaking changes are stated there, and there is no other place they are collected.
 
@@ -364,12 +365,12 @@ it as the second checkout's `ref`:
         with:
           repository: 0z00z0/0z0-shared
           path: 0z0-shared
-          ref: v0.3.0
+          ref: v0.3.1
 ```
 
 The **sibling clone** shape needs no change at all — a full `git clone` fetches tags, so
 `checkout --detach $ref` resolves one. Shallow is the one thing to watch: `--depth 1` alone leaves
-no tag to check out, so it comes with `--branch v0.3.0`.
+no tag to check out, so it comes with `--branch v0.3.1`.
 
 Local dev builds against the live sibling checkout while CI builds the pinned tag, so a consumer
 that adopts a newly added shared type builds green locally and fails CI with `CS0234`. A consumer
