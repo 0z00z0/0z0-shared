@@ -140,6 +140,47 @@ writes nothing at all. So the file exists exactly when something has been stored
 because the application started, and `MqttSettingsFile.FilePath` is a sound basis for a host's own
 first-run or has-this-migrated gate. The same holds for `DiscoveryLedgerFile`.
 
+#### Carrying an existing broker block across
+
+**The module reads its own file and nothing else. A consumer that already stores MQTT settings
+somewhere — its own `settings.json`, a registry key, an ini file — must carry them into `mqtt.json`
+itself, and nothing in the module does it or detects that it was not done.** A missing file is
+indistinguishable from a fresh installation: the declared defaults stand, no other location is
+consulted, and there is no legacy path to configure.
+
+The consequence on an upgrade is a silent one. The panel opens with no broker host, `Enabled` reads
+false, publishing is inert, and every entity the installation had goes unavailable — with no error,
+no log line and nothing on screen saying a value was dropped rather than never set. The user's own
+file is still on disk, untouched and unread.
+
+**A fresh install is not a test of this.** It has nothing to lose and behaves correctly whether or
+not the move exists, so a consumer can validate the adoption end to end, ship, and discover the
+defect only on machines that had a working configuration.
+
+The move belongs in the host, immediately after the store is opened and **before anything reads
+it** — the publisher, the panel, the connection. Gate it on the absence of the module's own file:
+that file exists exactly when something has been stored, so its presence means the move has already
+run or the user has since edited the new file, and replaying an old document over either would undo
+what is there.
+
+Only the consumer can write it, because only the consumer knows the shape it is moving from. Expect
+the names to differ from `MqttSettings`, and expect the semantics to differ too — a two-state TLS
+switch is not a three-valued `EncryptionMode`, and a port that was once a hard default is not a port
+the user chose. Two rules keep an upgrade from inventing choices nobody made: **carry per key, not
+per file**, so an absent key leaves the target's own default standing rather than overwriting it,
+and **never read an absent key as `false` or as zero** — "nothing was said" and "the user chose this"
+are different answers that a careless read collapses into one.
+
+Carry the device id under whatever name it had. It is the `unique_id` stem, so it is what decides
+whether the receiver keeps the existing entities or announces a parallel set of new ones — see
+[Identity, and what it guarantees](#identity-and-what-it-guarantees).
+
+**This is a different obligation from the entity migration in
+[Differences from an earlier shape](#differences-from-an-earlier-shape).** That one hands retained
+discovery topics over on the wire and is declared to the module; this one moves the stored broker
+block into the module's file and the module never sees it. A consumer needs both, and doing the
+declared one does not cover this.
+
 A host whose configuration is one document with several unrelated sections implements the three
 members over that document instead and never constructs `MqttSettingsFile`. Nothing else in the
 module changes.
@@ -897,6 +938,16 @@ Six keys, declared in the application's own resources to override: five brushes 
 stock WinUI theme. **Where an override is declared decides whether it is seen at all**, and
 [Where an override goes](#where-an-override-goes) is the whole of that rule.
 
+**What a branded panel comes out as:** the module's own surfaces follow these six keys, and the
+toolkit's `SettingsCard`s and `SettingsExpander`s inside the panel follow the application's own
+override of the toolkit's semantic brushes — so a host that brands its other pages gets the two
+matching. The WinUI control parts keep platform colours until each control's own keys are declared,
+which for the controls this panel renders is 266 live brush keys; the module carries none of them,
+because they are the application's to declare and they reach every page it has rather than this one
+panel. `consume-mqtt-settings-panel.md`'s
+[What a host's branding reaches](../consume-mqtt-settings-panel.md#what-a-hosts-branding-reaches)
+carries the per-surface table, the per-control key counts and the measured contrast of every tier.
+
 `MqttPanelFontFamily` is the only route to the panel's typeface. Every element the panel styles
 carries an explicit style, and an explicit style means a host's *implicit* `TextBlock` style is never
 applied — so a studio's own face reaches the panel through this key and through nothing else. One
@@ -1003,6 +1054,12 @@ tray tooltip or a log line.
 
 A consumer with code written against a per-component, shared-payload implementation meets the
 following. Each is a compile error or a topic move, not a silent behaviour change.
+
+**This chapter covers the wire only — the retained topics an existing installation already
+publishes.** It does not carry the consumer's stored broker settings into the module's own file;
+that is a separate obligation, it is the host's, and skipping it loses the user's configuration
+without a word. See
+[Carrying an existing broker block across](#carrying-an-existing-broker-block-across).
 
 ### Declaring the migration
 

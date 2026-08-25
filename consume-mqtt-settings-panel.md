@@ -47,6 +47,12 @@ Optional and worth supplying: `RecallEndpoint` (the same accessor the connection
 Status rows can say what the connection landed on), `DefaultDeviceName`, the master card's title,
 description and info text, `PublishGroupsInfo`, `DeviceIdConsequence`, `CommandLabel`, and `Log`.
 
+**If the application already stores MQTT settings of its own, carry them into the store before the
+panel is first shown.** The module reads only its own file, so an upgrading user otherwise opens the
+panel to an empty broker host with their existing configuration still sitting unread in the old
+location — and a fresh install looks correct either way, so testing one proves nothing. See
+[Carrying an existing broker block across](docs/zerozero-mqtt.md#carrying-an-existing-broker-block-across).
+
 Two obligations the panel's own copy depends on:
 
 - **`ConnectionChanged` must run the connection's apply path.** The device-id dialogue promises the
@@ -120,56 +126,73 @@ level below what the panel resolves. Inside a dictionary the application merges 
 before the module's own and loses to it. Either way **all six keys fall back to stock**, with no
 warning and no build error, and the panel looks as though it ignores the host's theme entirely.
 
-### What the six keys reach
+### What a host's branding reaches
 
-**Correct placement changes the panel's own text and its one hand-built card, and no control.** A
-page whose headings, hints and status block are exactly the studio palette while every dropdown,
-field and button is still platform-coloured is what the keys are specified to produce — not a sign
-that they were placed wrongly. The screenshots below show the panel under a palette nothing in the
-stock theme can produce, so every surface in them is unambiguously overridden or unambiguously not:
-[light](docs/screenshots/mqtt-panel-light-branded.png) and
-[dark](docs/screenshots/mqtt-panel-dark-branded.png).
+**A host branding the panel gets the module's own surfaces and the toolkit's cards and expanders,
+matching each other. What stays stock is the WinUI control parts.** Two override sets do it: the six
+keys above for the panel's own surfaces, and the application's own override of the toolkit's
+semantic brushes — `CardBackgroundFillColorDefaultBrush` and `TextFillColorPrimaryBrush` — for the
+cards. A host declaring both already has the second, because it is what brands its other pages.
 
-| Follows the keys | Keeps platform colours |
+Measured on an installed, rendered build: the application's card override reached every toolkit
+`SettingsCard` **including those inside the panel**, at exactly the studio ground — flat and opaque,
+strokes matching at 2 px — while a `ComboBox` on the same page kept stock values until its own
+control keys were declared. `MqttPanelCardBackgroundBrush` took the same application override, so the
+Status band and the toolkit cards beside it measure identically.
+
+**The decision is therefore not whether to brand the panel.** It is whether to accept stock control
+chrome or to take on the control key sets, which for the controls this panel renders is 266 live
+brush keys.
+
+| Surface | What reaches it |
 |---|---|
-| Section headings — `MqttPanelHeadingBrush` | Every `SettingsCard` and `SettingsExpander` ground and header |
-| The Status block's ground — `MqttPanelCardBackgroundBrush` | The three `ComboBox`es: ground, value, chevron, border |
-| The Status block's labels — `MqttPanelBodyBrush` | Every `TextBox` and the `PasswordBox`: ground, value, border |
-| Row descriptions, hints, status values, the device-id echo — `MqttPanelSecondaryBrush` | Every `Button`: ground, label, border |
-| The applied, unapplied and saved markers — `MqttPanelAccentBrush` | The `ToggleSwitch`, the info icons, the section rules |
-| The typeface wherever the panel styles text, the value text inside the fields included — `MqttPanelFontFamily` | The device-id dialogue's own chrome: ground, title, buttons, checkbox |
+| Section headings | `MqttPanelHeadingBrush` |
+| The Status block's ground | `MqttPanelCardBackgroundBrush` |
+| The Status block's labels | `MqttPanelBodyBrush` |
+| Row descriptions, hints, status values, the device-id echo | `MqttPanelSecondaryBrush` |
+| The applied, unapplied and saved markers | `MqttPanelAccentBrush` |
+| The typeface wherever the panel styles text, the value text inside the fields included | `MqttPanelFontFamily` |
+| Every `SettingsCard` and `SettingsExpander` ground and header | The application's toolkit semantic brushes |
+| The three `ComboBox`es, every `TextBox`, the `PasswordBox`, every `Button`, the `ToggleSwitch`, the info icons, the device-id dialogue's chrome | Each control's own keys, and nothing else |
 
 `MqttPanelCardBackgroundBrush` is narrower than the name suggests. The Status block is a `Border` the
-panel draws itself and takes the key; the toolkit's cards are the toolkit's own surface and do not.
+panel draws itself and takes the key; the toolkit's cards are the toolkit's own surface and take the
+toolkit's. Pointing both at the same colour is what makes the band and the cards match.
 
 Validation errors and the section rules resolve `SystemFillColorCriticalBrush`,
 `DividerStrokeColorDefaultBrush` and `CardStrokeColorDefaultBrush`. Those are platform keys by
 intent: a failed value reads as failure in the host's own language rather than in the panel's accent.
+
+The screenshots show the six keys **alone**, under a palette nothing in the stock theme can produce
+and with no toolkit or control override, so every surface in them is unambiguously one set or the
+other: [light](docs/screenshots/mqtt-panel-light-branded.png) and
+[dark](docs/screenshots/mqtt-panel-dark-branded.png).
 
 `MqttPanelFontFamily` is the only route to the panel's typeface: every element the panel styles
 carries an explicit style, and an explicit style means a host's implicit `TextBlock` style is never
 applied. A toolkit `SettingsCard`'s own header keeps the stock face — the toolkit's style carries the
 family — and everything else on the panel follows the key.
 
-### Branding the control chrome is the application's own job
+### Why the toolkit follows and the controls do not
 
-A control takes its colours from its own keys — `ComboBoxForeground`, `ComboBoxBackground`,
-`TextControlForeground`, `ButtonBackground` and their per-state siblings. Those are what a control
-template looks up at run time, so declaring one as an immediate child of `Application.Resources`
-does reach the control.
-
-**Overriding the shared semantic brushes does not reach a WinUI control.** `ComboBoxForeground` is a
-`StaticResource` alias to `TextFillColorPrimaryBrush`, resolved inside WinUI's own dictionary as that
-dictionary is parsed — before an application's entries exist. Replacing `TextFillColorPrimaryBrush`
-afterwards leaves the alias pointing where it already pointed. Overriding the paired `*Color` key
-misses for the same reason: the brush binds its colour with `StaticResource` as well. Accent-derived
-brushes are the one exception, binding with `ThemeResource`, so replacing an accent colour does
-propagate — which is what makes the accent look like proof of a general rule that does not hold.
-
-The toolkit's `SettingsCard` is the other exception. Its dictionary loads on first use, after the
+**When a dictionary is parsed decides it.** The toolkit's dictionary loads on first use, after the
 application's own entries exist, so its aliases resolve against them: overriding
-`CardBackgroundFillColorDefaultBrush` and `TextFillColorPrimaryBrush` does repaint the toolkit cards
-and their headers, and repaints nothing else on the panel.
+`CardBackgroundFillColorDefaultBrush` and `TextFillColorPrimaryBrush` repaints the toolkit cards and
+their headers. WinUI's dictionary is parsed at startup, before an application's entries exist, and
+its aliases are frozen at that moment.
+
+**So overriding the shared semantic brushes does not reach a WinUI control at all.**
+`ComboBoxForeground` is a `StaticResource` alias to `TextFillColorPrimaryBrush`, resolved inside
+WinUI's own dictionary as it is parsed. Replacing `TextFillColorPrimaryBrush` afterwards leaves the
+alias pointing where it already pointed. Overriding the paired `*Color` key misses for the same
+reason: the brush binds its colour with `StaticResource` as well. Accent-derived brushes are the one
+partial exception, binding with `ThemeResource`, so replacing an accent colour does propagate —
+which, beside the toolkit cards, is what makes the semantic brushes look like a general route.
+
+**A control's own key is the one dependable lever.** `ComboBoxForeground`, `ComboBoxBackground`,
+`TextControlForeground`, `ButtonBackground` and their per-state siblings are what a control template
+looks up at run time, so declaring one as an immediate child of `Application.Resources` does reach
+the control.
 
 The module does not carry the control keys, because the surface is per control and large. Live brush
 keys in WinUI's `Default` dictionary, for the controls this panel renders:
