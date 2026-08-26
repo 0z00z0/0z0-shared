@@ -227,7 +227,8 @@ public sealed partial class MqttSettingsPanel : UserControl
         BrokerHeading.Text = _strings.Get("HeadingBroker");
         SetInfo(BrokerInfoIcon, "the broker section", _strings.Get("InfoBroker"));
         BrokerDirtyText.Text = _strings.Get("NotApplied");
-        BrokerExpanderDescription.Text = _strings.Get("DescBroker");
+        // The two expander summaries are not set here: they are composed from live state, in
+        // RefreshSummaries, exactly as the Status rows are.
 
         HostCard.Header = _strings.Get("RowHost");
         SetInfo(HostInfoIcon, "the broker host", _strings.Get("InfoHost"));
@@ -261,7 +262,6 @@ public sealed partial class MqttSettingsPanel : UserControl
         SetInfo(ApplyInfoIcon, "Apply", _strings.Get("InfoApply"));
 
         PublishHeading.Text = _strings.Get("HeadingPublish");
-        PublishExpanderDescription.Text = _strings.Get("DescPublish");
     }
 
     /// <summary>The strings the host owns. What an application publishes is the one thing the module
@@ -654,10 +654,30 @@ public sealed partial class MqttSettingsPanel : UserControl
 
         var request = SavedRequest();
         var memory = Memory();
-        SetStatusValue(DetectText,
-            _text.Connection(request, memory, setup.ConnectionState(), _probe.Busy));
+        var state = setup.ConnectionState();
+        SetStatusValue(DetectText, _text.Connection(request, memory, state, _probe.Busy));
         SetStatusValue(BrokerStatusText, _text.DescribeBroker(request, memory));
+        RefreshSummaries(setup, request, memory, state);
         RefreshActivityTexts();
+    }
+
+    /// <summary>The line each closed section shows about itself. Composed by the module from live
+    /// state, on the same seam as the Status rows — the panel assembles no sentence of its own, so
+    /// what a collapsed summary says is testable without a window.</summary>
+    private void RefreshSummaries(
+        MqttPanelSetup setup, MqttEndpointRequest request, MqttEndpointMemory? memory,
+        MqttConnectionState state)
+    {
+        SetSummary(BrokerExpanderDescription, _text.SummariseBroker(request, memory, state));
+        SetSummary(PublishExpanderDescription, _text.SummarisePublish(MqttPublishRows.Tally(setup.Groups)));
+    }
+
+    /// <summary>Writes one collapsed summary: the line on screen, and the whole string on the hover
+    /// tip, so a summary wider than the section it sits in is still readable.</summary>
+    private static void SetSummary(TextBlock target, string text)
+    {
+        target.Text = text;
+        ToolTipService.SetToolTip(target, text);
     }
 
     /// <summary>The two relative ages, and the button beside them. Re-read on the tick as well as on
@@ -893,6 +913,8 @@ public sealed partial class MqttSettingsPanel : UserControl
 
         setup.Groups.Set(key, toggle.IsOn);
         setup.PublishSetChanged();
+        // The count in the closed section's summary is one of the facts this toggle just changed.
+        RefreshStatus();
     }
 
     // ---------------------------------------------------------------------------------------------

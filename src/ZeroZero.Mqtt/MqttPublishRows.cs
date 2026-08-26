@@ -18,6 +18,10 @@ public sealed record MqttPublishRow(
     public string InfoSubject => $"the {Label} group";
 }
 
+/// <summary>How many declared groups there are and how many are switched on, as a collapsed section
+/// summarises itself.</summary>
+public readonly record struct MqttPublishTally(int SwitchedOn, int Declared);
+
 /// <summary>The declared publish groups as rows a panel renders. Pure.</summary>
 /// <remarks>
 /// <para>Three rules live here rather than in the panel, because each is invisible until an entity
@@ -45,5 +49,13 @@ public static class MqttPublishRows
     {
         var state = groups.Snapshot();
         return groups.Declared.ToDictionary(g => g.Key, g => state.IsEnabled(g.Key), StringComparer.Ordinal);
+    }
+
+    /// <summary>The declared groups counted, and how many of them are on — what a collapsed section
+    /// says about itself. From one snapshot, so the two numbers describe the same moment.</summary>
+    public static MqttPublishTally Tally(PublishGroupSet groups)
+    {
+        var state = groups.Snapshot();
+        return new(groups.Declared.Count(g => state.IsEnabled(g.Key)), groups.Declared.Count);
     }
 }

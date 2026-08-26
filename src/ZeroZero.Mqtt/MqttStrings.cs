@@ -195,11 +195,22 @@ public sealed class MqttStrings
             ["DescDiscoveryPrefix"] = "Prefix for discovery topics. Change only to match the broker.",
             ["DescDeviceName"]      = "Shown wherever this device appears.",
             ["DescDeviceId"]        = "Used in every topic and entity id. Changing it moves them all.",
-            ["DescBroker"]          = "How the broker is reached. Changes take effect on Apply.",
             ["DescApply"]           = "Reconnects once.",
-            ["DescPublish"]         = "Which entities are announced.",
             ["DescPublishSwitch"]   = "Publishes this application's state to an MQTT broker.",
             ["TitlePublishSwitch"]  = "Publish to MQTT",
+
+            // Collapsed-section summaries: what is configured, so a section can be read without
+            // being opened. The Broker line carries the instruction, never the outcome — a value
+            // left on Automatic is shown marked, so it cannot be read as one that was chosen, and a
+            // field with nothing behind it yet stands as the bare instruction rather than an empty
+            // bracket.
+            ["SummaryBrokerNotSet"]    = "No broker set",
+            ["SummaryBroker"]          = "{0} · {1} · {2} · {3}",
+            ["SummaryDetected"]        = "{0} (detected)",
+            ["SummaryEncrypted"]       = "encrypted",
+            ["SummaryNotEncrypted"]    = "not encrypted",
+            ["SummaryPublish"]         = "{0} of {1} switched on",
+            ["SummaryPublishNoGroups"] = "Nothing to switch on or off",
 
             // Info-icon text: the explanation the row is clearer without. Protocol vocabulary is
             // identical for every consumer, so a host never writes what a transport is; what an
@@ -209,15 +220,15 @@ public sealed class MqttStrings
                                   + "none of it applies. This switch takes effect immediately; the broker "
                                   + "fields take effect on Apply.",
             ["InfoStatus"]        = "Read-only, and about the live connection rather than the fields below. "
-                                  + "The two ages re-read themselves while this page is open.",
+                                  + "The two ages keep counting up while this page is open.",
             ["InfoConnection"]    = "Where the broker settings in force came from, and whether the live link "
                                   + "is encrypted. A port, transport or encryption left on Automatic is found "
-                                  + "by probing the host, and the answer is remembered against that host and "
-                                  + "user name. Setting one by hand pins it, and nothing is probed around it. "
-                                  + "Automatic can settle on clear text on its own, which is why this row "
+                                  + "by trying the host, and the answer is remembered against that host and "
+                                  + "user name. Setting one by hand pins it, and nothing is tried around it. "
+                                  + "Automatic can end up in clear text on its own, which is why this row "
                                   + "says which it is.",
             ["InfoBrokerInUse"]   = "The address the live connection is using. The saved values, not the ones "
-                                  + "staged in the fields below; the two differ until Apply.",
+                                  + "being edited in the fields below; the two differ until Apply.",
             ["InfoLastPublish"]   = "When a message last reached the broker. Unchanged values are not re-sent, "
                                   + "so this stands still while nothing changes. Publish now sends the current "
                                   + "state for the groups switched on below; it announces nothing and "
@@ -232,11 +243,10 @@ public sealed class MqttStrings
                                   + "typed, not behind Apply.",
             ["InfoDeviceId"]      = "Changing it renames every published entity, so it has a confirmation of "
                                   + "its own rather than riding the Apply batch.",
-            ["InfoBroker"]        = "These fields are staged locally and take effect on Apply, so the "
-                                  + "connection is remade once per edit session rather than once per "
-                                  + "keystroke. Port, transport and encryption left on Automatic are found by "
-                                  + "probing, which happens when one of these fields settles and when Test "
-                                  + "connection or Apply is pressed — never merely on opening the page.",
+            ["InfoBroker"]        = "Changes here take effect on Apply, which re-establishes the connection "
+                                  + "once — nothing here is live until then. Anything left on Automatic is "
+                                  + "detected by a check of its own, which runs after a change here and when "
+                                  + "Test connection or Apply is pressed, never merely by opening this page.",
             ["InfoHost"]          = "A name or an address. A host written as a ws:// or wss:// address is used "
                                   + "exactly as typed, which covers a broker served under a path the port "
                                   + "alone cannot express.",
@@ -244,7 +254,7 @@ public sealed class MqttStrings
                                   + "remembers the one that answered. The list covers plain MQTT, MQTT over "
                                   + "encryption, and the front-door ports a broker published over WebSocket "
                                   + "answers on. The last entry takes a port typed by hand.",
-            ["InfoTransport"]     = "Automatic tries a plain socket first and falls back to WebSocket, then "
+            ["InfoTransport"]     = "Automatic tries TCP first and falls back to WebSocket, then "
                                   + "remembers whichever answered and starts there next time — the usual case "
                                   + "for a machine that is on the internal network sometimes and outside it "
                                   + "at others. An explicit choice is never reached around.",

@@ -126,6 +126,87 @@ public sealed class MqttPanelText
             : _text.Get("StatusNothingReceived");
 
     // ------------------------------------------------------------------------------------------
+    // Collapsed-section summaries.
+    // ------------------------------------------------------------------------------------------
+
+    /// <summary>The Broker section's line while it is closed: the host, and the port, transport and
+    /// encryption it is configured with. What a section says about itself when it cannot be read.</summary>
+    /// <remarks>
+    /// <para>The instruction, not the outcome — the same split the Broker dropdowns and the Status
+    /// rows already keep. A field set by hand shows its value plainly. A field left on Automatic
+    /// shows the value in force marked as detected, so a summary never presents a swept result as a
+    /// choice somebody made.</para>
+    /// <para>A detected value is only shown while the link that found it is up. Once it is down the
+    /// same value is a reading from an earlier moment, and printing it unqualified would be the very
+    /// error the marking exists to prevent, reached by another route; the field falls back to the
+    /// bare instruction instead.</para>
+    /// </remarks>
+    public string SummariseBroker(
+        MqttEndpointRequest request, MqttEndpointMemory? memory, MqttConnectionState state)
+    {
+        string host = (request.Host ?? "").Trim();
+        if (host.Length == 0) return _text.Get("SummaryBrokerNotSet");
+
+        var found = state == MqttConnectionState.Connected
+            ? MqttEndpointPlan.Reusable(request, memory)
+            : null;
+
+        // The port the line is about: the pinned one, or the detected one while the link that found
+        // it is up. The scheme a WebSocket address fixes is read from this rather than from the
+        // setting alone, so a detected port settles it exactly as a pinned one does.
+        int? inForce = request.Port ?? found?.Port;
+
+        // The port is an address, not a quantity: an invariant rendering keeps a group separator out
+        // of it whatever the display culture does with four digits.
+        string port = request.Port is { } pinned
+            ? pinned.ToString(CultureInfo.InvariantCulture)
+            : Detected(found?.Port.ToString(CultureInfo.InvariantCulture));
+
+        string transport = request.Transport switch
+        {
+            MqttTransportMode.Tcp       => Name(MqttTransport.Tcp),
+            MqttTransportMode.WebSocket => Name(MqttTransport.WebSocket),
+            _ => Detected(found is { } f ? Name(f.Transport) : null),
+        };
+
+        string encryption = request.Encryption switch
+        {
+            // An explicit choice is the instruction, except where the address fixes the scheme
+            // whatever the setting says — a WebSocket front door on 443 is encrypted by its port,
+            // and a summary denying that would put a false statement about the wire beside a Status
+            // row asserting the opposite. Only the port reaches this from what was found; the rest
+            // of the answer is the settings' own, and nothing here is detected to mark.
+            MqttEncryptionMode.On or MqttEncryptionMode.Off =>
+                Encryption(MqttEndpointPlan.EncryptionInForce(
+                    request with { Port = inForce }, memory: null) is true),
+            _ => Detected(found?.Encrypted is { } encrypted ? Encryption(encrypted) : null),
+        };
+
+        return _text.Format("SummaryBroker", host, port, transport, encryption);
+    }
+
+    /// <summary>The publish section's line while it is closed: how many declared groups are switched
+    /// on.</summary>
+    /// <remarks>A count rather than the group names, because the module declares no group of its own
+    /// and a consumer may declare any number — a list grows without bound where a count stays one
+    /// short true fact. The entities behind the groups are never counted here: the panel is not shown
+    /// the entity set, so a number for it could only be invented.</remarks>
+    public string SummarisePublish(MqttPublishTally tally) =>
+        tally.Declared == 0
+            ? _text.Get("SummaryPublishNoGroups")
+            : _text.Format("SummaryPublish", tally.SwitchedOn, tally.Declared);
+
+    /// <summary>A value that was found rather than chosen, marked as such — or the bare instruction
+    /// when nothing has found one yet. An empty bracket would read as a value that failed to render
+    /// rather than as a question nothing has answered.</summary>
+    private string Detected(string? value) => value is { Length: > 0 } found
+        ? _text.Format("SummaryDetected", found)
+        : _text.Get("OptionAutomatic");
+
+    private string Encryption(bool on) =>
+        _text.Get(on ? "SummaryEncrypted" : "SummaryNotEncrypted");
+
+    // ------------------------------------------------------------------------------------------
     // Vocabulary.
     // ------------------------------------------------------------------------------------------
 

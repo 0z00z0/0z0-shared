@@ -940,6 +940,45 @@ would refuse.
 The panel never writes a settings store directly: every commit goes through `IMqttSettingsStore.Update`,
 so a host whose configuration is one document keeps its own read-modify-write.
 
+### What a closed section says about itself
+
+The Broker group and the publish group both open closed, and each carries a line the module composes
+from live state rather than a fixed description of the section. The line is what makes the
+configuration readable without opening the group.
+
+**The Broker line carries the host and then the port, transport and encryption, separated by
+`·`.** Each of the three has three possible readings, and the distinction is the point:
+
+| The field is | The line shows | Example |
+|---|---|---|
+| set by hand | the value, unqualified | `8883` |
+| on Automatic, with a live connection behind it | the value in force, marked | `8883 (detected)` |
+| on Automatic, with nothing found yet | the instruction itself | `Automatic` |
+
+The marking exists because on a typical installation only the host is set and everything else is
+left on Automatic. A summary of what is merely *configured* would read `host · Automatic ·
+Automatic · Automatic` on almost every machine, which looks like information and is not.
+
+**A detected value is shown only while the link that found it is up.** Once the connection drops the
+same value is a reading from an earlier moment, and presenting it unqualified would be the error the
+marking exists to prevent, reached by another route — so each Automatic field falls back to the bare
+instruction. A blank host reads `No broker set`, and the encryption clause follows the address where
+the address settles it: a WebSocket front door on a port whose scheme is fixed reads `encrypted`
+whatever the switch says, matching the Connection row rather than contradicting it.
+
+**The line carries the saved values, not the ones being edited.** The unapplied marker sits beside
+the section heading and says when the two differ.
+
+**The publish line is a count** — `2 of 3 switched on` — because the module declares no group of its
+own and a consumer may declare any number: a list of names grows without bound where a count stays
+one short true fact. A consumer that declares no groups at all reads `Nothing to switch on or off`.
+The entities behind the groups are never counted, because the panel is not shown the entity set.
+
+Both lines compose through `MqttPanelText.SummariseBroker` and `MqttPanelText.SummarisePublish` in
+the plain `net10.0` assembly, with `MqttPublishRows.Tally` reducing a `PublishGroupSet` to the two
+numbers from one snapshot. The panel assembles no sentence of its own, so what a closed section says
+is testable without a window.
+
 ### The info-text ownership split
 
 **Protocol vocabulary is the module's.** What a transport is, what the discovery prefix controls,
@@ -1075,6 +1114,12 @@ controls.
 `MqttPanelText` composes every sentence the panel renders, and `MqttStatusText` is its static facade
 over the module's own en-GB — useful to a host rendering the same status outside the panel, in a
 tray tooltip or a log line.
+
+**Every key is flat, and a key that changes name is a translation that silently stops being read**:
+the lookup finds nothing, answers null, and the built-in en-GB stands with no error anywhere. A
+translation is therefore checked against `MqttStrings.Builtin` after raising a pin, not only when a
+panel looks wrong. The module's own `.resw` is held to the same standard by test — same keys, same
+text — so the file a consumer copies as a template cannot drift from the text the fallback uses.
 
 ---
 

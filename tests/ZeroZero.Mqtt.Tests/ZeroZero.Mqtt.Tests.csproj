@@ -18,4 +18,13 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The panel's resource file holds the same en-GB as MqttStrings.Builtin, in the form a WinUI
+         host loads. It lives in a Windows-only project this one cannot reference, so it is copied in
+         as data and the two are compared as text. Without that the .resw drifts silently: a reworded
+         string still passes every test while the panel keeps showing the old wording. -->
+    <None Include="..\..\src\ZeroZero.Mqtt.WinUI\Strings\en-GB\Resources.resw"
+          Link="Resources.resw" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

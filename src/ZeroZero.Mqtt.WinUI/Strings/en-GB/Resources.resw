@@ -118,9 +118,6 @@
   <data name="DescApply" xml:space="preserve">
     <value>Reconnects once.</value>
   </data>
-  <data name="DescBroker" xml:space="preserve">
-    <value>How the broker is reached. Changes take effect on Apply.</value>
-  </data>
   <data name="DescDeviceId" xml:space="preserve">
     <value>Used in every topic and entity id. Changing it moves them all.</value>
   </data>
@@ -138,9 +135,6 @@
   </data>
   <data name="DescPort" xml:space="preserve">
     <value>Automatic tries the standard ports.</value>
-  </data>
-  <data name="DescPublish" xml:space="preserve">
-    <value>Which entities are announced.</value>
   </data>
   <data name="DescPublishSwitch" xml:space="preserve">
     <value>Publishes this application's state to an MQTT broker.</value>
@@ -195,13 +189,13 @@ An empty box restores the name derived from this machine.</value>
     <value>Commits every field above as one change and remakes the connection once. Nothing above is live until it is pressed.</value>
   </data>
   <data name="InfoBroker" xml:space="preserve">
-    <value>These fields are staged locally and take effect on Apply, so the connection is remade once per edit session rather than once per keystroke. Port, transport and encryption left on Automatic are found by probing, which happens when one of these fields settles and when Test connection or Apply is pressed — never merely on opening the page.</value>
+    <value>Changes here take effect on Apply, which re-establishes the connection once — nothing here is live until then. Anything left on Automatic is detected by a check of its own, which runs after a change here and when Test connection or Apply is pressed, never merely by opening this page.</value>
   </data>
   <data name="InfoBrokerInUse" xml:space="preserve">
-    <value>The address the live connection is using. The saved values, not the ones staged in the fields below; the two differ until Apply.</value>
+    <value>The address the live connection is using. The saved values, not the ones being edited in the fields below; the two differ until Apply.</value>
   </data>
   <data name="InfoConnection" xml:space="preserve">
-    <value>Where the broker settings in force came from, and whether the live link is encrypted. A port, transport or encryption left on Automatic is found by probing the host, and the answer is remembered against that host and user name. Setting one by hand pins it, and nothing is probed around it. Automatic can settle on clear text on its own, which is why this row says which it is.</value>
+    <value>Where the broker settings in force came from, and whether the live link is encrypted. A port, transport or encryption left on Automatic is found by trying the host, and the answer is remembered against that host and user name. Setting one by hand pins it, and nothing is tried around it. Automatic can end up in clear text on its own, which is why this row says which it is.</value>
   </data>
   <data name="InfoDevice" xml:space="preserve">
     <value>How this machine appears to whatever consumes the entities: one display name, and one identifier every topic is built from.</value>
@@ -237,13 +231,13 @@ An empty box restores the name derived from this machine.</value>
     <value>The master switch for the whole feature. Nothing on the network is touched while it is off, and the rest of this panel is hidden because none of it applies. This switch takes effect immediately; the broker fields take effect on Apply.</value>
   </data>
   <data name="InfoStatus" xml:space="preserve">
-    <value>Read-only, and about the live connection rather than the fields below. The two ages re-read themselves while this page is open.</value>
+    <value>Read-only, and about the live connection rather than the fields below. The two ages keep counting up while this page is open.</value>
   </data>
   <data name="InfoTest" xml:space="preserve">
     <value>Tries the values in the fields above, including ones not yet applied, over a throwaway connection of its own. It commits nothing at all: not the fields, and not where the broker answered.</value>
   </data>
   <data name="InfoTransport" xml:space="preserve">
-    <value>Automatic tries a plain socket first and falls back to WebSocket, then remembers whichever answered and starts there next time — the usual case for a machine that is on the internal network sometimes and outside it at others. An explicit choice is never reached around.</value>
+    <value>Automatic tries TCP first and falls back to WebSocket, then remembers whichever answered and starts there next time — the usual case for a machine that is on the internal network sometimes and outside it at others. An explicit choice is never reached around.</value>
   </data>
   <data name="InfoUsername" xml:space="preserve">
     <value>Part of what a found endpoint is remembered against: a broker commonly fronts a separate listener per account, so changing the user name starts the search again.</value>
@@ -251,14 +245,14 @@ An empty box restores the name derived from this machine.</value>
   <data name="NotApplied" xml:space="preserve">
     <value>Not applied</value>
   </data>
+  <data name="OptionAutomatic" xml:space="preserve">
+    <value>Automatic</value>
+  </data>
   <data name="PlaceholderHost" xml:space="preserve">
     <value>e.g. mqtt.example.com</value>
   </data>
   <data name="PlaceholderPort" xml:space="preserve">
     <value>1-65535</value>
-  </data>
-  <data name="PortAutomatic" xml:space="preserve">
-    <value>Automatic</value>
   </data>
   <data name="PortCustom" xml:space="preserve">
     <value>Other…</value>
@@ -424,6 +418,27 @@ An empty box restores the name derived from this machine.</value>
   </data>
   <data name="StatusProbing" xml:space="preserve">
     <value>Looking for the broker</value>
+  </data>
+  <data name="SummaryBroker" xml:space="preserve">
+    <value>{0} · {1} · {2} · {3}</value>
+  </data>
+  <data name="SummaryBrokerNotSet" xml:space="preserve">
+    <value>No broker set</value>
+  </data>
+  <data name="SummaryDetected" xml:space="preserve">
+    <value>{0} (detected)</value>
+  </data>
+  <data name="SummaryEncrypted" xml:space="preserve">
+    <value>encrypted</value>
+  </data>
+  <data name="SummaryNotEncrypted" xml:space="preserve">
+    <value>not encrypted</value>
+  </data>
+  <data name="SummaryPublish" xml:space="preserve">
+    <value>{0} of {1} switched on</value>
+  </data>
+  <data name="SummaryPublishNoGroups" xml:space="preserve">
+    <value>Nothing to switch on or off</value>
   </data>
   <data name="TestRunning" xml:space="preserve">
     <value>Testing…</value>

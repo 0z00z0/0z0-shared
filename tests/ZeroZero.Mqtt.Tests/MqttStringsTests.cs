@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Xunit;
 
 namespace ZeroZero.Mqtt.Tests;
@@ -172,5 +174,85 @@ public class MqttStringsTests
 
             Assert.True(exception is null, $"{key}: {exception?.Message}");
         }
+    }
+
+    [Fact]
+    public void NoStringNamesSomethingOnlyTheImplementationHas()
+    {
+        // Host, port, transport, broker and topic are protocol words a user meets in the wild and
+        // are not here. These are the module's own machinery, which a user has no way to see and no
+        // reason to learn — plus "staged", which is borrowed from version control and describes
+        // neither. Whole words, so WebSocket keeps its own socket and a settings file keeps its
+        // fields.
+        string[] banned =
+        [
+            "probe", "probes", "probed", "probing",
+            "sweep", "sweeps", "sweeping", "swept",
+            "coalesce", "coalesced", "coalescing", "channel", "channels",
+            "stage", "stages", "staged", "staging",
+            "debounce", "debounced", "debouncing", "settle", "settles", "settled",
+            "socket", "sockets", "callback", "handler", "dispatch", "marshal", "mutex",
+            "thread", "async", "enum", "struct", "instance", "singleton", "dedupe", "seam",
+        ];
+
+        foreach (var (key, value) in MqttStrings.Builtin)
+            foreach (string word in banned)
+                Assert.False(
+                    Regex.IsMatch(value, $@"\b{word}\b", RegexOptions.IgnoreCase),
+                    $"{key} names the implementation rather than what a user sees: {value}");
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // The panel's resource file against the built-in text.
+    // ------------------------------------------------------------------------------------------
+
+    /// <summary>The panel's <c>.resw</c>, read as data. It lives in a Windows-only project this one
+    /// cannot reference, so the copy in the output directory is what the comparison reads.</summary>
+    private static readonly Lazy<IReadOnlyDictionary<string, string>> Resw = new(() =>
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, "Resources.resw");
+        Assert.True(File.Exists(path), $"The panel's resource file was not copied to {path}.");
+
+        return XDocument.Load(path).Root!.Elements("data").ToDictionary(
+            d => d.Attribute("name")!.Value,
+            d => d.Element("value")?.Value ?? "",
+            StringComparer.Ordinal);
+    });
+
+    [Fact]
+    public void TheResourceFileDeclaresExactlyTheKeysTheModuleDoes()
+    {
+        // A key in one and not the other is a string that renders as its own key on screen, or a
+        // translator's entry nothing will ever ask for.
+        var missing = MqttStrings.Builtin.Keys.Except(Resw.Value.Keys, StringComparer.Ordinal);
+        var orphaned = Resw.Value.Keys.Except(MqttStrings.Builtin.Keys, StringComparer.Ordinal);
+
+        Assert.Equal("", string.Join(", ", missing));
+        Assert.Equal("", string.Join(", ", orphaned));
+    }
+
+    [Fact]
+    public void TheResourceFileCarriesTheSameTextAsTheModule()
+    {
+        // The failure this exists for: a string reworded in one place and left standing in the
+        // other. Both compile, every other test passes, and the panel shows the stale wording —
+        // because the resource file outranks the built-in text wherever it answers.
+        foreach (var (key, text) in MqttStrings.Builtin)
+        {
+            if (!Resw.Value.TryGetValue(key, out string? resource)) continue;
+
+            Assert.True(string.Equals(text, resource, StringComparison.Ordinal),
+                        $"{key} differs.\n  built-in: {text}\n  resource: {resource}");
+        }
+    }
+
+    [Fact]
+    public void EveryResourceEntryKeepsItsWhitespace()
+    {
+        // Without xml:space the reader trims, which silently eats the blank lines a multi-paragraph
+        // warning is built from.
+        foreach (var data in XDocument.Load(Path.Combine(AppContext.BaseDirectory, "Resources.resw"))
+                                      .Root!.Elements("data"))
+            Assert.Equal("preserve", data.Attribute(XNamespace.Xml + "space")?.Value);
     }
 }

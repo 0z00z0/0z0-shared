@@ -19,6 +19,17 @@ public static class MqttStatusText
     public static string DescribeBroker(MqttEndpointRequest request, MqttEndpointMemory? memory) =>
         MqttPanelText.Default.DescribeBroker(request, memory);
 
+    /// <summary>The Broker section's line while it is closed: what the connection is configured
+    /// with, a value left on Automatic marked as detected rather than chosen. Pure.</summary>
+    public static string SummariseBroker(
+        MqttEndpointRequest request, MqttEndpointMemory? memory, MqttConnectionState state) =>
+        MqttPanelText.Default.SummariseBroker(request, memory, state);
+
+    /// <summary>The publish section's line while it is closed: how many declared groups are switched
+    /// on. Pure.</summary>
+    public static string SummarisePublish(MqttPublishTally tally) =>
+        MqttPanelText.Default.SummarisePublish(tally);
+
     /// <summary>The "Last publish" line.</summary>
     public static string DescribeLastPublish(DateTimeOffset? last, DateTimeOffset now) =>
         MqttPanelText.Default.DescribeLastPublish(last, now);
