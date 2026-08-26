@@ -28,11 +28,17 @@ MIT licensed, public.
 git clone https://github.com/0z00z0/0z0-shared.git
 ```
 
-Consuming apps reference this repo by relative path, so it is cloned as a **sibling** of the
-consuming app's own checkout — `..\0z0-shared` from the consumer's project directory. See
-[Integrating the About dialogue](#integrating-the-about-dialogue) for the reference and CI recipe,
-which is the same one for either module; [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) carries
-the MQTT module's wiring on top of it.
+That clone is only needed to work *on* the library, or to consume it by relative path — a consuming
+app doing the latter keeps it as a **sibling** of its own checkout, `..\0z0-shared` from the
+consumer's project directory. A consumer taking [the packages](#the-package-route) instead needs no
+clone at all. See [Integrating the About dialogue](#integrating-the-about-dialogue) for both
+reference routes and the CI recipe, which are the same for either module;
+[`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) carries the MQTT module's wiring on top of them.
+
+All six libraries are published to GitHub Packages at
+`https://nuget.pkg.github.com/0z00z0/index.json`, and **that feed authenticates every read even
+though the packages are public** — an anonymous request returns `401`, so a restore needs a token
+with `read:packages`.
 
 Requirements:
 
@@ -262,9 +268,71 @@ they show the surfaces as they actually render rather than what the XAML claims.
 
 ### 1. Reference the library
 
-There is no NuGet feed yet — tracked in
-[issue #14](https://github.com/0z00z0/0z0-shared/issues/14) — so a consumer takes a
-`ProjectReference` on a checkout of this repo. Route it through an MSBuild property that defaults
+**Two routes, and both are supported.** A `PackageReference` on the studio's GitHub Packages feed,
+or a `ProjectReference` on a sibling checkout. Neither replaces the other, and a consumer already
+building the sibling way needs to change nothing.
+
+#### The package route
+
+All six libraries are published, both WinUI assemblies included. The packages carry the compiled
+XAML and the `.pri` index beside the assembly, and the consuming build merges that index into its
+own, so a consumer with no checkout of this repository anywhere builds, runs and renders.
+
+```xml
+<ItemGroup>
+  <PackageReference Include="ZeroZero.Brand.WinUI" Version="0.6.0" />
+</ItemGroup>
+```
+
+**What the pin buys, and it is the substantive difference:** a package version resolves the same
+source locally and in CI. A sibling pin governs CI alone — see
+[Pin a tag](#3-pin-a-tag) — so every local build, local test run and locally built installer
+silently compiles whatever the sibling working tree currently holds, pin file notwithstanding.
+
+**What it costs: GitHub Packages authenticates every read, including of a public package.** An
+anonymous request to the feed returns `401`. So the package route needs a token carrying
+`read:packages` wherever a restore happens — on a developer's machine and on a CI runner alike —
+where the sibling-checkout route clones a public repository with no credential at all. A consumer's
+own workflow therefore gains a secret it did not previously need.
+
+The consuming repository carries a `nuget.config` naming the feed and mapping which source may
+answer for which package name:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
+    <add key="0z00z0" value="https://nuget.pkg.github.com/0z00z0/index.json" protocolVersion="3" />
+  </packageSources>
+
+  <packageSourceMapping>
+    <packageSource key="nuget.org">
+      <package pattern="*" />
+    </packageSource>
+    <packageSource key="0z00z0">
+      <package pattern="ZeroZero.*" />
+    </packageSource>
+  </packageSourceMapping>
+</configuration>
+```
+
+**The mapping is not optional.** Without it restore asks every source for every package, so anyone
+publishing a `ZeroZero.*` name to nuget.org could be resolved into a consuming app; none of the six
+names is reserved there. The mapping, not the absence of a source, is what keeps them on the studio
+feed. Keep `nuget.org` in the list — everything else a consumer needs comes from there, and the
+mapping is all-or-nothing: once it exists, a package matching no pattern fails to restore rather
+than falling back.
+
+**Never put a token in that file; it is tracked.** Register the credential against the *user-level*
+`NuGet.Config` with `dotnet nuget add source`, passing the username and the token as the password.
+On a runner, add the source in a step using a secret, or set `NUGET_AUTH_TOKEN` with
+`actions/setup-dotnet`.
+
+#### The sibling-checkout route
+
+A `ProjectReference` on a checkout of this repo. Route it through an MSBuild property that defaults
 to the sibling folder, so CI can point the same reference somewhere else without editing the
 `.csproj`:
 
@@ -295,8 +363,13 @@ do) so the window renders sharp on high-DPI displays.
 
 ### 2. Make the reference resolve in CI
 
-A GitHub Actions runner checks out one repo, so the consumer's workflow has to fetch this one as
-well. Two working shapes, both in use:
+**On the package route there is nothing to fetch** — restore resolves the libraries like any other
+dependency. What the workflow does need is a secret carrying `read:packages` and a step that adds
+the source with it, because the feed refuses an anonymous read. That is the one thing the package
+route adds to a consumer's CI, and the sibling-checkout route below needs no credential at all.
+
+On the sibling-checkout route, a GitHub Actions runner checks out one repo, so the consumer's
+workflow has to fetch this one as well. Two working shapes, both in use:
 
 **Workspace subfolder + property override.** `actions/checkout` refuses a `path:` outside the
 workspace, so the second checkout lands *inside* it and the `ZeroZeroSharedDir` property is
@@ -349,8 +422,9 @@ pinned build wants because `checkout --detach` takes an exact ref:
 ### 3. Pin a tag
 
 Every consumer-visible change is released under a `v`-prefixed tag — `v0.1.0`, `v0.2.0`, `v0.2.1`,
-`v0.3.0`, `v0.3.1`, `v0.3.2`, `v0.3.3`, `v0.3.4`, `v0.4.0` — and **a tag is the ref to pin, not a
-raw commit SHA.** A tag reads as a version, so a pin bump is a legible diff and a reviewable
+`v0.3.0`, `v0.3.1`, `v0.3.2`, `v0.3.3`, `v0.3.4`, `v0.4.0`, `v0.5.0`, `v0.6.0` — and **a tag is the
+ref to pin, not a raw commit SHA.** It is also the package version, so the same number pins either
+route. A tag reads as a version, so a pin bump is a legible diff and a reviewable
 decision; a SHA says only that something moved. Each tag carries release notes listing what changed,
 so **a consumer raising its pin reads the notes for that tag first** — the breaking changes are
 stated there, and there is no other place they are collected.
@@ -370,12 +444,12 @@ it as the second checkout's `ref`:
         with:
           repository: 0z00z0/0z0-shared
           path: 0z0-shared
-          ref: v0.4.0
+          ref: v0.6.0
 ```
 
 The **sibling clone** shape needs no change at all — a full `git clone` fetches tags, so
 `checkout --detach $ref` resolves one. Shallow is the one thing to watch: `--depth 1` alone leaves
-no tag to check out, so it comes with `--branch v0.4.0`.
+no tag to check out, so it comes with `--branch v0.6.0`.
 
 Local dev builds against the live sibling checkout while CI builds the pinned tag, so a consumer
 that adopts a newly added shared type builds green locally and fails CI with `CS0234`. A consumer
@@ -394,11 +468,10 @@ locally checks the sibling clone out at it. The MQTT guide's
 [Take the reference](docs/zerozero-mqtt.md#1-take-the-reference) states what that means when a defect
 is fixed here.
 
-There is no NuGet feed to pin instead. Neither WinUI assembly can be packed —
-`ZeroZero.Brand.WinUI` and `ZeroZero.Mqtt.WinUI` both compile XAML to binary form, and
-`ZeroZero.Mqtt.WinUI` additionally indexes a `.resw` into a `.pri`; `dotnet pack` carries none of it
-— so a release is the tag and its notes, which is all a `ProjectReference` on a pinned checkout
-needs.
+**A package pin does not have that gap.** A `PackageReference` version resolves the same six
+assemblies on a developer's machine as on a runner, because nothing about a restore consults the
+working tree. That is the substantive reason to take
+[the package route](#the-package-route), and the price is the token every restore then needs.
 
 ### 4. Pick the hosting style
 
@@ -504,9 +577,8 @@ single source of truth — only its *rendering* moves to the shared control, not
   only `RepoUrl` comes from the `AboutInfo`; Website and Donate always point at the studio's own
   `Brand.WebsiteUrl` / `Brand.BuyMeACoffeeUrl` rather than anything per-app. None of those five are
   supplied by the consumer.
-- The reference and CI recipe above applies here too: the consuming app's own workflow needs one of
-  the two checkout shapes, pinned to a tag — or a NuGet pin, once
-  [issue #14](https://github.com/0z00z0/0z0-shared/issues/14) makes the WinUI assemblies packable.
+- The reference and CI recipe above applies here too: either a `PackageReference` on the studio
+  feed, or one of the two checkout shapes pinned to a tag.
 
 ## Package versions
 

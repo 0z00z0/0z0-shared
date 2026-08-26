@@ -1,11 +1,12 @@
 # Consuming BrandAboutControl
 
 A checklist for a full windowed app adopting the shared About content control. The detail —
-the `ProjectReference` recipe, the CI shapes, the sample XAML and code — is in
+the two reference recipes, the CI shapes, the sample XAML and code — is in
 [the README's hosting section](README.md#option-b--hosted-in-the-apps-own-page-brandaboutcontrol).
 
-1. Reference `ZeroZero.Brand.WinUI` from a sibling checkout of this repo, and give the consuming
-   workflow a checkout of it too.
+1. Reference `ZeroZero.Brand.WinUI`, either as a package off the studio feed — which authenticates
+   every read, so the consuming workflow gains a `read:packages` token — or from a sibling checkout
+   of this repo, in which case the workflow gains a checkout of it instead.
 2. Host `BrandAboutControl` in the existing About page's XAML, in place of the bespoke layout.
 3. Call `SetInfo(AboutInfo)` once from the page's constructor or `Loaded` handler.
 4. Supply only app facts: name, version, description, repo URL, external-library credits. The

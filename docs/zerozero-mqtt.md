@@ -54,8 +54,26 @@ type reaches a public signature: the module's own `MqttQos`, `MqttMessage`, `Mqt
 
 ### 1. Take the reference
 
-There is no NuGet feed, so a consumer takes a `ProjectReference` on a sibling checkout, routed
-through an MSBuild property so CI can point it elsewhere without editing the `.csproj`:
+Two routes, both supported, neither replacing the other.
+
+**As a package.** One reference brings the whole module, the panel's compiled XAML and its `.pri`
+included; the consuming build merges that index into its own:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="ZeroZero.Mqtt.WinUI" Version="0.6.0" />
+</ItemGroup>
+```
+
+The feed is `https://nuget.pkg.github.com/0z00z0/index.json` and **it authenticates every read even
+though the packages are public** — an anonymous request returns `401` — so every machine and every
+runner that restores needs a token with `read:packages`. The consuming repository also needs a
+`nuget.config` naming the feed *and* mapping `ZeroZero.*` to it, so that nothing on nuget.org can
+answer for one of these names. The README's
+[package route](../README.md#the-package-route) carries both files and the credential rules.
+
+**As a sibling checkout.** A `ProjectReference`, routed through an MSBuild property so CI can point
+it elsewhere without editing the `.csproj`:
 
 ```xml
 <PropertyGroup>
@@ -86,7 +104,7 @@ generates a merged PRI from resources of its own still has MakePRI comparing the
 `v`-prefixed tag, and the notes for that tag state what it breaks — the module is pre-1.0, so a
 minor bump may. The README's [Pin a tag](../README.md#3-pin-a-tag) carries both CI shapes.
 
-**A pin protects CI. It does not protect a local build.** The reference above resolves through
+**A sibling pin protects CI. It does not protect a local build.** The reference above resolves through
 `ZeroZeroSharedDir`, which defaults to the sibling folder, and nothing reads the pinned-ref file to
 decide which sources are compiled — the drift guard that reads it raises a warning and changes
 nothing. Both documented CI shapes place the pinned revision where the property points; a developer's
@@ -105,6 +123,11 @@ Three consequences worth stating plainly:
 - **Build against a clean sibling at a known revision, never one mid-edit.** While work is in flight
   in the shared tree, a local build takes a partially applied change set, which is worse than either
   the old state or the new one.
+
+**A package pin has none of that.** A `PackageReference` version resolves the same six assemblies
+everywhere, because a restore never consults a working tree, so the pin governs a developer's
+machine exactly as it governs a runner. That is what the package route buys, and the token every
+restore then needs is what it costs.
 
 `CommunityToolkit.WinUI.Controls.SettingsControls` is a ceiling, not a preference. The panel holds
 it at or below `8.2.251219`, because a consuming app holds a direct reference at that version and a

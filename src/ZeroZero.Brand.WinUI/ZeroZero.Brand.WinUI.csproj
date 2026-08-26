@@ -36,14 +36,40 @@
     library into every consuming app's output under Assets\Fonts\ — BrandAboutWindow references it
     by that relative path, so consumers get the correct brand face with no per-app setup. The OFL
     licence must accompany any redistributed copy of the font, so it ships alongside.
+
+    Inside the package they go beside the assembly, not to NuGet's default content\ and
+    contentFiles\: a consuming build resolves a referenced WinUI library's assets from
+    lib\<tfm>\<assembly>\Assets\, the folder the markup compiler already writes the compiled XAML
+    into, so the default destinations leave it copying from a path the package does not carry and
+    its build fails with two MSB3030 errors.
+
+    That folder is NuGet's short form of TargetFramework, which no property exposes while this file
+    is evaluated, so it is written out and PackagePathMatchesTargetFramework below fails the pack if
+    the two ever part company.
   -->
+  <PropertyGroup>
+    <BrandAssetPackagePath>lib\net10.0-windows10.0.26100\$(MSBuildProjectName)\Assets\Fonts\</BrandAssetPackagePath>
+  </PropertyGroup>
+
   <ItemGroup>
+    <!-- An implicit glob has already taken everything under Assets\ as Content, so an Include on
+         its own leaves two items per file and packs each of them to a different destination. -->
+    <Content Remove="Assets\Fonts\**" />
     <Content Include="Assets\Fonts\CascadiaMono.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Pack>true</Pack>
+      <PackagePath>$(BrandAssetPackagePath)</PackagePath>
     </Content>
     <Content Include="Assets\Fonts\LICENCE-OFL.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Pack>true</Pack>
+      <PackagePath>$(BrandAssetPackagePath)</PackagePath>
     </Content>
   </ItemGroup>
+
+  <Target Name="PackagePathMatchesTargetFramework" BeforeTargets="GenerateNuspec">
+    <Error Condition="'$(TargetFramework)' != 'net10.0-windows10.0.26100.0'"
+           Text="BrandAssetPackagePath names lib\net10.0-windows10.0.26100, which was NuGet's short form of net10.0-windows10.0.26100.0. TargetFramework is now $(TargetFramework), so the fonts would pack to a folder no consumer looks in and every consuming build would fail with MSB3030. Update both." />
+  </Target>
 
 </Project>

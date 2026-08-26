@@ -4,9 +4,12 @@ on:
   push:
     tags: ["v*"]
 
-# gh release create writes to the repository.
 permissions:
+  # gh release create writes to the repository.
   contents: write
+  # The package push below. That is the whole credential story: GITHUB_TOKEN is minted for the run,
+  # so there is no secret to create, rotate or forget.
+  packages: write
 
 jobs:
   release:
@@ -80,9 +83,35 @@ jobs:
       - name: Unit tests — ZeroZero.Mqtt.Discovery
         run: dotnet test tests\ZeroZero.Mqtt.Discovery.Tests\ZeroZero.Mqtt.Discovery.Tests.csproj -c Release --no-build --nologo
 
-      # No artefact is attached. The WinUI assembly cannot be packed (issue #14), so there is no
-      # package to push; the release is the tag and its notes, which is what a consumer pinning a
-      # ref in a sibling checkout needs.
+      # All six libraries pack, both WinUI assemblies included: their packages carry the compiled
+      # XAML and the .pri index beside the assembly, and a consuming build merges that index into
+      # its own. No -p:Version — the version comes from Directory.Build.props, which the step above
+      # has already checked against the tag, so there is one declaration and not two.
+      - name: Pack
+        run: dotnet pack 0z0-shared.slnx -c Release --no-build -o artifacts
+
+      # GitHub Packages is the only feed these packages go to. nuget.org is not a fallback and not a
+      # later step. This job is the only publish path, so keep it the only place a source is named.
+      #
+      # GITHUB_TOKEN, not a PAT: it is minted per run, so there is no secret to create, rotate or
+      # forget, and nothing that expires and breaks a release with no warning. It buys nothing for a
+      # consumer either — a restore happens against the consumer's own NuGet.Config, never here.
+      #
+      # --no-symbols: pack writes a .snupkg beside each .nupkg and push would send it uninvited.
+      # GitHub Packages has no symbol server, so that is a failed step in exchange for nothing.
+      #
+      # No --skip-duplicate. It turns the 409 that means "this version is already published" into a
+      # green build while the old bits stay live, which is the one failure a release job exists to
+      # catch.
+      #
+      # Before the release is created, so a published release means the packages are actually on the
+      # feed rather than merely announced there.
+      - name: Push to GitHub Packages
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key "${{ secrets.GITHUB_TOKEN }}" --source https://nuget.pkg.github.com/0z00z0/index.json --no-symbols
+
+      # No artefact is attached: the packages are the artefact and they live on the feed, so a copy
+      # on the release page would be a second thing to keep honest. The release is the tag, its
+      # notes and the six packages the step above published.
       - name: Create the release
         shell: pwsh
         env:
