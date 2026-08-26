@@ -185,10 +185,76 @@ public class MqttPanelTextTests
 
         Assert.Contains("nothing is listening", nothingListening);
         Assert.Contains("rejected these credentials", refusedCredentials);
-        Assert.Contains("certificate trust", tlsFailed);
+        Assert.Contains("encrypted connection", tlsFailed);
         Assert.DoesNotContain("credentials", tlsFailed);
         Assert.Contains("did not answer", timedOut);
-        Assert.Contains("accepted these settings", connected);
+        Assert.Equal("Connected over TCP.", connected);
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // The run verdict: the outcome, never the attempts behind it.
+    // ------------------------------------------------------------------------------------------
+
+    [Theory]
+    [InlineData(MqttProbeOutcome.Unreachable)]
+    [InlineData(MqttProbeOutcome.TimedOut)]
+    [InlineData(MqttProbeOutcome.TlsUnsupported)]
+    [InlineData(MqttProbeOutcome.Failed)]
+    public void ASuccessCarriesNothingAboutAnAttemptThatFailedOnTheWay(MqttProbeOutcome failed)
+    {
+        MqttProbeReport report = new([
+            new(new(1883, MqttTransport.Tcp), new MqttProbeResult(failed, "nothing answered on that port")),
+            new(new(443, MqttTransport.WebSocket), MqttProbeOutcome.Success),
+        ]);
+
+        string sentence = Text.Describe(report);
+
+        // The defect this pins: a failed leg printed under a success reads as a finding, and a user
+        // scanning it concludes something is wrong with a connection that works.
+        Assert.Equal("Connected over WebSocket on port 443.", sentence);
+        Assert.DoesNotContain("TCP", sentence);
+        Assert.DoesNotContain("nothing answered", sentence);
+    }
+
+    [Fact]
+    public void ASuccessNamesTheEndpointItConnectedOnRatherThanOnlyTheTransport()
+    {
+        MqttProbeReport report = new([new(new(8883, MqttTransport.Tcp), MqttProbeOutcome.Success)]);
+
+        Assert.Equal("Connected over TCP on port 8883.", Text.Describe(report));
+    }
+
+    [Fact]
+    public void ATotalFailureStillSaysWhatWasTriedAndWhatEachDid()
+    {
+        MqttProbeReport report = new([
+            new(new(1883, MqttTransport.Tcp), new MqttProbeResult(MqttProbeOutcome.Unreachable, "nothing is listening on that port")),
+            new(new(443, MqttTransport.WebSocket), MqttProbeOutcome.TimedOut),
+        ]);
+
+        string sentence = Text.Describe(report);
+
+        // The mirror of the rule above: with nothing to report as an outcome, the attempts are what
+        // a reader has to go on, so they must survive.
+        Assert.Contains("TCP", sentence);
+        Assert.Contains("nothing is listening on that port", sentence);
+        Assert.Contains("WebSocket", sentence);
+        Assert.Contains("did not answer", sentence);
+    }
+
+    [Fact]
+    public void ABrokerThatAnsweredAndRefusedIsItsOwnWholeAnswer()
+    {
+        MqttProbeReport report = new([
+            new(new(1883, MqttTransport.Tcp), MqttProbeOutcome.Unreachable),
+            new(new(443, MqttTransport.WebSocket), new MqttProbeResult(MqttProbeOutcome.AuthRejected, "NotAuthorised")),
+        ]);
+
+        string sentence = Text.Describe(report);
+
+        // A refused credential is the finding; naming the transport that never answered sends nobody
+        // anywhere useful.
+        Assert.Equal("The broker rejected these credentials over WebSocket (NotAuthorised).", sentence);
     }
 
     [Fact]

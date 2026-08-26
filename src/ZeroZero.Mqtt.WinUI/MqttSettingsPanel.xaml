@@ -425,7 +425,6 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
                                             HorizontalAlignment="Right">
-                                    <brand:InfoIcon x:Name="ApplyInfoIcon"/>
                                     <Button x:Name="ApplyBtn" Click="OnApplyClicked"/>
                                 </StackPanel>
                             </Grid>

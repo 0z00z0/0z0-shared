@@ -90,12 +90,12 @@ public sealed class MqttStrings
             ["ProvenanceNotEncrypted"] = "{0} — not encrypted",
 
             // One candidate's verdict, named for the transport it was reached over.
-            ["ProbeSuccess"]        = "Connected over {0}. The broker accepted these settings.",
+            ["ProbeSuccess"]        = "Connected over {0}.",
             ["ProbeUnreachable"]    = "Could not reach the broker over {0} — {1}.",
             ["ProbeTimedOut"]       = "The broker did not answer over {0} within {1} seconds.",
-            ["ProbeAuthRejected"]   = "The broker answered over {0} but rejected these credentials ({1}).",
+            ["ProbeAuthRejected"]   = "The broker rejected these credentials over {0} ({1}).",
             ["ProbeRejected"]       = "The broker refused the connection over {0} ({1}).",
-            ["ProbeTlsUntrusted"]   = "The encrypted connection over {0} was not established — {1}. Check the certificate trust setting.",
+            ["ProbeTlsUntrusted"]   = "The encrypted connection over {0} failed — {1}.",
             ["ProbeTlsUnsupported"] = "The broker does not accept encrypted connections over {0} on that port — {1}.",
             ["ProbeFailed"]         = "The connection over {0} failed — {1}.",
 
@@ -115,19 +115,19 @@ public sealed class MqttStrings
             ["ProgressPort"]      = "Trying {0}…",
             ["ProgressTransport"] = "Trying {0} — asking the broker…",
             ["ProgressFinished"]  = "{0} {1}.",
-            ["ProgressNoAnswer"]  = "{0} — no answer recorded.",
+            ["ProgressNoAnswer"]  = "{0} — no answer.",
 
             // The whole run.
             ["ReportNoHost"]         = "No broker host set.",
-            ["ReportWithContext"]    = "{0} {1}.",
-            ["ReportNothingReached"] = "Neither transport reached the broker. {0}.",
+            ["ReportConnected"]      = "Connected over {0} on port {1}.",
+            ["ReportNothingReached"] = "The broker was not reached. {0}.",
             ["ReportFragment"]       = "{0} {1}",
             ["ReportFragmentJoin"]   = "; ",
 
             // Panel state that is neither a status value nor a probe sentence.
             ["TestRunning"]      = "Testing…",
-            ["Applied"]          = "Applied.",
-            ["Saved"]            = "Saved.",
+            ["Applied"]          = "Applied",
+            ["Saved"]            = "Saved",
             ["NotApplied"]       = "Not applied",
             ["PublishFailed"]    = "Nothing reached the broker",
             ["PortOutOfRange"]   = "Port must be between {0} and {1}.",
@@ -147,12 +147,14 @@ public sealed class MqttStrings
             ["DeviceIdNew"]       = "New ID",
             ["DeviceIdPreview"]   = "Publishes as: {0}",
             ["DeviceIdWarning"]   = "Changing the ID renames every entity this application publishes. "
-                                  + "Anything pointing at the old entities stops resolving — no error is "
-                                  + "reported, the entities are simply no longer there.\n\n"
-                                  + "The old entities are removed from the broker on confirmation. Their "
-                                  + "recorded history is not carried over to the new ones.\n\n"
-                                  + "An empty box restores the name derived from this machine.",
-            ["DeviceIdAcknowledge"] = "I understand everything referring to the old ID stops working",
+                                  + "Anything pointing at the old names stops working, with no error "
+                                  + "reported anywhere.\n\n"
+                                  + "The old entities are removed from the broker, and their recorded "
+                                  + "history does not carry over to the new ones.\n\n"
+                                  + "Leaving the box empty falls back to the name derived from this "
+                                  + "machine.",
+            ["DeviceIdAcknowledge"] = "I understand that anything using the old ID stops working, and its "
+                                  + "recorded history is not carried over",
 
             // Section headings and row labels. Held here rather than only in markup so the composed
             // text and the static text localise through one mechanism.
@@ -163,7 +165,7 @@ public sealed class MqttStrings
             ["RowConnection"]        = "Connection",
             ["RowBrokerInUse"]       = "Broker in use",
             ["RowLastPublish"]       = "Last publish",
-            ["RowLastCommand"]       = "Last command received",
+            ["RowLastCommand"]       = "Last command accepted",
             ["RowDeviceName"]        = "Device name",
             ["RowDeviceId"]          = "Device ID",
             ["RowHost"]              = "Host",
@@ -192,10 +194,10 @@ public sealed class MqttStrings
             ["DescEncryption"]      = "Encrypts traffic to the broker.",
             ["DescUsername"]        = "Leave blank for anonymous access.",
             ["DescPassword"]        = "Leave blank for anonymous access.",
-            ["DescDiscoveryPrefix"] = "Prefix for discovery topics. Change only to match the broker.",
+            ["DescDiscoveryPrefix"] = "Prefix for discovery topics. Change only for a consumer that listens elsewhere.",
             ["DescDeviceName"]      = "Shown wherever this device appears.",
             ["DescDeviceId"]        = "Used in every topic and entity id. Changing it moves them all.",
-            ["DescApply"]           = "Reconnects once.",
+            ["DescApply"]           = "Saves every broker field above and reconnects once. Nothing above is live until then.",
             ["DescPublishSwitch"]   = "Publishes this application's state to an MQTT broker.",
             ["TitlePublishSwitch"]  = "Publish to MQTT",
 
@@ -214,71 +216,88 @@ public sealed class MqttStrings
 
             // Info-icon text: the explanation the row is clearer without. Protocol vocabulary is
             // identical for every consumer, so a host never writes what a transport is; what an
-            // application publishes is the opposite, and none of it is here.
+            // application publishes is the opposite, and none of it is here. Each icon says the one
+            // thing its row does not, once — a fact repeated across icons is a fact neither copy is
+            // trusted on — and none of them explains why the panel is built the way it is.
             ["InfoPublishSwitch"] = "The master switch for the whole feature. Nothing on the network is "
-                                  + "touched while it is off, and the rest of this panel is hidden because "
-                                  + "none of it applies. This switch takes effect immediately; the broker "
-                                  + "fields take effect on Apply.",
-            ["InfoStatus"]        = "Read-only, and about the live connection rather than the fields below. "
-                                  + "The two ages keep counting up while this page is open.",
-            ["InfoConnection"]    = "Where the broker settings in force came from, and whether the live link "
-                                  + "is encrypted. A port, transport or encryption left on Automatic is found "
-                                  + "by trying the host, and the answer is remembered against that host and "
-                                  + "user name. Setting one by hand pins it, and nothing is tried around it. "
-                                  + "Automatic can end up in clear text on its own, which is why this row "
-                                  + "says which it is.",
-            ["InfoBrokerInUse"]   = "The address the live connection is using. The saved values, not the ones "
-                                  + "being edited in the fields below; the two differ until Apply.",
-            ["InfoLastPublish"]   = "When a message last reached the broker. Unchanged values are not re-sent, "
-                                  + "so this stands still while nothing changes. Publish now sends the current "
-                                  + "state for the groups switched on below; it announces nothing and "
-                                  + "re-declares no entity.",
-            ["InfoLastCommand"]   = "The most recent command the broker sent. Commands arrive on the topics "
-                                  + "the announced entities subscribe to. Nothing is shown until one is "
-                                  + "acted on.",
-            ["InfoDevice"]        = "How this machine appears to whatever consumes the entities: one display "
-                                  + "name, and one identifier every topic is built from.",
-            ["InfoDeviceName"]    = "Cosmetic — it renames nothing else. An empty box falls back to the name "
-                                  + "derived from this machine, shown as the placeholder. Saved as it is "
-                                  + "typed, not behind Apply.",
-            ["InfoDeviceId"]      = "Changing it renames every published entity, so it has a confirmation of "
-                                  + "its own rather than riding the Apply batch.",
-            ["InfoBroker"]        = "Changes here take effect on Apply, which re-establishes the connection "
-                                  + "once — nothing here is live until then. Anything left on Automatic is "
-                                  + "detected by a check of its own, which runs after a change here and when "
-                                  + "Test connection or Apply is pressed, never merely by opening this page.",
-            ["InfoHost"]          = "A name or an address. A host written as a ws:// or wss:// address is used "
-                                  + "exactly as typed, which covers a broker served under a path the port "
-                                  + "alone cannot express.",
-            ["InfoPort"]          = "Automatic tries the ports brokers are commonly served on, in turn, and "
-                                  + "remembers the one that answered. The list covers plain MQTT, MQTT over "
-                                  + "encryption, and the front-door ports a broker published over WebSocket "
-                                  + "answers on. The last entry takes a port typed by hand.",
-            ["InfoTransport"]     = "Automatic tries TCP first and falls back to WebSocket, then "
-                                  + "remembers whichever answered and starts there next time — the usual case "
-                                  + "for a machine that is on the internal network sometimes and outside it "
-                                  + "at others. An explicit choice is never reached around.",
-            ["InfoEncryption"]    = "Automatic tries each endpoint encrypted first and only then in clear "
-                                  + "text. A broker that answers and refuses the credentials ends the search, "
-                                  + "so a wrong password never causes a retry in clear text; nor does a "
-                                  + "broker that offered a certificate this machine does not trust. Only an "
-                                  + "endpoint with no encryption on offer at all is retried plain. An "
-                                  + "explicit choice is never reached around, and a broker reached over "
-                                  + "WebSocket through a public front door is encrypted by its address rather "
-                                  + "than by this setting.",
-            ["InfoUsername"]      = "Part of what a found endpoint is remembered against: a broker commonly "
-                                  + "fronts a separate listener per account, so changing the user name starts "
-                                  + "the search again.",
-            ["InfoPassword"]      = "Never written to the log, never published, and never part of what a "
-                                  + "found endpoint is remembered against.",
+                                  + "touched while it is off, and it takes effect immediately.",
+            ["InfoStatus"]        = "Read-only, and about the live connection rather than the fields below.",
+            ["InfoConnection"]    = "Where the broker settings in force came from, and whether the live "
+                                  + "link is encrypted — a setting left on Automatic can land on either.",
+            ["InfoBrokerInUse"]   = "The address the live connection is using — the saved settings, not "
+                                  + "any unapplied edit in the fields below.",
+            ["InfoLastPublish"]   = "When a message last reached the broker. Unchanged values are not "
+                                  + "re-sent, so this stands still while nothing changes. Publish now "
+                                  + "sends the current state for the groups switched on below.",
+            ["InfoLastCommand"]   = "The most recent command the broker sent that was acted on. One that "
+                                  + "was refused never appears here.",
+            ["InfoDevice"]        = "How this machine appears to anything reading its entities: a display "
+                                  + "name, and the identifier every topic is built from.",
+            ["InfoDeviceName"]    = "Cosmetic — it renames nothing else. An empty box falls back to the "
+                                  + "name derived from this machine, shown as the placeholder. Saved when "
+                                  + "the box is left, not on Apply.",
+            ["InfoDeviceId"]      = "Lower-case letters, digits and underscores only, up to {0} characters. "
+                                  + "An empty value falls back to the name derived from this machine.",
+            ["InfoBroker"]        = "Changes here take effect on Apply, which remakes the connection once. "
+                                  + "Anything left on Automatic is found by trying the broker when Test "
+                                  + "connection or Apply is pressed, and at no other time.",
+            ["InfoHost"]          = "A name or an address. A full ws:// or wss:// address is used exactly "
+                                  + "as typed, including any path.",
+            ["InfoPort"]          = "Automatic tries the ports brokers commonly use, encrypted and plain, "
+                                  + "and remembers the one that answered. Choose Other… to type a port.",
+            ["InfoTransport"]     = "Automatic tries TCP first, then WebSocket, and remembers whichever "
+                                  + "answered — useful for a machine that is on the internal network "
+                                  + "sometimes and outside it at others. A transport chosen by hand is "
+                                  + "always used.",
+            ["InfoEncryption"]    = "Automatic tries each endpoint encrypted first, and falls back to clear "
+                                  + "text only where the broker offers no encryption at all — a rejected "
+                                  + "password or an untrusted certificate ends the search instead. A choice "
+                                  + "made by hand is always used, and a host typed as a wss:// address is "
+                                  + "encrypted whatever this is set to.",
+            ["InfoUsername"]      = "Changing the username starts the search for the broker endpoint "
+                                  + "again: a broker often serves a separate listener per account.",
+            ["InfoPassword"]      = "Never written to the log, and never published.",
             ["InfoDiscoveryPrefix"] = "Entities are announced using the Home Assistant MQTT Discovery "
                                   + "convention, an openly published specification that some MQTT consumers "
-                                  + "follow and others ignore. The prefix only needs changing for a consumer "
-                                  + "that listens elsewhere.",
-            ["InfoApply"]         = "Commits every field above as one change and remakes the connection once. "
-                                  + "Nothing above is live until it is pressed.",
+                                  + "follow and others ignore. Change the prefix only for a consumer that "
+                                  + "listens elsewhere.",
             ["InfoTest"]          = "Tries the values in the fields above, including ones not yet applied, "
-                                  + "over a throwaway connection of its own. It commits nothing at all: not "
-                                  + "the fields, and not where the broker answered.",
+                                  + "over a throwaway connection of its own. It saves nothing at all: not "
+                                  + "the fields, and not where the broker answered. Anything left on "
+                                  + "Automatic may take several addresses to find; the result names the one "
+                                  + "that answered, and lists what was tried only when none of them did.",
+
+            // The module's own version, read from the loaded assembly and shown behind the publish
+            // switch's icon. A build made between tags carries the same number as the tag before it,
+            // so the commit is the half that identifies a binary.
+            ["ModuleVersion"]     = "MQTT module {0}.",
+
+            // The screen-reader name of an info icon: what the icon is about, spoken before its text.
+            // Held here because a panel translated everywhere except the naming of its icons is a
+            // panel translated for everyone except the people who most depend on that naming.
+            ["SubjectPublishSwitch"]   = "the publish switch",
+            ["SubjectPublishGroups"]   = "the publishing groups",
+            ["SubjectStatus"]          = "the status block",
+            ["SubjectConnection"]      = "how the connection was found",
+            ["SubjectBrokerInUse"]     = "the broker in use",
+            ["SubjectLastPublish"]     = "the last publish time",
+            ["SubjectLastCommand"]     = "the last command accepted",
+            ["SubjectDevice"]          = "the device section",
+            ["SubjectDeviceName"]      = "the device name",
+            ["SubjectDeviceId"]        = "the device ID",
+            ["SubjectBroker"]          = "the broker section",
+            ["SubjectHost"]            = "the broker host",
+            ["SubjectPort"]            = "the broker port",
+            ["SubjectTransport"]       = "the transport",
+            ["SubjectEncryption"]      = "the encrypted connection",
+            ["SubjectUsername"]        = "the broker username",
+            ["SubjectPassword"]        = "the broker password",
+            ["SubjectDiscoveryPrefix"] = "the discovery prefix",
+            ["SubjectTest"]            = "Test connection",
+
+            // Why a typed device id is unusable. Composed where the id is validated, which is a plain
+            // net10.0 type with no resource system of its own, so it reads them through this table.
+            ["DeviceIdTooLong"]   = "An id can be at most {0} characters.",
+            ["DeviceIdNoAlnum"]   = "An id must contain at least one letter or digit.",
         };
 }

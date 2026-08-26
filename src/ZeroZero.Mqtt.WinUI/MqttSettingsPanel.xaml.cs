@@ -48,9 +48,6 @@ public sealed partial class MqttSettingsPanel : UserControl
 
     private CancellationTokenSource? _probeCts;
 
-    // Keeps a typed host from starting a probe per keystroke.
-    private readonly DispatcherTimer _probeSettle = new() { Interval = TimeSpan.FromMilliseconds(700) };
-
     // The two relative ages have to move while nothing at all is happening: a panel left open showing
     // "just now" must reach "2 minutes ago" without a publish to trigger it. Twenty seconds is inside
     // the coarsest thing the wording can show, and the tick stops the moment the page is off screen
@@ -62,11 +59,6 @@ public sealed partial class MqttSettingsPanel : UserControl
         EnsureThemeResources();
         InitializeComponent();
 
-        _probeSettle.Tick += (_, _) =>
-        {
-            _probeSettle.Stop();
-            StartProbe(MqttProbeTrigger.BrokerSettingChanged);
-        };
         _ageTick.Tick += (_, _) => RefreshActivityTexts();
 
         Loaded += (_, _) => UpdateAgeTick();
@@ -197,69 +189,70 @@ public sealed partial class MqttSettingsPanel : UserControl
     {
         PublishCard.Header = _strings.Get("TitlePublishSwitch");
         PublishDescriptionText.Text = _strings.Get("DescPublishSwitch");
-        SetInfo(PublishInfoIcon, "the publish switch", _strings.Get("InfoPublishSwitch"));
+        SetInfo(PublishInfoIcon, _strings.Get("SubjectPublishSwitch"),
+                WithModuleVersion(_strings.Get("InfoPublishSwitch")));
         EnabledToggle.OnContent = _strings.Get("ToggleOn");
         EnabledToggle.OffContent = _strings.Get("ToggleOff");
 
         StatusHeading.Text = _strings.Get("HeadingStatus");
-        SetInfo(StatusInfoIcon, "the status block", _strings.Get("InfoStatus"));
+        SetInfo(StatusInfoIcon, _strings.Get("SubjectStatus"), _strings.Get("InfoStatus"));
         ConnectionLabel.Text = _strings.Get("RowConnection");
-        SetInfo(ConnectionInfoIcon, "how the connection was found", _strings.Get("InfoConnection"));
+        SetInfo(ConnectionInfoIcon, _strings.Get("SubjectConnection"), _strings.Get("InfoConnection"));
         BrokerInUseLabel.Text = _strings.Get("RowBrokerInUse");
-        SetInfo(BrokerInUseInfoIcon, "the broker in use", _strings.Get("InfoBrokerInUse"));
+        SetInfo(BrokerInUseInfoIcon, _strings.Get("SubjectBrokerInUse"), _strings.Get("InfoBrokerInUse"));
         LastPublishLabel.Text = _strings.Get("RowLastPublish");
         PublishNowBtn.Content = _strings.Get("ButtonPublishNow");
-        SetInfo(LastPublishInfoIcon, "the last publish time", _strings.Get("InfoLastPublish"));
+        SetInfo(LastPublishInfoIcon, _strings.Get("SubjectLastPublish"), _strings.Get("InfoLastPublish"));
         LastCommandLabel.Text = _strings.Get("RowLastCommand");
-        SetInfo(LastCommandInfoIcon, "the last command received", _strings.Get("InfoLastCommand"));
+        SetInfo(LastCommandInfoIcon, _strings.Get("SubjectLastCommand"), _strings.Get("InfoLastCommand"));
 
         DeviceHeading.Text = _strings.Get("HeadingDevice");
-        SetInfo(DeviceInfoIcon, "the device section", _strings.Get("InfoDevice"));
+        SetInfo(DeviceInfoIcon, _strings.Get("SubjectDevice"), _strings.Get("InfoDevice"));
         DeviceNameCard.Header = _strings.Get("RowDeviceName");
         DeviceNameDescription.Text = _strings.Get("DescDeviceName");
-        SetInfo(DeviceNameInfoIcon, "the device name", _strings.Get("InfoDeviceName"));
+        SetInfo(DeviceNameInfoIcon, _strings.Get("SubjectDeviceName"), _strings.Get("InfoDeviceName"));
         DeviceNameSavedText.Text = _strings.Get("Saved");
         DeviceIdCard.Header = _strings.Get("RowDeviceId");
         DeviceIdDescription.Text = _strings.Get("DescDeviceId");
-        SetInfo(DeviceIdInfoIcon, "the device ID", _strings.Get("InfoDeviceId"));
+        SetInfo(DeviceIdInfoIcon, _strings.Get("SubjectDeviceId"),
+                _strings.Format("InfoDeviceId", MqttIdentity.MaxLength));
         ChangeDeviceIdBtn.Content = _strings.Get("ButtonChangeDeviceId");
 
         BrokerHeading.Text = _strings.Get("HeadingBroker");
-        SetInfo(BrokerInfoIcon, "the broker section", _strings.Get("InfoBroker"));
+        SetInfo(BrokerInfoIcon, _strings.Get("SubjectBroker"), _strings.Get("InfoBroker"));
         BrokerDirtyText.Text = _strings.Get("NotApplied");
         // The two expander summaries are not set here: they are composed from live state, in
         // RefreshSummaries, exactly as the Status rows are.
 
         HostCard.Header = _strings.Get("RowHost");
-        SetInfo(HostInfoIcon, "the broker host", _strings.Get("InfoHost"));
+        SetInfo(HostInfoIcon, _strings.Get("SubjectHost"), _strings.Get("InfoHost"));
         HostBox.PlaceholderText = _strings.Get("PlaceholderHost");
         PortCard.Header = _strings.Get("RowPort");
         PortDescription.Text = _strings.Get("DescPort");
-        SetInfo(PortInfoIcon, "the broker port", _strings.Get("InfoPort"));
+        SetInfo(PortInfoIcon, _strings.Get("SubjectPort"), _strings.Get("InfoPort"));
         PortCustomBox.PlaceholderText = _strings.Get("PlaceholderPort");
         TransportCard.Header = _strings.Get("RowTransport");
         TransportDescription.Text = _strings.Get("DescTransport");
-        SetInfo(TransportInfoIcon, "the transport", _strings.Get("InfoTransport"));
+        SetInfo(TransportInfoIcon, _strings.Get("SubjectTransport"), _strings.Get("InfoTransport"));
         EncryptionCard.Header = _strings.Get("RowEncryption");
         EncryptionDescription.Text = _strings.Get("DescEncryption");
-        SetInfo(EncryptionInfoIcon, "the encrypted connection", _strings.Get("InfoEncryption"));
+        SetInfo(EncryptionInfoIcon, _strings.Get("SubjectEncryption"), _strings.Get("InfoEncryption"));
         UsernameCard.Header = _strings.Get("RowUsername");
         UsernameDescription.Text = _strings.Get("DescUsername");
-        SetInfo(UsernameInfoIcon, "the broker username", _strings.Get("InfoUsername"));
+        SetInfo(UsernameInfoIcon, _strings.Get("SubjectUsername"), _strings.Get("InfoUsername"));
         PasswordCard.Header = _strings.Get("RowPassword");
         PasswordDescription.Text = _strings.Get("DescPassword");
-        SetInfo(PasswordInfoIcon, "the broker password", _strings.Get("InfoPassword"));
+        SetInfo(PasswordInfoIcon, _strings.Get("SubjectPassword"), _strings.Get("InfoPassword"));
         PrefixCard.Header = _strings.Get("RowDiscoveryPrefix");
         PrefixDescription.Text = _strings.Get("DescDiscoveryPrefix");
-        SetInfo(PrefixInfoIcon, "the discovery prefix", _strings.Get("InfoDiscoveryPrefix"));
+        SetInfo(PrefixInfoIcon, _strings.Get("SubjectDiscoveryPrefix"), _strings.Get("InfoDiscoveryPrefix"));
 
         ApplyCard.Header = _strings.Get("RowApply");
         ApplyDescription.Text = _strings.Get("DescApply");
         ApplyBtn.Content = _strings.Get("ButtonApply");
         TestBtn.Content = _strings.Get("ButtonTest");
         AppliedText.Text = _strings.Get("Applied");
-        SetInfo(TestInfoIcon, "Test connection", _strings.Get("InfoTest"));
-        SetInfo(ApplyInfoIcon, "Apply", _strings.Get("InfoApply"));
+        SetInfo(TestInfoIcon, _strings.Get("SubjectTest"), _strings.Get("InfoTest"));
 
         PublishHeading.Text = _strings.Get("HeadingPublish");
     }
@@ -271,11 +264,12 @@ public sealed partial class MqttSettingsPanel : UserControl
         if (setup.PublishTitle is { Length: > 0 } title) PublishCard.Header = title;
         if (setup.PublishDescription is { Length: > 0 } description) PublishDescriptionText.Text = description;
         if (setup.PublishInfo is { Length: > 0 } info)
-            SetInfo(PublishInfoIcon, "the publish switch", info);
+            SetInfo(PublishInfoIcon, _strings.Get("SubjectPublishSwitch"), WithModuleVersion(info));
 
         // No fallback here on purpose: an icon opening on nothing is worse than no icon.
         bool hasGroupsInfo = !string.IsNullOrWhiteSpace(setup.PublishGroupsInfo);
-        if (hasGroupsInfo) SetInfo(PublishGroupsInfoIcon, "the publishing groups", setup.PublishGroupsInfo!);
+        if (hasGroupsInfo)
+            SetInfo(PublishGroupsInfoIcon, _strings.Get("SubjectPublishGroups"), setup.PublishGroupsInfo!);
         PublishGroupsInfoIcon.Visibility = hasGroupsInfo ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -284,6 +278,15 @@ public sealed partial class MqttSettingsPanel : UserControl
         icon.Subject = subject;
         icon.Info = info;
     }
+
+    /// <summary>The publish switch's text with the module build in force appended.</summary>
+    /// <remarks>Version information conventionally lives in an About box, and nobody opens one while
+    /// chasing a broker that will not connect. This icon is in front of the reader at the moment the
+    /// question arises, so a consumer that has done nothing at all still reports which build produced
+    /// the behaviour being described. It rides whatever text is in force, the host's included, so
+    /// supplying <see cref="MqttPanelSetup.PublishInfo"/> does not silently drop it.</remarks>
+    private string WithModuleVersion(string info) =>
+        $"{info}\n\n{_strings.Format("ModuleVersion", MqttModule.Version)}";
 
     // ---------------------------------------------------------------------------------------------
     // The master switch.
@@ -429,7 +432,7 @@ public sealed partial class MqttSettingsPanel : UserControl
             void Revalidate()
             {
                 string raw = idBox.Text ?? "";
-                string? error = MqttIdentity.Validate(raw);
+                string? error = MqttIdentity.Validate(raw, _strings);
                 string candidate = MqttIdentity.Effective(raw, setup.TopicRoot, Environment.MachineName);
 
                 errorText.Text = error ?? "";
@@ -555,9 +558,12 @@ public sealed partial class MqttSettingsPanel : UserControl
 
     private void OnPortSelectionChanged(object sender, SelectionChangedEventArgs e) => BrokerFieldMoved();
 
-    /// <summary>Every staged edit lands here: the block is re-read, the indicators are recomputed, the
-    /// answer under the buttons is dropped because it is about values since retyped, and the settle
-    /// timer restarts.</summary>
+    /// <summary>Every staged edit lands here: the block is re-read, the indicators are recomputed,
+    /// and the answer under the buttons is dropped because it is about values since retyped.</summary>
+    /// <remarks>No network follows. Editing a field is not one of the things that starts a check, so
+    /// the promise that showing this page touches no broker holds while it is being typed into as
+    /// well; a check in flight from an earlier button press is abandoned, because its answer is about
+    /// values that have since moved.</remarks>
     private void BrokerFieldMoved()
     {
         if (_updating) return;
@@ -565,8 +571,8 @@ public sealed partial class MqttSettingsPanel : UserControl
         PullBrokerFields();
         _edits.Touch();
         _probe.Clear();
+        CancelProbe();
         RefreshEditIndicators();
-        ScheduleProbe();
     }
 
     /// <summary>Shows the typed-port box only for the last entry, keeps the applied indicator honest,
@@ -750,20 +756,10 @@ public sealed partial class MqttSettingsPanel : UserControl
         StartProbe(MqttProbeTrigger.TestConnection);
     }
 
-    /// <summary>Restarts the settle timer after a broker field is edited, abandoning whatever the
-    /// previous value had in flight — its answer is about values since retyped.</summary>
-    private void ScheduleProbe()
-    {
-        if (_updating) return;
-        CancelProbe();
-        _probeSettle.Start();
-    }
-
-    /// <summary>Abandons any probe in flight and the settle timer behind it, and frees the controls at
-    /// once rather than at the end of a budget nobody is waiting for.</summary>
+    /// <summary>Abandons any probe in flight and frees the controls at once rather than at the end of
+    /// a budget nobody is waiting for.</summary>
     private void CancelProbe()
     {
-        _probeSettle.Stop();
         _probeCts?.Cancel();
         _probeCts = null;
         _probe.Abandon();
@@ -771,8 +767,8 @@ public sealed partial class MqttSettingsPanel : UserControl
     }
 
     /// <summary>Probes for the broker's endpoint if this trigger warrants one, and reports whatever
-    /// happens either way. Every caller names what the user did; there is no path in from showing the
-    /// panel or from a bare timer.</summary>
+    /// happens either way. Both callers are a button press; there is no path in from showing the
+    /// panel, from editing a field or from a timer.</summary>
     private void StartProbe(MqttProbeTrigger trigger)
     {
         if (_setup is null) return;

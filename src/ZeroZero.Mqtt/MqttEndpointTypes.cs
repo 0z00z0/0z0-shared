@@ -46,16 +46,13 @@ public readonly record struct MqttEndpointAttempt(
     public MqttProbeOutcome Outcome => Result.Outcome;
 }
 
-/// <summary>What asked for a probe. A closed set, and every member is an action the user took:
-/// opening a settings page, re-showing a section and a timer are absent on purpose, so a probe can
-/// only follow something deliberate. <see cref="MqttEndpointPlan.ShouldProbe"/> lists them one by one
-/// rather than accepting whatever arrives, so a member added here has to be considered there before
-/// it can put the machine on the network.</summary>
+/// <summary>What asked for a probe. A closed set, and every member is a button the user pressed:
+/// opening a settings page, re-showing a section, editing a field and a timer are all absent on
+/// purpose, so a probe can only follow a deliberate act. <see cref="MqttEndpointPlan.ShouldProbe"/>
+/// lists the members one by one rather than accepting whatever arrives, so a member added here has
+/// to be considered there before it can put the machine on the network.</summary>
 public enum MqttProbeTrigger
 {
-    /// <summary>One of the broker settings was edited and has settled.</summary>
-    BrokerSettingChanged,
-
     /// <summary>The Test connection button.</summary>
     TestConnection,
 

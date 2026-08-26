@@ -82,13 +82,16 @@ public class MqttStatusTextTests
     }
 
     [Fact]
-    public void Describe_SendsACertificateFailureToTheTrustSettingRatherThanToThePassword()
+    public void Describe_OfACertificateFailurePointsAtNoControlThePanelDoesNotCarry()
     {
         string sentence = MqttStatusText.Describe(
             new(MqttProbeOutcome.TlsUntrusted, "the remote certificate is invalid"), MqttTransport.Tcp);
 
-        Assert.Contains("certificate trust", sentence);
+        // The reason the far end gave, and nothing sending a reader to look for a certificate-trust
+        // field: the panel has none, and trust is configured by the host in code.
+        Assert.Contains("the remote certificate is invalid", sentence);
         Assert.DoesNotContain("credentials", sentence);
+        Assert.DoesNotContain("setting", sentence, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -127,7 +130,7 @@ public class MqttStatusTextTests
         Assert.Equal("No broker host set.", MqttStatusText.Describe(new MqttProbeReport([])));
 
     [Fact]
-    public void Describe_OfASuccessfulRunLeadsWithTheAttemptThatWorked()
+    public void Describe_OfASuccessfulRunIsTheOutcomeAndNotTheAttempts()
     {
         MqttProbeReport report = new([
             new(new(1883, MqttTransport.Tcp), MqttProbeOutcome.Unreachable),
@@ -136,8 +139,10 @@ public class MqttStatusTextTests
 
         string sentence = MqttStatusText.Describe(report);
 
-        Assert.StartsWith("Connected over WebSocket", sentence, StringComparison.Ordinal);
-        Assert.Contains("TCP could not be reached", sentence);
+        // The question was whether these settings work. The answer is yes, over what and on which
+        // port — a leg that failed on the way there is the search describing itself, and under a
+        // success it reads as a fault to go and investigate.
+        Assert.Equal("Connected over WebSocket on port 443.", sentence);
     }
 
     [Fact]
@@ -151,7 +156,8 @@ public class MqttStatusTextTests
 
         string sentence = MqttStatusText.Describe(report);
 
-        Assert.Equal("Neither transport reached the broker. TCP did not answer; WebSocket did not answer.",
+        // Nothing answered anywhere, which is the one case where what was tried is the finding.
+        Assert.Equal("The broker was not reached. TCP did not answer; WebSocket did not answer.",
             sentence);
     }
 

@@ -12,8 +12,31 @@
        tag must match it — .github/workflows/release.yml fails on a mismatch. Pre-1.0: the minor
        carries breaking changes. -->
   <PropertyGroup>
-    <Version>0.4.0</Version>
+    <Version>0.5.0</Version>
   </PropertyGroup>
+
+  <!-- The commit every assembly reports alongside its version. A consumer builds the module from a
+       sibling working tree rather than from the pinned revision, so the number alone cannot say
+       which source produced a binary: between two tags every revision carries the same three
+       digits. SourceRevisionId is what the SDK appends to AssemblyInformationalVersion, which
+       MqttModule.Version reads back off the loaded assembly. A tree with no git available stamps
+       nothing and reports the bare number. -->
+  <PropertyGroup>
+    <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <Target Name="StampSourceRevision" BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo"
+          Condition="'$(SourceRevisionId)' == ''">
+    <Exec Command="git rev-parse --short=7 HEAD" WorkingDirectory="$(MSBuildThisFileDirectory)"
+          ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low"
+          ContinueOnError="true" IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_HeadRevision"/>
+      <Output TaskParameter="ExitCode" PropertyName="_HeadRevisionExitCode"/>
+    </Exec>
+    <PropertyGroup Condition="'$(_HeadRevisionExitCode)' == '0' and '$(_HeadRevision)' != ''">
+      <SourceRevisionId>$(_HeadRevision.Trim())</SourceRevisionId>
+    </PropertyGroup>
+  </Target>
 
   <!-- Studio identity and packaging metadata. Per-assembly values (AssemblyTitle, Product,
        Description) stay in the project that owns them. -->

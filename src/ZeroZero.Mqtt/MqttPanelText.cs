@@ -263,24 +263,33 @@ public sealed class MqttPanelText
         };
     }
 
-    /// <summary>The sentence for a whole run.</summary>
+    /// <summary>The sentence for a whole run: the outcome, never the attempts it took to get
+    /// there.</summary>
     /// <remarks>
-    /// The shapes differ because the user's next move does. Reaching the broker makes that attempt
-    /// the story and any earlier one mere context ("connected over WebSocket, TCP was refused" sends
-    /// nobody to check their password). Reaching nothing at all is the opposite: no single attempt
-    /// explains it, so what was tried is listed — de-duplicated, because a sweep of eight candidates
-    /// mostly repeats the same clause and a wall of them says less than one of each.
+    /// <para>The question the button was pressed to answer is whether these settings work, so a run
+    /// that connected is answered by the endpoint it connected on and by nothing else. An attempt
+    /// that failed on the way there is the search describing itself, and printed under a success it
+    /// reads as a fault to go and investigate.</para>
+    /// <para>A broker that answered and said no is its own whole answer for the same reason: what
+    /// else was tried adds nothing to a rejected credential. Only a run that reached nothing at all
+    /// lists what it tried, because there the attempts are the finding — de-duplicated, since a
+    /// sweep of eight candidates mostly repeats one clause and a wall of them says less than one of
+    /// each.</para>
     /// </remarks>
     public string Describe(MqttProbeReport report)
     {
         if (report.Attempts.Count == 0) return _text.Get("ReportNoHost");
 
         var last = report.Attempts[^1];
-        string verdict = Describe(last.Result, last.Candidate.Transport);
-        if (report.Attempts.Count == 1) return verdict;
 
-        if (MqttEndpointPlan.Answered(last.Outcome))
-            return _text.Format("ReportWithContext", verdict, Fragment(Context(report, last)));
+        // The working configuration, which is the other half of "does this work": the port is an
+        // address, so an invariant rendering keeps a group separator out of four digits.
+        if (report.Succeeded)
+            return _text.Format("ReportConnected", Name(last.Candidate.Transport),
+                                last.Candidate.Port.ToString(CultureInfo.InvariantCulture));
+
+        if (report.Attempts.Count == 1 || MqttEndpointPlan.Answered(last.Outcome))
+            return Describe(last.Result, last.Candidate.Transport);
 
         return _text.Format("ReportNothingReached",
             string.Join(_text.Get("ReportFragmentJoin"),
@@ -289,17 +298,6 @@ public sealed class MqttPanelText
 
     /// <summary>Whether a result should be shown in the error colour rather than as plain status.</summary>
     public static bool IsFailure(MqttProbeReport report) => !report.Succeeded;
-
-    /// <summary>The attempt worth naming beside the verdict: the last one on the other transport,
-    /// which is the fact the user came for. Falls back to the one immediately before when the whole
-    /// run stayed on a single transport.</summary>
-    private static MqttEndpointAttempt Context(MqttProbeReport report, MqttEndpointAttempt verdict)
-    {
-        for (int i = report.Attempts.Count - 2; i >= 0; i--)
-            if (report.Attempts[i].Candidate.Transport != verdict.Candidate.Transport)
-                return report.Attempts[i];
-        return report.Attempts[^2];
-    }
 
     /// <summary>One attempt as a clause, for the sentences that name more than one transport.</summary>
     private string Fragment(MqttEndpointAttempt attempt) =>

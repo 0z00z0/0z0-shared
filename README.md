@@ -140,6 +140,8 @@ protocol-only and names no entity, sensor or device class. Contains:
   per key, never per index.
 - **`MqttStrings`**, **`MqttPanelText`**, **`MqttStatusText`** — the module's built-in en-GB wording,
   which is what the panel falls back to.
+- **`MqttModule`** — which build of the module is loaded, as `0.5.0+1a2b3c4`, reflected off the
+  running assembly rather than compiled in, so it can disagree with a consumer's pin and say so.
 
 ### `src/ZeroZero.Mqtt.Discovery`
 

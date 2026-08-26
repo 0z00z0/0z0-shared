@@ -77,7 +77,7 @@
     <value>{0} min ago</value>
   </data>
   <data name="Applied" xml:space="preserve">
-    <value>Applied.</value>
+    <value>Applied</value>
   </data>
   <data name="ButtonApply" xml:space="preserve">
     <value>Apply</value>
@@ -116,7 +116,7 @@
     <value>could not be reached ({0})</value>
   </data>
   <data name="DescApply" xml:space="preserve">
-    <value>Reconnects once.</value>
+    <value>Saves every broker field above and reconnects once. Nothing above is live until then.</value>
   </data>
   <data name="DescDeviceId" xml:space="preserve">
     <value>Used in every topic and entity id. Changing it moves them all.</value>
@@ -125,7 +125,7 @@
     <value>Shown wherever this device appears.</value>
   </data>
   <data name="DescDiscoveryPrefix" xml:space="preserve">
-    <value>Prefix for discovery topics. Change only to match the broker.</value>
+    <value>Prefix for discovery topics. Change only for a consumer that listens elsewhere.</value>
   </data>
   <data name="DescEncryption" xml:space="preserve">
     <value>Encrypts traffic to the broker.</value>
@@ -137,7 +137,7 @@
     <value>Automatic tries the standard ports.</value>
   </data>
   <data name="DescPublishSwitch" xml:space="preserve">
-    <value>Publishes this application's state to an MQTT broker.</value>
+    <value>Publishes this application&apos;s state to an MQTT broker.</value>
   </data>
   <data name="DescTransport" xml:space="preserve">
     <value>TCP direct, or WebSocket through a proxy.</value>
@@ -146,7 +146,7 @@
     <value>Leave blank for anonymous access.</value>
   </data>
   <data name="DeviceIdAcknowledge" xml:space="preserve">
-    <value>I understand everything referring to the old ID stops working</value>
+    <value>I understand that anything using the old ID stops working, and its recorded history is not carried over</value>
   </data>
   <data name="DeviceIdCancel" xml:space="preserve">
     <value>Cancel</value>
@@ -160,18 +160,24 @@
   <data name="DeviceIdNew" xml:space="preserve">
     <value>New ID</value>
   </data>
+  <data name="DeviceIdNoAlnum" xml:space="preserve">
+    <value>An id must contain at least one letter or digit.</value>
+  </data>
   <data name="DeviceIdPreview" xml:space="preserve">
     <value>Publishes as: {0}</value>
   </data>
   <data name="DeviceIdTitle" xml:space="preserve">
     <value>Change device ID</value>
   </data>
+  <data name="DeviceIdTooLong" xml:space="preserve">
+    <value>An id can be at most {0} characters.</value>
+  </data>
   <data name="DeviceIdWarning" xml:space="preserve">
-    <value>Changing the ID renames every entity this application publishes. Anything pointing at the old entities stops resolving — no error is reported, the entities are simply no longer there.
+    <value>Changing the ID renames every entity this application publishes. Anything pointing at the old names stops working, with no error reported anywhere.
 
-The old entities are removed from the broker on confirmation. Their recorded history is not carried over to the new ones.
+The old entities are removed from the broker, and their recorded history does not carry over to the new ones.
 
-An empty box restores the name derived from this machine.</value>
+Leaving the box empty falls back to the name derived from this machine.</value>
   </data>
   <data name="HeadingBroker" xml:space="preserve">
     <value>Broker</value>
@@ -185,62 +191,62 @@ An empty box restores the name derived from this machine.</value>
   <data name="HeadingStatus" xml:space="preserve">
     <value>Status</value>
   </data>
-  <data name="InfoApply" xml:space="preserve">
-    <value>Commits every field above as one change and remakes the connection once. Nothing above is live until it is pressed.</value>
-  </data>
   <data name="InfoBroker" xml:space="preserve">
-    <value>Changes here take effect on Apply, which re-establishes the connection once — nothing here is live until then. Anything left on Automatic is detected by a check of its own, which runs after a change here and when Test connection or Apply is pressed, never merely by opening this page.</value>
+    <value>Changes here take effect on Apply, which remakes the connection once. Anything left on Automatic is found by trying the broker when Test connection or Apply is pressed, and at no other time.</value>
   </data>
   <data name="InfoBrokerInUse" xml:space="preserve">
-    <value>The address the live connection is using. The saved values, not the ones being edited in the fields below; the two differ until Apply.</value>
+    <value>The address the live connection is using — the saved settings, not any unapplied edit in the fields below.</value>
   </data>
   <data name="InfoConnection" xml:space="preserve">
-    <value>Where the broker settings in force came from, and whether the live link is encrypted. A port, transport or encryption left on Automatic is found by trying the host, and the answer is remembered against that host and user name. Setting one by hand pins it, and nothing is tried around it. Automatic can end up in clear text on its own, which is why this row says which it is.</value>
+    <value>Where the broker settings in force came from, and whether the live link is encrypted — a setting left on Automatic can land on either.</value>
   </data>
   <data name="InfoDevice" xml:space="preserve">
-    <value>How this machine appears to whatever consumes the entities: one display name, and one identifier every topic is built from.</value>
+    <value>How this machine appears to anything reading its entities: a display name, and the identifier every topic is built from.</value>
   </data>
   <data name="InfoDeviceId" xml:space="preserve">
-    <value>Changing it renames every published entity, so it has a confirmation of its own rather than riding the Apply batch.</value>
+    <value>Lower-case letters, digits and underscores only, up to {0} characters. An empty value falls back to the name derived from this machine.</value>
   </data>
   <data name="InfoDeviceName" xml:space="preserve">
-    <value>Cosmetic — it renames nothing else. An empty box falls back to the name derived from this machine, shown as the placeholder. Saved as it is typed, not behind Apply.</value>
+    <value>Cosmetic — it renames nothing else. An empty box falls back to the name derived from this machine, shown as the placeholder. Saved when the box is left, not on Apply.</value>
   </data>
   <data name="InfoDiscoveryPrefix" xml:space="preserve">
-    <value>Entities are announced using the Home Assistant MQTT Discovery convention, an openly published specification that some MQTT consumers follow and others ignore. The prefix only needs changing for a consumer that listens elsewhere.</value>
+    <value>Entities are announced using the Home Assistant MQTT Discovery convention, an openly published specification that some MQTT consumers follow and others ignore. Change the prefix only for a consumer that listens elsewhere.</value>
   </data>
   <data name="InfoEncryption" xml:space="preserve">
-    <value>Automatic tries each endpoint encrypted first and only then in clear text. A broker that answers and refuses the credentials ends the search, so a wrong password never causes a retry in clear text; nor does a broker that offered a certificate this machine does not trust. Only an endpoint with no encryption on offer at all is retried plain. An explicit choice is never reached around, and a broker reached over WebSocket through a public front door is encrypted by its address rather than by this setting.</value>
+    <value>Automatic tries each endpoint encrypted first, and falls back to clear text only where the broker offers no encryption at all — a rejected password or an untrusted certificate ends the search instead. A choice made by hand is always used, and a host typed as a wss:// address is encrypted whatever this is set to.</value>
   </data>
   <data name="InfoHost" xml:space="preserve">
-    <value>A name or an address. A host written as a ws:// or wss:// address is used exactly as typed, which covers a broker served under a path the port alone cannot express.</value>
+    <value>A name or an address. A full ws:// or wss:// address is used exactly as typed, including any path.</value>
   </data>
   <data name="InfoLastCommand" xml:space="preserve">
-    <value>The most recent command the broker sent. Commands arrive on the topics the announced entities subscribe to. Nothing is shown until one is acted on.</value>
+    <value>The most recent command the broker sent that was acted on. One that was refused never appears here.</value>
   </data>
   <data name="InfoLastPublish" xml:space="preserve">
-    <value>When a message last reached the broker. Unchanged values are not re-sent, so this stands still while nothing changes. Publish now sends the current state for the groups switched on below; it announces nothing and re-declares no entity.</value>
+    <value>When a message last reached the broker. Unchanged values are not re-sent, so this stands still while nothing changes. Publish now sends the current state for the groups switched on below.</value>
   </data>
   <data name="InfoPassword" xml:space="preserve">
-    <value>Never written to the log, never published, and never part of what a found endpoint is remembered against.</value>
+    <value>Never written to the log, and never published.</value>
   </data>
   <data name="InfoPort" xml:space="preserve">
-    <value>Automatic tries the ports brokers are commonly served on, in turn, and remembers the one that answered. The list covers plain MQTT, MQTT over encryption, and the front-door ports a broker published over WebSocket answers on. The last entry takes a port typed by hand.</value>
+    <value>Automatic tries the ports brokers commonly use, encrypted and plain, and remembers the one that answered. Choose Other… to type a port.</value>
   </data>
   <data name="InfoPublishSwitch" xml:space="preserve">
-    <value>The master switch for the whole feature. Nothing on the network is touched while it is off, and the rest of this panel is hidden because none of it applies. This switch takes effect immediately; the broker fields take effect on Apply.</value>
+    <value>The master switch for the whole feature. Nothing on the network is touched while it is off, and it takes effect immediately.</value>
   </data>
   <data name="InfoStatus" xml:space="preserve">
-    <value>Read-only, and about the live connection rather than the fields below. The two ages keep counting up while this page is open.</value>
+    <value>Read-only, and about the live connection rather than the fields below.</value>
   </data>
   <data name="InfoTest" xml:space="preserve">
-    <value>Tries the values in the fields above, including ones not yet applied, over a throwaway connection of its own. It commits nothing at all: not the fields, and not where the broker answered.</value>
+    <value>Tries the values in the fields above, including ones not yet applied, over a throwaway connection of its own. It saves nothing at all: not the fields, and not where the broker answered. Anything left on Automatic may take several addresses to find; the result names the one that answered, and lists what was tried only when none of them did.</value>
   </data>
   <data name="InfoTransport" xml:space="preserve">
-    <value>Automatic tries TCP first and falls back to WebSocket, then remembers whichever answered and starts there next time — the usual case for a machine that is on the internal network sometimes and outside it at others. An explicit choice is never reached around.</value>
+    <value>Automatic tries TCP first, then WebSocket, and remembers whichever answered — useful for a machine that is on the internal network sometimes and outside it at others. A transport chosen by hand is always used.</value>
   </data>
   <data name="InfoUsername" xml:space="preserve">
-    <value>Part of what a found endpoint is remembered against: a broker commonly fronts a separate listener per account, so changing the user name starts the search again.</value>
+    <value>Changing the username starts the search for the broker endpoint again: a broker often serves a separate listener per account.</value>
+  </data>
+  <data name="ModuleVersion" xml:space="preserve">
+    <value>MQTT module {0}.</value>
   </data>
   <data name="NotApplied" xml:space="preserve">
     <value>Not applied</value>
@@ -264,7 +270,7 @@ An empty box restores the name derived from this machine.</value>
     <value>Port must be between {0} and {1}.</value>
   </data>
   <data name="ProbeAuthRejected" xml:space="preserve">
-    <value>The broker answered over {0} but rejected these credentials ({1}).</value>
+    <value>The broker rejected these credentials over {0} ({1}).</value>
   </data>
   <data name="ProbeFailed" xml:space="preserve">
     <value>The connection over {0} failed — {1}.</value>
@@ -273,7 +279,7 @@ An empty box restores the name derived from this machine.</value>
     <value>The broker refused the connection over {0} ({1}).</value>
   </data>
   <data name="ProbeSuccess" xml:space="preserve">
-    <value>Connected over {0}. The broker accepted these settings.</value>
+    <value>Connected over {0}.</value>
   </data>
   <data name="ProbeTimedOut" xml:space="preserve">
     <value>The broker did not answer over {0} within {1} seconds.</value>
@@ -282,7 +288,7 @@ An empty box restores the name derived from this machine.</value>
     <value>The broker does not accept encrypted connections over {0} on that port — {1}.</value>
   </data>
   <data name="ProbeTlsUntrusted" xml:space="preserve">
-    <value>The encrypted connection over {0} was not established — {1}. Check the certificate trust setting.</value>
+    <value>The encrypted connection over {0} failed — {1}.</value>
   </data>
   <data name="ProbeUnreachable" xml:space="preserve">
     <value>Could not reach the broker over {0} — {1}.</value>
@@ -294,7 +300,7 @@ An empty box restores the name derived from this machine.</value>
     <value>{0} {1}.</value>
   </data>
   <data name="ProgressNoAnswer" xml:space="preserve">
-    <value>{0} — no answer recorded.</value>
+    <value>{0} — no answer.</value>
   </data>
   <data name="ProgressPort" xml:space="preserve">
     <value>Trying {0}…</value>
@@ -317,6 +323,9 @@ An empty box restores the name derived from this machine.</value>
   <data name="PublishFailed" xml:space="preserve">
     <value>Nothing reached the broker</value>
   </data>
+  <data name="ReportConnected" xml:space="preserve">
+    <value>Connected over {0} on port {1}.</value>
+  </data>
   <data name="ReportFragment" xml:space="preserve">
     <value>{0} {1}</value>
   </data>
@@ -327,10 +336,7 @@ An empty box restores the name derived from this machine.</value>
     <value>No broker host set.</value>
   </data>
   <data name="ReportNothingReached" xml:space="preserve">
-    <value>Neither transport reached the broker. {0}.</value>
-  </data>
-  <data name="ReportWithContext" xml:space="preserve">
-    <value>{0} {1}.</value>
+    <value>The broker was not reached. {0}.</value>
   </data>
   <data name="RowApply" xml:space="preserve">
     <value>Apply these settings</value>
@@ -357,7 +363,7 @@ An empty box restores the name derived from this machine.</value>
     <value>Host</value>
   </data>
   <data name="RowLastCommand" xml:space="preserve">
-    <value>Last command received</value>
+    <value>Last command accepted</value>
   </data>
   <data name="RowLastPublish" xml:space="preserve">
     <value>Last publish</value>
@@ -375,7 +381,7 @@ An empty box restores the name derived from this machine.</value>
     <value>Username</value>
   </data>
   <data name="Saved" xml:space="preserve">
-    <value>Saved.</value>
+    <value>Saved</value>
   </data>
   <data name="StateConnected" xml:space="preserve">
     <value>Connected</value>
@@ -418,6 +424,63 @@ An empty box restores the name derived from this machine.</value>
   </data>
   <data name="StatusProbing" xml:space="preserve">
     <value>Looking for the broker</value>
+  </data>
+  <data name="SubjectBroker" xml:space="preserve">
+    <value>the broker section</value>
+  </data>
+  <data name="SubjectBrokerInUse" xml:space="preserve">
+    <value>the broker in use</value>
+  </data>
+  <data name="SubjectConnection" xml:space="preserve">
+    <value>how the connection was found</value>
+  </data>
+  <data name="SubjectDevice" xml:space="preserve">
+    <value>the device section</value>
+  </data>
+  <data name="SubjectDeviceId" xml:space="preserve">
+    <value>the device ID</value>
+  </data>
+  <data name="SubjectDeviceName" xml:space="preserve">
+    <value>the device name</value>
+  </data>
+  <data name="SubjectDiscoveryPrefix" xml:space="preserve">
+    <value>the discovery prefix</value>
+  </data>
+  <data name="SubjectEncryption" xml:space="preserve">
+    <value>the encrypted connection</value>
+  </data>
+  <data name="SubjectHost" xml:space="preserve">
+    <value>the broker host</value>
+  </data>
+  <data name="SubjectLastCommand" xml:space="preserve">
+    <value>the last command accepted</value>
+  </data>
+  <data name="SubjectLastPublish" xml:space="preserve">
+    <value>the last publish time</value>
+  </data>
+  <data name="SubjectPassword" xml:space="preserve">
+    <value>the broker password</value>
+  </data>
+  <data name="SubjectPort" xml:space="preserve">
+    <value>the broker port</value>
+  </data>
+  <data name="SubjectPublishGroups" xml:space="preserve">
+    <value>the publishing groups</value>
+  </data>
+  <data name="SubjectPublishSwitch" xml:space="preserve">
+    <value>the publish switch</value>
+  </data>
+  <data name="SubjectStatus" xml:space="preserve">
+    <value>the status block</value>
+  </data>
+  <data name="SubjectTest" xml:space="preserve">
+    <value>Test connection</value>
+  </data>
+  <data name="SubjectTransport" xml:space="preserve">
+    <value>the transport</value>
+  </data>
+  <data name="SubjectUsername" xml:space="preserve">
+    <value>the broker username</value>
   </data>
   <data name="SummaryBroker" xml:space="preserve">
     <value>{0} · {1} · {2} · {3}</value>

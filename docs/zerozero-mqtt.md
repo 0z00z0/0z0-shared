@@ -888,9 +888,26 @@ the same broker legitimately answers differently from inside and outside a netwo
 fronts a separate listener per account. An explicit port, transport or encryption is honoured
 exactly and is never reached around, remembered entry included.
 
-A probe runs only on `BrokerSettingChanged`, `TestConnection` or `Apply`, and only while publishing
-is enabled and a host is set. Showing a settings page is deliberately not a trigger: a probe costs
-real seconds and puts the machine on the network.
+A probe runs only on `TestConnection` or `Apply` — the two buttons — and only while publishing is
+enabled and a host is set. **Editing a field is not a trigger, and neither is showing the page.** A
+probe costs real seconds and puts the machine on the network, so it follows a press and nothing
+else; the guarantee that opening the settings page touches no broker holds equally while the fields
+are being typed into. What is remembered leads the sweep once one runs, and decides the order only.
+
+### What the module reports about itself
+
+`MqttModule.Version` is the module's version **as the loaded assembly carries it**, in the shape
+`0.5.0+1a2b3c4`. It is reflected off `AssemblyInformationalVersionAttribute` rather than compiled in
+from `Directory.Build.props`, because a consumer builds against a sibling working tree rather than
+the revision its pin names — a value that cannot disagree with the pin answers nothing. The commit
+half comes from `SourceRevisionId`, stamped in `Directory.Build.props` from `git rev-parse` at build
+time; a tree with no git available reports the bare number.
+
+`MqttModule.Read(assembly)` answers the same question for any assembly, so a host can report its own
+build the same way. The panel appends the module's own to the publish switch's info icon, so a
+consumer that does nothing at all still shows which build produced the behaviour being described —
+version information conventionally lives in an About box, and nobody opens one while chasing a
+broker that will not connect.
 
 ### Reconnect, and what a broker is charged
 

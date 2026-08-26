@@ -260,5 +260,8 @@ to load leaves a readable panel rather than blank controls.
 - It never writes a settings store directly — every commit goes through `IMqttSettingsStore.Update`,
   so a host whose configuration is one document keeps its own read-modify-write.
 - **Test connection commits nothing at all**: not the fields, and not where the broker answered.
+- **It never touches the network while a field is being edited.** The endpoint check runs on Test
+  connection and on Apply, and on nothing else — not on a field settling, not on focus leaving a
+  box, and not on the page being shown.
 - Nothing in the Broker group takes effect until Apply, and an unapplied edit is marked beside the
   section heading rather than inside the group that holds the fields.

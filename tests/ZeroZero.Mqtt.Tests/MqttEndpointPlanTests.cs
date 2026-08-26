@@ -221,6 +221,17 @@ public class MqttEndpointPlanTests
     }
 
     [Fact]
+    public void ShouldProbe_HasNoTriggerThatIsNotAButtonPress()
+    {
+        // The guarantee this pins: nothing puts the machine on the network except a press of Test
+        // connection or of Apply. A trigger for a field settling, a timer or a page being shown is
+        // the defect, and adding one back has to fail here before it can reach a user.
+        Assert.Equal(
+            new[] { MqttProbeTrigger.TestConnection, MqttProbeTrigger.Apply },
+            Enum.GetValues<MqttProbeTrigger>());
+    }
+
+    [Fact]
     public void ShouldProbe_NeedsPublishingOnAndAHost()
     {
         Assert.True(MqttEndpointPlan.ShouldProbe(MqttProbeTrigger.TestConnection, true, "broker.invalid"));

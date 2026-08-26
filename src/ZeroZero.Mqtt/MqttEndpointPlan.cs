@@ -196,16 +196,16 @@ public static class MqttEndpointPlan
     /// <summary>Whether an explicit action should start a probe. Pure.</summary>
     /// <remarks>
     /// The trigger is the gate, not the memory: a probe costs real seconds and puts the machine on
-    /// the network, so it happens because somebody asked for it. <see cref="MqttProbeTrigger"/> is
-    /// the closed set of things that count as asking, and showing a settings page is deliberately not
-    /// one of them. What is remembered still leads the sweep once one runs — it decides the order,
-    /// never whether there is a sweep at all.
+    /// the network, so it happens because somebody pressed a button for it. <see cref="MqttProbeTrigger"/>
+    /// is the closed set of things that count as asking; showing a settings page and editing a field
+    /// are both deliberately outside it, so the guarantee that opening the page touches no broker
+    /// holds equally while the fields are being typed into. What is remembered still leads the sweep
+    /// once one runs — it decides the order, never whether there is a sweep at all.
     /// </remarks>
     public static bool ShouldProbe(MqttProbeTrigger trigger, bool publishingEnabled, string host) =>
         // Nothing is probed while publishing is off: in that state the host application touches no
         // network at all, and a probe would be the one exception. A blank host has nothing to probe.
-        trigger is MqttProbeTrigger.BrokerSettingChanged or MqttProbeTrigger.TestConnection
-                or MqttProbeTrigger.Apply
+        trigger is MqttProbeTrigger.TestConnection or MqttProbeTrigger.Apply
         && publishingEnabled
         && !string.IsNullOrWhiteSpace(host);
 
