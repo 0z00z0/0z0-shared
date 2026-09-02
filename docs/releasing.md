@@ -12,6 +12,14 @@ property (`MqttVersion` in `Versions.props`), the tag prefix (`mqtt-v0.7.0`), th
 projects by it, so the rule is load-bearing, not cosmetic. A project that does not pack — the
 interactive harness — is never part of a release, whatever its name.
 
+**A new assembly's name decides which component it joins, and nothing checks that the join was
+meant.** Whatever follows the first segment is invisible to the key, so an assembly named
+`ZeroZero.Primitives.WinUI` would be `primitives`: released under the plain assembly's tag, at its
+version, in its notes, and bumping the plain assembly's version with every change of its own. An
+assembly that must version on its own takes a first segment no `<Key>Version` in `Versions.props`
+declares yet — the visual controls assembly is `ZeroZero.Controls.WinUI`, key `controls`, for that
+reason. Check the name against the declared keys before creating the project.
+
 ## What every component depends on
 
 Packing turns a project reference on another component into a package dependency on that
