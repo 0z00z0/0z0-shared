@@ -73,5 +73,10 @@ file by path from its own project:
 The props file only states `IncludeSourceRevisionInInformationalVersion`, which is the SDK's default
 already; the targets file is the stamp.
 
+The stamp is not part of the [build kit](zerozero-build.md), although both are build files: it is
+the build half of `AssemblyVersionText`, so it ships with the assembly that reads it and the one
+reference delivers a working version display. The kit neither duplicates nor imports it, and this
+repository's `Directory.Build.props` imports both, each from its own folder.
+
 The tests are in `tests/ZeroZero.Primitives.Tests`, plain `net10.0`, and run on any machine with the
 SDK: no desktop, no broker, no network.

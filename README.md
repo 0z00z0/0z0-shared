@@ -24,6 +24,10 @@ rule.
 | Primitives | `primitives` | `ZeroZero.Primitives` | The two-member log sink and its no-op, the reader of the version an assembly reports with its About-box form, the coalescing gate, and the source-revision stamp as build properties and targets. The MQTT module writes to the sink and runs every retained channel on the gate. | [`docs/zerozero-primitives.md`](docs/zerozero-primitives.md) |
 | Win32 | `win32` | `ZeroZero.Win32` | The raw Win32 layer: monitor and DPI metrics as plain numbers, the native task dialog and message boxes, dark native chrome. Headless, so a console tool can take it; the About window takes its monitor metrics from here. | [`docs/zerozero-win32.md`](docs/zerozero-win32.md) |
 
+| Build machinery | Key | Package | What it is | Guide |
+|---|---|---|---|---|
+| Build | `build` | `ZeroZero.Build` | The build kit every repository in the family shares: the language and studio-identity property blocks, the unpackaged WinUI application block, the application manifest as a token-substituted template, the signing script with its publish-time target, and the third-party pins under central package management. No assembly; taken as an MSBuild SDK or by path, never as a package reference. This repository builds under it. | [`docs/zerozero-build.md`](docs/zerozero-build.md) |
+
 Dependencies point downward: a component's projects take foundation and each other. The MQTT
 projects take `ZeroZero.Primitives` and `ZeroZero.Config`, the About window takes `ZeroZero.Win32`,
 and the MQTT panel additionally references `ZeroZero.Brand.WinUI`, for the info icon and nothing
@@ -33,7 +37,9 @@ it.
 Third-party packages are the Windows App SDK, the Community Toolkit's settings controls, and
 **MQTTnet** — the last confined to `ZeroZero.Mqtt`, where no MQTTnet type reaches a public
 signature. `ZeroZero.Brand.Core`, `ZeroZero.Config`, `ZeroZero.Primitives` and `ZeroZero.Win32`
-reference nothing at all.
+reference nothing at all. Every third-party version is pinned once, in the build kit's
+`ZeroZero.Packages.props`, which this repository's `Directory.Packages.props` imports and every
+consuming repository imports the same way.
 
 `ZeroZero.Brand.WinUI.TestHarness` is an interactive exe that opens either UI surface, or the native
 dialogs, on screen from fabricated state; it is never packed and nothing references it. The capture
@@ -88,6 +94,7 @@ components are not yet on the feed. [`docs/releasing.md`](docs/releasing.md) is 
 | [`docs/zerozero-config.md`](docs/zerozero-config.md) | The config foundation assembly. |
 | [`docs/zerozero-primitives.md`](docs/zerozero-primitives.md) | The primitives foundation assembly: the log sink, the version reader, the coalescing gate and the source-revision stamp. |
 | [`docs/zerozero-win32.md`](docs/zerozero-win32.md) | The Win32 foundation assembly, and the manifest dependency its task dialog needs. |
+| [`docs/zerozero-build.md`](docs/zerozero-build.md) | The build kit: the shared property blocks, the WinUI application block, the manifest template, signing, the pin rule and its guards, and how a repository takes it on either route. |
 | [`docs/consume-brand-about-control.md`](docs/consume-brand-about-control.md) | `BrandAboutControl`, as an adoption checklist. |
 | [`docs/consume-mqtt-settings-panel.md`](docs/consume-mqtt-settings-panel.md) | The panel alone, as an adoption checklist. |
 | [`docs/releasing.md`](docs/releasing.md) | Cutting a component release, what the workflow guards, and how to run the guards locally. |

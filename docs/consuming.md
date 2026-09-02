@@ -253,10 +253,22 @@ token every restore then needs.
   its process loads; [`zerozero-win32.md`](zerozero-win32.md) carries the declaration. Without it
   `NativeTaskDialog.IsAvailable` is false and `Show` throws, naming the dependency.
 
+## The build kit
+
+Every repository in the family also takes the [build kit](zerozero-build.md), on the same route as
+its components: three imports, in `Directory.Build.props`, `Directory.Build.targets` and
+`Directory.Packages.props`. It carries the shared property blocks, the WinUI application block, the
+manifest template, signing, and the pins below — and the rule that every repository pins through
+it, which its guards enforce.
+
 ## Third-party pins
 
-Every version is declared centrally, in `Directory.Packages.props`. The pins do not all behave the
-same way, and the difference is what a consumer needs:
+Every version is declared once, in the build kit's `ZeroZero.Packages.props`, which this
+repository's `Directory.Packages.props` and every consuming repository's import. A consumer that
+imports the file resolves exactly these versions: an `Update`, a second `PackageVersion` or a
+`VersionOverride` fails the build (`ZZB006`, `NU1013`), and a pin moves in the kit and nowhere
+else. The pins do not all behave the same way, and the difference matters to a consumer that has
+not yet taken the kit:
 
 | Package | Version | What the pin is |
 |---|---|---|
@@ -264,10 +276,15 @@ same way, and the difference is what a consumer needs:
 | `Microsoft.Windows.SDK.BuildTools` | `10.0.28000.2270` | A **floor**. |
 | `CommunityToolkit.WinUI.Controls.SettingsControls` | `8.2.251219` | A **ceiling**. |
 | `MQTTnet` | `5.2.0.1603` | Transitive only, and no type of it reaches a public signature. |
+| `Microsoft.NET.Test.Sdk` | `18.8.1` | The test trio, for a consumer's own test projects. |
+| `xunit` | `2.9.3` | |
+| `xunit.runner.visualstudio` | `3.1.5` | |
 
-**The two Windows App SDK pins are a floor, not a lock.** A consuming app may pin higher, and NuGet
-unifies a package graph on the version nearest the consuming project, so the app's own pin governs
-the Windows App SDK runtime that is actually resolved for the whole build.
+**The two Windows App SDK pins are a floor, not a lock.** A consuming app that pins on its own may
+pin higher, and NuGet unifies a package graph on the version nearest the consuming project, so the
+app's own pin governs the Windows App SDK runtime that is actually resolved for the whole build.
+Under the kit both sides carry the same number by construction, and a newer runtime is taken by
+raising the pin in the kit.
 
 **The Community Toolkit pin is a ceiling and behaves the opposite way.** A consuming app holding a
 direct reference *below* this version fails to restore with **NU1605**, an error rather than a
