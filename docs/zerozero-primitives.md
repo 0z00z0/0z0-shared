@@ -26,9 +26,9 @@ once the version it references is on the feed, so a change here releases first.
   no-op every component defaults to, so a host that supplies nothing still runs, and a host can tell
   "nothing wired" by identity. The exception handed to `Error` may be null: a component reports a
   refusal with a message alone. A component that handles a credential sanitises before it calls —
-  type and message only — so nothing secret reaches the host's log through this seam. The MQTT
-  module's `IMqttLog` is this interface under the module's own name; an implementation of it is a
-  sink.
+  type and message only — so nothing secret reaches the host's log through this seam. Every
+  component is typed on this interface directly; no component carries an alias of it under its own
+  name.
 - **`AssemblyVersionText.Read(assembly)`** — the version the assembly carries: the informational
   version where one is stamped (`0.7.0+1a2b3c4`), the assembly version otherwise, and the empty
   string where the assembly carries neither — never a fabricated number. Read off the loaded assembly

@@ -1308,7 +1308,7 @@ at risk, and the backup is what stands in for that difference.
 | Was | Is |
 |---|---|
 | `ZeroZero.Mqtt.HomeAssistant` | `ZeroZero.Mqtt.Discovery` |
-| `Microsoft.Extensions.Logging` abstractions | `ILogSink` in `ZeroZero.Primitives`, two members, with `NullLogSink.Instance` as the default; `IMqttLog` is the same interface under the module's name |
+| `Microsoft.Extensions.Logging` abstractions | `ILogSink` in `ZeroZero.Primitives`, two members, with `NullLogSink.Instance` as the default |
 | — | `ZeroZero.Primitives` and `ZeroZero.Config` at the base of the graph |
 
 **The entity model**
