@@ -29,6 +29,16 @@ public class MonitorMetricsTests
     }
 
     [Fact]
+    public void ForCursor_ReportsTheMonitorUnderTheCursorAndItsScale()
+    {
+        // Read the same monitor through the test's own imports: the work area, not the whole
+        // monitor, and the monitor's DPI, not the primary's.
+        var expected = CursorMonitor.Read();
+
+        Assert.Equal(expected, MonitorMetrics.ForCursor());
+    }
+
+    [Fact]
     public void ScaleForWindow_IsOneForAHandleThatIsNotAWindow()
     {
         Assert.Equal(1.0, MonitorMetrics.ScaleForWindow(IntPtr.Zero));
