@@ -8,12 +8,10 @@
     <NeutralLanguage>en-GB</NeutralLanguage>
   </PropertyGroup>
 
-  <!-- The one place the module's version is declared. Every assembly reports it, every package
-       carries it, and a release tag must match it — .github/workflows/release.yml fails on a
-       mismatch. Pre-1.0: the minor carries breaking changes. -->
-  <PropertyGroup>
-    <Version>0.6.0</Version>
-  </PropertyGroup>
+  <!-- Versions are per component and live in Versions.props, one property each; a project picks
+       its own up as <Version>$(<Key>Version)</Version>. Nothing here sets Version, so a project
+       that declares none reports the SDK default — which only the unpublished harness does. -->
+  <Import Project="$(MSBuildThisFileDirectory)Versions.props" />
 
   <!-- The commit every assembly reports alongside its version. A consumer builds the module from a
        sibling working tree rather than from the pinned revision, so the number alone cannot say
@@ -51,7 +49,7 @@
     <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
   </PropertyGroup>
 
-  <!-- One readme for all six packages: what the module is, and the fact that the feed authenticates
+  <!-- One readme for every package: what the library is, and the fact that the feed authenticates
        every read. Named by PackageReadmeFile above, which only resolves if the file is packed to the
        package root as well. Harmless in a project that does not pack. -->
   <ItemGroup>

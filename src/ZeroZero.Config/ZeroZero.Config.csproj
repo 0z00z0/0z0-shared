@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>ZeroZero.Config</RootNamespace>
+    <Version>$(ConfigVersion)</Version>
 
     <AssemblyTitle>ZeroZero.Config</AssemblyTitle>
     <Product>ZeroZero.Config</Product>

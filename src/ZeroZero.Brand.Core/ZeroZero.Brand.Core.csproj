@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>ZeroZero.Brand.Core</RootNamespace>
+    <Version>$(BrandVersion)</Version>
 
     <AssemblyTitle>ZeroZero.Brand.Core</AssemblyTitle>
     <Product>ZeroZero.Brand.Core</Product>
