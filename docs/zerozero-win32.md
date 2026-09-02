@@ -1,10 +1,11 @@
 # The Win32 foundation assembly
 
-`ZeroZero.Win32` is the raw native layer: monitor and DPI metrics as plain numbers, the native task
+`ZeroZero.Win32` is the raw native layer: monitor, DPI and taskbar metrics as plain numbers, the native task
 dialog and the four message boxes, and dark native chrome for the process. Plain `net10.0`, no
 package references, no project references, no XAML and no Windows App SDK — which is what makes it
 **foundation** rather than a component, and what lets a console tool take it as readily as a WinUI
-application. The About window takes its monitor metrics from here.
+application. The About window and the text prompt take their monitor metrics from here, and the
+tray assembly the taskbar's scale.
 
 The assembly is versioned as `Win32Version` in `Versions.props` and released under `win32-v<x.y.z>`
 tags, with notes under `docs/release-notes/win32/`; [`releasing.md`](releasing.md) has the
@@ -23,7 +24,10 @@ the feed, so a change here releases first.
 
 - **`MonitorMetrics`** — the work area and scale of the monitor under the cursor (`ForCursor`), the
   primary monitor's work area (`PrimaryWorkArea`), the scale a window is drawn at
-  (`ScaleForWindow`) and the pixels its frame adds around the client area (`NonClientSize`). Every
+  (`ScaleForWindow`), the scale of the display the taskbar sits on (`ScaleForTaskbar`) — under
+  per-monitor awareness the process's own scale follows its last window, which is not where a
+  notification icon is drawn — and the pixels a frame adds around the client area
+  (`NonClientSize`). Every
   answer is physical pixels or a plain factor; the caller decides which monitor gets which window
   and does the arithmetic. A call that fails yields something usable — the primary monitor at 100%,
   a 1080p work area, zero chrome — never an empty rectangle.
@@ -60,12 +64,14 @@ declare it on an application's behalf. The consuming application's `app.manifest
 
 Without it `NativeTaskDialog.IsAvailable` is false and `Show` throws an
 `InvalidOperationException` naming the dependency; a caller that may run without it falls back to a
-message box. The repository's harness declares it, and `--native` shows the dialog from there.
+message box. The build kit's manifest template declares it, so the harness, which builds under the
+kit's application block, shows the dialog under `--native`.
 
 ## Take the reference
 
 Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Win32` itself; there is
-nothing beneath it. An application taking the brand component has it transitively and adds nothing.
+nothing beneath it. An application taking the brand component, the controls assembly or the tray
+assembly has it transitively and adds nothing.
 
 The tests are in `tests/ZeroZero.Win32.Tests`, plain `net10.0`, and run on Windows only: they call
 user32 and shcore against the real desktop, create a hidden framed window to measure, and read the
