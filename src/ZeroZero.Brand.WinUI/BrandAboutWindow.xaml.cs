@@ -4,14 +4,15 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Windows.Foundation;
 using Windows.Graphics;
+using ZeroZero.Win32;
 
 namespace ZeroZero.Brand.WinUI;
 
 /// <summary>
 /// The shared, parameterised About popup for ZeroZero Software apps — 320px wide, Mica backdrop,
-/// centred on the monitor under the cursor, no title bar, always-on-top. Carries its own minimal
-/// Win32 P/Invoke (<see cref="NativeMethods"/>) for monitor/DPI metrics, so it has no dependency
-/// on a consuming app's own NativeMethods class.
+/// centred on the monitor under the cursor, no title bar, always-on-top. Takes its monitor and
+/// DPI metrics from <see cref="MonitorMetrics"/>, so it has no dependency on a consuming app's
+/// own NativeMethods class.
 ///
 /// This is a thin shell: the actual About content (brand header, links, credits) lives in the
 /// hosted <see cref="BrandAboutControl"/>. This window only owns chrome — sizing, centring,
@@ -30,7 +31,7 @@ public sealed partial class BrandAboutWindow : Window
 
     // Cached from ConfigureChrome so ResizeToContent() can recentre on the same monitor
     // without re-querying the cursor position (which may have moved since the window opened).
-    private NativeMethods.RECT _workArea;
+    private NativeRect _workArea;
     private double _scale;
 
     public BrandAboutWindow(BrandAboutOptions options)
@@ -112,7 +113,7 @@ public sealed partial class BrandAboutWindow : Window
         AppWindow.SetPresenter(presenter);
 
         Root.Width = ContentWidth;
-        (_workArea, _scale) = NativeMethods.GetCursorMonitorMetrics();
+        (_workArea, _scale) = MonitorMetrics.ForCursor();
 
         ResizeToContent();
 
@@ -146,7 +147,7 @@ public sealed partial class BrandAboutWindow : Window
         // taken from its own rectangles, and size the outer window to that; the client then fills
         // with the 320-DIP content exactly, with no border eating into it. Centre using that same
         // outer size.
-        var (ncWidth, ncHeight) = NativeMethods.GetNonClientSize(Win32Interop.GetWindowFromWindowId(AppWindow.Id));
+        var (ncWidth, ncHeight) = MonitorMetrics.NonClientSize(Win32Interop.GetWindowFromWindowId(AppWindow.Id));
         AppWindow.Resize(new SizeInt32(cw + ncWidth, ch + ncHeight));
         var outer = AppWindow.Size;
         AppWindow.Move(new PointInt32(
