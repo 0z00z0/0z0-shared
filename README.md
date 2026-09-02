@@ -25,35 +25,42 @@ rule.
 | Foundation | Key | Package | What it is | Guide |
 |---|---|---|---|---|
 | Config | `config` | `ZeroZero.Config` | Atomic JSON settings files: typed snapshot reads, mutation under one lock, change notification, quarantine of a file that cannot be parsed. The MQTT module stores its settings and its discovery ledger through it. | [`docs/zerozero-config.md`](docs/zerozero-config.md) |
-| Controls | `controls` | `ZeroZero.Controls.WinUI` | WinUI controls with no studio identity: the settings-row info bubble. The one WinUI foundation assembly, so a UI component takes it without the brand's font pack and About window. The MQTT panel puts a bubble on every row. | [`docs/zerozero-controls.md`](docs/zerozero-controls.md) |
+| Controls | `controls` | `ZeroZero.Controls.WinUI` | WinUI controls with no studio identity: the settings-row vocabulary — info bubble, section header, card row — title-bar theming, and the single-line text prompt. The one WinUI foundation assembly, so a UI component takes it without the brand's font pack and About window. The MQTT panel puts a bubble on every row. | [`docs/zerozero-controls.md`](docs/zerozero-controls.md) |
 | Primitives | `primitives` | `ZeroZero.Primitives` | The two-member log sink and its no-op, the reader of the version an assembly reports with its About-box form, the coalescing gate, and the source-revision stamp as build properties and targets. The MQTT module writes to the sink and runs every retained channel on the gate. | [`docs/zerozero-primitives.md`](docs/zerozero-primitives.md) |
-| Win32 | `win32` | `ZeroZero.Win32` | The raw Win32 layer: monitor and DPI metrics as plain numbers, the native task dialog and message boxes, dark native chrome. Headless, so a console tool can take it; the About window takes its monitor metrics from here. | [`docs/zerozero-win32.md`](docs/zerozero-win32.md) |
+| Tray | `tray` | `ZeroZero.Tray` | The tray icon's container and sizing policy: the PNG-in-ICO file writer, the slot size at the taskbar's own scale, and whether the taskbar is light or dark with the stroke tone that reads on it. Headless, no drawing; the WinUI host of the icon is a later project under the same key. | [`docs/zerozero-tray.md`](docs/zerozero-tray.md) |
+| Win32 | `win32` | `ZeroZero.Win32` | The raw Win32 layer: monitor, DPI and taskbar metrics as plain numbers, the native task dialog and message boxes, dark native chrome. Headless, so a console tool can take it; the About window and the text prompt take their monitor metrics from here. | [`docs/zerozero-win32.md`](docs/zerozero-win32.md) |
 
 | Build machinery | Key | Package | What it is | Guide |
 |---|---|---|---|---|
 | Build | `build` | `ZeroZero.Build` | The build kit every repository in the family shares: the language and studio-identity property blocks, the unpackaged WinUI application block, the application manifest as a token-substituted template, the signing script with its publish-time target, and the third-party pins under central package management. No assembly; taken as an MSBuild SDK or by path, never as a package reference. This repository builds under it. | [`docs/zerozero-build.md`](docs/zerozero-build.md) |
 
 Dependencies point downward: a component's projects take foundation and each other, and never
-another component. The MQTT projects take `ZeroZero.Primitives` and `ZeroZero.Config`, the MQTT
-panel takes `ZeroZero.Controls.WinUI` for the info bubble, the About window takes `ZeroZero.Win32`,
-and the diagnostics, lifecycle and startup components take `ZeroZero.Primitives` — for the log
-sink, and in diagnostics for the version reader as well. Taking the MQTT module therefore brings
-three foundation assemblies with it and no brand assembly; an application that wants the About
-control takes the brand component as well.
+another component; a foundation assembly may take another foundation assembly beneath it. The
+MQTT projects take `ZeroZero.Primitives` and `ZeroZero.Config`, the MQTT panel takes
+`ZeroZero.Controls.WinUI` for the info bubble, the About window takes `ZeroZero.Win32`,
+`ZeroZero.Controls.WinUI` and `ZeroZero.Tray` take `ZeroZero.Win32` for their monitor and taskbar
+metrics, and the diagnostics, lifecycle and startup components take `ZeroZero.Primitives` — for
+the log sink, and in diagnostics for the version reader as well. Taking the MQTT module therefore
+brings four foundation assemblies with it and no brand assembly; an application that wants the
+About control takes the brand component as well.
 
 Third-party packages are the Windows App SDK, the Community Toolkit's settings controls,
 **MQTTnet**, the **TaskScheduler** library and **Microsoft.Win32.SystemEvents** — the last three
 confined to `ZeroZero.Mqtt`, `ZeroZero.Startup` and `ZeroZero.Lifecycle` in turn, where no type of
 any of them reaches a public signature. `ZeroZero.Brand.Core`, `ZeroZero.Config`,
 `ZeroZero.Primitives` and `ZeroZero.Win32` reference nothing at all; the diagnostics assemblies
-reference the primitives foundation and no package; `ZeroZero.Controls.WinUI` references the
-Windows App SDK alone. Every third-party version is pinned once, in the build kit's
-`ZeroZero.Packages.props`, which this repository's `Directory.Packages.props` imports and every
-consuming repository imports the same way.
+and `ZeroZero.Tray` reference a foundation assembly and no package; `ZeroZero.Controls.WinUI`
+references the Windows App SDK and the toolkit, and no toolkit type reaches its public signature.
+Every third-party version is pinned once, in the build kit's `ZeroZero.Packages.props`, which this
+repository's `Directory.Packages.props` imports and every consuming repository imports the same
+way.
 
 `ZeroZero.Brand.WinUI.TestHarness` is an interactive exe that opens either UI surface, the brand
-palette, or the native dialogs, on screen from fabricated state; it is never packed and nothing
-references it. The capture and demo scripts that drive it are under `scripts/`.
+palette, the settings rows, the title bars, the text prompt, or the native dialogs, on screen from
+fabricated state; it is never packed and nothing references it. It builds under the kit's WinUI
+application block, the one project in the repository that does, so the block and the manifest
+writer are exercised by every build here. The capture and demo scripts that drive it are under
+`scripts/`.
 
 ## Consuming
 
@@ -104,8 +111,9 @@ components are not yet on the feed. [`docs/releasing.md`](docs/releasing.md) is 
 | [`docs/zerozero-diagnostics.md`](docs/zerozero-diagnostics.md) | The diagnostics component: the crash handlers, the crash line, the version line, the dump registration and its lifecycle, the wiring order, and what stays with the application. |
 | [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) | The MQTT module end to end: the assemblies, the six wiring steps, the entity model, identity, the encryption model and the panel. |
 | [`docs/zerozero-config.md`](docs/zerozero-config.md) | The config foundation assembly. |
-| [`docs/zerozero-controls.md`](docs/zerozero-controls.md) | The controls foundation assembly: the settings-row info bubble, and how the harness shows it. |
+| [`docs/zerozero-controls.md`](docs/zerozero-controls.md) | The controls foundation assembly: the settings-row vocabulary, title-bar theming, the text prompt, and how the harness shows each. |
 | [`docs/zerozero-primitives.md`](docs/zerozero-primitives.md) | The primitives foundation assembly: the log sink, the version reader, the coalescing gate and the source-revision stamp. |
+| [`docs/zerozero-tray.md`](docs/zerozero-tray.md) | The tray foundation assembly: the icon file writer, the slot size at the taskbar's scale, and the taskbar's theme. |
 | [`docs/zerozero-win32.md`](docs/zerozero-win32.md) | The Win32 foundation assembly, and the manifest dependency its task dialog needs. |
 | [`docs/zerozero-lifecycle.md`](docs/zerozero-lifecycle.md) | The lifecycle component: the lock, the relaunch and its limit, the data path, the wiring order and its traps. |
 | [`docs/zerozero-startup.md`](docs/zerozero-startup.md) | The startup component: the logon task, its definition and repair, what stays with the application, and the token it needs. |

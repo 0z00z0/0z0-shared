@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="ZeroZero.Controls.WinUI.SettingsRow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:ZeroZero.Controls.WinUI"
+    xmlns:toolkit="using:CommunityToolkit.WinUI.Controls">
+
+    <!-- The alignment contract: the bubble sits to the LEFT of the field it explains, so no
+         adornment can displace a right edge, and a field given a width lands on the same edge as
+         every other row's. The card is the toolkit's, so the row matches the pages beside it and
+         drops its field beneath the header when the card is narrow, as the toolkit's card does on
+         its own. -->
+    <toolkit:SettingsCard x:Name="Card">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <local:InfoIcon x:Name="Bubble" Visibility="Collapsed"/>
+            <ContentPresenter x:Name="FieldPresenter"
+                              VerticalAlignment="Center"
+                              HorizontalContentAlignment="Stretch"/>
+        </StackPanel>
+    </toolkit:SettingsCard>
+</UserControl>

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="ZeroZero.Brand.WinUI.TestHarness.SettingsRowsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:shared="using:ZeroZero.Controls.WinUI">
+
+    <!-- The row vocabulary on a plain settings page: a heading the host supplies, then the shared
+         section headers and rows in every shape a page uses — a field held to one width, a toggle
+         at its natural size, a row with and without a description, a bubble and none, a trailing
+         marker, and a header the host restyles through inherited Foreground and FontFamily. The
+         narrow scenario is the same page at a width under the toolkit card's wrap threshold. -->
+    <Grid x:Name="Root" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <ScrollViewer x:Name="Scroller" HorizontalScrollBarVisibility="Disabled" Padding="24,20,24,24">
+            <!-- One star column capped at a settings page's width, so the rows take the width the
+                 page has up to that cap and sit at its left edge: a card takes the width it is
+                 given, and the toolkit wraps a card narrower than its threshold whatever the window
+                 is doing. -->
+            <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MaxWidth="720"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel x:Name="Page" Spacing="4">
+                <TextBlock Text="Rows" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+                <shared:SettingsSectionHeader Heading="Connection" ShowDivider="False"
+                                              InfoSubject="the connection"
+                                              Info="Where the service is reached. Nothing in this group is saved until Apply."/>
+
+                <shared:SettingsRow Header="Host" FieldWidth="240"
+                                    Info="A host name or an address; the port is separate.">
+                    <shared:SettingsRow.Field>
+                        <TextBox x:Name="HostBox" Text="mqtt.example.com" TextAlignment="Right"/>
+                    </shared:SettingsRow.Field>
+                </shared:SettingsRow>
+
+                <shared:SettingsRow Header="Port" FieldWidth="240"
+                                    Description="1883 in clear, 8883 in cipher.">
+                    <shared:SettingsRow.Field>
+                        <ComboBox x:Name="PortCombo" SelectedIndex="1" HorizontalAlignment="Stretch">
+                            <x:String>1883</x:String>
+                            <x:String>8883</x:String>
+                            <x:String>Custom</x:String>
+                        </ComboBox>
+                    </shared:SettingsRow.Field>
+                </shared:SettingsRow>
+
+                <shared:SettingsRow Header="Encryption" FieldWidth="240"
+                                    Description="Whether a port is served in cipher is the broker's business, so Automatic is first."
+                                    Info="Automatic tries cipher first and falls back to clear. Required refuses a broker that offers no cipher.">
+                    <shared:SettingsRow.Field>
+                        <ComboBox x:Name="EncryptionCombo" SelectedIndex="0" HorizontalAlignment="Stretch">
+                            <x:String>Automatic</x:String>
+                            <x:String>Required</x:String>
+                            <x:String>Never</x:String>
+                        </ComboBox>
+                    </shared:SettingsRow.Field>
+                </shared:SettingsRow>
+
+                <shared:SettingsRow Header="Password" FieldWidth="240"
+                                    Info="Kept in the settings file as typed.">
+                    <shared:SettingsRow.Field>
+                        <PasswordBox x:Name="PasswordField" Password="not-a-real-password" HorizontalContentAlignment="Right"/>
+                    </shared:SettingsRow.Field>
+                </shared:SettingsRow>
+
+                <shared:SettingsSectionHeader Heading="Publish"
+                                              Info="Switching a group off withdraws its entities; switching it back on announces them again.">
+                    <shared:SettingsSectionHeader.Trailing>
+                        <!-- The accent as text, which the theme shades for its own ground; the
+                             raw accent colour reads at 4.2:1 on the light page and 3.5:1 on the
+                             dark one. -->
+                        <TextBlock x:Name="Marker" Text="Unapplied changes" FontSize="11"
+                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                    </shared:SettingsSectionHeader.Trailing>
+                </shared:SettingsSectionHeader>
+
+                <shared:SettingsRow Header="State" Info="What the machine is doing right now, sampled as it changes.">
+                    <shared:SettingsRow.Field>
+                        <ToggleSwitch IsOn="True" OnContent="On" OffContent="Off"/>
+                    </shared:SettingsRow.Field>
+                </shared:SettingsRow>
+
+                <shared:SettingsRow Header="Metrics"
+                                    Description="Off by default: these describe the application, not the hardware.">
+                    <shared:SettingsRow.Field>
+                        <ToggleSwitch OnContent="On" OffContent="Off"/>
+                    </shared:SettingsRow.Field>
+                </shared:SettingsRow>
+
+                <shared:SettingsRow Header="Controls">
+                    <shared:SettingsRow.Field>
+                        <ToggleSwitch OnContent="On" OffContent="Off"/>
+                    </shared:SettingsRow.Field>
+                </shared:SettingsRow>
+
+                <!-- Restyled the way a host restyles: the two inherited properties set on the
+                     instance, nothing declared in a dictionary. -->
+                <shared:SettingsSectionHeader x:Name="RestyledHeader" Heading="Restyled by the host"
+                                              Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                              FontFamily="Consolas"
+                                              Info="Foreground and FontFamily set on the instance reach the heading."/>
+
+                <!-- One row built in code follows, appended by the code-behind. -->
+            </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</Window>

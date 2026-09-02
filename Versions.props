@@ -20,6 +20,7 @@
     <MqttVersion>0.7.0</MqttVersion>
     <PrimitivesVersion>0.7.0</PrimitivesVersion>
     <StartupVersion>0.7.0</StartupVersion>
+    <TrayVersion>0.7.0</TrayVersion>
     <Win32Version>0.7.0</Win32Version>
   </PropertyGroup>
 

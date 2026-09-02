@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="ZeroZero.Controls.WinUI.SettingsSectionHeader"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:ZeroZero.Controls.WinUI">
+
+    <!-- The rule sits above the heading and carries the whole gap between groups, so a heading binds
+         downwards to its own cards rather than floating between two groups. The heading's colour
+         and face are inherited from the control, which is how a host restyles it: set Foreground or
+         FontFamily on the instance, and nothing here fights it. -->
+    <StackPanel>
+        <Border x:Name="Divider"
+                Height="1"
+                Background="{ThemeResource DividerStrokeColorDefaultBrush}"
+                Margin="0,24,0,16"/>
+        <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock x:Name="HeadingText"
+                       FontSize="15"
+                       FontWeight="SemiBold"
+                       CharacterSpacing="40"
+                       VerticalAlignment="Center"/>
+            <local:InfoIcon x:Name="Bubble" Visibility="Collapsed"/>
+            <ContentPresenter x:Name="TrailingPresenter" VerticalAlignment="Center"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

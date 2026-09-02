@@ -30,13 +30,14 @@ its own tag and its own notes.
 
 The references that cross component lines today: all three MQTT projects, both diagnostics
 projects, `ZeroZero.Lifecycle` and `ZeroZero.Startup` take `ZeroZero.Primitives`, `ZeroZero.Mqtt`
-and `ZeroZero.Mqtt.Discovery` take `ZeroZero.Config`, `ZeroZero.Brand.WinUI` takes
-`ZeroZero.Win32`, and `ZeroZero.Mqtt.WinUI` takes `ZeroZero.Controls.WinUI`. So `primitives`,
-`config`, `win32`, `controls` and `build` release in any order, `brand` releases after `win32`,
-`diagnostics`, `lifecycle` and `startup` release after `primitives`, and `mqtt` releases after
-`primitives`, `config` and `controls`. No component references another component: the brand,
-diagnostics, lifecycle, MQTT and startup components are independent of each other, and the build
-kit references nothing and is referenced by nothing.
+and `ZeroZero.Mqtt.Discovery` take `ZeroZero.Config`, `ZeroZero.Brand.WinUI`,
+`ZeroZero.Controls.WinUI` and `ZeroZero.Tray` take `ZeroZero.Win32`, and `ZeroZero.Mqtt.WinUI`
+takes `ZeroZero.Controls.WinUI`. So `primitives`, `config`, `win32` and `build` release in any
+order, `brand`, `controls` and `tray` release after `win32`, `diagnostics`, `lifecycle` and
+`startup` release after `primitives`, and `mqtt` releases after `primitives`, `config`, `win32`
+and `controls`. No component references another component: the brand, diagnostics, lifecycle,
+MQTT and startup components are independent of each other, and the build kit references nothing
+and is referenced by nothing.
 Within a component the order does not matter: the projects release together. The build kit packs
 no assembly — its package is the MSBuild files, the manifest template and the signing script — and
 the pack step counts it like any other project of its key.

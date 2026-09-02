@@ -201,6 +201,10 @@ no assembly. This repository's `Directory.Build.props` imports both, each from i
 ## Tests
 
 The kit has no test project, because it has no assembly. It is exercised by every build of this
-repository, and its guards are proved by breaking each condition in a consumer outside the
-repository: a throwaway application and test project, on each route, in which the guards are made
-to fire and the pins, the properties, the embedded manifest and the signature are read back.
+repository: the property blocks and the pins by every project, and the WinUI application block
+with its manifest writer by the interactive harness, which imports the block the way a consuming
+application does and carries no manifest of its own. Breaking any of the four guards behind the
+block — `ZZB004`, `ZZB005`, `ZZB007`, `ZZB008` — fails the harness build. The signing step and
+the package route are proved in a consumer outside the repository: a throwaway application and
+test project in which the pins, the properties, the embedded manifest and the signature are read
+back.

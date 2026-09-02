@@ -1,31 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
-    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
-    <RootNamespace>ZeroZero.Brand.WinUI.TestHarness</RootNamespace>
+  <!-- The build kit's unpackaged WinUI application block, imported the way a consuming application
+       imports it: OutputType, target framework, minimum platform, UseWinUI, no MSIX, a runtime
+       identifier from the process architecture, DefaultLanguage en-GB, and the manifest written
+       from the kit's template with the trust block, per-monitor-v2 DPI awareness and the
+       common-controls-6 dependency the task dialog needs. The harness is the one project in the
+       repository that takes the block, so the block, the manifest writer and the guards behind
+       them are exercised by this repository's own build. -->
+  <Import Project="$(ZeroZeroBuildDir)Sdk\ZeroZero.WinUIApp.props" />
 
-    <!-- The merged app PRI is built from the app's own resources, so an app declares this even
-         where every library it references already has: without it MakePRI measures the en-GB
-         resources reaching it against its en-US assumption and reports PRI257. The same property a
-         consuming app needs, on the repository's own app. -->
-    <DefaultLanguage>en-GB</DefaultLanguage>
+  <PropertyGroup>
+    <RootNamespace>ZeroZero.Brand.WinUI.TestHarness</RootNamespace>
 
     <!-- Interactive manual test rig only: launches BrandAboutWindow with this repo's own sample
          data so it can be eyeballed without building/running ChargeKeeper or HyperVManagerTray.
          Not published, not referenced by consumers, not part of the public library surface. -->
     <IsPackable>false</IsPackable>
-    <UseWinUI>true</UseWinUI>
-    <WinUISDKReferences>false</WinUISDKReferences>
-    <WindowsPackageType>None</WindowsPackageType>
-    <EnableMsixTooling>false</EnableMsixTooling>
-    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
-
-    <!-- Declares PerMonitorV2 DPI awareness so the harness renders BrandAboutWindow sharp on
-         high-DPI displays instead of being bitmap-stretched (blurry) by the OS, and the common
-         controls 6 dependency the task dialog needs. -->
-    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>

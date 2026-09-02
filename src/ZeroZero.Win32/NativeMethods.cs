@@ -68,4 +68,7 @@ internal static partial class NativeMethods
 
     [LibraryImport("user32.dll", EntryPoint = "MessageBoxW", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
     internal static partial int MessageBox(IntPtr owner, string text, string caption, uint type);
+
+    [LibraryImport("user32.dll", EntryPoint = "FindWindowW", StringMarshalling = StringMarshalling.Utf16)]
+    internal static partial IntPtr FindWindow(string? className, string? windowName);
 }

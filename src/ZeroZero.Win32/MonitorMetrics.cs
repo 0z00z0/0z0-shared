@@ -67,6 +67,18 @@ public static class MonitorMetrics
         return (frame.Right - frame.Left - client.Right, frame.Bottom - frame.Top - client.Bottom);
     }
 
+    /// <summary>
+    /// Scale of the display the taskbar is drawn on, read from the taskbar window itself. Under
+    /// per-monitor awareness the process's own scale follows whichever monitor its last window
+    /// was on, which is not where a notification icon is drawn. 1.0 when the taskbar cannot be
+    /// found or its DPI is not known.
+    /// </summary>
+    public static double ScaleForTaskbar()
+    {
+        IntPtr taskbar = NativeMethods.FindWindow("Shell_TrayWnd", null);
+        return taskbar == IntPtr.Zero ? 1.0 : ScaleForWindow(taskbar);
+    }
+
     private static double ScaleForMonitor(IntPtr monitor)
     {
         // S_OK and a non-zero DPI; anything else is 100%, never a zero a caller divides by.
