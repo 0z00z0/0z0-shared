@@ -1156,9 +1156,10 @@ consumer to override all six measures 11.07:1 on the status values and 14.47:1 o
 Every user-facing string the module owns is in `MqttStrings`, keyed, with its en-GB text built in
 and exposed as `MqttStrings.Builtin` for a consumer generating a translation template. A consumer
 localises by adding a language folder alongside `Strings\en-GB\`, or by supplying an
-`IMqttStringSource` on the setup object. A lookup that finds nothing answers null and the built-in
-en-GB stands, so a resource map that fails to load leaves a readable panel rather than blank
-controls.
+`IMqttStringSource` on the setup object. A consumer's own `.resw` entry for a module key outranks
+the module's: the merged index is asked for the application's map before the library's copy, the
+order `MqttResourceMaps` states. A lookup that finds nothing answers null and the built-in en-GB
+stands, so a resource map that fails to load leaves a readable panel rather than blank controls.
 
 `MqttPanelText` composes every sentence the panel renders, and `MqttStatusText` is its static facade
 over the module's own en-GB — useful to a host rendering the same status outside the panel, in a

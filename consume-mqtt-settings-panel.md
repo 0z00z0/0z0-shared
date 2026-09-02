@@ -252,10 +252,11 @@ an extreme palette for the same purpose.
 
 One `.resw` under `Strings\en-GB\`, read through the Windows App SDK's `ResourceManager` and the
 `ResourceMap`s below it — several are tried, because where a library's strings land in the index
-depends on how the consuming application builds. A consumer localises by adding a
-language folder; a host with its own resource system supplies an `IMqttStringSource` on the setup
-object instead. Everything falls back to the module's built-in en-GB, so a resource map that fails
-to load leaves a readable panel rather than blank controls.
+depends on how the consuming application builds. The application's own map is asked before the
+library's copy, so a host's `.resw` entry for a module key is the one the panel renders. A consumer
+localises by adding a language folder; a host with its own resource system supplies an
+`IMqttStringSource` on the setup object instead. Everything falls back to the module's built-in
+en-GB, so a resource map that fails to load leaves a readable panel rather than blank controls.
 
 ## What the panel never does
 
