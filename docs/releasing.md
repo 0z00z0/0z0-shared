@@ -51,8 +51,8 @@ The workflow then runs, in this order, and stops at the first failure:
 | Push to GitHub Packages | Any push fails, `409` for an already-published version included. |
 
 A green run means the component's packages are on the feed and a GitHub release exists for the tag
-with the notes as its body. Nothing else is republished: a release of `mqtt` leaves the `brand` and
-`config` packages at whatever version they last released.
+with the notes as its body. Nothing else is republished: a release of `mqtt` leaves the `brand`,
+`config`, `primitives` and `win32` packages at whatever version each last released.
 
 Tags from `v0.1.0` to `v0.6.0` predate the scheme and released every package together under one
 number; they remain valid refs and their notes stay at `docs/release-notes/v<x.y.z>.md`.
