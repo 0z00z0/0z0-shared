@@ -20,4 +20,15 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The brand dictionary declares the palette a second time, in the form XAML consumes, and the
+         About control names the brand face on its own. Both live in a Windows-only project this one
+         cannot reference, so they are copied in as data and held against the constants as text.
+         Without that a retyped hex or a renamed face passes every test while the screen drifts. -->
+    <None Include="..\..\src\ZeroZero.Brand.WinUI\Themes\BrandResources.xaml"
+          Link="BrandResources.xaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ZeroZero.Brand.WinUI\BrandAboutControl.xaml"
+          Link="BrandAboutControl.xaml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
