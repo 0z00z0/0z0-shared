@@ -14,6 +14,7 @@
     <BrandVersion>0.7.0</BrandVersion>
     <ConfigVersion>0.7.0</ConfigVersion>
     <MqttVersion>0.7.0</MqttVersion>
+    <PrimitivesVersion>0.7.0</PrimitivesVersion>
   </PropertyGroup>
 
 </Project>

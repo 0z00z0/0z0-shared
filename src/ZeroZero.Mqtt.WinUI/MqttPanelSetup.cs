@@ -1,3 +1,5 @@
+using ZeroZero.Primitives;
+
 namespace ZeroZero.Mqtt.WinUI;
 
 /// <summary>
@@ -98,7 +100,7 @@ public sealed class MqttPanelSetup
     public IMqttStringSource? Strings { get; init; }
 
     /// <summary>Where the panel's guarded handlers report. Defaults to the no-op.</summary>
-    public IMqttLog Log { get; init; } = NullMqttLog.Instance;
+    public ILogSink Log { get; init; } = NullLogSink.Instance;
 
     /// <summary>The default device name, resolved. One expression, so the placeholder and whatever
     /// the publisher falls back to cannot disagree.</summary>

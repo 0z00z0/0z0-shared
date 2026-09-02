@@ -1,3 +1,5 @@
+using ZeroZero.Primitives;
+
 namespace ZeroZero.Mqtt;
 
 /// <summary>The identity in force for one apply round: the device id every topic is composed from,
@@ -77,7 +79,7 @@ public sealed record MqttConnectionSetup
     /// because only the application knows why a value it understands is one it will not act on.</summary>
     public Action<MqttCommandRefusal>? CommandRefused { get; init; }
 
-    public IMqttLog Log { get; init; } = NullMqttLog.Instance;
+    public ILogSink Log { get; init; } = NullLogSink.Instance;
 
     /// <summary>The layer above, or null for a connection that publishes without announcing.</summary>
     public IMqttConnectionListener? Listener { get; init; }

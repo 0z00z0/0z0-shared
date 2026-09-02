@@ -1,4 +1,4 @@
-namespace ZeroZero.Mqtt;
+namespace ZeroZero.Primitives;
 
 /// <summary>Collapses a burst of signals into at most one in-flight run plus one trailing run. Tracks
 /// only the running/pending flags, so the coalescing decision is testable without threads.</summary>

@@ -12,6 +12,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZeroZero.Mqtt\ZeroZero.Mqtt.csproj" />
+    <!-- The log sink the publisher writes to. -->
+    <ProjectReference Include="..\ZeroZero.Primitives\ZeroZero.Primitives.csproj" />
     <!-- Only the file-backed ledger needs it; a host with its own document implements the two-member
          store interface instead and this reference costs it nothing. -->
     <ProjectReference Include="..\ZeroZero.Config\ZeroZero.Config.csproj" />

@@ -32,6 +32,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZeroZero.Mqtt\ZeroZero.Mqtt.csproj" />
+    <!-- The log sink the panel's guarded handlers report to. -->
+    <ProjectReference Include="..\ZeroZero.Primitives\ZeroZero.Primitives.csproj" />
     <!-- InfoIcon lives in the brand assembly: it carries no MQTT vocabulary, and both consumers of
          this panel already reference that assembly for the About window. -->
     <ProjectReference Include="..\ZeroZero.Brand.WinUI\ZeroZero.Brand.WinUI.csproj" />

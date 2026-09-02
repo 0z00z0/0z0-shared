@@ -1,0 +1,25 @@
+<Project>
+
+  <!-- The commit every assembly reports beside its version, in the short seven-character form.
+       Between two tags every revision carries the same three digits, and a consumer built from a
+       sibling working tree is rarely at the tag, so the number alone cannot say which source
+       produced a binary. Runs before the SDK's own source-control step as well, which otherwise
+       sets the full forty-character revision first and keeps it. The working directory is the
+       consuming project's, never this file's: as a package this file sits in the package cache,
+       which is in no repository. A tree with no git available stamps nothing and reports the bare
+       number. -->
+  <Target Name="StampSourceRevision"
+          BeforeTargets="InitializeSourceControlInformation;GetAssemblyVersion;GenerateAssemblyInfo"
+          Condition="'$(SourceRevisionId)' == ''">
+    <Exec Command="git rev-parse --short=7 HEAD" WorkingDirectory="$(MSBuildProjectDirectory)"
+          ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low"
+          ContinueOnError="true" IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_HeadRevision"/>
+      <Output TaskParameter="ExitCode" PropertyName="_HeadRevisionExitCode"/>
+    </Exec>
+    <PropertyGroup Condition="'$(_HeadRevisionExitCode)' == '0' and '$(_HeadRevision)' != ''">
+      <SourceRevisionId>$(_HeadRevision.Trim())</SourceRevisionId>
+    </PropertyGroup>
+  </Target>
+
+</Project>

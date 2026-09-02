@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using MQTTnet;
+using ZeroZero.Primitives;
 
 namespace ZeroZero.Mqtt;
 
@@ -11,7 +12,7 @@ namespace ZeroZero.Mqtt;
 public sealed class MqttConnection : IMqttPublisher, IDisposable
 {
     private readonly MqttConnectionSetup _setup;
-    private readonly IMqttLog _log;
+    private readonly ILogSink _log;
     private readonly IMqttClient _client;
     private readonly SemaphoreSlim _gate = new(1, 1);
 

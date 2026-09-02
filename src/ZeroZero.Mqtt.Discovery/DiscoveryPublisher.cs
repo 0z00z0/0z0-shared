@@ -1,3 +1,5 @@
+using ZeroZero.Primitives;
+
 namespace ZeroZero.Mqtt.Discovery;
 
 /// <summary>The deliberate no-ops for a publisher that drives no connection, or one whose published
@@ -94,7 +96,7 @@ public sealed record DiscoveryPublisherSetup
     /// once.</summary>
     public TimeSpan BirthRepublishDelay { get; init; } = TimeSpan.FromSeconds(30);
 
-    public IMqttLog Log { get; init; } = NullMqttLog.Instance;
+    public ILogSink Log { get; init; } = NullLogSink.Instance;
 }
 
 /// <summary>Announces the device document on connect, re-announces it when what is announced changes,
@@ -107,7 +109,7 @@ public sealed record DiscoveryPublisherSetup
 public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
 {
     private readonly DiscoveryPublisherSetup _setup;
-    private readonly IMqttLog _log;
+    private readonly ILogSink _log;
 
     // One pass at a time. A group toggle, a rebuilt entity set and a connect can arrive together, and
     // two passes interleaving would write a ledger describing neither.

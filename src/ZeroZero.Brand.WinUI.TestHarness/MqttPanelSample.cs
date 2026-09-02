@@ -1,5 +1,6 @@
 using ZeroZero.Mqtt;
 using ZeroZero.Mqtt.WinUI;
+using ZeroZero.Primitives;
 
 namespace ZeroZero.Brand.WinUI.TestHarness;
 
@@ -13,7 +14,7 @@ internal static class MqttPanelSample
     /// <summary>Somewhere for the panel to say what went wrong. A WinExe has no console, and the
     /// panel swallows its own exceptions into this interface — without it a handler that throws is
     /// indistinguishable from one that did nothing.</summary>
-    private sealed class FileLog : IMqttLog
+    private sealed class FileLog : ILogSink
     {
         private static readonly string Path =
             System.IO.Path.Combine(System.IO.Path.GetTempPath(), "mqtt-harness-log.txt");

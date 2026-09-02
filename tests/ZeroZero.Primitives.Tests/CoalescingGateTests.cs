@@ -1,6 +1,7 @@
 using Xunit;
+using ZeroZero.Primitives;
 
-namespace ZeroZero.Mqtt.Tests;
+namespace ZeroZero.Primitives.Tests;
 
 /// <summary>A burst of change signals must cost one pass plus at most one trailing pass. The
 /// trailing pass is what guarantees the last snapshot wins.</summary>

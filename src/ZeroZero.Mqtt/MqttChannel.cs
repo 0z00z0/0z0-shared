@@ -1,3 +1,5 @@
+using ZeroZero.Primitives;
+
 namespace ZeroZero.Mqtt;
 
 /// <summary>What one read of a channel's payload produced. The three cases are distinct because they
