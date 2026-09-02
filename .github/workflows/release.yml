@@ -19,6 +19,12 @@ jobs:
     # The WinUI projects target net10.0-windows and need the Windows App SDK build tooling.
     runs-on: windows-latest
 
+    # The component the tag named, for the job that creates the release page once the feed has
+    # been verified to hold what this job pushed.
+    outputs:
+      key: ${{ steps.component.outputs.key }}
+      version: ${{ steps.component.outputs.version }}
+
     steps:
       - uses: actions/checkout@v7
 
@@ -90,6 +96,18 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: ./.github/scripts/pack-component.ps1 -Tag $env:TAG -Output artifacts
 
+      # The build's own statement of what it packed — the tag, the commit and every package's
+      # SHA-256, written by the pack script beside the packages — kept as an artifact so the verify
+      # job below, which has none of this job's files in reach, can compare what the feed serves
+      # with what was packed here. Kept before the push, so a failed push still leaves the record
+      # of what was meant to go.
+      - name: Keep the build's record of what it packed
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-record-${{ github.ref_name }}
+          path: artifacts/release-artefacts.json
+          if-no-files-found: error
+
       # GitHub Packages is the only feed these packages go to. nuget.org is not a fallback and not a
       # later step. This job is the only publish path, so keep it the only place a source is named.
       #
@@ -104,8 +122,8 @@ jobs:
       # green build while the old bits stay live, which is the one failure a release job exists to
       # catch.
       #
-      # Before the release is created, so a published release means the packages are actually on the
-      # feed rather than merely announced there.
+      # Before the release is verified and created, so a published release means the packages are
+      # actually on the feed rather than merely announced there.
       #
       # One push per file rather than a wildcard: dotnet nuget push does not expand a wildcard here
       # and reports "File does not exist" against packages that are sitting in the folder. The loop
@@ -126,14 +144,40 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
-      # No artefact is attached: the packages are the artefact and they live on the feed, so a copy
-      # on the release page would be a second thing to keep honest. The release is the tag, its
-      # notes and the component's packages the step above published.
+  # What the feed now serves, fetched back and compared with the record the build kept: the bytes,
+  # the nuspec's id, version and commit, and every assembly's stamp. A push that reported success
+  # while the feed kept older bits, and a pack of a stale build, are both refused here — the
+  # failure no shape check sees. A separate job by design: nothing the release job built is in
+  # reach, so the only thing verified is what came down the wire. The run's own token reads the
+  # feed, which authenticates every read.
+  verify:
+    needs: release
+    uses: ./.github/workflows/verify-release.yml
+    with:
+      tag: ${{ github.ref_name }}
+      record-artifact: release-record-${{ github.ref_name }}
+      location: https://nuget.pkg.github.com/0z00z0/download
+      layout: NuGet
+    secrets:
+      feed-token: ${{ secrets.GITHUB_TOKEN }}
+
+  # No artefact is attached: the packages are the artefact and they live on the feed, so a copy
+  # on the release page would be a second thing to keep honest. The release is the tag, its notes
+  # and the component's packages the feed was verified to hold — so the page exists only once the
+  # verify job has passed, and a tag whose packages did not verify has no release announcing them.
+  # Nothing here builds, so the cheapest runner does.
+  publish:
+    needs: [release, verify]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
       - name: Create the release
         shell: pwsh
         env:
           TAG: ${{ github.ref_name }}
-          KEY: ${{ steps.component.outputs.key }}
-          VERSION: ${{ steps.component.outputs.version }}
+          KEY: ${{ needs.release.outputs.key }}
+          VERSION: ${{ needs.release.outputs.version }}
           GH_TOKEN: ${{ github.token }}
         run: gh release create $env:TAG --title $env:TAG --notes-file "docs/release-notes/$env:KEY/v$env:VERSION.md"
