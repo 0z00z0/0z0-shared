@@ -32,6 +32,14 @@
     <ZeroZeroFamilyPin Include="MQTTnet" Version="5.2.0.1603" />
   </ItemGroup>
 
+  <ItemGroup Label="Process and startup">
+    <!-- The scheduler library the startup component registers through, and the session-ending
+         signal the lifecycle component listens for. Neither type reaches a public signature of
+         either assembly. -->
+    <ZeroZeroFamilyPin Include="TaskScheduler" Version="2.12.2" />
+    <ZeroZeroFamilyPin Include="Microsoft.Win32.SystemEvents" Version="10.0.9" />
+  </ItemGroup>
+
   <ItemGroup Label="Testing">
     <ZeroZeroFamilyPin Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <ZeroZeroFamilyPin Include="xunit" Version="2.9.3" />
