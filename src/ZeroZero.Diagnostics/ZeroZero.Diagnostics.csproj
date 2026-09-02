@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0: nothing here touches a window or the Windows App SDK, so a console tool
+         and a service take it as readily as a WinUI application. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Diagnostics</RootNamespace>
+    <Version>$(DiagnosticsVersion)</Version>
+
+    <AssemblyTitle>ZeroZero.Diagnostics</AssemblyTitle>
+    <Product>ZeroZero.Diagnostics</Product>
+    <Description>Crash diagnostics: the process-wide unhandled-exception arms routed to one place, a crash-line appender that never throws, and the startup version line. The entry point of the diagnostics component; carries the dump registration with it.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The component's entry point carries its other project, so one reference adopts the whole. -->
+    <ProjectReference Include="..\ZeroZero.Diagnostics.Dumps\ZeroZero.Diagnostics.Dumps.csproj" />
+    <ProjectReference Include="..\ZeroZero.Primitives\ZeroZero.Primitives.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ZeroZero.Diagnostics.Tests" />
+  </ItemGroup>
+
+</Project>
