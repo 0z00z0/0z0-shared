@@ -21,6 +21,13 @@ public class MqttEndpointTests
     public void Encrypts_IsFalseOnAPlainTcpPortNobodyAskedToEncrypt() =>
         Assert.False(MqttEndpoint.Encrypts(MqttTransport.Tcp, 8883, requested: false));
 
+    [Theory]
+    [InlineData(9001)]
+    [InlineData(80)]
+    public void Encrypts_IsFalseOnAWebSocketPortOutsideTheConvention(int port) =>
+        // The transport alone fixes nothing: only the three conventional ports do.
+        Assert.False(MqttEndpoint.Encrypts(MqttTransport.WebSocket, port, requested: false));
+
     [Fact]
     public void WebSocketUri_LeavesOffTheSchemesOwnDefaultPort()
     {

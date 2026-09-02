@@ -75,6 +75,8 @@ public class MqttPayloadTests
     public void ReadFlag_HonoursADeclaredPair()
     {
         Assert.True(MqttPayload.ReadFlag("RUNNING", "RUNNING", "STOPPED"));
+        Assert.False(MqttPayload.ReadFlag("STOPPED", "RUNNING", "STOPPED"));
         Assert.Null(MqttPayload.ReadFlag("ON", "RUNNING", "STOPPED"));
+        Assert.Null(MqttPayload.ReadFlag("OFF", "RUNNING", "STOPPED"));
     }
 }

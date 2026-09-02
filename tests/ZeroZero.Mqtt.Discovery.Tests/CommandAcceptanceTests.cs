@@ -20,6 +20,26 @@ public class CommandAcceptanceTests
     }
 
     [Fact]
+    public async Task ASwitchWithItsOwnPairTakesThatPairAndNotTheDefault()
+    {
+        bool? applied = null;
+        var entity = new MqttSwitch
+        {
+            EntityId = "running",
+            Name = "Running",
+            Read = () => true,
+            Apply = on => MqttCommandVerdict.Accept(() => applied = on),
+            PayloadOn = "RUNNING",
+            PayloadOff = "STOPPED",
+        };
+
+        await entity.Accept("STOPPED").Run!(CancellationToken.None);
+
+        Assert.False(applied);
+        Assert.Equal(MqttCommandOutcome.Malformed, entity.Accept("OFF").Outcome);
+    }
+
+    [Fact]
     public void ASwitchRefusesAnythingElse()
     {
         var verdict = Sample.Switch().Accept("yes");

@@ -132,6 +132,40 @@ public class MqttEntityTests
     }
 
     [Fact]
+    public void ABinarySensorHonoursItsOwnPairOnTheOffSideToo()
+    {
+        var sensor = new MqttBinarySensor
+        {
+            EntityId = "running",
+            Name = "Running",
+            Read = () => false,
+            PayloadOn = "RUNNING",
+            PayloadOff = "STOPPED",
+        };
+
+        Assert.Equal("STOPPED", sensor.ReadState());
+    }
+
+    [Fact]
+    public void ASwitchPublishesItsOwnPair()
+    {
+        bool? reading = true;
+        var entity = new MqttSwitch
+        {
+            EntityId = "running",
+            Name = "Running",
+            Read = () => reading,
+            Apply = _ => MqttCommandVerdict.Accept(() => { }),
+            PayloadOn = "RUNNING",
+            PayloadOff = "STOPPED",
+        };
+
+        Assert.Equal("RUNNING", entity.ReadState());
+        reading = false;
+        Assert.Equal("STOPPED", entity.ReadState());
+    }
+
+    [Fact]
     public void ANumberPublishesAMachineReadableValue()
     {
         Assert.Equal("30", Sample.Number(read: () => 30).ReadState());

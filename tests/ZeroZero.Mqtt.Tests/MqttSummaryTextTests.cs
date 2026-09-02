@@ -162,6 +162,18 @@ public class MqttSummaryTextTests
     }
 
     [Fact]
+    public void APinnedPortOutranksTheDetectedOneWhenTheAddressDecidesEncryption()
+    {
+        // The pinned and remembered ports differ, so which of the two settles the scheme is visible:
+        // 1883 over WebSocket fixes nothing, and the 443 a sweep found must not reach the line.
+        var request = Request(port: 1883, transport: MqttTransportMode.WebSocket,
+                              encryption: MqttEncryptionMode.Off);
+        var memory = Memory(port: 443, transport: MqttTransport.WebSocket, encrypted: true);
+
+        Assert.Equal("broker.invalid · 1883 · WebSocket · not encrypted", Summary(request, memory));
+    }
+
+    [Fact]
     public void ThePortDoesNotVaryWithTheDisplayCulture()
     {
         // A port is an address, not a quantity: a rendering that grouped four digits would put a

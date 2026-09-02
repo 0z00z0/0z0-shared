@@ -312,6 +312,31 @@ public class DiscoveryDocumentTests
     }
 
     [Fact]
+    public void ADeclaredPairReachesTheDocumentForABinarySensorAndASwitch()
+    {
+        // A pair equal to the default cannot tell the declared value from the constant.
+        var sensor = new MqttBinarySensor
+        {
+            EntityId = "running", Name = "Running", Read = () => true,
+            PayloadOn = "RUNNING", PayloadOff = "STOPPED",
+        };
+        var toggle = new MqttSwitch
+        {
+            EntityId = "armed", Name = "Armed", Read = () => true,
+            Apply = _ => MqttCommandVerdict.Accept(() => { }),
+            PayloadOn = "ARM", PayloadOff = "DISARM",
+        };
+        var document = Build([sensor, toggle]);
+
+        var running = Component(document, "running");
+        Assert.Equal("RUNNING", (string?)running["payload_on"]);
+        Assert.Equal("STOPPED", (string?)running["payload_off"]);
+        var armed = Component(document, "armed");
+        Assert.Equal("ARM", (string?)armed["payload_on"]);
+        Assert.Equal("DISARM", (string?)armed["payload_off"]);
+    }
+
+    [Fact]
     public void ANumberCarriesItsBoundsAsNumbers()
     {
         var entry = Component(Build([Sample.Number()]), "poll_interval");
