@@ -8,10 +8,12 @@
     <Project Path="src/ZeroZero.Controls.WinUI/ZeroZero.Controls.WinUI.csproj" />
     <Project Path="src/ZeroZero.Diagnostics/ZeroZero.Diagnostics.csproj" />
     <Project Path="src/ZeroZero.Diagnostics.Dumps/ZeroZero.Diagnostics.Dumps.csproj" />
+    <Project Path="src/ZeroZero.Lifecycle/ZeroZero.Lifecycle.csproj" />
     <Project Path="src/ZeroZero.Mqtt/ZeroZero.Mqtt.csproj" />
     <Project Path="src/ZeroZero.Mqtt.Discovery/ZeroZero.Mqtt.Discovery.csproj" />
     <Project Path="src/ZeroZero.Mqtt.WinUI/ZeroZero.Mqtt.WinUI.csproj" />
     <Project Path="src/ZeroZero.Primitives/ZeroZero.Primitives.csproj" />
+    <Project Path="src/ZeroZero.Startup/ZeroZero.Startup.csproj" />
     <Project Path="src/ZeroZero.Win32/ZeroZero.Win32.csproj" />
   </Folder>
   <Folder Name="/tests/">
@@ -19,9 +21,11 @@
     <Project Path="tests/ZeroZero.Config.Tests/ZeroZero.Config.Tests.csproj" />
     <Project Path="tests/ZeroZero.Diagnostics.Tests/ZeroZero.Diagnostics.Tests.csproj" />
     <Project Path="tests/ZeroZero.Diagnostics.Dumps.Tests/ZeroZero.Diagnostics.Dumps.Tests.csproj" />
+    <Project Path="tests/ZeroZero.Lifecycle.Tests/ZeroZero.Lifecycle.Tests.csproj" />
     <Project Path="tests/ZeroZero.Mqtt.Tests/ZeroZero.Mqtt.Tests.csproj" />
     <Project Path="tests/ZeroZero.Mqtt.Discovery.Tests/ZeroZero.Mqtt.Discovery.Tests.csproj" />
     <Project Path="tests/ZeroZero.Primitives.Tests/ZeroZero.Primitives.Tests.csproj" />
+    <Project Path="tests/ZeroZero.Startup.Tests/ZeroZero.Startup.Tests.csproj" />
     <Project Path="tests/ZeroZero.Win32.Tests/ZeroZero.Win32.Tests.csproj" />
   </Folder>
 </Solution>

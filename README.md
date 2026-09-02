@@ -18,7 +18,9 @@ rule.
 |---|---|---|---|---|
 | Brand | `brand` | `ZeroZero.Brand.Core`, `ZeroZero.Brand.WinUI` | The studio's identity constants, the About control and the About window, the brand typeface, and the palette as a resource dictionary XAML can merge. Entry point `ZeroZero.Brand.WinUI`; a console tool takes `ZeroZero.Brand.Core` alone. | [`docs/zerozero-brand.md`](docs/zerozero-brand.md) |
 | Diagnostics | `diagnostics` | `ZeroZero.Diagnostics`, `ZeroZero.Diagnostics.Dumps` | Crash diagnostics: the process-wide unhandled-exception arms routed to one place, a crash-line file that never throws, the startup version line, and the Windows Error Reporting dump registration with its lifecycle. Logging configuration stays with the application. Entry point `ZeroZero.Diagnostics`; a consumer wanting the registration alone takes `ZeroZero.Diagnostics.Dumps`. | [`docs/zerozero-diagnostics.md`](docs/zerozero-diagnostics.md) |
+| Lifecycle | `lifecycle` | `ZeroZero.Lifecycle` | The single-instance lock held for the life of the process, the deliberate-exit mark, relaunch on any other clean exit under a three-in-ten-minutes limit, and the per-user data path. Entry point `ZeroZero.Lifecycle`; no user interface. | [`docs/zerozero-lifecycle.md`](docs/zerozero-lifecycle.md) |
 | MQTT | `mqtt` | `ZeroZero.Mqtt`, `ZeroZero.Mqtt.Discovery`, `ZeroZero.Mqtt.WinUI` | An MQTT 5.0 connection, the device document that puts an application into a discovery-aware receiver as one device with entities, and the settings panel a host embeds. Entry point `ZeroZero.Mqtt.WinUI`; a headless consumer takes `ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` and pulls in no WinUI. | [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) |
+| Startup | `startup` | `ZeroZero.Startup` | The application's logon task in the Task Scheduler: its identity, the power-safe elevated definition, registration, the direct enabled read, enable, disable, delete, repair of a task an older build registered, and a demand start that proves the task runs. The manifest, the installer and the watchdog task stay with the application. Entry point `ZeroZero.Startup`; no user interface. | [`docs/zerozero-startup.md`](docs/zerozero-startup.md) |
 
 | Foundation | Key | Package | What it is | Guide |
 |---|---|---|---|---|
@@ -33,19 +35,21 @@ rule.
 
 Dependencies point downward: a component's projects take foundation and each other, and never
 another component. The MQTT projects take `ZeroZero.Primitives` and `ZeroZero.Config`, the MQTT
-panel takes `ZeroZero.Controls.WinUI` for the info bubble, both diagnostics assemblies take
-`ZeroZero.Primitives`, and the About window takes `ZeroZero.Win32`. Taking the MQTT module
-therefore brings three foundation assemblies with it and no brand assembly; an application that
-wants the About control takes the brand component as well.
+panel takes `ZeroZero.Controls.WinUI` for the info bubble, the About window takes `ZeroZero.Win32`,
+and the diagnostics, lifecycle and startup components take `ZeroZero.Primitives` — for the log
+sink, and in diagnostics for the version reader as well. Taking the MQTT module therefore brings
+three foundation assemblies with it and no brand assembly; an application that wants the About
+control takes the brand component as well.
 
-Third-party packages are the Windows App SDK, the Community Toolkit's settings controls, and
-**MQTTnet** — the last confined to `ZeroZero.Mqtt`, where no MQTTnet type reaches a public
-signature. `ZeroZero.Brand.Core`, `ZeroZero.Config`, `ZeroZero.Primitives` and `ZeroZero.Win32`
-reference nothing at all; the diagnostics assemblies reference the primitives foundation and no
-package; `ZeroZero.Controls.WinUI` references the Windows App SDK alone. Every
-third-party version is pinned once, in the build kit's `ZeroZero.Packages.props`, which this
-repository's `Directory.Packages.props` imports and every consuming repository imports the same
-way.
+Third-party packages are the Windows App SDK, the Community Toolkit's settings controls,
+**MQTTnet**, the **TaskScheduler** library and **Microsoft.Win32.SystemEvents** — the last three
+confined to `ZeroZero.Mqtt`, `ZeroZero.Startup` and `ZeroZero.Lifecycle` in turn, where no type of
+any of them reaches a public signature. `ZeroZero.Brand.Core`, `ZeroZero.Config`,
+`ZeroZero.Primitives` and `ZeroZero.Win32` reference nothing at all; the diagnostics assemblies
+reference the primitives foundation and no package; `ZeroZero.Controls.WinUI` references the
+Windows App SDK alone. Every third-party version is pinned once, in the build kit's
+`ZeroZero.Packages.props`, which this repository's `Directory.Packages.props` imports and every
+consuming repository imports the same way.
 
 `ZeroZero.Brand.WinUI.TestHarness` is an interactive exe that opens either UI surface, the brand
 palette, or the native dialogs, on screen from fabricated state; it is never packed and nothing
@@ -103,6 +107,8 @@ components are not yet on the feed. [`docs/releasing.md`](docs/releasing.md) is 
 | [`docs/zerozero-controls.md`](docs/zerozero-controls.md) | The controls foundation assembly: the settings-row info bubble, and how the harness shows it. |
 | [`docs/zerozero-primitives.md`](docs/zerozero-primitives.md) | The primitives foundation assembly: the log sink, the version reader, the coalescing gate and the source-revision stamp. |
 | [`docs/zerozero-win32.md`](docs/zerozero-win32.md) | The Win32 foundation assembly, and the manifest dependency its task dialog needs. |
+| [`docs/zerozero-lifecycle.md`](docs/zerozero-lifecycle.md) | The lifecycle component: the lock, the relaunch and its limit, the data path, the wiring order and its traps. |
+| [`docs/zerozero-startup.md`](docs/zerozero-startup.md) | The startup component: the logon task, its definition and repair, what stays with the application, and the token it needs. |
 | [`docs/zerozero-build.md`](docs/zerozero-build.md) | The build kit: the shared property blocks, the WinUI application block, the manifest template, signing, the pin rule and its guards, and how a repository takes it on either route. |
 | [`docs/consume-brand-about-control.md`](docs/consume-brand-about-control.md) | `BrandAboutControl`, as an adoption checklist. |
 | [`docs/consume-mqtt-settings-panel.md`](docs/consume-mqtt-settings-panel.md) | The panel alone, as an adoption checklist. |

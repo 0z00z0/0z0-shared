@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0, as the other headless assemblies: a console tool can take the lock and the
+         data path. The assembly declares itself Windows-only through SupportedOSPlatform instead. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Lifecycle</RootNamespace>
+    <Version>$(LifecycleVersion)</Version>
+
+    <AssemblyTitle>ZeroZero.Lifecycle</AssemblyTitle>
+    <Product>ZeroZero.Lifecycle</Product>
+    <Description>Process lifecycle for a tray application: the single-instance lock held for the life of the process, the deliberate-exit mark, relaunch on an unmarked exit under a sliding-window limit, and the per-user data path.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroZero.Primitives\ZeroZero.Primitives.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The session-ending signal. A plain net10.0 target has no SystemEvents: the type ships in the
+         Windows Desktop framework, which this assembly does not take. Pinned in the build kit. -->
+    <PackageReference Include="Microsoft.Win32.SystemEvents" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ZeroZero.Lifecycle.Tests" />
+  </ItemGroup>
+
+</Project>
