@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0, matching the project under test. The tests write the registry, so they run
+         on Windows only. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Diagnostics.Dumps.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- The test assembly is its own crash victim: Program.cs is the entry point the elevated test
+         launches to provoke a real crash under a real registration. The test host never calls it. -->
+    <GenerateProgramFile>false</GenerateProgramFile>
+    <!-- The test SDK builds no apphost; the crash victim needs one, because Windows Error
+         Reporting keys the registration on the image name the process dies as. -->
+    <UseAppHost>true</UseAppHost>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The assembly under test declares itself Windows-only; without the same declaration every
+         call into it is a CA1416 warning. -->
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ZeroZero.Diagnostics.Dumps\ZeroZero.Diagnostics.Dumps.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The child-process runner, the sinks and the scratch folder are the sibling test project's,
+         taken as source so neither test project references the other. -->
+    <Compile Include="..\ZeroZero.Diagnostics.Tests\ChildProcess.cs" Link="Shared\ChildProcess.cs" />
+    <Compile Include="..\ZeroZero.Diagnostics.Tests\Scratch.cs" Link="Shared\Scratch.cs" />
+    <Compile Include="..\ZeroZero.Diagnostics.Tests\Sinks.cs" Link="Shared\Sinks.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+</Project>

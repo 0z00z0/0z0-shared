@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0, matching the project under test. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Diagnostics.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- The test assembly is its own crash victim: Program.cs is the entry point the tests launch
+         as a child process to provoke a real unhandled exception, so the test SDK's empty one is
+         not generated. The test host never calls it. -->
+    <GenerateProgramFile>false</GenerateProgramFile>
+    <!-- The test SDK builds no apphost; the crash victim needs one, so the process the child
+         dies as carries this assembly's own name. -->
+    <UseAppHost>true</UseAppHost>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ZeroZero.Diagnostics\ZeroZero.Diagnostics.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+</Project>

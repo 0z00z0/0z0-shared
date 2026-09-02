@@ -12,6 +12,8 @@ licensed, public.
 | `ZeroZero.Build` | `build` | none — an MSBuild SDK | The build kit: shared property blocks, the unpackaged WinUI application block, the manifest template, the signing script and the family's third-party pins under central package management. Taken through `global.json` and three `Sdk="ZeroZero.Build"` imports, never as a package reference. |
 | `ZeroZero.Config` | `config` (foundation) | `net10.0` | Atomic JSON settings files: typed snapshot reads, mutation under one lock, change notification, quarantine of a file that cannot be parsed. |
 | `ZeroZero.Controls.WinUI` | `controls` (foundation) | `net10.0-windows10.0.26100.0` | WinUI controls with no studio identity: the settings-row info bubble. |
+| `ZeroZero.Diagnostics` | `diagnostics` | `net10.0` | Crash diagnostics: the process-wide unhandled-exception arms routed to one place, a crash-line appender that never throws, and the startup version line. The component's entry point; carries the dump registration with it. |
+| `ZeroZero.Diagnostics.Dumps` | `diagnostics` | `net10.0` | The Windows Error Reporting local dump registration with a lifecycle: arm, disarm, sweep older builds' registrations, remove the shared root once empty, prune old dump files. Windows only. |
 | `ZeroZero.Mqtt` | `mqtt` | `net10.0` | An MQTT 5.0 connection for desktop applications: endpoint search and probe, retained per-entity channels, command routing, availability through the Last Will, publish groups. |
 | `ZeroZero.Mqtt.Discovery` | `mqtt` | `net10.0` | The entity and discovery-document layer above it: seven typed component types, one device document, eviction that survives a process restart. |
 | `ZeroZero.Mqtt.WinUI` | `mqtt` | `net10.0-windows10.0.26100.0` | The MQTT settings panel a host embeds. |
@@ -59,6 +61,9 @@ broker at run time, and Home Assistant 2024.11.0 or later for discovery.
   the config foundation assembly.
 - [`docs/zerozero-controls.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-controls.md) —
   the controls foundation assembly: the settings-row info bubble.
+- [`docs/zerozero-diagnostics.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-diagnostics.md) —
+  the diagnostics component: the crash handlers, the crash line, the version line, the dump
+  registration and its lifecycle, and the wiring order.
 - [`docs/zerozero-primitives.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-primitives.md) —
   the primitives foundation assembly: the log sink, the version reader, the coalescing gate and the
   source-revision stamp.

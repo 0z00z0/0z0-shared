@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0, not net10.0-windows, so a net10.0 console tool can reference it; the assembly
+         declares itself Windows-only through SupportedOSPlatform instead, since the registration
+         is a Windows Error Reporting key and nothing else. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Diagnostics.Dumps</RootNamespace>
+    <Version>$(DiagnosticsVersion)</Version>
+
+    <AssemblyTitle>ZeroZero.Diagnostics.Dumps</AssemblyTitle>
+    <Product>ZeroZero.Diagnostics.Dumps</Product>
+    <Description>Crash dump registration with a lifecycle: arm and disarm Windows Error Reporting local dumps for one executable, sweep the registrations older builds left behind, remove the shared root when it is left empty, and prune old dump files. Dump type, arming and retention are the application's parameters.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroZero.Primitives\ZeroZero.Primitives.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ZeroZero.Diagnostics.Dumps.Tests" />
+  </ItemGroup>
+
+</Project>
