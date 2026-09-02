@@ -11,7 +11,7 @@ transitively — the one reference is the whole module, entity table and About c
 feed, which authenticates every read and so needs a token with `read:packages` plus a `nuget.config`
 mapping `ZeroZero.*` to it, or a `ProjectReference` on a sibling checkout carrying
 `<UndefineProperties>WindowsAppSDKSelfContained</UndefineProperties>`. Both are set out in
-[the README](README.md#1-reference-the-library).
+[`consuming.md`](consuming.md).
 
 `CommunityToolkit.WinUI.Controls.SettingsControls` is held at or below `8.2.251219`: a consuming app
 holds a direct reference at that version, and a direct reference below a transitive one is NU1605,
@@ -53,7 +53,7 @@ description and info text, `PublishGroupsInfo`, `DeviceIdConsequence`, `CommandL
 panel is first shown.** The module reads only its own file, so an upgrading user otherwise opens the
 panel to an empty broker host with their existing configuration still sitting unread in the old
 location — and a fresh install looks correct either way, so testing one proves nothing. See
-[Carrying an existing broker block across](docs/zerozero-mqtt.md#carrying-an-existing-broker-block-across).
+[Carrying an existing broker block across](zerozero-mqtt.md#carrying-an-existing-broker-block-across).
 
 Two obligations the panel's own copy depends on:
 
@@ -167,8 +167,8 @@ intent: a failed value reads as failure in the host's own language rather than i
 
 The screenshots show the six keys **alone**, under a palette nothing in the stock theme can produce
 and with no toolkit or control override, so every surface in them is unambiguously one set or the
-other: [light](docs/screenshots/mqtt-panel-light-branded.png) and
-[dark](docs/screenshots/mqtt-panel-dark-branded.png).
+other: [light](screenshots/mqtt-panel-light-branded.png) and
+[dark](screenshots/mqtt-panel-dark-branded.png).
 
 `MqttPanelFontFamily` is the only route to the panel's typeface: every element the panel styles
 carries an explicit style, and an explicit style means a host's implicit `TextBlock` style is never
@@ -245,7 +245,7 @@ the surfaces with no ground of their own — the section headings and the transl
 heading in the same frame — an override that arrived makes them identical, byte for byte — and
 compute the contrast of the panel's text against its ground, where below 4.5:1 fails. A key that
 fell back reads as the module's own default, which is exactly what the measurement separates from a
-palette that is merely poor. `Capture 'MQTT panel' screenshots.ps1 -Branded` renders the panel under
+palette that is merely poor. `scripts/Capture 'MQTT panel' screenshots.ps1 -Branded` renders the panel under
 an extreme palette for the same purpose.
 
 ## Translation

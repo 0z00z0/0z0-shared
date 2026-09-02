@@ -1,7 +1,7 @@
 # Launches the BrandAboutWindow test harness and captures WINDOW-ONLY screenshots of both hosting
 # scenarios it opens — the tray-app popup (BrandAboutWindow) and the hosted-control demo
 # (BrandAboutControl embedded in a plain window, simulating M365Migrator's in-nav About page) — to
-# docs\screenshots\, under the filenames the README embeds.
+# docs\screenshots\, under the filenames the brand guide embeds.
 #
 # Window-aware capture (PrintWindow + PW_RENDERFULLCONTENT) pulls each window's own composited
 # bitmap straight from DWM — so the translucent Mica backdrop resolves cleanly and no desktop
@@ -14,8 +14,9 @@
 
 $ErrorActionPreference = "Stop"
 
-$harnessDir = Join-Path $PSScriptRoot "src\ZeroZero.Brand.WinUI.TestHarness"
-$outDir     = Join-Path $PSScriptRoot "docs\screenshots"
+$repoRoot   = Split-Path $PSScriptRoot -Parent   # scripts\ sits one level below the repository root
+$harnessDir = Join-Path $repoRoot "src\ZeroZero.Brand.WinUI.TestHarness"
+$outDir     = Join-Path $repoRoot "docs\screenshots"
 
 # The harness csproj derives its RuntimeIdentifier from the running process architecture, so the
 # output folder is win-x64 on x64 and win-arm64 on arm64. Locate the exe instead of assuming one.
@@ -77,7 +78,7 @@ Add-Type -AssemblyName System.Drawing
 [AboutCapture]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
 
 # Maps a window's AppWindow title (set in App.xaml.cs) to the screenshot file it should produce.
-# Both filenames are embedded by the README, so they are fixed; a title with no mapping falls back
+# Both filenames are embedded by the brand guide, so they are fixed; a title with no mapping falls back
 # to a slug of its own.
 $titleToFile = @{
     "Window Mode"        = "about-window.png"
