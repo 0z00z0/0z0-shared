@@ -20,7 +20,7 @@ build may only warn about.
 
 ## The package route
 
-Every assembly is published as a package of its own, both WinUI assemblies included. The packages
+Every assembly is published as a package of its own, the WinUI assemblies included. The packages
 carry the compiled XAML and the `.pri` index beside the assembly, and the consuming build merges that
 index into its own, so a consumer with no checkout of this repository anywhere builds, runs and
 renders.
