@@ -2,7 +2,8 @@
 
   <PropertyGroup>
     <!-- Plain net10.0, matching the project under test. The tests call user32 and comctl32, so
-         they run on Windows only — the one test project in the repository that is not portable. -->
+         they run on Windows only, as do the dumps, lifecycle, startup and tray test projects; the
+         rest are portable. -->
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>ZeroZero.Win32.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
