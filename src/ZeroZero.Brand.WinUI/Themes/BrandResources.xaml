@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    The studio palette and typeface in the form XAML consumes. Brand.cs carries the same seven
+    colours as hex strings so a console tool can read them; a resource dictionary cannot read a C#
+    constant, so they are declared again here and a test pins the two lists to each other.
+
+    Everything is themed, and light and dark carry the palette unchanged: identity does not follow
+    the theme. High contrast takes the system's own colours instead, because that mode exists so the
+    user's choice outranks every design decision. A consumer merges this dictionary into its
+    application resources and resolves a key with ThemeResource; a colour key feeds a gradient stop
+    or code, a brush key feeds a Foreground or a Background.
+-->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- The brand face. It travels with the assembly as content under Assets\Fonts\ in every
+         consuming app's output, which is the path this URI resolves against. -->
+    <FontFamily x:Key="BrandFontFamily">ms-appx:///Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
+
+    <ResourceDictionary.ThemeDictionaries>
+
+        <!-- "Default" is the dark theme's dictionary, which is WinUI's own naming. -->
+        <ResourceDictionary x:Key="Default">
+            <Color x:Key="BrandBackgroundColour">#0a0f17</Color>
+            <Color x:Key="BrandBackgroundAltColour">#0e1620</Color>
+            <Color x:Key="BrandTealColour">#27e0c8</Color>
+            <Color x:Key="BrandBlueColour">#11a9d6</Color>
+            <Color x:Key="BrandPurpleColour">#7b8cff</Color>
+            <Color x:Key="BrandIndigoColour">#3f5be0</Color>
+            <Color x:Key="BrandAmberColour">#d8a657</Color>
+            <SolidColorBrush x:Key="BrandBackgroundBrush"    Color="{StaticResource BrandBackgroundColour}"/>
+            <SolidColorBrush x:Key="BrandBackgroundAltBrush" Color="{StaticResource BrandBackgroundAltColour}"/>
+            <SolidColorBrush x:Key="BrandTealBrush"          Color="{StaticResource BrandTealColour}"/>
+            <SolidColorBrush x:Key="BrandBlueBrush"          Color="{StaticResource BrandBlueColour}"/>
+            <SolidColorBrush x:Key="BrandPurpleBrush"        Color="{StaticResource BrandPurpleColour}"/>
+            <SolidColorBrush x:Key="BrandIndigoBrush"        Color="{StaticResource BrandIndigoColour}"/>
+            <SolidColorBrush x:Key="BrandAmberBrush"         Color="{StaticResource BrandAmberColour}"/>
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Light">
+            <Color x:Key="BrandBackgroundColour">#0a0f17</Color>
+            <Color x:Key="BrandBackgroundAltColour">#0e1620</Color>
+            <Color x:Key="BrandTealColour">#27e0c8</Color>
+            <Color x:Key="BrandBlueColour">#11a9d6</Color>
+            <Color x:Key="BrandPurpleColour">#7b8cff</Color>
+            <Color x:Key="BrandIndigoColour">#3f5be0</Color>
+            <Color x:Key="BrandAmberColour">#d8a657</Color>
+            <SolidColorBrush x:Key="BrandBackgroundBrush"    Color="{StaticResource BrandBackgroundColour}"/>
+            <SolidColorBrush x:Key="BrandBackgroundAltBrush" Color="{StaticResource BrandBackgroundAltColour}"/>
+            <SolidColorBrush x:Key="BrandTealBrush"          Color="{StaticResource BrandTealColour}"/>
+            <SolidColorBrush x:Key="BrandBlueBrush"          Color="{StaticResource BrandBlueColour}"/>
+            <SolidColorBrush x:Key="BrandPurpleBrush"        Color="{StaticResource BrandPurpleColour}"/>
+            <SolidColorBrush x:Key="BrandIndigoBrush"        Color="{StaticResource BrandIndigoColour}"/>
+            <SolidColorBrush x:Key="BrandAmberBrush"         Color="{StaticResource BrandAmberColour}"/>
+        </ResourceDictionary>
+
+        <!-- The two grounds become the system window colour and the five accents its highlight
+             colour, so a consumer's markup keeps resolving and the palette itself never reaches a
+             high-contrast screen. -->
+        <ResourceDictionary x:Key="HighContrast">
+            <Color x:Key="BrandBackgroundColour">{ThemeResource SystemColorWindowColor}</Color>
+            <Color x:Key="BrandBackgroundAltColour">{ThemeResource SystemColorWindowColor}</Color>
+            <Color x:Key="BrandTealColour">{ThemeResource SystemColorHighlightColor}</Color>
+            <Color x:Key="BrandBlueColour">{ThemeResource SystemColorHighlightColor}</Color>
+            <Color x:Key="BrandPurpleColour">{ThemeResource SystemColorHighlightColor}</Color>
+            <Color x:Key="BrandIndigoColour">{ThemeResource SystemColorHighlightColor}</Color>
+            <Color x:Key="BrandAmberColour">{ThemeResource SystemColorHighlightColor}</Color>
+            <SolidColorBrush x:Key="BrandBackgroundBrush"    Color="{ThemeResource SystemColorWindowColor}"/>
+            <SolidColorBrush x:Key="BrandBackgroundAltBrush" Color="{ThemeResource SystemColorWindowColor}"/>
+            <SolidColorBrush x:Key="BrandTealBrush"          Color="{ThemeResource SystemColorHighlightColor}"/>
+            <SolidColorBrush x:Key="BrandBlueBrush"          Color="{ThemeResource SystemColorHighlightColor}"/>
+            <SolidColorBrush x:Key="BrandPurpleBrush"        Color="{ThemeResource SystemColorHighlightColor}"/>
+            <SolidColorBrush x:Key="BrandIndigoBrush"        Color="{ThemeResource SystemColorHighlightColor}"/>
+            <SolidColorBrush x:Key="BrandAmberBrush"         Color="{ThemeResource SystemColorHighlightColor}"/>
+        </ResourceDictionary>
+
+    </ResourceDictionary.ThemeDictionaries>
+
+</ResourceDictionary>

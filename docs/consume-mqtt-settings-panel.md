@@ -6,8 +6,9 @@ structure; the host supplies the content and receives every edit as a callback.
 ## Reference
 
 `ZeroZero.Mqtt.WinUI` (`net10.0-windows10.0.26100.0`), which pulls in `ZeroZero.Mqtt`,
-`ZeroZero.Mqtt.Discovery`, `ZeroZero.Config`, `ZeroZero.Brand.WinUI` and `ZeroZero.Brand.Core`
-transitively — the one reference is the whole module, entity table and About control included. Same reference recipe as the About control: either a `PackageReference` on the studio's GitHub Packages
+`ZeroZero.Mqtt.Discovery`, `ZeroZero.Config`, `ZeroZero.Primitives` and `ZeroZero.Controls.WinUI`
+transitively — the one reference is the whole module, entity table included. The About control is
+the brand component's and is a reference of its own. Same reference recipe as the About control: either a `PackageReference` on the studio's GitHub Packages
 feed, which authenticates every read and so needs a token with `read:packages` plus a `nuget.config`
 mapping `ZeroZero.*` to it, or a `ProjectReference` on a sibling checkout carrying
 `<UndefineProperties>WindowsAppSDKSelfContained</UndefineProperties>`. Both are set out in

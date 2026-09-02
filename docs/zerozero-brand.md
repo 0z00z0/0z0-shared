@@ -1,9 +1,12 @@
 # The brand component
 
 The studio's visual identity and About plumbing: the brand constants, one parameterised About
-component with a popup window to host it, the settings-row info icon and the brand typeface.
-`ZeroZero.Brand.Core` holds the constants and the data contracts; `ZeroZero.Brand.WinUI` holds the
-controls and the window.
+component with a popup window to host it, the brand typeface, and the palette as a resource
+dictionary XAML can merge. `ZeroZero.Brand.Core` holds the constants and the data contracts;
+`ZeroZero.Brand.WinUI` holds the control, the window and the dictionary. A control with no studio
+identity is not here: the settings-row info bubble is the controls foundation assembly's
+([`zerozero-controls.md`](zerozero-controls.md)), so a component that wants a bubble takes no font
+pack with it.
 
 The component is versioned as `BrandVersion` in `Versions.props` and released under `brand-v<x.y.z>`
 tags, with notes under `docs/release-notes/brand/`; [`releasing.md`](releasing.md) has the procedure.
@@ -34,7 +37,7 @@ takes `ZeroZero.Brand.Core` alone.
 
 ### `ZeroZero.Brand.WinUI`
 
-References `ZeroZero.Brand.Core`.
+References `ZeroZero.Brand.Core` and `ZeroZero.Win32`.
 
 - **`BrandAboutControl`** — a `UserControl` holding the actual About *content*: the `[Ø]` studio mark
   and brand header band, the company name and tagline as plain non-interactive text, app description,
@@ -53,15 +56,42 @@ References `ZeroZero.Brand.Core`.
   (omit it to hide the "Check for Updates" button entirely — a console-only tool or a build without
   an update channel does not pass one), and an optional `OnBeforeExit` hook for apps that need to
   self-exit cleanly before an installer-triggered relaunch.
-- **`InfoIcon`** — a small "(i)" button that opens its explanation in a flyout, for the settings row
-  whose how-it-works detail would otherwise sit in the visible copy. `Info`, `Subject` and
-  `GlyphCode` are dependency properties, so a row built in code can bind them. It carries no brand
-  vocabulary and resolves stock theme brushes; the MQTT settings panel takes it from here.
 - **The brand typeface**, Cascadia Mono, with its OFL licence. Shipped as content so it travels with
   the library into every consuming app's output under `Assets\Fonts\`, where `BrandAboutWindow`
   references it by relative path; inside the package it sits beside the assembly under
   `lib\<tfm>\ZeroZero.Brand.WinUI\Assets\Fonts\`, the folder a consuming WinUI build resolves a
   referenced library's assets from.
+- **The brand resource dictionary**, `Themes/BrandResources.xaml` — the palette and the typeface in
+  the form XAML consumes. Seven colour keys, `BrandBackgroundColour`, `BrandBackgroundAltColour`,
+  `BrandTealColour`, `BrandBlueColour`, `BrandPurpleColour`, `BrandIndigoColour` and
+  `BrandAmberColour`; a brush per colour, `BrandTealBrush` and so on; and `BrandFontFamily`, the
+  brand face. Light and dark carry the palette unchanged, because identity does not follow the
+  theme; high contrast resolves every key to the system's own window and highlight colours, because
+  that mode exists so the user's choice outranks the studio's. A test holds every colour to the
+  constant in `Brand`, so the two declarations cannot drift.
+
+### The palette from XAML
+
+Merge the dictionary once, in the application's resources, and resolve a key with `ThemeResource`. A
+colour key feeds a gradient stop or code; a brush key feeds a `Foreground` or a `Background`:
+
+```xml
+<Application.Resources>
+    <ResourceDictionary>
+        <ResourceDictionary.MergedDictionaries>
+            <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/>
+            <ResourceDictionary Source="ms-appx:///ZeroZero.Brand.WinUI/Themes/BrandResources.xaml"/>
+        </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+</Application.Resources>
+```
+
+```xml
+<TextBlock Text="Broker" Foreground="{ThemeResource BrandTealBrush}" FontFamily="{ThemeResource BrandFontFamily}"/>
+```
+
+The harness renders every key under `--palette` (below), which is how a change to the dictionary is
+looked at rather than read.
 
 Deliberately **not** shared: each app's own update-check networking and dialogue plumbing. Only the
 window chrome and layout are unified — `OnCheckForUpdates` is a plain `Func<Task<bool>>` the consumer
@@ -207,8 +237,11 @@ dotnet run --project src/ZeroZero.Brand.WinUI.TestHarness
 
 It opens two windows: the `BrandAboutWindow` popup ("Window Mode") and a plain window hosting
 `BrandAboutControl` directly with ordinary title-bar chrome and no update button ("Hosted Control
-Demo"). With `--mqtt` it opens the MQTT panel scenario instead — one component per run, so unrelated
-windows never land on top of each other.
+Demo"). With `--mqtt` it opens the MQTT panel scenario instead, and with `--palette` the brand
+resource dictionary — one window per theme, a swatch per brush key, the wordmark on two colour keys
+and a sample line in the brand face, every one resolved through `ThemeResource` the way a consumer
+resolves them; `--probe <path>` beside it writes the colour and face that reached each element. One
+component per run, so unrelated windows never land on top of each other.
 
 Two scripts under `scripts/` drive the About scenarios:
 

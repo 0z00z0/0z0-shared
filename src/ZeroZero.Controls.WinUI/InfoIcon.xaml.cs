@@ -2,7 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 
-namespace ZeroZero.Brand.WinUI;
+namespace ZeroZero.Controls.WinUI;
 
 /// <summary>
 /// A small "(i)" button that opens its explanation in a flyout. The one place a settings row puts

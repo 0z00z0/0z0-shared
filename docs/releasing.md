@@ -31,9 +31,10 @@ its own tag and its own notes.
 The references that cross component lines today: all three MQTT projects take
 `ZeroZero.Primitives`, `ZeroZero.Mqtt` and `ZeroZero.Mqtt.Discovery` take `ZeroZero.Config`,
 `ZeroZero.Brand.WinUI` takes `ZeroZero.Win32`, and `ZeroZero.Mqtt.WinUI` takes
-`ZeroZero.Brand.WinUI`. So `primitives`, `config` and `win32` release in any order, `brand`
-releases after `win32`, and `mqtt` releases after `primitives`, `config` and `brand` — last of
-all. Within a component the order does not matter: the projects release together.
+`ZeroZero.Controls.WinUI`. So `primitives`, `config`, `win32` and `controls` release in any order,
+`brand` releases after `win32`, and `mqtt` releases after `primitives`, `config` and `controls`.
+No component references another component: the brand and MQTT components are independent of each
+other. Within a component the order does not matter: the projects release together.
 
 ## The procedure
 

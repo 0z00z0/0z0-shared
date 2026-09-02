@@ -7,18 +7,20 @@ versioned and released with its component. MIT licensed, public.
 | Package | Component | Target | What it is |
 |---|---|---|---|
 | `ZeroZero.Brand.Core` | `brand` | `net10.0` | Brand constants and the About-window data contracts. |
-| `ZeroZero.Brand.WinUI` | `brand` | `net10.0-windows10.0.26100.0` | The About window, the hosted About control and the settings-row info icon. |
+| `ZeroZero.Brand.WinUI` | `brand` | `net10.0-windows10.0.26100.0` | The About window, the hosted About control, the brand typeface, and the palette as a resource dictionary. |
 | `ZeroZero.Config` | `config` (foundation) | `net10.0` | Atomic JSON settings files: typed snapshot reads, mutation under one lock, change notification, quarantine of a file that cannot be parsed. |
+| `ZeroZero.Controls.WinUI` | `controls` (foundation) | `net10.0-windows10.0.26100.0` | WinUI controls with no studio identity: the settings-row info bubble. |
 | `ZeroZero.Mqtt` | `mqtt` | `net10.0` | An MQTT 5.0 connection for desktop applications: endpoint search and probe, retained per-entity channels, command routing, availability through the Last Will, publish groups. |
 | `ZeroZero.Mqtt.Discovery` | `mqtt` | `net10.0` | The entity and discovery-document layer above it: seven typed component types, one device document, eviction that survives a process restart. |
 | `ZeroZero.Mqtt.WinUI` | `mqtt` | `net10.0-windows10.0.26100.0` | The MQTT settings panel a host embeds. |
 | `ZeroZero.Primitives` | `primitives` (foundation) | `net10.0` | The two-member log sink and its no-op, the reader of the version an assembly reports with its About-box form, the coalescing gate, and the source-revision stamp as build properties and targets. |
 | `ZeroZero.Win32` | `win32` (foundation) | `net10.0` | The raw Win32 layer: monitor and DPI metrics as plain numbers, the native task dialog and message boxes, dark native chrome. No XAML, no Windows App SDK. |
 
-Taking `ZeroZero.Mqtt.WinUI` brings the whole MQTT module, both brand assemblies and all three
-foundation assemblies with it, so an application with a settings page needs the one reference. A
-headless or test consumer takes `ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` and pulls in no WinUI
-at all — the primitives and config foundations only.
+Taking `ZeroZero.Mqtt.WinUI` brings the whole MQTT module and the primitives, config and controls
+foundations with it, so an application with a settings page needs the one reference; the About
+control is the brand component's and is a reference of its own. A headless or test consumer takes
+`ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` and pulls in no WinUI at all — the primitives and
+config foundations only.
 
 **Versions are per component.** A package version is its component's tag without the prefix —
 `mqtt-v0.7.0` is `0.7.0` — and a component's release notes speak about that component alone. A
@@ -39,7 +41,7 @@ name. The recipe, both halves of it, is in
 
 ## Requirements
 
-.NET 10 SDK. The two WinUI packages additionally need Windows 10 1809 (build 10.0.17763) or later
+.NET 10 SDK. The three WinUI packages additionally need Windows 10 1809 (build 10.0.17763) or later
 and the Windows App SDK, which arrives as a package of its own. The MQTT module needs an MQTT 5.0
 broker at run time, and Home Assistant 2024.11.0 or later for discovery.
 
@@ -53,6 +55,8 @@ broker at run time, and Home Assistant 2024.11.0 or later for discovery.
   the brand component: the About control and window, the two hosting styles.
 - [`docs/zerozero-config.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-config.md) —
   the config foundation assembly.
+- [`docs/zerozero-controls.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-controls.md) —
+  the controls foundation assembly: the settings-row info bubble.
 - [`docs/zerozero-primitives.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-primitives.md) —
   the primitives foundation assembly: the log sink, the version reader, the coalescing gate and the
   source-revision stamp.

@@ -15,29 +15,30 @@ rule.
 
 | Component | Key | Packages | What it is | Guide |
 |---|---|---|---|---|
-| Brand | `brand` | `ZeroZero.Brand.Core`, `ZeroZero.Brand.WinUI` | The studio's identity constants, the About control and the About window, the settings-row info icon and the brand typeface. Entry point `ZeroZero.Brand.WinUI`; a console tool takes `ZeroZero.Brand.Core` alone. | [`docs/zerozero-brand.md`](docs/zerozero-brand.md) |
+| Brand | `brand` | `ZeroZero.Brand.Core`, `ZeroZero.Brand.WinUI` | The studio's identity constants, the About control and the About window, the brand typeface, and the palette as a resource dictionary XAML can merge. Entry point `ZeroZero.Brand.WinUI`; a console tool takes `ZeroZero.Brand.Core` alone. | [`docs/zerozero-brand.md`](docs/zerozero-brand.md) |
 | MQTT | `mqtt` | `ZeroZero.Mqtt`, `ZeroZero.Mqtt.Discovery`, `ZeroZero.Mqtt.WinUI` | An MQTT 5.0 connection, the device document that puts an application into a discovery-aware receiver as one device with entities, and the settings panel a host embeds. Entry point `ZeroZero.Mqtt.WinUI`; a headless consumer takes `ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` and pulls in no WinUI. | [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) |
 
 | Foundation | Key | Package | What it is | Guide |
 |---|---|---|---|---|
 | Config | `config` | `ZeroZero.Config` | Atomic JSON settings files: typed snapshot reads, mutation under one lock, change notification, quarantine of a file that cannot be parsed. The MQTT module stores its settings and its discovery ledger through it. | [`docs/zerozero-config.md`](docs/zerozero-config.md) |
+| Controls | `controls` | `ZeroZero.Controls.WinUI` | WinUI controls with no studio identity: the settings-row info bubble. The one WinUI foundation assembly, so a UI component takes it without the brand's font pack and About window. The MQTT panel puts a bubble on every row. | [`docs/zerozero-controls.md`](docs/zerozero-controls.md) |
 | Primitives | `primitives` | `ZeroZero.Primitives` | The two-member log sink and its no-op, the reader of the version an assembly reports with its About-box form, the coalescing gate, and the source-revision stamp as build properties and targets. The MQTT module writes to the sink and runs every retained channel on the gate. | [`docs/zerozero-primitives.md`](docs/zerozero-primitives.md) |
 | Win32 | `win32` | `ZeroZero.Win32` | The raw Win32 layer: monitor and DPI metrics as plain numbers, the native task dialog and message boxes, dark native chrome. Headless, so a console tool can take it; the About window takes its monitor metrics from here. | [`docs/zerozero-win32.md`](docs/zerozero-win32.md) |
 
-Dependencies point downward: a component's projects take foundation and each other. The MQTT
-projects take `ZeroZero.Primitives` and `ZeroZero.Config`, the About window takes `ZeroZero.Win32`,
-and the MQTT panel additionally references `ZeroZero.Brand.WinUI`, for the info icon and nothing
-else, so taking the MQTT module brings the brand assemblies and all three foundation assemblies with
-it.
+Dependencies point downward: a component's projects take foundation and each other, and never
+another component. The MQTT projects take `ZeroZero.Primitives` and `ZeroZero.Config`, the MQTT
+panel takes `ZeroZero.Controls.WinUI` for the info bubble, and the About window takes
+`ZeroZero.Win32`. Taking the MQTT module therefore brings three foundation assemblies with it and
+no brand assembly; an application that wants the About control takes the brand component as well.
 
 Third-party packages are the Windows App SDK, the Community Toolkit's settings controls, and
 **MQTTnet** — the last confined to `ZeroZero.Mqtt`, where no MQTTnet type reaches a public
 signature. `ZeroZero.Brand.Core`, `ZeroZero.Config`, `ZeroZero.Primitives` and `ZeroZero.Win32`
-reference nothing at all.
+reference nothing at all; `ZeroZero.Controls.WinUI` references the Windows App SDK alone.
 
-`ZeroZero.Brand.WinUI.TestHarness` is an interactive exe that opens either UI surface, or the native
-dialogs, on screen from fabricated state; it is never packed and nothing references it. The capture
-and demo scripts that drive it are under `scripts/`.
+`ZeroZero.Brand.WinUI.TestHarness` is an interactive exe that opens either UI surface, the brand
+palette, or the native dialogs, on screen from fabricated state; it is never packed and nothing
+references it. The capture and demo scripts that drive it are under `scripts/`.
 
 ## Consuming
 
@@ -86,6 +87,7 @@ components are not yet on the feed. [`docs/releasing.md`](docs/releasing.md) is 
 | [`docs/zerozero-brand.md`](docs/zerozero-brand.md) | The brand component: the assemblies, the two hosting styles, the screenshots, the harness. |
 | [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) | The MQTT module end to end: the assemblies, the six wiring steps, the entity model, identity, the encryption model and the panel. |
 | [`docs/zerozero-config.md`](docs/zerozero-config.md) | The config foundation assembly. |
+| [`docs/zerozero-controls.md`](docs/zerozero-controls.md) | The controls foundation assembly: the settings-row info bubble, and how the harness shows it. |
 | [`docs/zerozero-primitives.md`](docs/zerozero-primitives.md) | The primitives foundation assembly: the log sink, the version reader, the coalescing gate and the source-revision stamp. |
 | [`docs/zerozero-win32.md`](docs/zerozero-win32.md) | The Win32 foundation assembly, and the manifest dependency its task dialog needs. |
 | [`docs/consume-brand-about-control.md`](docs/consume-brand-about-control.md) | `BrandAboutControl`, as an adoption checklist. |

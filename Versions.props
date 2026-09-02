@@ -13,6 +13,7 @@
   <PropertyGroup>
     <BrandVersion>0.7.0</BrandVersion>
     <ConfigVersion>0.7.0</ConfigVersion>
+    <ControlsVersion>0.7.0</ControlsVersion>
     <MqttVersion>0.7.0</MqttVersion>
     <PrimitivesVersion>0.7.0</PrimitivesVersion>
     <Win32Version>0.7.0</Win32Version>
