@@ -12,9 +12,10 @@ versioned and released with its component. MIT licensed, public.
 | `ZeroZero.Mqtt` | `mqtt` | `net10.0` | An MQTT 5.0 connection for desktop applications: endpoint search and probe, retained per-entity channels, command routing, availability through the Last Will, publish groups. |
 | `ZeroZero.Mqtt.Discovery` | `mqtt` | `net10.0` | The entity and discovery-document layer above it: seven typed component types, one device document, eviction that survives a process restart. |
 | `ZeroZero.Mqtt.WinUI` | `mqtt` | `net10.0-windows10.0.26100.0` | The MQTT settings panel a host embeds. |
+| `ZeroZero.Win32` | `win32` (foundation) | `net10.0` | The raw Win32 layer: monitor and DPI metrics as plain numbers, the native task dialog and message boxes, dark native chrome. No XAML, no Windows App SDK. |
 
-Taking `ZeroZero.Mqtt.WinUI` brings the whole MQTT module and both brand assemblies with it, so an
-application with a settings page needs the one reference. A headless or test consumer takes
+Taking `ZeroZero.Mqtt.WinUI` brings the whole MQTT module, both brand assemblies and the Win32 layer
+with it, so an application with a settings page needs the one reference. A headless or test consumer takes
 `ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` and pulls in no WinUI at all.
 
 **Versions are per component.** A package version is its component's tag without the prefix —
@@ -50,6 +51,8 @@ broker at run time, and Home Assistant 2024.11.0 or later for discovery.
   the brand component: the About control and window, the two hosting styles.
 - [`docs/zerozero-config.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-config.md) —
   the config foundation assembly.
+- [`docs/zerozero-win32.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-win32.md) —
+  the Win32 foundation assembly, and the manifest dependency its task dialog needs.
 - [`docs/zerozero-mqtt.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-mqtt.md) —
   the MQTT module end to end: the six wiring steps, the entity model, identity, encryption, and the
   settings panel.

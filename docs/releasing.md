@@ -21,9 +21,10 @@ the workflow refuses the tag otherwise. A component with unreleased changes rele
 its own tag and its own notes.
 
 The references that cross component lines today: `ZeroZero.Mqtt` and `ZeroZero.Mqtt.Discovery` take
-`ZeroZero.Config`, and `ZeroZero.Mqtt.WinUI` takes `ZeroZero.Brand.WinUI`. So `config` and `brand`
-release in either order and `mqtt` releases after both. Within a component the order does not
-matter: the projects release together.
+`ZeroZero.Config`, `ZeroZero.Brand.WinUI` takes `ZeroZero.Win32`, and `ZeroZero.Mqtt.WinUI` takes
+`ZeroZero.Brand.WinUI`. So `config` and `win32` release in either order, `brand` releases after
+`win32`, and `mqtt` releases after all three. Within a component the order does not matter: the
+projects release together.
 
 ## The procedure
 

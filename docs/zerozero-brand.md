@@ -46,9 +46,9 @@ References `ZeroZero.Brand.Core`.
   a XAML class, which `AboutInfo`'s `required` members deliberately do not have).
 - **`BrandAboutWindow`** — the shared, parameterised About popup (320 px wide, Mica backdrop, centred
   on the monitor under the cursor, no title bar, always-on-top). A thin shell hosting
-  `BrandAboutControl` plus the tray-app-only "Check for Updates" button. Carries its own minimal Win32
-  interop for monitor and DPI metrics, so it has no dependency on a consuming app's own
-  `NativeMethods` class.
+  `BrandAboutControl` plus the tray-app-only "Check for Updates" button. Takes its monitor and DPI
+  metrics from the `ZeroZero.Win32` foundation assembly, so it has no dependency on a consuming
+  app's own `NativeMethods` class.
 - **`BrandAboutOptions`** — the parameters: an `AboutInfo`, an optional `OnCheckForUpdates` callback
   (omit it to hide the "Check for Updates" button entirely — a console-only tool or a build without
   an update channel does not pass one), and an optional `OnBeforeExit` hook for apps that need to
@@ -73,8 +73,8 @@ owns the clean-exit-before-relaunch step via `OnBeforeExit`.
 Either route in [`consuming.md`](consuming.md) — a `PackageReference` on the studio feed, or a
 `ProjectReference` on a sibling checkout carrying
 `<UndefineProperties>WindowsAppSDKSelfContained</UndefineProperties>`. The reference is
-`ZeroZero.Brand.WinUI`; it pulls in `ZeroZero.Brand.Core` transitively and ships the typeface as
-content, so a consumer gets the correct brand face with no extra setup. The consuming app's
+`ZeroZero.Brand.WinUI`; it pulls in `ZeroZero.Brand.Core` and `ZeroZero.Win32` transitively and
+ships the typeface as content, so a consumer gets the correct brand face with no extra setup. The consuming app's
 `app.manifest` declares `PerMonitorV2` DPI awareness so the window renders sharp on high-DPI
 displays.
 

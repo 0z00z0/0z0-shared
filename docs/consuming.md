@@ -248,6 +248,10 @@ token every restore then needs.
 - **`UndefineProperties`** on the sibling route, above.
 - **`PerMonitorV2`.** The consuming app's `app.manifest` declares per-monitor-v2 DPI awareness, so
   every shared window renders sharp on a high-DPI display rather than being bitmap-stretched.
+- **Common controls 6.** The task dialog in `ZeroZero.Win32` exists in version 6 of the common
+  controls only, and the consuming app's own manifest is the one place that decides which version
+  its process loads; [`zerozero-win32.md`](zerozero-win32.md) carries the declaration. Without it
+  `NativeTaskDialog.IsAvailable` is false and `Show` throws, naming the dependency.
 
 ## Third-party pins
 
