@@ -23,8 +23,8 @@ licensed, public.
 | `ZeroZero.Tray` | `tray` (foundation) | `net10.0` | The tray icon's container and sizing policy: the PNG-in-ICO file writer, the slot size at the taskbar's own scale, and whether the taskbar is light or dark with the stroke tone that reads on it. Headless, no drawing; takes `ZeroZero.Win32`. Windows only. |
 | `ZeroZero.Win32` | `win32` (foundation) | `net10.0` | The raw Win32 layer: monitor, DPI and taskbar metrics as plain numbers, the native task dialog and message boxes, dark native chrome. No XAML, no Windows App SDK. |
 
-Taking `ZeroZero.Mqtt.WinUI` brings the whole MQTT module and the primitives, config and controls
-foundations with it, so an application with a settings page needs the one reference; the About
+Taking `ZeroZero.Mqtt.WinUI` brings the whole MQTT module and the primitives, config, controls and
+win32 foundations with it, so an application with a settings page needs the one reference; the About
 control is the brand component's and is a reference of its own. A headless or test consumer takes
 `ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` and pulls in no WinUI at all — the primitives and
 config foundations only.
