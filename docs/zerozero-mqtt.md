@@ -163,6 +163,15 @@ writes nothing at all. So the file exists exactly when something has been stored
 because the application started, and `MqttSettingsFile.FilePath` is a sound basis for a host's own
 first-run or has-this-migrated gate. The same holds for `DiscoveryLedgerFile`.
 
+**A file that cannot be read is not written over.** A file that is present but unreadable when the
+store is constructed — held open by another process, or access denied — reads as the declared
+defaults in memory, and every `Update` and `File.Save()` is refused until `File.Reload()` has read
+it once: the result carries an `InvalidOperationException` and `File.SaveFailed` is raised. The
+file may be intact, and the quarantine copy cannot cover it, because a copy is made by reading the
+file. A `File.Reload()` that meets the same failure keeps the state already held. Once any read has
+succeeded the store stays writable whatever a later read finds: writing a good configuration over
+a file broken by hand is the intended repair. The same holds for `DiscoveryLedgerFile`.
+
 #### Carrying an existing broker block across
 
 **The module reads its own file and nothing else. A consumer that already stores MQTT settings

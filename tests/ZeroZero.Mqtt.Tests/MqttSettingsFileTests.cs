@@ -154,4 +154,28 @@ public class MqttSettingsFileTests : IDisposable
         Assert.False(store.Read().Enabled);
         Assert.NotNull(store.File.LastQuarantinePath);
     }
+
+    [Fact]
+    public void AFileThatCannotBeReadIsNotWrittenOverThroughTheModulesOwnWritePath()
+    {
+        // The store beneath the module carries the gate, so a write from the panel or a publish
+        // group cannot put defaults over a file that was merely locked when the store opened.
+        using (var first = MqttSettingsFile.In(_directory)) first.Update(s => s.Host = "broker.invalid");
+        string path = Path.Combine(_directory, MqttSettingsFile.DefaultFileName);
+        string before = File.ReadAllText(path);
+
+        MqttSettingsFile store;
+        using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            store = MqttSettingsFile.In(_directory);
+        using (store)
+        {
+            int failures = 0;
+            store.File.SaveFailed += (_, _) => failures++;
+
+            store.Update(s => s.Enabled = true);
+
+            Assert.Equal(before, File.ReadAllText(path));
+            Assert.Equal(1, failures);
+        }
+    }
 }

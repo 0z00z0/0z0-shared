@@ -5,10 +5,6 @@ namespace ZeroZero.Config.Tests;
 /// <summary>Atomic replacement, and what happens when the file will not take the write.</summary>
 public class SettingsFileSaveTests : SettingsFileTestBase
 {
-    /// <summary>Holds the settings file open so no other process may touch it, which is what a
-    /// locked or read-only file looks like from inside a save.</summary>
-    private FileStream Seize() => new(FilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-
     /// <summary>Windows refuses a move over a seized file with either exception, depending on the
     /// handle that holds it.</summary>
     private static bool IsRefusal(Exception? error) => error is IOException or UnauthorizedAccessException;

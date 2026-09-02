@@ -23,6 +23,10 @@ public abstract class SettingsFileTestBase : IDisposable
     /// <summary>The sibling the atomic save writes first.</summary>
     protected string TempPath => FilePath + ".tmp";
 
+    /// <summary>Holds the settings file open so no other process may touch it, which is what a
+    /// locked or read-only file looks like from inside a save — and from inside a load.</summary>
+    protected FileStream Seize() => new(FilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
     protected SettingsFileOptions Options(
         SettingsFileQuarantine? quarantine = null,
         SynchronizationContext? notificationContext = null) =>
