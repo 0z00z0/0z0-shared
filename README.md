@@ -17,7 +17,7 @@ take — no domain vocabulary and no dependencies of its own — and is never pa
 
 | Foundation | Key | Package | What it is | Guide |
 |---|---|---|---|---|
-| Config | `config` | `ZeroZero.Config` | Atomic JSON settings files: typed snapshot reads, mutation under one lock, change notification, quarantine of an unreadable file. The MQTT module stores its settings and its discovery ledger through it. | [`docs/zerozero-config.md`](docs/zerozero-config.md) |
+| Config | `config` | `ZeroZero.Config` | Atomic JSON settings files: typed snapshot reads, mutation under one lock, change notification, quarantine of a file that cannot be parsed. The MQTT module stores its settings and its discovery ledger through it. | [`docs/zerozero-config.md`](docs/zerozero-config.md) |
 
 Dependencies point downward: a component's projects take foundation and each other. The MQTT panel
 additionally references `ZeroZero.Brand.WinUI`, for the info icon and nothing else, so taking the

@@ -177,10 +177,9 @@ first-run or has-this-migrated gate. The same holds for `DiscoveryLedgerFile`.
 store is constructed — held open by another process, or access denied — reads as the declared
 defaults in memory, and every `Update` and `File.Save()` is refused until `File.Reload()` has read
 it once: the result carries an `InvalidOperationException` and `File.SaveFailed` is raised. The
-file may be intact, and the quarantine copy cannot cover it, because a copy is made by reading the
-file. A `File.Reload()` that meets the same failure keeps the state already held. Once any read has
-succeeded the store stays writable whatever a later read finds: writing a good configuration over
-a file broken by hand is the intended repair. The same holds for `DiscoveryLedgerFile`.
+rule and its edges are the store's own, stated in
+[`zerozero-config.md`](zerozero-config.md#what-it-contains). The same holds for
+`DiscoveryLedgerFile`.
 
 #### Carrying an existing broker block across
 

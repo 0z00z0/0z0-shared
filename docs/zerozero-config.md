@@ -1,11 +1,11 @@
 # The config foundation assembly
 
 `ZeroZero.Config` is the settings store: an atomic JSON file with typed snapshot reads, mutation
-under one lock, change notification and quarantine of an unreadable file. Plain `net10.0`, no
-package references, no project references, and no domain vocabulary — which is what makes it
-**foundation** rather than a component: any component may take it, and the MQTT module does, for its
-settings file and its discovery ledger. It is equally usable on its own by anything that keeps a JSON
-document on disk.
+under one lock, change notification and quarantine of a file that cannot be parsed. Plain
+`net10.0`, no package references, no project references, and no domain vocabulary — which is what
+makes it **foundation** rather than a component: any component may take it, and the MQTT module
+does, for its settings file and its discovery ledger. It is equally usable on its own by anything
+that keeps a JSON document on disk.
 
 The assembly is versioned as `ConfigVersion` in `Versions.props` and released under
 `config-v<x.y.z>` tags, with notes under `docs/release-notes/config/`; [`releasing.md`](releasing.md)
@@ -33,6 +33,15 @@ is on the feed, so a change here releases first.
   say so.
 - **`SettingsSaveFailedEventArgs`** and **`SettingsSaveResult`** — a failed write is reported, never
   swallowed.
+
+**A file that cannot be read is not written over.** A file that is present but unreadable when the
+store is constructed — held open by another process, or access denied — reads as the declared
+defaults in memory, and every `Update` and `Save` is refused until a `Reload` has read it once: the
+result carries an `InvalidOperationException` and `SaveFailed` is raised. The file may be intact,
+and quarantine cannot cover it, because the copy is taken by reading the file. A `Reload` that meets
+the same failure keeps the state already held. Once any read has succeeded the store stays writable
+whatever a later read finds: writing a good configuration over a file broken by hand is the intended
+repair.
 
 ## Take the reference
 
