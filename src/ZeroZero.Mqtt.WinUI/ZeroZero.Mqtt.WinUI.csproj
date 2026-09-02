@@ -25,8 +25,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
-    <!-- Held at or below the version pinned in Directory.Packages.props: a consuming app holds a
-         direct reference there, and a direct reference below a transitive one is NU1605, an error. -->
+    <!-- The family's pin in the build kit's ZeroZero.Packages.props is a ceiling: a consuming app
+         holds a direct reference at that version, and a direct reference below a transitive one is
+         NU1605, an error. -->
     <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" />
   </ItemGroup>
 

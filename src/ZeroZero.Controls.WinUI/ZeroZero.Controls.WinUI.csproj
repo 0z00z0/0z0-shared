@@ -19,9 +19,10 @@
   <!--
     Foundation, so no project reference at all: a control here carries no studio identity, resolves
     stock theme brushes and ships no font, and any UI component may take it without dragging the
-    brand assembly's font pack and About window along. The two pins live in Directory.Packages.props
-    and are a floor, not a lock: a consuming app may pin higher, and NuGet unifies on the version
-    nearest the consuming project.
+    brand assembly's font pack and About window along. The two versions are the family's pins in
+    the build kit's ZeroZero.Packages.props, which Directory.Packages.props imports; a pin moves
+    there and nowhere else, so a consumer under the kit resolves the runtime this library was built
+    against.
   -->
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" />

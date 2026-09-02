@@ -17,9 +17,9 @@
   </PropertyGroup>
 
   <!--
-    The Windows App SDK / SDK.BuildTools versions this library pins live in Directory.Packages.props.
-    They are a floor, not a lock: a consuming app may pin higher, and NuGet unifies on the version
-    nearest the consuming project, so the app's own pin governs the runtime the whole build resolves.
+    The Windows App SDK / SDK.BuildTools versions are the family's pins in the build kit's
+    ZeroZero.Packages.props, which Directory.Packages.props imports; a pin moves there and nowhere
+    else, so a consumer under the kit resolves the runtime this library was built against.
   -->
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" />
