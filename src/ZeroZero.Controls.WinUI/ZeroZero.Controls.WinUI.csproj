@@ -13,20 +13,27 @@
 
     <AssemblyTitle>ZeroZero.Controls.WinUI</AssemblyTitle>
     <Product>ZeroZero.Controls.WinUI</Product>
-    <Description>Identity-free WinUI 3 controls for ZeroZero Software apps: the settings-row info bubble.</Description>
+    <Description>Identity-free WinUI 3 controls for ZeroZero Software apps: the settings-row vocabulary with its info bubble, title-bar theming and the single-line text prompt.</Description>
   </PropertyGroup>
 
   <!--
-    Foundation, so no project reference at all: a control here carries no studio identity, resolves
-    stock theme brushes and ships no font, and any UI component may take it without dragging the
-    brand assembly's font pack and About window along. The two versions are the family's pins in
-    the build kit's ZeroZero.Packages.props, which Directory.Packages.props imports; a pin moves
-    there and nowhere else, so a consumer under the kit resolves the runtime this library was built
-    against.
+    Foundation: a control here carries no studio identity, resolves stock theme brushes and ships no
+    font, so any UI component may take it without dragging the brand assembly's font pack and About
+    window along. The three versions are the family's pins in the build kit's ZeroZero.Packages.props,
+    which Directory.Packages.props imports; a pin moves there and nowhere else, so a consumer under
+    the kit resolves the runtime this library was built against. The toolkit reaches no public
+    signature: the settings row wraps its card rather than deriving from it.
   -->
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Foundation on foundation, downward: the text prompt centres itself on the cursor monitor
+         through the monitor metrics, and nothing here reaches past them. -->
+    <ProjectReference Include="..\ZeroZero.Win32\ZeroZero.Win32.csproj" />
   </ItemGroup>
 
 </Project>
