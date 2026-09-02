@@ -3,9 +3,10 @@
 The assemblies that put a Windows desktop application on an MQTT broker and, above that, into a
 discovery-aware receiver as one device with entities. `ZeroZero.Mqtt` speaks the protocol.
 `ZeroZero.Mqtt.Discovery` adds the entity and document layer. `ZeroZero.Mqtt.WinUI` is the settings
-panel a host embeds. Settings persist through `ZeroZero.Config`, a foundation assembly the module
-takes and does not own. The panel's typography and colours resolve from the stock WinUI theme; the
-one thing it takes from `ZeroZero.Brand.WinUI` is the settings-row info icon.
+panel a host embeds. Settings persist through `ZeroZero.Config`, and the log sink and the gate under
+every retained channel come from `ZeroZero.Primitives` — two foundation assemblies the module takes
+and does not own. The panel's typography and colours resolve from the stock WinUI theme; the one
+thing it takes from `ZeroZero.Brand.WinUI` is the settings-row info icon.
 
 The module is versioned as `MqttVersion` in `Versions.props` and released under `mqtt-v<x.y.z>`
 tags, with notes under `docs/release-notes/mqtt/`; [`releasing.md`](releasing.md) has the procedure.
@@ -26,17 +27,20 @@ must supply; the rationale behind a given rule lives in the source comment besid
 
 | Assembly | Target | References | Knows about |
 |---|---|---|---|
+| `ZeroZero.Primitives` | `net10.0` | — | The log sink, the version reader, the coalescing gate |
 | `ZeroZero.Config` | `net10.0` | — | Atomic JSON files, snapshot reads, mutation under one lock, quarantine of an unreadable file |
 | `ZeroZero.Brand.Core` | `net10.0` | — | The studio's branding constants and the About-window data contracts |
-| `ZeroZero.Mqtt` | `net10.0` | `ZeroZero.Config`, `MQTTnet` | Topics, payloads, QoS, retain, the Last Will, transports, endpoint search, certificate trust, command routing, publish groups |
-| `ZeroZero.Mqtt.Discovery` | `net10.0` | `ZeroZero.Mqtt`, `ZeroZero.Config` | Entities, component types, the device document, availability, eviction |
+| `ZeroZero.Mqtt` | `net10.0` | `ZeroZero.Primitives`, `ZeroZero.Config`, `MQTTnet` | Topics, payloads, QoS, retain, the Last Will, transports, endpoint search, certificate trust, command routing, publish groups |
+| `ZeroZero.Mqtt.Discovery` | `net10.0` | `ZeroZero.Mqtt`, `ZeroZero.Primitives`, `ZeroZero.Config` | Entities, component types, the device document, availability, eviction |
 | `ZeroZero.Brand.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Brand.Core` | The About control and window, and the info icon |
-| `ZeroZero.Mqtt.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Mqtt`, `ZeroZero.Mqtt.Discovery`, `ZeroZero.Brand.WinUI` | Rendering the settings a user edits |
+| `ZeroZero.Mqtt.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Mqtt`, `ZeroZero.Mqtt.Discovery`, `ZeroZero.Primitives`, `ZeroZero.Brand.WinUI` | Rendering the settings a user edits |
 
-`ZeroZero.Config` is foundation rather than part of the module: it carries no MQTT vocabulary and
-references nothing, and [`zerozero-config.md`](zerozero-config.md) documents it on its own. The two
-brand assemblies are the brand component, documented in [`zerozero-brand.md`](zerozero-brand.md);
-the panel's reference to `ZeroZero.Brand.WinUI` carries `InfoIcon` and nothing else.
+`ZeroZero.Primitives` and `ZeroZero.Config` are foundation rather than part of the module: neither
+carries MQTT vocabulary, neither references anything, and each is documented on its own —
+[`zerozero-primitives.md`](zerozero-primitives.md) and [`zerozero-config.md`](zerozero-config.md).
+The two brand assemblies are the brand component, documented in
+[`zerozero-brand.md`](zerozero-brand.md); the panel's reference to `ZeroZero.Brand.WinUI` carries
+`InfoIcon` and nothing else.
 
 The dependency runs one way. `ZeroZero.Mqtt` contains no entity vocabulary and no receiver
 vocabulary beyond the default discovery prefix; a console tool or a service references it alone and
@@ -44,8 +48,8 @@ gets a broker connection with nothing above it. `ZeroZero.Mqtt.Discovery` is Win
 entity table composes in a plain `net10.0` test project with no broker and no UI present.
 
 **A consumer takes one project reference.** Referencing `ZeroZero.Mqtt.Discovery` brings the core
-and the settings assembly transitively; referencing `ZeroZero.Mqtt.WinUI` brings those three **and**
-the panel, and the two brand assemblies with it, so an application with a settings page declares its
+and both foundation assemblies transitively; referencing `ZeroZero.Mqtt.WinUI` brings those four
+**and** the panel, and the two brand assemblies with it, so an application with a settings page declares its
 entity table, hosts the panel and gets the About control from that single reference. The panel
 compiles against none of the entity vocabulary — it carries the reference because the whole module
 is what one reference is expected to deliver.
@@ -941,11 +945,13 @@ are being typed into. What is remembered leads the sweep once one runs, and deci
 `0.5.0+1a2b3c4`. It is reflected off `AssemblyInformationalVersionAttribute` rather than compiled in
 from `Versions.props`, because a consumer builds against a sibling working tree rather than
 the revision its pin names — a value that cannot disagree with the pin answers nothing. The commit
-half comes from `SourceRevisionId`, stamped in `Directory.Build.props` from `git rev-parse` at build
-time; a tree with no git available reports the bare number.
+half comes from `SourceRevisionId`, stamped by the primitives assembly's build targets from
+`git rev-parse` at build time; a tree with no git available reports the bare number.
 
-`MqttModule.Read(assembly)` answers the same question for any assembly, so a host can report its own
-build the same way. The panel appends the module's own to the publish switch's info icon, so a
+`AssemblyVersionText.Read(assembly)` in `ZeroZero.Primitives` answers the same question for any
+assembly, so a host reports its own build the same way, and `AssemblyVersionText.ForDisplay` is the
+About-box form; [`zerozero-primitives.md`](zerozero-primitives.md) has both. The panel appends the
+module's own to the publish switch's info icon, so a
 consumer that does nothing at all still shows which build produced the behaviour being described —
 version information conventionally lives in an About box, and nobody opens one while chasing a
 broker that will not connect.
@@ -1299,8 +1305,8 @@ at risk, and the backup is what stands in for that difference.
 | Was | Is |
 |---|---|
 | `ZeroZero.Mqtt.HomeAssistant` | `ZeroZero.Mqtt.Discovery` |
-| `Microsoft.Extensions.Logging` abstractions | `IMqttLog`, two members, with `NullMqttLog` as the default |
-| — | `ZeroZero.Config` at the base of the graph |
+| `Microsoft.Extensions.Logging` abstractions | `ILogSink` in `ZeroZero.Primitives`, two members, with `NullLogSink.Instance` as the default; `IMqttLog` is the same interface under the module's name |
+| — | `ZeroZero.Primitives` and `ZeroZero.Config` at the base of the graph |
 
 **The entity model**
 

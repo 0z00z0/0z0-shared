@@ -18,6 +18,7 @@ take — no domain vocabulary and no dependencies of its own — and is never pa
 | Foundation | Key | Package | What it is | Guide |
 |---|---|---|---|---|
 | Config | `config` | `ZeroZero.Config` | Atomic JSON settings files: typed snapshot reads, mutation under one lock, change notification, quarantine of a file that cannot be parsed. The MQTT module stores its settings and its discovery ledger through it. | [`docs/zerozero-config.md`](docs/zerozero-config.md) |
+| Primitives | `primitives` | `ZeroZero.Primitives` | The two-member log sink and its no-op, the reader of the version an assembly reports with its About-box form, the coalescing gate, and the source-revision stamp as build properties and targets. The MQTT module writes to the sink and runs every retained channel on the gate. | [`docs/zerozero-primitives.md`](docs/zerozero-primitives.md) |
 
 Dependencies point downward: a component's projects take foundation and each other. The MQTT panel
 additionally references `ZeroZero.Brand.WinUI`, for the info icon and nothing else, so taking the
@@ -25,7 +26,8 @@ MQTT module brings the brand assemblies with it.
 
 Third-party packages are the Windows App SDK, the Community Toolkit's settings controls, and
 **MQTTnet** — the last confined to `ZeroZero.Mqtt`, where no MQTTnet type reaches a public
-signature. `ZeroZero.Brand.Core` and `ZeroZero.Config` reference nothing at all.
+signature. `ZeroZero.Brand.Core`, `ZeroZero.Config` and `ZeroZero.Primitives` reference nothing at
+all.
 
 `ZeroZero.Brand.WinUI.TestHarness` is an interactive exe that opens either UI surface on screen from
 fabricated state; it is never packed and nothing references it. The capture and demo scripts that
@@ -78,6 +80,7 @@ components are not yet on the feed. [`docs/releasing.md`](docs/releasing.md) is 
 | [`docs/zerozero-brand.md`](docs/zerozero-brand.md) | The brand component: the assemblies, the two hosting styles, the screenshots, the harness. |
 | [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) | The MQTT module end to end: the assemblies, the six wiring steps, the entity model, identity, the encryption model and the panel. |
 | [`docs/zerozero-config.md`](docs/zerozero-config.md) | The config foundation assembly. |
+| [`docs/zerozero-primitives.md`](docs/zerozero-primitives.md) | The primitives foundation assembly: the log sink, the version reader, the coalescing gate and the source-revision stamp. |
 | [`docs/consume-brand-about-control.md`](docs/consume-brand-about-control.md) | `BrandAboutControl`, as an adoption checklist. |
 | [`docs/consume-mqtt-settings-panel.md`](docs/consume-mqtt-settings-panel.md) | The panel alone, as an adoption checklist. |
 | [`docs/releasing.md`](docs/releasing.md) | Cutting a component release, what the workflow guards, and how to run the guards locally. |
