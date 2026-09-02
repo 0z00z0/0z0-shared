@@ -18,12 +18,14 @@ public class NativeRectTests
     [Fact]
     public void ClampInto_LeavesARectangleAlreadyInsideWhereItIs()
     {
-        var rect = new NativeRect(100, 100, 300, 250);
+        // Left and Top differ: with them equal, a top edge computed from Left reads the same.
+        var rect = new NativeRect(100, 40, 300, 190);
 
         Assert.Equal(rect, rect.ClampInto(Bounds));
     }
 
-    // Every rectangle below is wider than it is tall: a square hides an axis mixed up with the other.
+    // Every rectangle below is wider than it is tall, and no rectangle's Left equals its Top: a
+    // square, or an origin on the diagonal, hides an axis mixed up with the other.
 
     [Fact]
     public void ClampInto_MovesARectanglePastTheRightAndBottomEdgesBackInside()
@@ -85,5 +87,17 @@ public class NativeRectTests
         var clamped = rect.ClampInto(secondMonitor);
 
         Assert.Equal(new NativeRect(3540, 930, 3840, 1080), clamped);
+    }
+
+    [Fact]
+    public void ClampInto_MovesARectanglePastTheLeftEdgeOfBoundsThatDoNotStartAtTheOrigin()
+    {
+        // The bounds' left and top edges differ here, so a left edge pinned to the wrong one shows.
+        var secondMonitor = new NativeRect(1920, 0, 3840, 1080);
+        var rect = new NativeRect(1800, 500, 2100, 650);
+
+        var clamped = rect.ClampInto(secondMonitor);
+
+        Assert.Equal(new NativeRect(1920, 500, 2220, 650), clamped);
     }
 }
