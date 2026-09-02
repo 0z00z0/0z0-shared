@@ -240,7 +240,9 @@ It opens two windows: the `BrandAboutWindow` popup ("Window Mode") and a plain w
 Demo"). With `--mqtt` it opens the MQTT panel scenario instead, and with `--palette` the brand
 resource dictionary — one window per theme, a swatch per brush key, the wordmark on two colour keys
 and a sample line in the brand face, every one resolved through `ThemeResource` the way a consumer
-resolves them; `--probe <path>` beside it writes the colour and face that reached each element. One
+resolves them; `--probe <path>` beside it writes the colour and face that reached each element.
+`--rows`, `--titlebar` and `--prompt` open the controls foundation assembly's surfaces
+([`zerozero-controls.md`](zerozero-controls.md)), and `--native` the Win32 layer's dialogs. One
 component per run, so unrelated windows never land on top of each other.
 
 Two scripts under `scripts/` drive the About scenarios:
