@@ -29,18 +29,20 @@ must supply; the rationale behind a given rule lives in the source comment besid
 |---|---|---|---|
 | `ZeroZero.Primitives` | `net10.0` | — | The log sink, the version reader, the coalescing gate |
 | `ZeroZero.Config` | `net10.0` | — | Atomic JSON files, snapshot reads, mutation under one lock, quarantine of an unreadable file |
+| `ZeroZero.Win32` | `net10.0` | — | Monitor and DPI metrics, the native task dialog and message boxes, dark native chrome |
 | `ZeroZero.Brand.Core` | `net10.0` | — | The studio's branding constants and the About-window data contracts |
 | `ZeroZero.Mqtt` | `net10.0` | `ZeroZero.Primitives`, `ZeroZero.Config`, `MQTTnet` | Topics, payloads, QoS, retain, the Last Will, transports, endpoint search, certificate trust, command routing, publish groups |
 | `ZeroZero.Mqtt.Discovery` | `net10.0` | `ZeroZero.Mqtt`, `ZeroZero.Primitives`, `ZeroZero.Config` | Entities, component types, the device document, availability, eviction |
-| `ZeroZero.Brand.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Brand.Core` | The About control and window, and the info icon |
+| `ZeroZero.Brand.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Brand.Core`, `ZeroZero.Win32` | The About control and window, and the info icon |
 | `ZeroZero.Mqtt.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Mqtt`, `ZeroZero.Mqtt.Discovery`, `ZeroZero.Primitives`, `ZeroZero.Brand.WinUI` | Rendering the settings a user edits |
 
-`ZeroZero.Primitives` and `ZeroZero.Config` are foundation rather than part of the module: neither
-carries MQTT vocabulary, neither references anything, and each is documented on its own —
-[`zerozero-primitives.md`](zerozero-primitives.md) and [`zerozero-config.md`](zerozero-config.md).
-The two brand assemblies are the brand component, documented in
-[`zerozero-brand.md`](zerozero-brand.md); the panel's reference to `ZeroZero.Brand.WinUI` carries
-`InfoIcon` and nothing else.
+`ZeroZero.Primitives`, `ZeroZero.Config` and `ZeroZero.Win32` are foundation rather than part of the
+module: none carries MQTT vocabulary, none references anything, and each is documented on its own —
+[`zerozero-primitives.md`](zerozero-primitives.md), [`zerozero-config.md`](zerozero-config.md) and
+[`zerozero-win32.md`](zerozero-win32.md). The two brand assemblies are the brand component,
+documented in [`zerozero-brand.md`](zerozero-brand.md); the panel's reference to
+`ZeroZero.Brand.WinUI` carries `InfoIcon` and nothing else, and the Win32 layer arrives through that
+reference alone, because the About window takes its monitor metrics from it.
 
 The dependency runs one way. `ZeroZero.Mqtt` contains no entity vocabulary and no receiver
 vocabulary beyond the default discovery prefix; a console tool or a service references it alone and
@@ -48,8 +50,9 @@ gets a broker connection with nothing above it. `ZeroZero.Mqtt.Discovery` is Win
 entity table composes in a plain `net10.0` test project with no broker and no UI present.
 
 **A consumer takes one project reference.** Referencing `ZeroZero.Mqtt.Discovery` brings the core
-and both foundation assemblies transitively; referencing `ZeroZero.Mqtt.WinUI` brings those four
-**and** the panel, and the two brand assemblies with it, so an application with a settings page declares its
+and both of its foundation assemblies transitively; referencing `ZeroZero.Mqtt.WinUI` brings those
+four **and** the panel, and the two brand assemblies and the Win32 layer with it, so an application
+with a settings page declares its
 entity table, hosts the panel and gets the About control from that single reference. The panel
 compiles against none of the entity vocabulary — it carries the reference because the whole module
 is what one reference is expected to deliver.
