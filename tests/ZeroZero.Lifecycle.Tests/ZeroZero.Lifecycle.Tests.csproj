@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0, matching the project under test. The tests take named mutexes and start the
+         test executable as a child process, so they run on Windows only. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Lifecycle.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- The executable's own Main plays the child process in the relaunch tests; the test SDK's
+         generated one would do nothing. -->
+    <GenerateProgramFile>false</GenerateProgramFile>
+    <!-- The test SDK builds no native launcher; the child process needs one. -->
+    <UseAppHost>true</UseAppHost>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The assembly under test declares itself Windows-only; without the same declaration every
+         call into it is a CA1416 warning. -->
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ZeroZero.Lifecycle\ZeroZero.Lifecycle.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+</Project>

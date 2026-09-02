@@ -6,6 +6,7 @@
     <Project Path="src/ZeroZero.Build/ZeroZero.Build.csproj" />
     <Project Path="src/ZeroZero.Config/ZeroZero.Config.csproj" />
     <Project Path="src/ZeroZero.Controls.WinUI/ZeroZero.Controls.WinUI.csproj" />
+    <Project Path="src/ZeroZero.Lifecycle/ZeroZero.Lifecycle.csproj" />
     <Project Path="src/ZeroZero.Mqtt/ZeroZero.Mqtt.csproj" />
     <Project Path="src/ZeroZero.Mqtt.Discovery/ZeroZero.Mqtt.Discovery.csproj" />
     <Project Path="src/ZeroZero.Mqtt.WinUI/ZeroZero.Mqtt.WinUI.csproj" />
@@ -15,6 +16,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/ZeroZero.Brand.Core.Tests/ZeroZero.Brand.Core.Tests.csproj" />
     <Project Path="tests/ZeroZero.Config.Tests/ZeroZero.Config.Tests.csproj" />
+    <Project Path="tests/ZeroZero.Lifecycle.Tests/ZeroZero.Lifecycle.Tests.csproj" />
     <Project Path="tests/ZeroZero.Mqtt.Tests/ZeroZero.Mqtt.Tests.csproj" />
     <Project Path="tests/ZeroZero.Mqtt.Discovery.Tests/ZeroZero.Mqtt.Discovery.Tests.csproj" />
     <Project Path="tests/ZeroZero.Primitives.Tests/ZeroZero.Primitives.Tests.csproj" />
