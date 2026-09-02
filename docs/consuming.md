@@ -277,7 +277,7 @@ not yet taken the kit:
 | `CommunityToolkit.WinUI.Controls.SettingsControls` | `8.2.251219` | A **ceiling**. |
 | `MQTTnet` | `5.2.0.1603` | Transitive only, and no type of it reaches a public signature. |
 | `TaskScheduler` | `2.12.2` | Transitive only, through `ZeroZero.Startup`; no type of it reaches a public signature. |
-| `Microsoft.Win32.SystemEvents` | `10.0.9` | Transitive only, through `ZeroZero.Lifecycle`; no type of it reaches a public signature. |
+| `Microsoft.Win32.SystemEvents` | `10.0.11` | Transitive only, through `ZeroZero.Lifecycle`; no type of it reaches a public signature. The runtime's own assembly, pinned at the .NET 10 servicing release the family builds on and raised with it. |
 | `Microsoft.NET.Test.Sdk` | `18.8.1` | The test trio, for a consumer's own test projects. |
 | `xunit` | `2.9.3` | |
 | `xunit.runner.visualstudio` | `3.1.5` | |

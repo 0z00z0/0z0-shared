@@ -37,7 +37,12 @@
          signal the lifecycle component listens for. Neither type reaches a public signature of
          either assembly. -->
     <ZeroZeroFamilyPin Include="TaskScheduler" Version="2.12.2" />
-    <ZeroZeroFamilyPin Include="Microsoft.Win32.SystemEvents" Version="10.0.9" />
+    <!-- A runtime-companion package: the assembly Microsoft.WindowsDesktop.App ships, republished
+         on every .NET 10 servicing release under the runtime's own number, with one API across
+         the train. The pin is the current servicing release of the runtime the family builds on,
+         and it moves with that runtime, never with what a package cache happens to hold. A floor
+         for a consumer: a direct reference above it wins, one below it is NU1605. -->
+    <ZeroZeroFamilyPin Include="Microsoft.Win32.SystemEvents" Version="10.0.11" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">
