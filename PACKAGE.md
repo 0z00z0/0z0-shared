@@ -8,6 +8,7 @@ versioned and released with its component. MIT licensed, public.
 |---|---|---|---|
 | `ZeroZero.Brand.Core` | `brand` | `net10.0` | Brand constants and the About-window data contracts. |
 | `ZeroZero.Brand.WinUI` | `brand` | `net10.0-windows10.0.26100.0` | The About window, the hosted About control, the brand typeface, and the palette as a resource dictionary. |
+| `ZeroZero.Build` | `build` | none — an MSBuild SDK | The build kit: shared property blocks, the unpackaged WinUI application block, the manifest template, the signing script and the family's third-party pins under central package management. Taken through `global.json` and three `Sdk="ZeroZero.Build"` imports, never as a package reference. |
 | `ZeroZero.Config` | `config` (foundation) | `net10.0` | Atomic JSON settings files: typed snapshot reads, mutation under one lock, change notification, quarantine of a file that cannot be parsed. |
 | `ZeroZero.Controls.WinUI` | `controls` (foundation) | `net10.0-windows10.0.26100.0` | WinUI controls with no studio identity: the settings-row info bubble. |
 | `ZeroZero.Mqtt` | `mqtt` | `net10.0` | An MQTT 5.0 connection for desktop applications: endpoint search and probe, retained per-entity channels, command routing, availability through the Last Will, publish groups. |
@@ -62,6 +63,9 @@ broker at run time, and Home Assistant 2024.11.0 or later for discovery.
   source-revision stamp.
 - [`docs/zerozero-win32.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-win32.md) —
   the Win32 foundation assembly, and the manifest dependency its task dialog needs.
+- [`docs/zerozero-build.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-build.md) —
+  the build kit: the property blocks, the WinUI application block, the manifest template, signing,
+  the pin rule and its guards, and the two ways to take it.
 - [`docs/zerozero-mqtt.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-mqtt.md) —
   the MQTT module end to end: the six wiring steps, the entity model, identity, encryption, and the
   settings panel.

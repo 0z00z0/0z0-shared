@@ -3,6 +3,7 @@
     <Project Path="src/ZeroZero.Brand.Core/ZeroZero.Brand.Core.csproj" />
     <Project Path="src/ZeroZero.Brand.WinUI/ZeroZero.Brand.WinUI.csproj" />
     <Project Path="src/ZeroZero.Brand.WinUI.TestHarness/ZeroZero.Brand.WinUI.TestHarness.csproj" />
+    <Project Path="src/ZeroZero.Build/ZeroZero.Build.csproj" />
     <Project Path="src/ZeroZero.Config/ZeroZero.Config.csproj" />
     <Project Path="src/ZeroZero.Controls.WinUI/ZeroZero.Controls.WinUI.csproj" />
     <Project Path="src/ZeroZero.Mqtt/ZeroZero.Mqtt.csproj" />

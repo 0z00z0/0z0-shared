@@ -1,0 +1,14 @@
+<Project>
+
+  <!-- NuGet imports build\<PackageId>.targets into a project that takes this package as a
+       PackageReference, and that is the one thing such a reference delivers: nothing under Sdk\
+       reaches the project, because central package management is decided before restore runs
+       and a package's files arrive after it. Measured, not assumed — the reference restores
+       without complaint and applies nothing. This target turns that silence into a build error
+       naming the route that works. -->
+  <Target Name="ZeroZeroRefusePackageReference" BeforeTargets="BeforeBuild">
+    <Error Code="ZZB011"
+           Text="$(MSBuildProjectName) takes ZeroZero.Build as a PackageReference, which delivers none of it. The kit is an MSBuild SDK: name the version in global.json under msbuild-sdks, then import ZeroZero.Build.props from Directory.Build.props, ZeroZero.Build.targets from Directory.Build.targets and ZeroZero.Packages.props from Directory.Packages.props, each with Sdk=&quot;ZeroZero.Build&quot;, and remove the PackageReference." />
+  </Target>
+
+</Project>

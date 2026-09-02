@@ -1,28 +1,8 @@
 <Project>
 
-  <PropertyGroup>
-    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-  </PropertyGroup>
-
-  <ItemGroup Label="Windows App SDK">
-    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
-    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2270" />
-  </ItemGroup>
-
-  <ItemGroup Label="UI">
-    <!-- A ceiling, not a preference: a consuming app holds a direct reference at this version, and
-         a direct reference below a transitive one is NU1605, an error. Raise both or neither. -->
-    <PackageVersion Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.251219" />
-  </ItemGroup>
-
-  <ItemGroup Label="MQTT">
-    <PackageVersion Include="MQTTnet" Version="5.2.0.1603" />
-  </ItemGroup>
-
-  <ItemGroup Label="Testing">
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
-  </ItemGroup>
+  <!-- The family's pins are the build kit's, imported so this repository and every consumer that
+       imports the same file resolve one version per third-party package. A package only this
+       repository needs would be added below the import; there is none. -->
+  <Import Project="$(MSBuildThisFileDirectory)src\ZeroZero.Build\Sdk\ZeroZero.Packages.props" />
 
 </Project>

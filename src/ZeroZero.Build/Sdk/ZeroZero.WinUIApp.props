@@ -1,0 +1,39 @@
+<Project>
+
+  <!-- The unpackaged WinUI application block. An application project imports this at the top of
+       its own file, before its own properties:
+
+         <Import Project="$(ZeroZeroBuildDir)Sdk\ZeroZero.WinUIApp.props" />
+
+       That is where the Windows App SDK reads these values from, and the project's own properties
+       below the import still win. The family ships unpackaged — installed per user by Inno Setup —
+       so ZeroZero.Build.targets refuses a WindowsPackageType other than None under this import. -->
+
+  <PropertyGroup>
+    <ZeroZeroWinUIAppImported>true</ZeroZeroWinUIAppImported>
+
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <WinUISDKReferences>false</WinUISDKReferences>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
+
+    <!-- The merged app PRI is built from the app's own resources, so the app declares the default
+         language even where every library it references already has; without it MakePRI measures
+         en-GB resources against an en-US assumption and reports PRI257. -->
+    <DefaultLanguage>en-GB</DefaultLanguage>
+
+    <!-- The application manifest is written from templates\app.manifest at build time, with the
+         assembly name and the execution level substituted. A project that names its own
+         ApplicationManifest keeps it and nothing is written. Elevation is an explicit choice: the
+         default runs as the invoker, and an application that needs administrator sets
+         ZeroZeroManifestExecutionLevel to requireAdministrator. -->
+    <ZeroZeroManifestExecutionLevel Condition="'$(ZeroZeroManifestExecutionLevel)' == ''">asInvoker</ZeroZeroManifestExecutionLevel>
+    <ZeroZeroGeneratedManifest>$(MSBuildProjectExtensionsPath)ZeroZero.Build\app.manifest</ZeroZeroGeneratedManifest>
+    <ApplicationManifest Condition="'$(ApplicationManifest)' == ''">$(ZeroZeroGeneratedManifest)</ApplicationManifest>
+  </PropertyGroup>
+
+</Project>

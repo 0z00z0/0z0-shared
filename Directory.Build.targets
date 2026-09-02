@@ -1,0 +1,8 @@
+<Project>
+
+  <!-- The build kit's targets — the guards that hold the family's build rules, the manifest writer
+       and the signing step — from the kit's own folder, so every project here builds under them
+       and a broken file breaks this repository before it reaches a consumer. -->
+  <Import Project="$(MSBuildThisFileDirectory)src\ZeroZero.Build\Sdk\ZeroZero.Build.targets" />
+
+</Project>

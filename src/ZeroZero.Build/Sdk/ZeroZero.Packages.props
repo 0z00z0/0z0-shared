@@ -1,0 +1,45 @@
+<Project>
+
+  <!-- The family's third-party pins, under central package management. A repository imports this
+       from its Directory.Packages.props and adds its own packages below the import; every
+       repository that does so resolves one version per package here. The drift this stops was
+       measured before it existed: a test SDK a minor apart and two platform packages a patch apart
+       between two applications with no pin file at all. -->
+
+  <PropertyGroup>
+    <ZeroZeroPackagesImported>true</ZeroZeroPackagesImported>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- A VersionOverride on a PackageReference is a pin drifting in one project. Off, so NuGet
+         refuses it (NU1013) instead of honouring it. -->
+    <CentralPackageVersionOverrideEnabled>false</CentralPackageVersionOverrideEnabled>
+  </PropertyGroup>
+
+  <!-- ZeroZeroFamilyPin is the declaration; PackageVersion is made from it below, so the guard in
+       ZeroZero.Build.targets holds the declared list to compare a project's resolved pins against.
+       A pin moves here, and nowhere else. -->
+  <ItemGroup Label="Windows App SDK">
+    <ZeroZeroFamilyPin Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
+    <ZeroZeroFamilyPin Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2270" />
+  </ItemGroup>
+
+  <ItemGroup Label="UI">
+    <!-- A ceiling, not a preference: a consuming app holds a direct reference at this version, and
+         a direct reference below a transitive one is NU1605, an error. Raise both or neither. -->
+    <ZeroZeroFamilyPin Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.251219" />
+  </ItemGroup>
+
+  <ItemGroup Label="MQTT">
+    <ZeroZeroFamilyPin Include="MQTTnet" Version="5.2.0.1603" />
+  </ItemGroup>
+
+  <ItemGroup Label="Testing">
+    <ZeroZeroFamilyPin Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <ZeroZeroFamilyPin Include="xunit" Version="2.9.3" />
+    <ZeroZeroFamilyPin Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="@(ZeroZeroFamilyPin)" />
+  </ItemGroup>
+
+</Project>

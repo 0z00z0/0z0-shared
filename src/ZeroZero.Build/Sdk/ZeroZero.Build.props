@@ -1,0 +1,30 @@
+<Project>
+
+  <!-- The property blocks every project in the family shares. A repository imports this from its
+       Directory.Build.props — by path from a sibling checkout, or through the ZeroZero.Build SDK on
+       the package route — so every project there evaluates it before its own file. A value set in
+       a project file wins over anything here: these are the family's defaults, not a lock. -->
+
+  <PropertyGroup>
+    <ZeroZeroBuildPropsImported>true</ZeroZeroBuildPropsImported>
+    <!-- Where scripts\ and templates\ live, in a package and in a checkout alike. -->
+    <ZeroZeroBuildDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..'))</ZeroZeroBuildDir>
+  </PropertyGroup>
+
+  <!-- Language and compilation settings. -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NeutralLanguage>en-GB</NeutralLanguage>
+  </PropertyGroup>
+
+  <!-- Studio identity. Per-assembly values (AssemblyTitle, Product, Description) and a
+       repository's own URLs and licence stay with the project or repository that owns them. -->
+  <PropertyGroup>
+    <Authors>ZeroZero Software</Authors>
+    <Company>ZeroZero Software</Company>
+    <Copyright>Copyright © 2026 ZeroZero Software</Copyright>
+  </PropertyGroup>
+
+</Project>

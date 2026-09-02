@@ -12,6 +12,7 @@
        "released together" and 0.7.0 and above means "released on its own". -->
   <PropertyGroup>
     <BrandVersion>0.7.0</BrandVersion>
+    <BuildVersion>0.7.0</BuildVersion>
     <ConfigVersion>0.7.0</ConfigVersion>
     <ControlsVersion>0.7.0</ControlsVersion>
     <MqttVersion>0.7.0</MqttVersion>
