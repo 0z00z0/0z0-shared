@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0, as the other headless assemblies, so a console tool can read and repair the
+         task. The assembly declares itself Windows-only through SupportedOSPlatform instead. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Startup</RootNamespace>
+    <Version>$(StartupVersion)</Version>
+
+    <AssemblyTitle>ZeroZero.Startup</AssemblyTitle>
+    <Product>ZeroZero.Startup</Product>
+    <Description>The application's logon task in the Task Scheduler: the current task identity, the power-safe elevated task definition, registration, the direct enabled read, enable, disable, delete, demand-start verification and the repair state machine. The manifest, the installer and the watchdog policy stay with the application.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroZero.Primitives\ZeroZero.Primitives.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The scheduler library. No type of it reaches a public signature here. Pinned in the build
+         kit. -->
+    <PackageReference Include="TaskScheduler" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ZeroZero.Startup.Tests" />
+  </ItemGroup>
+
+</Project>

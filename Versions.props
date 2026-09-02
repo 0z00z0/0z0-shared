@@ -18,6 +18,7 @@
     <LifecycleVersion>0.7.0</LifecycleVersion>
     <MqttVersion>0.7.0</MqttVersion>
     <PrimitivesVersion>0.7.0</PrimitivesVersion>
+    <StartupVersion>0.7.0</StartupVersion>
     <Win32Version>0.7.0</Win32Version>
   </PropertyGroup>
 
