@@ -13,28 +13,12 @@
        that declares none reports the SDK default — which only the unpublished harness does. -->
   <Import Project="$(MSBuildThisFileDirectory)Versions.props" />
 
-  <!-- The commit every assembly reports alongside its version. A consumer builds the module from a
-       sibling working tree rather than from the pinned revision, so the number alone cannot say
-       which source produced a binary: between two tags every revision carries the same three
-       digits. SourceRevisionId is what the SDK appends to AssemblyInformationalVersion, which
-       MqttModule.Version reads back off the loaded assembly. A tree with no git available stamps
-       nothing and reports the bare number. -->
-  <PropertyGroup>
-    <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
-  </PropertyGroup>
-
-  <Target Name="StampSourceRevision" BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo"
-          Condition="'$(SourceRevisionId)' == ''">
-    <Exec Command="git rev-parse --short=7 HEAD" WorkingDirectory="$(MSBuildThisFileDirectory)"
-          ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low"
-          ContinueOnError="true" IgnoreExitCode="true">
-      <Output TaskParameter="ConsoleOutput" PropertyName="_HeadRevision"/>
-      <Output TaskParameter="ExitCode" PropertyName="_HeadRevisionExitCode"/>
-    </Exec>
-    <PropertyGroup Condition="'$(_HeadRevisionExitCode)' == '0' and '$(_HeadRevision)' != ''">
-      <SourceRevisionId>$(_HeadRevision.Trim())</SourceRevisionId>
-    </PropertyGroup>
-  </Target>
+  <!-- The commit every assembly reports alongside its version, which AssemblyVersionText reads back
+       off the loaded assembly. The stamp is the primitives package's, shipped in its build folder
+       so a consumer adopts it with the one reference; the repository's own projects take the same
+       two files here, so there is one definition. -->
+  <Import Project="$(MSBuildThisFileDirectory)src\ZeroZero.Primitives\build\ZeroZero.Primitives.props" />
+  <Import Project="$(MSBuildThisFileDirectory)src\ZeroZero.Primitives\build\ZeroZero.Primitives.targets" />
 
   <!-- Studio identity and packaging metadata. Per-assembly values (AssemblyTitle, Product,
        Description) stay in the project that owns them. -->

@@ -1,0 +1,10 @@
+<Project>
+
+  <!-- SourceRevisionId is what the SDK appends to AssemblyInformationalVersion, and what
+       AssemblyVersionText reads back off the loaded assembly. The SDK's default is already true;
+       stated so the stamp does not rest on a default staying where it is. -->
+  <PropertyGroup>
+    <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+</Project>

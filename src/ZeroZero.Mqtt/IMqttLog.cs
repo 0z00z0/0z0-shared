@@ -1,17 +1,15 @@
+using ZeroZero.Primitives;
+
 namespace ZeroZero.Mqtt;
 
-/// <summary>Where the module says what it did. The host owns the logging framework; this is the
-/// whole of what the module needs from it.</summary>
-public interface IMqttLog
+/// <summary>The shared log sink under the module's own name, so a host's implementation of this is
+/// a sink any component takes. The module itself is typed on <see cref="ILogSink"/> throughout.</summary>
+public interface IMqttLog : ILogSink
 {
-    void Info(string message);
-
-    /// <summary>An exception is passed whole so the host can decide how much of it to record. The
-    /// module sanitises first — type and message only — so no staged credential reaches here.</summary>
-    void Error(string source, Exception? ex);
 }
 
-/// <summary>The default: nothing is recorded, so a consumer that has not supplied a log still runs.</summary>
+/// <summary>The no-op under the module's own name; <see cref="NullLogSink.Instance"/> is what the
+/// module defaults to.</summary>
 public sealed class NullMqttLog : IMqttLog
 {
     public static readonly NullMqttLog Instance = new();

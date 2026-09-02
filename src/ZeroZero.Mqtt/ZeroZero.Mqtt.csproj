@@ -11,6 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- The log sink the module writes to and the coalescing gate under every channel. -->
+    <ProjectReference Include="..\ZeroZero.Primitives\ZeroZero.Primitives.csproj" />
     <!-- The storage seam has a file-backed implementation; a host with its own document
          implements the three-member interface instead and this reference costs it nothing. -->
     <ProjectReference Include="..\ZeroZero.Config\ZeroZero.Config.csproj" />

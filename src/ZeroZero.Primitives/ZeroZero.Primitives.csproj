@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Primitives</RootNamespace>
+    <Version>$(PrimitivesVersion)</Version>
+
+    <AssemblyTitle>ZeroZero.Primitives</AssemblyTitle>
+    <Product>ZeroZero.Primitives</Product>
+    <Description>The plain primitives any component may take: the two-member log sink and its no-op, the informational-version reader with its display form, the coalescing gate, and the source-revision stamp as build properties and targets.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The revision stamp travels with the package. NuGet imports build\<PackageId>.props and
+         .targets into a project that references the package directly, so adopting the stamp is the
+         one reference. Not buildTransitive: a component taking this assembly must not restamp the
+         application above it unasked. -->
+    <None Include="build\ZeroZero.Primitives.props" Pack="true" PackagePath="build\" />
+    <None Include="build\ZeroZero.Primitives.targets" Pack="true" PackagePath="build\" />
+  </ItemGroup>
+
+</Project>

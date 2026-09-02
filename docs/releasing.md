@@ -20,10 +20,11 @@ references is already on the feed at the version its `Versions.props` property c
 the workflow refuses the tag otherwise. A component with unreleased changes releases first, under
 its own tag and its own notes.
 
-The references that cross component lines today: `ZeroZero.Mqtt` and `ZeroZero.Mqtt.Discovery` take
-`ZeroZero.Config`, and `ZeroZero.Mqtt.WinUI` takes `ZeroZero.Brand.WinUI`. So `config` and `brand`
-release in either order and `mqtt` releases after both. Within a component the order does not
-matter: the projects release together.
+The references that cross component lines today: all three MQTT projects take
+`ZeroZero.Primitives`, `ZeroZero.Mqtt` and `ZeroZero.Mqtt.Discovery` take `ZeroZero.Config`, and
+`ZeroZero.Mqtt.WinUI` takes `ZeroZero.Brand.WinUI`. So `primitives`, `config` and `brand` release
+in any order and `mqtt` releases after all three. Within a component the order does not matter: the
+projects release together.
 
 ## The procedure
 
