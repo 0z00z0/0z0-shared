@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0: the container writer, the slot size and the contrast policy touch no UI
+         framework, so an application renders its icon with whatever it draws with and hands the
+         frames here. The WinUI host of the tray icon is a later project under the same key. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Tray</RootNamespace>
+    <Version>$(TrayVersion)</Version>
+
+    <AssemblyTitle>ZeroZero.Tray</AssemblyTitle>
+    <Product>ZeroZero.Tray</Product>
+    <Description>The tray icon's container and sizing policy: the PNG-in-ICO file writer, the slot size at the taskbar's own scale, and the light-or-dark contrast decision. Headless, no drawing.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The registry read and the taskbar metrics are Windows-only. -->
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Foundation on foundation, downward: the taskbar's scale is a monitor metric. -->
+    <ProjectReference Include="..\ZeroZero.Win32\ZeroZero.Win32.csproj" />
+  </ItemGroup>
+
+</Project>
