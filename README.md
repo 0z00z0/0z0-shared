@@ -9,7 +9,8 @@ sibling checkout. MIT licensed, public.
 
 A **component** is the unit of adoption: one to three projects, one entry-point reference, one
 guide, its own version and its own release tag. A **foundation** assembly is one any component may
-take — no domain vocabulary and no dependencies of its own — and is never part of a component. An
+take — no domain vocabulary, and no dependency of its own beyond another foundation assembly
+beneath it — and is never part of a component. An
 assembly belongs to the component its name's first segment after `ZeroZero.` spells, so a new
 assembly's name is chosen against the keys below; [`docs/releasing.md`](docs/releasing.md) has the
 rule.
