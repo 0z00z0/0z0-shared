@@ -5,8 +5,6 @@
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>ZeroZero.Brand.WinUI.TestHarness</RootNamespace>
-    <!-- Required by the LibraryImport source generator's generated marshalling code (NativeMethods). -->
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
     <!-- The merged app PRI is built from the app's own resources, so an app declares this even
          where every library it references already has: without it MakePRI measures the en-GB
@@ -25,7 +23,8 @@
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
 
     <!-- Declares PerMonitorV2 DPI awareness so the harness renders BrandAboutWindow sharp on
-         high-DPI displays instead of being bitmap-stretched (blurry) by the OS. -->
+         high-DPI displays instead of being bitmap-stretched (blurry) by the OS, and the common
+         controls 6 dependency the task dialog needs. -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
@@ -40,6 +39,9 @@
     <!-- The rig covers every shared WinUI component in this repository, not only the About window:
          the MQTT settings panel is driven here from fabricated state so it can be seen rendered. -->
     <ProjectReference Include="..\ZeroZero.Mqtt.WinUI\ZeroZero.Mqtt.WinUI.csproj" />
+    <!-- Direct, not only through the About window: the rig sizes its own windows through the
+         monitor metrics and shows the native dialogs on screen. -->
+    <ProjectReference Include="..\ZeroZero.Win32\ZeroZero.Win32.csproj" />
   </ItemGroup>
 
 </Project>

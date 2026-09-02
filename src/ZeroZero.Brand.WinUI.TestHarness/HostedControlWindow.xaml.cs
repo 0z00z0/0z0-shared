@@ -2,6 +2,7 @@ using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Windows.Graphics;
 using ZeroZero.Brand.Core;
+using ZeroZero.Win32;
 
 namespace ZeroZero.Brand.WinUI.TestHarness;
 
@@ -37,14 +38,14 @@ public sealed partial class HostedControlWindow : Window
         // the two coincide only at 100% scaling. Scale by the window's own DPI, or a scaled display
         // gets a window far smaller than its content and clips the control.
         IntPtr window = Win32Interop.GetWindowFromWindowId(AppWindow.Id);
-        double scale = NativeMethods.GetScaleForWindow(window);
+        double scale = MonitorMetrics.ScaleForWindow(window);
 
         // Resize sizes the whole window, title bar and borders included, so the chrome has to be
         // added on top of the content. Take it from the window's own frame: a constant allowance
         // is right at one scaling and one theme only, and the surplus becomes empty space.
-        SizeInt32 chrome = NativeMethods.GetChromeSizeForWindow(window);
+        var (chromeWidth, chromeHeight) = MonitorMetrics.NonClientSize(window);
         AppWindow.Resize(new SizeInt32(
-            (int)Math.Ceiling(ClientWidth * scale) + chrome.Width,
-            (int)Math.Ceiling(contentHeight * scale) + chrome.Height));
+            (int)Math.Ceiling(ClientWidth * scale) + chromeWidth,
+            (int)Math.Ceiling(contentHeight * scale) + chromeHeight));
     }
 }
