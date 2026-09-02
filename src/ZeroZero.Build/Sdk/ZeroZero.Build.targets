@@ -1,0 +1,110 @@
+<Project>
+
+  <!-- The targets every project in the family shares: the guards that hold the family's build
+       rules, the manifest writer and the signing step. A repository imports this from its
+       Directory.Build.targets, so it follows the project file and the SDK's own targets. -->
+
+  <PropertyGroup>
+    <ZeroZeroBuildTargetsImported>true</ZeroZeroBuildTargetsImported>
+    <ZeroZeroPowerShell Condition="'$(ZeroZeroPowerShell)' == ''">pwsh</ZeroZeroPowerShell>
+    <ZeroZeroManifestTemplate Condition="'$(ZeroZeroManifestTemplate)' == ''">$(ZeroZeroBuildDir)templates\app.manifest</ZeroZeroManifestTemplate>
+    <ZeroZeroSigningScript Condition="'$(ZeroZeroSigningScript)' == ''">$(ZeroZeroBuildDir)scripts\Sign-Executable.ps1</ZeroZeroSigningScript>
+  </PropertyGroup>
+
+  <!-- The guards. Each fails the build naming what to change; none is a warning, because a rule
+       that only warns is one nothing enforces. -->
+  <Target Name="ZeroZeroCheckKit" BeforeTargets="BeforeBuild">
+
+    <Error Condition="'$(ZeroZeroBuildPropsImported)' != 'true'"
+           Code="ZZB001"
+           Text="ZeroZero.Build.targets is imported but ZeroZero.Build.props is not. The two are one kit: import the props from Directory.Build.props and the targets from Directory.Build.targets." />
+
+    <Error Condition="'$(ZeroZeroPackagesImported)' != 'true'"
+           Code="ZZB002"
+           Text="$(MSBuildProjectName) does not see the family's pins. Every repository in the family has a Directory.Packages.props that imports ZeroZero.Packages.props above its own PackageVersion items." />
+
+    <Error Condition="'$(ManagePackageVersionsCentrally)' != 'true'"
+           Code="ZZB003"
+           Text="$(MSBuildProjectName) has opted out of central package management (ManagePackageVersionsCentrally is '$(ManagePackageVersionsCentrally)'). Every project in the family pins through Directory.Packages.props; remove the override." />
+
+    <Error Condition="'$(ZeroZeroWinUIAppImported)' == 'true' and '$(WindowsPackageType)' != 'None'"
+           Code="ZZB004"
+           Text="$(MSBuildProjectName) imports ZeroZero.WinUIApp.props and sets WindowsPackageType to '$(WindowsPackageType)'. The family ships unpackaged, installed by Inno Setup; drop the override, or drop the import if this application is genuinely packaged." />
+
+    <Error Condition="'$(ZeroZeroWinUIAppImported)' == 'true' and '$(ApplicationManifest)' == '$(ZeroZeroGeneratedManifest)' and '$(ZeroZeroManifestExecutionLevel)' != 'asInvoker' and '$(ZeroZeroManifestExecutionLevel)' != 'highestAvailable' and '$(ZeroZeroManifestExecutionLevel)' != 'requireAdministrator'"
+           Code="ZZB005"
+           Text="ZeroZeroManifestExecutionLevel is '$(ZeroZeroManifestExecutionLevel)'. The manifest schema allows asInvoker, highestAvailable or requireAdministrator, and nothing else." />
+  </Target>
+
+  <!-- A family pin that a later file moved. Directory.Packages.props evaluates after the import,
+       so an Update there changes what the project resolves while the import still looks intact,
+       and a second PackageVersion for the same name is only a warning to NuGet (NU1506), which
+       then resolves whichever it prefers. Each declared pin must appear in the resolved list
+       exactly once, name and version together. -->
+  <Target Name="ZeroZeroCheckFamilyPins" BeforeTargets="BeforeBuild" Condition="'@(ZeroZeroFamilyPin)' != ''">
+    <PropertyGroup>
+      <_ZeroZeroPinsNow>;@(PackageVersion->'%(Identity)=%(Version)', ';');</_ZeroZeroPinsNow>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ZeroZeroPinCheck Include="@(ZeroZeroFamilyPin)">
+        <Declared>;%(ZeroZeroFamilyPin.Identity)=%(ZeroZeroFamilyPin.Version);</Declared>
+        <Occurrences>$([System.Text.RegularExpressions.Regex]::Matches('$(_ZeroZeroPinsNow)', $([System.Text.RegularExpressions.Regex]::Escape(';%(ZeroZeroFamilyPin.Identity)='))).Count)</Occurrences>
+      </_ZeroZeroPinCheck>
+    </ItemGroup>
+    <Error Condition="'%(_ZeroZeroPinCheck.Occurrences)' != '1' or !$(_ZeroZeroPinsNow.Contains('%(_ZeroZeroPinCheck.Declared)'))"
+           Code="ZZB006"
+           Text="%(_ZeroZeroPinCheck.Identity) is pinned at %(_ZeroZeroPinCheck.Version) by the family, and $(MSBuildProjectName) resolves it at another version or declares it more than once. A pin moves in ZeroZero.Packages.props and nowhere else; remove the Update or the second PackageVersion." />
+  </Target>
+
+  <!-- The application manifest, from the template with the assembly name and the execution level
+       substituted. Only for a project that imports ZeroZero.WinUIApp.props and names no manifest of
+       its own. The text is escaped before it becomes lines, so nothing in the template is read as
+       a separator or a wildcard. -->
+  <Target Name="ZeroZeroWriteManifest" BeforeTargets="PrepareForBuild"
+          Condition="'$(ZeroZeroWinUIAppImported)' == 'true' and '$(ApplicationManifest)' == '$(ZeroZeroGeneratedManifest)'">
+    <Error Condition="!Exists('$(ZeroZeroManifestTemplate)')"
+           Code="ZZB007"
+           Text="The manifest template '$(ZeroZeroManifestTemplate)' does not exist. It ships in the kit's templates folder; set ZeroZeroManifestTemplate to point at another." />
+    <PropertyGroup>
+      <_ZeroZeroManifestText>$([System.IO.File]::ReadAllText('$(ZeroZeroManifestTemplate)').Replace('{AssemblyName}', '$(AssemblyName)').Replace('{ExecutionLevel}', '$(ZeroZeroManifestExecutionLevel)'))</_ZeroZeroManifestText>
+    </PropertyGroup>
+    <Error Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(_ZeroZeroManifestText)', '\{[A-Za-z]+\}'))"
+           Code="ZZB008"
+           Text="The manifest template '$(ZeroZeroManifestTemplate)' carries a token the kit does not know. Known tokens: {AssemblyName} and {ExecutionLevel}." />
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(ZeroZeroGeneratedManifest)'))" />
+    <WriteLinesToFile File="$(ZeroZeroGeneratedManifest)" Lines="$([MSBuild]::Escape('$(_ZeroZeroManifestText)'))"
+                      Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <FileWrites Include="$(ZeroZeroGeneratedManifest)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Signing, after publish, when a certificate is named: ZeroZeroSignThumbprint for one in the
+       current user's or the machine's personal store, or ZeroZeroSignPfx for a file whose password
+       arrives in ZeroZeroSignPfxPassword and reaches the script as an environment variable, never
+       as an argument. The script verifies what it signed and exits non-zero otherwise, which fails
+       the publish. ZeroZeroSignTrust installs the certificate as trusted for the current user
+       first, which is what a self-signed studio certificate needs on a fresh runner for the
+       signature to verify as valid rather than as untrusted. The same script signs an installer
+       from the application's own build script. -->
+  <Target Name="ZeroZeroSignPublishedExecutable" AfterTargets="Publish"
+          Condition="'$(ZeroZeroSignThumbprint)' != '' or '$(ZeroZeroSignPfx)' != ''">
+    <PropertyGroup>
+      <ZeroZeroSignFile Condition="'$(ZeroZeroSignFile)' == ''">$(PublishDir)$(AssemblyName).exe</ZeroZeroSignFile>
+      <_ZeroZeroSignCertificate Condition="'$(ZeroZeroSignThumbprint)' != ''">-Thumbprint &quot;$(ZeroZeroSignThumbprint)&quot;</_ZeroZeroSignCertificate>
+      <_ZeroZeroSignCertificate Condition="'$(ZeroZeroSignThumbprint)' == ''">-PfxPath &quot;$(ZeroZeroSignPfx)&quot;</_ZeroZeroSignCertificate>
+      <_ZeroZeroSignOptions Condition="'$(ZeroZeroSignTimestampServer)' != ''">$(_ZeroZeroSignOptions) -TimestampServer &quot;$(ZeroZeroSignTimestampServer)&quot;</_ZeroZeroSignOptions>
+      <_ZeroZeroSignOptions Condition="'$(ZeroZeroSignNoTimestamp)' == 'true'">$(_ZeroZeroSignOptions) -NoTimestamp</_ZeroZeroSignOptions>
+      <_ZeroZeroSignOptions Condition="'$(ZeroZeroSignTrust)' == 'true'">$(_ZeroZeroSignOptions) -Trust</_ZeroZeroSignOptions>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(ZeroZeroSignFile)')"
+           Code="ZZB009"
+           Text="Nothing to sign: '$(ZeroZeroSignFile)' is not there after publish. Set ZeroZeroSignFile if the executable is elsewhere." />
+    <Error Condition="!Exists('$(ZeroZeroSigningScript)')"
+           Code="ZZB010"
+           Text="The signing script '$(ZeroZeroSigningScript)' does not exist. It ships in the kit's scripts folder." />
+    <Exec Command="&quot;$(ZeroZeroPowerShell)&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(ZeroZeroSigningScript)&quot; -Path &quot;$(ZeroZeroSignFile)&quot; $(_ZeroZeroSignCertificate)$(_ZeroZeroSignOptions)"
+          EnvironmentVariables="ZEROZERO_SIGN_PFX_PASSWORD=$(ZeroZeroSignPfxPassword)" />
+  </Target>
+
+</Project>

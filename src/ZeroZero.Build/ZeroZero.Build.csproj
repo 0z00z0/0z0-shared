@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Build</RootNamespace>
+    <Version>$(BuildVersion)</Version>
+
+    <AssemblyTitle>ZeroZero.Build</AssemblyTitle>
+    <Product>ZeroZero.Build</Product>
+    <Description>The build machinery every repository in the family shares: the language and studio-identity property blocks, the unpackaged WinUI application block, the application manifest as token-substituted content, the signing script with its publish-time target, and the third-party pins under central package management. Build-time only, no assembly.</Description>
+
+    <!-- Build-time only. No assembly and no dependency group go into the package, and the package
+         type marks it as an MSBuild SDK. The SDK still compiles an empty assembly under bin/ so the
+         solution build and the release's pack, which does not build, have a project to run
+         against. -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <PackageType>MSBuildSdk</PackageType>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <!-- NuGet warns that a .ps1 outside tools\ will not run at install (NU5110) and that one not
+         named install/init/uninstall is unrecognised (NU5111). The signing script is content a
+         build target and an installer script call by path, never an install hook. -->
+    <NoWarn>$(NoWarn);NU5110;NU5111</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Sdk\ is the folder an MSBuild SDK import resolves to, so a consumer on the package route
+         imports each file by name; a sibling checkout imports the same files by path. scripts\ and
+         templates\ sit beside it in the package as in this folder, and the MSBuild files reach
+         them from their own location. Wildcards, so a file added to a folder is packed without a
+         line here; explicit Include rather than Update, because an item from the default glob
+         carries its folder as RecursiveDir and lands as Sdk\Sdk\. -->
+    <None Include="Sdk\*" Pack="true" PackagePath="Sdk\" />
+    <None Include="scripts\*" Pack="true" PackagePath="scripts\" />
+    <None Include="templates\*" Pack="true" PackagePath="templates\" />
+    <!-- build\ is what a PackageReference imports, and it holds one target that refuses the
+         reference: that route delivers nothing else of the kit, silently, so it fails instead. -->
+    <None Include="build\*" Pack="true" PackagePath="build\" />
+  </ItemGroup>
+
+</Project>
