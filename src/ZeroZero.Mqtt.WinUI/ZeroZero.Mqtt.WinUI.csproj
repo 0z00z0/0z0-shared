@@ -34,9 +34,10 @@
     <ProjectReference Include="..\ZeroZero.Mqtt\ZeroZero.Mqtt.csproj" />
     <!-- The log sink the panel's guarded handlers report to. -->
     <ProjectReference Include="..\ZeroZero.Primitives\ZeroZero.Primitives.csproj" />
-    <!-- InfoIcon lives in the brand assembly: it carries no MQTT vocabulary, and both consumers of
-         this panel already reference that assembly for the About window. -->
-    <ProjectReference Include="..\ZeroZero.Brand.WinUI\ZeroZero.Brand.WinUI.csproj" />
+    <!-- The info bubble. It carries no MQTT vocabulary and no studio identity, so it lives in the
+         controls foundation assembly rather than with the brand: a panel that wants a bubble must
+         not drag the font pack and the About window along with it. -->
+    <ProjectReference Include="..\ZeroZero.Controls.WinUI\ZeroZero.Controls.WinUI.csproj" />
     <!-- The panel compiles against nothing in the discovery assembly. It is referenced because this
          project is the module's entry point: one project reference is the documented contract, so
          the chain below it has to be complete here or a consumer that took that one reference is

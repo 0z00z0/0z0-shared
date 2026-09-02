@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Windows.System;
+using ZeroZero.Controls.WinUI;
 
 namespace ZeroZero.Mqtt.WinUI;
 
@@ -273,7 +274,7 @@ public sealed partial class MqttSettingsPanel : UserControl
         PublishGroupsInfoIcon.Visibility = hasGroupsInfo ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private static void SetInfo(Brand.WinUI.InfoIcon icon, string subject, string info)
+    private static void SetInfo(InfoIcon icon, string subject, string info)
     {
         icon.Subject = subject;
         icon.Info = info;
@@ -887,7 +888,7 @@ public sealed partial class MqttSettingsPanel : UserControl
 
             var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
             if (row.HasInfo)
-                content.Children.Add(new Brand.WinUI.InfoIcon { Subject = row.InfoSubject, Info = row.Info });
+                content.Children.Add(new InfoIcon { Subject = row.InfoSubject, Info = row.Info });
             content.Children.Add(toggle);
 
             var card = new CommunityToolkit.WinUI.Controls.SettingsCard

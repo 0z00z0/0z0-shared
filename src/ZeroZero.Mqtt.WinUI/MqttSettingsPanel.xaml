@@ -5,7 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:brand="using:ZeroZero.Brand.WinUI"
+    xmlns:shared="using:ZeroZero.Controls.WinUI"
     xmlns:controls="using:CommunityToolkit.WinUI.Controls"
     mc:Ignorable="d"
     FontFamily="{ThemeResource MqttPanelFontFamily}">
@@ -139,7 +139,7 @@
                 <TextBlock x:Name="PublishDescriptionText" Style="{StaticResource MqttHintStyle}"/>
             </controls:SettingsCard.Description>
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <brand:InfoIcon x:Name="PublishInfoIcon"/>
+                <shared:InfoIcon x:Name="PublishInfoIcon"/>
                 <ToggleSwitch x:Name="EnabledToggle" Toggled="OnEnabledToggled"/>
             </StackPanel>
         </controls:SettingsCard>
@@ -152,7 +152,7 @@
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock x:Name="StatusHeading" Style="{StaticResource MqttSubHeaderStyle}"
                            VerticalAlignment="Center"/>
-                <brand:InfoIcon x:Name="StatusInfoIcon"/>
+                <shared:InfoIcon x:Name="StatusInfoIcon"/>
             </StackPanel>
 
             <!-- THE TRAP, AND THE FIX.
@@ -205,13 +205,13 @@
                          these values were found or chosen. -->
                     <TextBlock x:Name="ConnectionLabel" Grid.Row="0" Grid.Column="0"
                                Style="{StaticResource MqttStatusLabelStyle}"/>
-                    <brand:InfoIcon x:Name="ConnectionInfoIcon" Grid.Row="0" Grid.Column="2"/>
+                    <shared:InfoIcon x:Name="ConnectionInfoIcon" Grid.Row="0" Grid.Column="2"/>
                     <TextBlock x:Name="DetectText" Grid.Row="0" Grid.Column="3" Text="—"
                                Style="{StaticResource MqttStatusValueStyle}"/>
 
                     <TextBlock x:Name="BrokerInUseLabel" Grid.Row="1" Grid.Column="0"
                                Style="{StaticResource MqttStatusLabelStyle}"/>
-                    <brand:InfoIcon x:Name="BrokerInUseInfoIcon" Grid.Row="1" Grid.Column="2"/>
+                    <shared:InfoIcon x:Name="BrokerInUseInfoIcon" Grid.Row="1" Grid.Column="2"/>
                     <TextBlock x:Name="BrokerStatusText" Grid.Row="1" Grid.Column="3" Text="—"
                                Style="{StaticResource MqttStatusValueStyle}"/>
 
@@ -224,13 +224,13 @@
                             Click="OnPublishNowClicked"
                             VerticalAlignment="Center"
                             MinHeight="0" Padding="10,3,10,3" FontSize="12"/>
-                    <brand:InfoIcon x:Name="LastPublishInfoIcon" Grid.Row="2" Grid.Column="2"/>
+                    <shared:InfoIcon x:Name="LastPublishInfoIcon" Grid.Row="2" Grid.Column="2"/>
                     <TextBlock x:Name="LastPublishText" Grid.Row="2" Grid.Column="3" Text="—"
                                Style="{StaticResource MqttStatusValueStyle}"/>
 
                     <TextBlock x:Name="LastCommandLabel" Grid.Row="3" Grid.Column="0"
                                Style="{StaticResource MqttStatusLabelStyle}"/>
-                    <brand:InfoIcon x:Name="LastCommandInfoIcon" Grid.Row="3" Grid.Column="2"/>
+                    <shared:InfoIcon x:Name="LastCommandInfoIcon" Grid.Row="3" Grid.Column="2"/>
                     <TextBlock x:Name="LastCommandText" Grid.Row="3" Grid.Column="3" Text="—"
                                Style="{StaticResource MqttStatusValueStyle}"/>
                 </Grid>
@@ -244,7 +244,7 @@
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock x:Name="DeviceHeading" Style="{StaticResource MqttSubHeaderStyle}"
                            VerticalAlignment="Center"/>
-                <brand:InfoIcon x:Name="DeviceInfoIcon"/>
+                <shared:InfoIcon x:Name="DeviceInfoIcon"/>
             </StackPanel>
 
             <controls:SettingsCard x:Name="DeviceNameCard">
@@ -255,7 +255,7 @@
                     <TextBlock x:Name="DeviceNameSavedText" Style="{StaticResource MqttHintStyle}"
                                Foreground="{ThemeResource MqttPanelAccentBrush}"
                                VerticalAlignment="Center" Visibility="Collapsed"/>
-                    <brand:InfoIcon x:Name="DeviceNameInfoIcon"/>
+                    <shared:InfoIcon x:Name="DeviceNameInfoIcon"/>
                     <TextBox x:Name="DeviceNameBox" Style="{StaticResource MqttTextFieldStyle}"
                              TextChanged="OnDeviceNameEdited"
                              LostFocus="OnDeviceNameCommitted" KeyDown="OnDeviceNameKeyDown"/>
@@ -269,7 +269,7 @@
                     <TextBlock x:Name="DeviceIdDescription" Style="{StaticResource MqttHintStyle}"/>
                 </controls:SettingsCard.Description>
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <brand:InfoIcon x:Name="DeviceIdInfoIcon"/>
+                    <shared:InfoIcon x:Name="DeviceIdInfoIcon"/>
                     <TextBlock x:Name="DeviceIdText" VerticalAlignment="Center"
                                Style="{StaticResource MqttHintStyle}"
                                IsTextSelectionEnabled="True"/>
@@ -288,7 +288,7 @@
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock x:Name="BrokerHeading" Style="{StaticResource MqttSubHeaderStyle}"
                            VerticalAlignment="Center"/>
-                <brand:InfoIcon x:Name="BrokerInfoIcon"/>
+                <shared:InfoIcon x:Name="BrokerInfoIcon"/>
                 <TextBlock x:Name="BrokerDirtyText" Style="{StaticResource MqttHintStyle}"
                            Foreground="{ThemeResource MqttPanelAccentBrush}"
                            VerticalAlignment="Center" Visibility="Collapsed"/>
@@ -304,7 +304,7 @@
                          without information, and the row reads better without it. -->
                     <controls:SettingsCard x:Name="HostCard">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <brand:InfoIcon x:Name="HostInfoIcon"/>
+                            <shared:InfoIcon x:Name="HostInfoIcon"/>
                             <TextBox x:Name="HostBox" Style="{StaticResource MqttTextFieldStyle}"
                                      TextChanged="OnBrokerFieldEdited"/>
                         </StackPanel>
@@ -319,7 +319,7 @@
                             <TextBlock x:Name="PortDescription" Style="{StaticResource MqttHintStyle}"/>
                         </controls:SettingsCard.Description>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <brand:InfoIcon x:Name="PortInfoIcon"/>
+                            <shared:InfoIcon x:Name="PortInfoIcon"/>
                             <StackPanel Spacing="4" HorizontalAlignment="Right">
                                 <ComboBox x:Name="PortCombo" Style="{StaticResource MqttComboFieldStyle}"
                                           SelectionChanged="OnPortSelectionChanged"/>
@@ -339,7 +339,7 @@
                             <TextBlock x:Name="TransportDescription" Style="{StaticResource MqttHintStyle}"/>
                         </controls:SettingsCard.Description>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <brand:InfoIcon x:Name="TransportInfoIcon"/>
+                            <shared:InfoIcon x:Name="TransportInfoIcon"/>
                             <ComboBox x:Name="TransportCombo" Style="{StaticResource MqttComboFieldStyle}"
                                       SelectionChanged="OnBrokerSelectionChanged"/>
                         </StackPanel>
@@ -354,7 +354,7 @@
                             <TextBlock x:Name="EncryptionDescription" Style="{StaticResource MqttHintStyle}"/>
                         </controls:SettingsCard.Description>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <brand:InfoIcon x:Name="EncryptionInfoIcon"/>
+                            <shared:InfoIcon x:Name="EncryptionInfoIcon"/>
                             <ComboBox x:Name="EncryptionCombo" Style="{StaticResource MqttComboFieldStyle}"
                                       SelectionChanged="OnBrokerSelectionChanged"/>
                         </StackPanel>
@@ -367,7 +367,7 @@
                             <TextBlock x:Name="UsernameDescription" Style="{StaticResource MqttHintStyle}"/>
                         </controls:SettingsCard.Description>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <brand:InfoIcon x:Name="UsernameInfoIcon"/>
+                            <shared:InfoIcon x:Name="UsernameInfoIcon"/>
                             <TextBox x:Name="UsernameBox" Style="{StaticResource MqttTextFieldStyle}"
                                      TextChanged="OnBrokerFieldEdited"/>
                         </StackPanel>
@@ -378,7 +378,7 @@
                             <TextBlock x:Name="PasswordDescription" Style="{StaticResource MqttHintStyle}"/>
                         </controls:SettingsCard.Description>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <brand:InfoIcon x:Name="PasswordInfoIcon"/>
+                            <shared:InfoIcon x:Name="PasswordInfoIcon"/>
                             <PasswordBox x:Name="PasswordBox" Style="{StaticResource MqttPasswordFieldStyle}"
                                          PasswordChanged="OnBrokerFieldEdited"/>
                         </StackPanel>
@@ -391,7 +391,7 @@
                             <TextBlock x:Name="PrefixDescription" Style="{StaticResource MqttHintStyle}"/>
                         </controls:SettingsCard.Description>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <brand:InfoIcon x:Name="PrefixInfoIcon"/>
+                            <shared:InfoIcon x:Name="PrefixInfoIcon"/>
                             <TextBox x:Name="PrefixBox" Style="{StaticResource MqttTextFieldStyle}"
                                      TextChanged="OnBrokerFieldEdited"/>
                         </StackPanel>
@@ -421,7 +421,7 @@
                                                Style="{StaticResource MqttHintStyle}"
                                                Foreground="{ThemeResource MqttPanelAccentBrush}"
                                                Visibility="Collapsed"/>
-                                    <brand:InfoIcon x:Name="TestInfoIcon"/>
+                                    <shared:InfoIcon x:Name="TestInfoIcon"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
                                             HorizontalAlignment="Right">
@@ -447,7 +447,7 @@
                            VerticalAlignment="Center"/>
                 <!-- Consumer-owned, and collapsed when the consumer supplied nothing: an icon that
                      opens on an empty flyout is worse than no icon. -->
-                <brand:InfoIcon x:Name="PublishGroupsInfoIcon" Visibility="Collapsed"/>
+                <shared:InfoIcon x:Name="PublishGroupsInfoIcon" Visibility="Collapsed"/>
             </StackPanel>
 
             <!-- The rows are built in code from MqttPanelSetup.Groups: the panel renders the
