@@ -30,11 +30,13 @@ its own tag and its own notes.
 
 The references that cross component lines today: all three MQTT projects take
 `ZeroZero.Primitives`, `ZeroZero.Mqtt` and `ZeroZero.Mqtt.Discovery` take `ZeroZero.Config`,
-`ZeroZero.Brand.WinUI` takes `ZeroZero.Win32`, and `ZeroZero.Mqtt.WinUI` takes
-`ZeroZero.Controls.WinUI`. So `primitives`, `config`, `win32`, `controls` and `build` release in
-any order, `brand` releases after `win32`, and `mqtt` releases after `primitives`, `config` and
-`controls`. No component references another component: the brand and MQTT components are
-independent of each other, and the build kit references nothing and is referenced by nothing.
+`ZeroZero.Brand.WinUI` takes `ZeroZero.Win32`, `ZeroZero.Mqtt.WinUI` takes
+`ZeroZero.Controls.WinUI`, and `ZeroZero.Lifecycle` and `ZeroZero.Startup` each take
+`ZeroZero.Primitives`. So `primitives`, `config`, `win32`, `controls` and `build` release in any
+order, `brand` releases after `win32`, `lifecycle` and `startup` release after `primitives`, and
+`mqtt` releases after `primitives`, `config` and `controls`. No component references another
+component: the brand, MQTT, lifecycle and startup components are independent of each other, and
+the build kit references nothing and is referenced by nothing.
 Within a component the order does not matter: the projects release together. The build kit packs
 no assembly — its package is the MSBuild files, the manifest template and the signing script — and
 the pack step counts it like any other project of its key.
@@ -64,8 +66,8 @@ The workflow then runs, in this order, and stops at the first failure:
 
 A green run means the component's packages are on the feed and a GitHub release exists for the tag
 with the notes as its body. Nothing else is republished: a release of `mqtt` leaves the `brand`,
-`build`, `config`, `controls`, `primitives` and `win32` packages at whatever version each last
-released.
+`build`, `config`, `controls`, `lifecycle`, `primitives`, `startup` and `win32` packages at
+whatever version each last released.
 
 Tags from `v0.1.0` to `v0.6.0` predate the scheme and released every package together under one
 number; they remain valid refs and their notes stay at `docs/release-notes/v<x.y.z>.md`.
