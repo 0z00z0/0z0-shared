@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0, and no reference to ZeroZero.Controls.WinUI: the Windows App SDK
+         bootstrapper blocks on a runner with no desktop session, so a WinUI-coupled test assembly
+         would hang CI rather than fail it (issue #13). What can be tested without the XAML runtime
+         is compiled in as linked source, and the markup is read as data. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Controls.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The framework-free half of title-bar theming: the enum and the palette, which name no
+         WinUI type on purpose so their values can be pinned here. -->
+    <Compile Include="..\..\src\ZeroZero.Controls.WinUI\TitleBarTheme.cs" Link="Linked\TitleBarTheme.cs" />
+    <Compile Include="..\..\src\ZeroZero.Controls.WinUI\TitleBarPalette.cs" Link="Linked\TitleBarPalette.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The controls' markup and the panel's, as data: the section header repeats the panel's
+         sub-header typography and rule, the row keeps its bubble before its field, and the prompt
+         keeps its confirm on the right. Each is a contract the plan states, and nothing in a build
+         holds it. -->
+    <None Include="..\..\src\ZeroZero.Controls.WinUI\SettingsSectionHeader.xaml"
+          Link="SettingsSectionHeader.xaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ZeroZero.Controls.WinUI\SettingsRow.xaml"
+          Link="SettingsRow.xaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ZeroZero.Controls.WinUI\TextPromptWindow.xaml"
+          Link="TextPromptWindow.xaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ZeroZero.Mqtt.WinUI\MqttSettingsPanel.xaml"
+          Link="MqttSettingsPanel.xaml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+</Project>
