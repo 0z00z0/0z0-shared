@@ -1,8 +1,9 @@
 # ZeroZero Software — shared library
 
 The building blocks ZeroZero Software's desktop apps share, published as packages from
-[0z00z0/0z0-shared](https://github.com/0z00z0/0z0-shared) — one package per assembly, each
-versioned and released with its component. MIT licensed, public.
+[0z00z0/0z0-shared](https://github.com/0z00z0/0z0-shared) — one package per assembly, and one for
+the build kit, which carries no assembly, each versioned and released with its component. MIT
+licensed, public.
 
 | Package | Component | Target | What it is |
 |---|---|---|---|
