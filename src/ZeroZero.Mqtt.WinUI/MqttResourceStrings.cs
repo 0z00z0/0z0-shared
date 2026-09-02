@@ -11,10 +11,12 @@ namespace ZeroZero.Mqtt.WinUI;
 /// gets an untranslated panel rather than a panel of blank controls, which is why no static text on
 /// the panel is bound by <c>x:Uid</c>.</para>
 /// <para>Several maps are tried rather than one, because the shape differs by how the consumer
-/// builds. A merged application index files the library's strings into the application's own
-/// <c>Resources</c> map; the library's own <c>.pri</c> beside the executable holds them under the
-/// assembly's name. The first map that answers a key wins, and a key none of them answers falls back
-/// to the built-in text.</para>
+/// builds. A merged application index files the application's own strings under the bare
+/// <c>Resources</c> map and the library's under the assembly's name; the library's own <c>.pri</c>
+/// beside the executable holds them under the bare name. The maps are asked in the order
+/// <see cref="MqttResourceMaps"/> states, the host's before the library's copy, so the first map
+/// that answers a key is the host's when it has one; a key none of them answers falls back to the
+/// built-in text.</para>
 /// <para>A consumer localises by adding a language folder alongside <c>en-GB</c>, or by supplying an
 /// <see cref="IMqttStringSource"/> of its own on the panel's setup object. Nothing here is forked and
 /// no package is added.</para>
@@ -55,7 +57,7 @@ public sealed class MqttResourceStrings : IMqttStringSource
             return;
         }
 
-        foreach (string path in new[] { $"{Library}/{Map}", Map, Library })
+        foreach (string path in MqttResourceMaps.Subtrees(Library, Map))
             if (Subtree(root, path) is { } map) _maps.Add(map);
 
         // The root itself, for an index whose items sit directly under it.

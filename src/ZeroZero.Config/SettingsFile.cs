@@ -17,7 +17,10 @@ namespace ZeroZero.Config;
 /// and the <see cref="SaveFailed"/> event carry the failure, and the in-memory state rolls back so
 /// it can never disagree with the file.</para>
 /// <para>A file that is present but cannot be parsed is copied aside before defaults take over.
-/// Missing, empty and unreadable files all end at defaults.</para>
+/// Missing, empty and unreadable files all end at defaults — but a file that could not be read at
+/// all may still be intact, so nothing is written over it until a read has succeeded. That latch is
+/// set once and never cleared: a later read that fails, or finds the file broken, does not stop a
+/// good configuration being written back over it.</para>
 /// </remarks>
 /// <typeparam name="T">The settings shape: a class with a parameterless constructor whose
 /// defaults are the state a missing file stands for.</typeparam>
@@ -40,6 +43,10 @@ public sealed class SettingsFile<T> where T : class, new()
     private string _json;
     private string? _quarantinePath;
 
+    // Whether any read has ever succeeded. Until one has, memory holds only defaults and the file
+    // may hold the user's settings behind a lock, so a write would put nothing over something.
+    private bool _hasLoaded;
+
     public SettingsFile(SettingsFileOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -57,7 +64,10 @@ public sealed class SettingsFile<T> where T : class, new()
         _serialiser = options.Serialiser;
         FilePath = Path.Combine(options.Directory, options.FileName);
         _tempPath = FilePath + TempSuffix;
-        _json = Load();
+
+        var loaded = Load();
+        _hasLoaded = loaded is not null;
+        _json = loaded ?? Serialise(new T());
     }
 
     /// <summary>The file this instance owns.</summary>
@@ -101,7 +111,7 @@ public sealed class SettingsFile<T> where T : class, new()
             var json = Serialise(draft);
             if (string.Equals(json, _json, StringComparison.Ordinal)) return SettingsSaveResult.Success;
 
-            error = TryWrite(json);
+            error = TryWriteOnceLoaded(json);
             changed = error is null;
             if (changed) _json = json;
         }
@@ -110,25 +120,29 @@ public sealed class SettingsFile<T> where T : class, new()
     }
 
     /// <summary>Writes the stored state out whether or not it has changed, which is how a file that
-    /// was missing or unreadable at load gets its defaults on disk.</summary>
+    /// was missing at load gets its defaults on disk. Refused, like <see cref="Update"/>, while the
+    /// file has never been read.</summary>
     public SettingsSaveResult Save()
     {
         Exception? error;
 
-        lock (_gate) error = TryWrite(_json);
+        lock (_gate) error = TryWriteOnceLoaded(_json);
 
         return Report(error, changed: false);
     }
 
     /// <summary>Re-reads the file, quarantining it if it has become unreadable. Returns true, and
-    /// raises <see cref="Changed"/>, only when the state on disk differs from the state held.</summary>
+    /// raises <see cref="Changed"/>, only when the state on disk differs from the state held. A file
+    /// that cannot be read at all leaves the held state standing.</summary>
     public bool Reload()
     {
         bool changed;
 
         lock (_gate)
         {
-            var json = Load();
+            if (Load() is not { } json) return false;
+
+            _hasLoaded = true;
             changed = !string.Equals(json, _json, StringComparison.Ordinal);
             if (changed) _json = json;
         }
@@ -159,8 +173,8 @@ public sealed class SettingsFile<T> where T : class, new()
     private string Serialise(T value) => JsonSerializer.Serialize(value, _serialiser);
 
     // Reads the file into its canonical serialised form, so a comparison later is about values
-    // rather than the whitespace a hand edit left behind.
-    private string Load()
+    // rather than the whitespace a hand edit left behind. Null when the file could not be read.
+    private string? Load()
     {
         string? text;
         try
@@ -169,9 +183,9 @@ public sealed class SettingsFile<T> where T : class, new()
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // Unreadable for a reason the content cannot explain. Nothing is preserved and nothing
-            // is overwritten, because the file may still be intact.
-            return Serialise(new T());
+            // Unreadable for a reason the content cannot explain, so the file may still be intact:
+            // nothing is preserved, and the caller decides what stands in.
+            return null;
         }
 
         // An empty file states nothing, so there is nothing worth preserving.
@@ -205,6 +219,12 @@ public sealed class SettingsFile<T> where T : class, new()
         canonical = string.Empty;
         return false;
     }
+
+    private Exception? TryWriteOnceLoaded(string json) =>
+        _hasLoaded
+            ? TryWrite(json)
+            : new InvalidOperationException(
+                "The file has not been read since the store opened, so it is not written over: what is on disk may be intact. Reload it first.");
 
     private Exception? TryWrite(string json)
     {

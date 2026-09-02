@@ -102,6 +102,24 @@ public class DiscoveryLedgerFileTests : IDisposable
 
         Assert.Empty(store.Read().Devices);
     }
+
+    [Fact]
+    public void AFileThatCannotBeReadIsNotWrittenOverOnceItIsReleased()
+    {
+        // A ledger locked when the store opens reads as nothing recorded. A write then must not put
+        // that nothing over the record that was there, or eviction across the restart is lost.
+        string path = Path.Combine(_directory, DiscoveryLedgerFile.DefaultFileName);
+        DiscoveryLedgerFile.In(_directory).Update(
+            ledger => ledger.Devices.Add(new PublishedDevice { ConfigTopic = Sample.ConfigTopic }));
+        string before = File.ReadAllText(path);
+
+        DiscoveryLedgerFile store;
+        using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            store = DiscoveryLedgerFile.In(_directory);
+        store.Update(ledger => ledger.Devices.Add(new PublishedDevice { ConfigTopic = "other/config" }));
+
+        Assert.Equal(before, File.ReadAllText(path));
+    }
 }
 
 /// <summary>The default store, and the one configuration in which eviction does not survive a

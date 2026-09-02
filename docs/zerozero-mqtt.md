@@ -173,6 +173,15 @@ writes nothing at all. So the file exists exactly when something has been stored
 because the application started, and `MqttSettingsFile.FilePath` is a sound basis for a host's own
 first-run or has-this-migrated gate. The same holds for `DiscoveryLedgerFile`.
 
+**A file that cannot be read is not written over.** A file that is present but unreadable when the
+store is constructed — held open by another process, or access denied — reads as the declared
+defaults in memory, and every `Update` and `File.Save()` is refused until `File.Reload()` has read
+it once: the result carries an `InvalidOperationException` and `File.SaveFailed` is raised. The
+file may be intact, and the quarantine copy cannot cover it, because a copy is made by reading the
+file. A `File.Reload()` that meets the same failure keeps the state already held. Once any read has
+succeeded the store stays writable whatever a later read finds: writing a good configuration over
+a file broken by hand is the intended repair. The same holds for `DiscoveryLedgerFile`.
+
 #### Carrying an existing broker block across
 
 **The module reads its own file and nothing else. A consumer that already stores MQTT settings
@@ -1157,9 +1166,10 @@ consumer to override all six measures 11.07:1 on the status values and 14.47:1 o
 Every user-facing string the module owns is in `MqttStrings`, keyed, with its en-GB text built in
 and exposed as `MqttStrings.Builtin` for a consumer generating a translation template. A consumer
 localises by adding a language folder alongside `Strings\en-GB\`, or by supplying an
-`IMqttStringSource` on the setup object. A lookup that finds nothing answers null and the built-in
-en-GB stands, so a resource map that fails to load leaves a readable panel rather than blank
-controls.
+`IMqttStringSource` on the setup object. A consumer's own `.resw` entry for a module key outranks
+the module's: the merged index is asked for the application's map before the library's copy, the
+order `MqttResourceMaps` states. A lookup that finds nothing answers null and the built-in en-GB
+stands, so a resource map that fails to load leaves a readable panel rather than blank controls.
 
 `MqttPanelText` composes every sentence the panel renders, and `MqttStatusText` is its static facade
 over the module's own en-GB — useful to a host rendering the same status outside the panel, in a
