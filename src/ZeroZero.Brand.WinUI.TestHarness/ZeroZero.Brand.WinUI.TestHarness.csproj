@@ -39,6 +39,9 @@
     <!-- The rig covers every shared WinUI component in this repository, not only the About window:
          the MQTT settings panel is driven here from fabricated state so it can be seen rendered. -->
     <ProjectReference Include="..\ZeroZero.Mqtt.WinUI\ZeroZero.Mqtt.WinUI.csproj" />
+    <!-- Direct, not only through the panel: the rig walks to an info bubble by type to open its
+         flyout on screen. -->
+    <ProjectReference Include="..\ZeroZero.Controls.WinUI\ZeroZero.Controls.WinUI.csproj" />
     <!-- Direct, not only through the About window: the rig sizes its own windows through the
          monitor metrics and shows the native dialogs on screen. -->
     <ProjectReference Include="..\ZeroZero.Win32\ZeroZero.Win32.csproj" />

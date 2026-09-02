@@ -30,8 +30,14 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// one capture says which layer a control follows), <c>--mica</c> (no page background and a Mica
 /// backdrop, the ground a rig otherwise never reproduces) and <c>--error</c> (an out-of-range port,
 /// so the validation tier is on screen). <c>--dialogue "&lt;window title&gt;"</c> opens the
-/// device-id dialogue on that one window and suppresses the rest, and <c>--probe &lt;path&gt;</c>
-/// writes <see cref="ThemeProbe"/>'s numbers beside the capture.
+/// device-id dialogue on that one window and suppresses the rest, <c>--info "&lt;window title&gt;"</c>
+/// does the same with the first info bubble's flyout, and <c>--probe &lt;path&gt;</c> writes
+/// <see cref="ThemeProbe"/>'s numbers beside the capture.
+/// </para>
+/// <para>
+/// <c>--palette</c> opens the brand resource dictionary instead, one window per theme, with every
+/// key resolved through ThemeResource; <c>--probe &lt;path&gt;</c> writes the colour and face that
+/// reached each element.
 /// </para>
 /// <para>
 /// <c>--native</c> opens no XAML window at all: it shows the Win32 layer's task dialog with every
@@ -55,8 +61,9 @@ public partial class App : Application
     }
 
     private readonly List<MqttPanelWindow> _mqttWindows = [];
+    private readonly List<BrandPaletteWindow> _paletteWindows = [];
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _probeTimer;
-    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _dialogueTimer;
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _settledTimer;
     private string? _onlyTitle;
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
@@ -72,24 +79,37 @@ public partial class App : Application
             return;
         }
 
+        if (commandLine.Any(a => a.Equals("--palette", StringComparison.Ordinal)))
+        {
+            ShowPalettes(ValueAfter(commandLine, "--probe"));
+            return;
+        }
+
         if (commandLine.Any(a => a.Equals("--mqtt", StringComparison.Ordinal)))
         {
             bool branded = commandLine.Any(a => a.Equals("--brand", StringComparison.Ordinal));
             if (branded) InstallExtremePalette();
             if (commandLine.Any(a => a.Equals("--controls", StringComparison.Ordinal))) InstallControlOverrides();
 
-            int dialogue = Array.IndexOf(commandLine, "--dialogue");
-            string? only = dialogue >= 0 && dialogue + 1 < commandLine.Length ? commandLine[dialogue + 1] : null;
+            // Either narrows the run to one window: a dialogue or a flyout is captured on a window
+            // nothing else overlaps.
+            string? dialogueOn = ValueAfter(commandLine, "--dialogue");
+            string? infoOn = ValueAfter(commandLine, "--info");
+            string? only = dialogueOn ?? infoOn;
 
             ShowMqttPanels(branded,
                            commandLine.Any(a => a.Equals("--mica", StringComparison.Ordinal)),
                            commandLine.Any(a => a.Equals("--error", StringComparison.Ordinal)),
                            only);
 
-            if (only is { Length: > 0 }) OpenDialogueOn(only);
+            if (dialogueOn is { Length: > 0 }) OnceSettled(dialogueOn, window => window.OpenDeviceIdDialogue());
+            if (infoOn is { Length: > 0 }) OnceSettled(infoOn, window => window.OpenFirstInfoBubble());
 
-            int probe = Array.IndexOf(commandLine, "--probe");
-            if (probe >= 0 && probe + 1 < commandLine.Length) StartProbe(commandLine[probe + 1]);
+            if (ValueAfter(commandLine, "--probe") is { Length: > 0 } probePath)
+                StartProbe(probePath, path =>
+                {
+                    foreach (var window in _mqttWindows) ThemeProbe.Dump(path, window.Title, window.ProbeRoot);
+                });
             return;
         }
 
@@ -300,24 +320,58 @@ public partial class App : Application
         resources["ButtonBackground"] = new SolidColorBrush(Color.FromArgb(0xFF, 0x00, 0x40, 0x40));
     }
 
-    /// <summary>Opens the device-id dialogue on one named window once it has settled, so the
-    /// dialogue's own text tiers can be captured. One window only: a second ContentDialog on the
-    /// same thread never opens.</summary>
-    private void OpenDialogueOn(string windowTitle)
+    /// <summary>Runs an action on one named window once it has settled, so a dialogue or a flyout
+    /// can be captured with its own text tiers on screen. One window only: a second ContentDialog
+    /// on the same thread never opens.</summary>
+    private void OnceSettled(string windowTitle, Action<MqttPanelWindow> action)
     {
-        _dialogueTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
-        _dialogueTimer.Interval = TimeSpan.FromSeconds(1.0);
-        _dialogueTimer.IsRepeating = false;
-        _dialogueTimer.Tick += (_, _) =>
-            _mqttWindows.FirstOrDefault(w => w.Title == windowTitle)?.OpenDeviceIdDialogue();
-        _dialogueTimer.Start();
+        _settledTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+        _settledTimer.Interval = TimeSpan.FromSeconds(1.0);
+        _settledTimer.IsRepeating = false;
+        _settledTimer.Tick += (_, _) =>
+        {
+            if (_mqttWindows.FirstOrDefault(w => w.Title == windowTitle) is { } window) action(window);
+        };
+        _settledTimer.Start();
+    }
+
+    private static string? ValueAfter(string[] commandLine, string option)
+    {
+        int index = Array.IndexOf(commandLine, option);
+        return index >= 0 && index + 1 < commandLine.Length ? commandLine[index + 1] : null;
     }
 
     /// <summary>
-    /// Dumps every window's realised tree to a tab-separated file once layout has settled, so the
-    /// capture and the numbers come from the same run.
+    /// The brand dictionary on screen, one window per theme. What a consumer resolves through
+    /// ThemeResource is seen here rather than read off the markup, and the probe records the value
+    /// that reached each element, which is the only place a key that missed shows.
     /// </summary>
-    private void StartProbe(string path)
+    private void ShowPalettes(string? probePath)
+    {
+        (string Title, ElementTheme Theme)[] scenarios =
+        [
+            ("Brand Palette Light", ElementTheme.Light),
+            ("Brand Palette Dark", ElementTheme.Dark),
+        ];
+        for (int i = 0; i < scenarios.Length; i++)
+        {
+            var window = new BrandPaletteWindow(scenarios[i].Title, scenarios[i].Theme, offset: i * 50);
+            _paletteWindows.Add(window);
+            window.Activate();
+        }
+
+        if (probePath is { Length: > 0 })
+            StartProbe(probePath, path =>
+            {
+                foreach (var window in _paletteWindows) window.Probe(path);
+            });
+    }
+
+    /// <summary>
+    /// Runs a dump to a tab-separated file once layout has settled, so the capture and the numbers
+    /// come from the same run.
+    /// </summary>
+    private void StartProbe(string path, Action<string> dump)
     {
         // Held in a field: a local timer is unrooted and can be collected before it ever ticks.
         _probeTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
@@ -328,7 +382,7 @@ public partial class App : Application
             try
             {
                 File.WriteAllText(path, "");
-                foreach (var window in _mqttWindows) ThemeProbe.Dump(path, window.Title, window.ProbeRoot);
+                dump(path);
             }
             catch (Exception ex)
             {

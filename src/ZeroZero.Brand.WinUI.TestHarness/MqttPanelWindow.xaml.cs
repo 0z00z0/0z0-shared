@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Automation.Provider;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Windows.Graphics;
+using ZeroZero.Controls.WinUI;
 using ZeroZero.Win32;
 
 namespace ZeroZero.Brand.WinUI.TestHarness;
@@ -76,6 +77,26 @@ public sealed partial class MqttPanelWindow : Window
         }
     }
 
+    /// <summary>Opens the first info bubble's flyout, so a capture shows the bubble as a reader
+    /// meets it and not only its glyph. The bubble's button is private to the control, so the rig
+    /// walks the realised tree to it, as it does for every other part it reaches.</summary>
+    internal void OpenFirstInfoBubble()
+    {
+        string report = Path.Combine(Path.GetTempPath(), "mqtt-harness-info.txt");
+        try
+        {
+            if (FindDescendant<InfoIcon>(Panel) is { } bubble &&
+                FindDescendant<Button>(bubble) is { Flyout: { } flyout } button)
+                flyout.ShowAt(button);
+            else
+                File.WriteAllText(report, "No info bubble with a flyout found.");
+        }
+        catch (Exception ex)
+        {
+            File.WriteAllText(report, ex.ToString());
+        }
+    }
+
     /// <summary>
     /// Edits the panel's own host box, so the unapplied marker can be seen while the group holding
     /// the field is closed — the state a staged edit used to be lost in. The rig reaches into the
@@ -125,6 +146,19 @@ public sealed partial class MqttPanelWindow : Window
             var child = VisualTreeHelper.GetChild(root, i);
             if (child is FrameworkElement { } element && element.Name == name) return element;
             if (FindDescendant(child, name) is { } found) return found;
+        }
+        return null;
+    }
+
+    /// <summary>The first descendant of a given type, in tree order.</summary>
+    private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
+    {
+        int count = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is T match) return match;
+            if (FindDescendant<T>(child) is { } found) return found;
         }
         return null;
     }

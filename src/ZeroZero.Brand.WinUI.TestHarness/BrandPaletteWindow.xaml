@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="ZeroZero.Brand.WinUI.TestHarness.BrandPaletteWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- The brand dictionary merged where a consuming application merges it, and every key resolved
+         through ThemeResource, so what is on screen is what a consumer gets and not what the
+         dictionary claims. -->
+    <Grid x:Name="Root" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.Resources>
+            <ResourceDictionary>
+                <ResourceDictionary.MergedDictionaries>
+                    <ResourceDictionary Source="ms-appx:///ZeroZero.Brand.WinUI/Themes/BrandResources.xaml"/>
+                </ResourceDictionary.MergedDictionaries>
+            </ResourceDictionary>
+        </Grid.Resources>
+
+        <StackPanel x:Name="Body" Padding="24,20,24,24" Spacing="8">
+            <TextBlock Text="Brand palette" FontSize="20" FontWeight="SemiBold"/>
+
+            <StackPanel x:Name="Swatches" Spacing="6">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Border Width="140" Height="28" CornerRadius="4" Background="{ThemeResource BrandBackgroundBrush}"/>
+                    <TextBlock Grid.Column="1" Text="BrandBackgroundBrush" VerticalAlignment="Center"/>
+                </Grid>
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Border Width="140" Height="28" CornerRadius="4" Background="{ThemeResource BrandBackgroundAltBrush}"/>
+                    <TextBlock Grid.Column="1" Text="BrandBackgroundAltBrush" VerticalAlignment="Center"/>
+                </Grid>
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Border Width="140" Height="28" CornerRadius="4" Background="{ThemeResource BrandTealBrush}"/>
+                    <TextBlock Grid.Column="1" Text="BrandTealBrush" VerticalAlignment="Center"/>
+                </Grid>
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Border Width="140" Height="28" CornerRadius="4" Background="{ThemeResource BrandBlueBrush}"/>
+                    <TextBlock Grid.Column="1" Text="BrandBlueBrush" VerticalAlignment="Center"/>
+                </Grid>
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Border Width="140" Height="28" CornerRadius="4" Background="{ThemeResource BrandPurpleBrush}"/>
+                    <TextBlock Grid.Column="1" Text="BrandPurpleBrush" VerticalAlignment="Center"/>
+                </Grid>
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Border Width="140" Height="28" CornerRadius="4" Background="{ThemeResource BrandIndigoBrush}"/>
+                    <TextBlock Grid.Column="1" Text="BrandIndigoBrush" VerticalAlignment="Center"/>
+                </Grid>
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Border Width="140" Height="28" CornerRadius="4" Background="{ThemeResource BrandAmberBrush}"/>
+                    <TextBlock Grid.Column="1" Text="BrandAmberBrush" VerticalAlignment="Center"/>
+                </Grid>
+            </StackPanel>
+
+            <!-- The colour keys, as a consumer uses them: gradient stops, which take a Color and not
+                 a Brush. -->
+            <TextBlock x:Name="Wordmark" Text="ZeroZero Software" FontSize="20" FontWeight="SemiBold"
+                       Margin="0,12,0,0" FontFamily="{ThemeResource BrandFontFamily}">
+                <TextBlock.Foreground>
+                    <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                        <GradientStop Color="{ThemeResource BrandTealColour}" Offset="0"/>
+                        <GradientStop Color="{ThemeResource BrandPurpleColour}" Offset="1"/>
+                    </LinearGradientBrush>
+                </TextBlock.Foreground>
+            </TextBlock>
+            <TextBlock x:Name="Sample" FontSize="13" FontFamily="{ThemeResource BrandFontFamily}"
+                       TextWrapping="Wrap"
+                       Text="BrandFontFamily: 0123456789 Il1 O0 — the brand face, monospaced."/>
+        </StackPanel>
+    </Grid>
+</Window>
