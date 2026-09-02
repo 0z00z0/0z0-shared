@@ -47,10 +47,11 @@ once the version it references is on the feed, so a change here releases first.
   thread and no timer, so the coalescing decision is testable without either.
 - **The source-revision stamp** — `build/ZeroZero.Primitives.props` and
   `build/ZeroZero.Primitives.targets`. The targets file sets `SourceRevisionId` to the short
-  seven-character commit of the consuming project's own repository, before the SDK's source-control
-  step would set the full one, so `AssemblyInformationalVersion` reads `<version>+<commit>` and
-  `Read` returns exactly that. A tree with no git available stamps nothing and the assembly reports
-  the bare number.
+  seven-character commit of the consuming project's own repository, so `AssemblyInformationalVersion`
+  reads `<version>+<commit>` and `Read` returns exactly that; without it the SDK's own stamp is the
+  full forty characters. The commit is read from the consuming project's directory, never from the
+  file's own, which as a package sits in the package cache and in no repository. A tree with no git
+  available stamps nothing and the assembly reports the bare number.
 
 ## Take the reference
 
