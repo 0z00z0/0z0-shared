@@ -48,8 +48,9 @@ releases after `primitives` is on the feed at the version it references.
 
 **A crash never reaches the hook.** The runtime raises no exit event for an unhandled exception,
 so relaunch covers the clean exit nobody asked for — a message loop that ended, an exit path taken
-by mistake — and not the crash. The crash is the crash-dump component's to record and the
-application's own watchdog task's to recover from.
+by mistake — and not the crash. The crash is the diagnostics component's to record
+([`zerozero-diagnostics.md`](zerozero-diagnostics.md)) and the application's own watchdog task's
+to recover from.
 
 **The relaunched process inherits the token.** An elevated application comes back elevated with no
 prompt, and nothing here asks for an elevation the parent did not have.
@@ -85,7 +86,8 @@ installer runs, when the installer asks it to close — `MarkDeliberateExit()` f
 - **The mutex name.** It is the application's public identity to its installer — the name an Inno
   Setup `AppMutex` directive checks — so it is chosen there, prefix included.
 - **The product name** the data folder takes.
-- **The crash path**: dumps, and the watchdog task that brings a crashed application back.
+- **The watchdog task** that brings a crashed application back. The crash itself — the handlers,
+  the crash line and the dump registration — is the diagnostics component's.
 
 ## Traps
 

@@ -8,7 +8,7 @@ namespace ZeroZero.Lifecycle;
 /// window exists; told when an exit is deliberate; on any other clean exit it starts the executable
 /// again with <see cref="Relaunch.Argument"/>, unless the session is ending or the limiter has seen
 /// its budget already. A crash never arrives here: the runtime raises no exit event for an
-/// unhandled exception, so a crash is the crash-dump component's to record and the application's
+/// unhandled exception, so a crash is the diagnostics component's to record and the application's
 /// watchdog task's to recover from.</summary>
 public sealed class ProcessLifecycle
 {
