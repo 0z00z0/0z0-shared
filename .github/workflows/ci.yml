@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    # ZeroZero.Brand.WinUI targets net10.0-windows and needs the Windows App SDK build tooling.
+    # The WinUI projects target net10.0-windows and need the Windows App SDK build tooling.
     runs-on: windows-latest
 
     steps:
@@ -25,22 +25,10 @@ jobs:
       - name: Build
         run: dotnet build 0z0-shared.slnx -c Release --no-restore
 
-      # Each test project is invoked by name rather than through the solution: the solution also
-      # holds ZeroZero.Brand.WinUI.TestHarness, a WinUI application whose Windows App SDK
-      # bootstrapper blocks on a runner with no desktop session. All four test projects are plain
-      # net10.0 and reference only plain net10.0 libraries, so none can reach that bootstrapper.
-      # One step per project: a single step would report only the last exit code.
-      - name: Unit tests — ZeroZero.Brand.Core
-        run: dotnet test tests\ZeroZero.Brand.Core.Tests\ZeroZero.Brand.Core.Tests.csproj -c Release --no-build --nologo
-
-      - name: Unit tests — ZeroZero.Config
-        run: dotnet test tests\ZeroZero.Config.Tests\ZeroZero.Config.Tests.csproj -c Release --no-build --nologo
-
-      # Some of these bind a loopback TcpListener and speak MQTT to it, so the runner needs nothing
-      # beyond the loopback interface — no broker, and no outbound network.
-      - name: Unit tests — ZeroZero.Mqtt
-        run: dotnet test tests\ZeroZero.Mqtt.Tests\ZeroZero.Mqtt.Tests.csproj -c Release --no-build --nologo
-
-      # Drives the same loopback listener, one layer up.
-      - name: Unit tests — ZeroZero.Mqtt.Discovery
-        run: dotnet test tests\ZeroZero.Mqtt.Discovery.Tests\ZeroZero.Mqtt.Discovery.Tests.csproj -c Release --no-build --nologo
+      # The one test-run definition, shared with the release workflow. It discovers every project
+      # under tests/ when it runs, so a new test project is in the run the moment it exists, and it
+      # fails at the end naming every project that failed. A hand-written step per project was the
+      # alternative, and a forgotten step is a project whose tests never run while everything stays
+      # green.
+      - name: Unit tests
+        uses: ./.github/actions/run-tests

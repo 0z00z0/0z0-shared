@@ -1,0 +1,26 @@
+name: Run every test project
+description: >-
+  Discovers every project under tests/ and runs each against the solution build, failing at the end
+  naming every project that failed. Shared by ci.yml and release.yml, so the two cannot drift and a
+  new test project cannot be left out of either.
+
+inputs:
+  configuration:
+    description: The configuration the solution was built in.
+    required: false
+    default: Release
+
+runs:
+  using: composite
+  steps:
+    # Each test project is invoked by name rather than through the solution: the solution also holds
+    # the interactive harness, a WinUI application whose Windows App SDK bootstrapper blocks on a
+    # runner with no desktop session. Every test project is plain net10.0 and references only plain
+    # net10.0 libraries, so none can reach that bootstrapper. Some tests bind a loopback TcpListener
+    # and speak MQTT to it, so the runner needs nothing beyond the loopback interface — no broker,
+    # and no outbound network.
+    - name: Unit tests — every project under tests/
+      shell: pwsh
+      env:
+        CONFIGURATION: ${{ inputs.configuration }}
+      run: ./.github/scripts/run-tests.ps1 -Configuration $env:CONFIGURATION
