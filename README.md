@@ -21,10 +21,11 @@ take — no domain vocabulary and no dependencies of its own — and is never pa
 | Primitives | `primitives` | `ZeroZero.Primitives` | The two-member log sink and its no-op, the reader of the version an assembly reports with its About-box form, the coalescing gate, and the source-revision stamp as build properties and targets. The MQTT module writes to the sink and runs every retained channel on the gate. | [`docs/zerozero-primitives.md`](docs/zerozero-primitives.md) |
 | Win32 | `win32` | `ZeroZero.Win32` | The raw Win32 layer: monitor and DPI metrics as plain numbers, the native task dialog and message boxes, dark native chrome. Headless, so a console tool can take it; the About window takes its monitor metrics from here. | [`docs/zerozero-win32.md`](docs/zerozero-win32.md) |
 
-Dependencies point downward: a component's projects take foundation and each other. The About
-window takes `ZeroZero.Win32`, and the MQTT panel additionally references `ZeroZero.Brand.WinUI`,
-for the info icon and nothing else, so taking the MQTT module brings the brand assemblies and the
-Win32 layer with it.
+Dependencies point downward: a component's projects take foundation and each other. The MQTT
+projects take `ZeroZero.Primitives` and `ZeroZero.Config`, the About window takes `ZeroZero.Win32`,
+and the MQTT panel additionally references `ZeroZero.Brand.WinUI`, for the info icon and nothing
+else, so taking the MQTT module brings the brand assemblies and all three foundation assemblies with
+it.
 
 Third-party packages are the Windows App SDK, the Community Toolkit's settings controls, and
 **MQTTnet** — the last confined to `ZeroZero.Mqtt`, where no MQTTnet type reaches a public

@@ -15,9 +15,10 @@ versioned and released with its component. MIT licensed, public.
 | `ZeroZero.Primitives` | `primitives` (foundation) | `net10.0` | The two-member log sink and its no-op, the reader of the version an assembly reports with its About-box form, the coalescing gate, and the source-revision stamp as build properties and targets. |
 | `ZeroZero.Win32` | `win32` (foundation) | `net10.0` | The raw Win32 layer: monitor and DPI metrics as plain numbers, the native task dialog and message boxes, dark native chrome. No XAML, no Windows App SDK. |
 
-Taking `ZeroZero.Mqtt.WinUI` brings the whole MQTT module, both brand assemblies and the Win32 layer
-with it, so an application with a settings page needs the one reference. A headless or test consumer takes
-`ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` and pulls in no WinUI at all.
+Taking `ZeroZero.Mqtt.WinUI` brings the whole MQTT module, both brand assemblies and all three
+foundation assemblies with it, so an application with a settings page needs the one reference. A
+headless or test consumer takes `ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` and pulls in no WinUI
+at all — the primitives and config foundations only.
 
 **Versions are per component.** A package version is its component's tag without the prefix —
 `mqtt-v0.7.0` is `0.7.0` — and a component's release notes speak about that component alone. A
