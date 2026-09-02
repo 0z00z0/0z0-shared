@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
 using ZeroZero.Brand.Core;
+using ZeroZero.Win32;
 // This project's own namespace nests inside ZeroZero.Brand (same collision documented in
 // BrandAboutWindow.xaml.cs), so an unqualified "Brand" resolves to the namespace segment
 // instead of ZeroZero.Brand.Core.Brand — alias it to sidestep that.
@@ -32,6 +33,11 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// device-id dialogue on that one window and suppresses the rest, and <c>--probe &lt;path&gt;</c>
 /// writes <see cref="ThemeProbe"/>'s numbers beside the capture.
 /// </para>
+/// <para>
+/// <c>--native</c> opens no XAML window at all: it shows the Win32 layer's task dialog with every
+/// part of its signature filled (<c>--links</c> renders the buttons as command links), then a
+/// message box naming the button pressed, and exits.
+/// </para>
 /// </summary>
 public partial class App : Application
 {
@@ -60,6 +66,12 @@ public partial class App : Application
         // Read from the process command line, because an unpackaged WinUI launch carries no
         // arguments on the activation event.
         var commandLine = Environment.GetCommandLineArgs();
+        if (commandLine.Any(a => a.Equals("--native", StringComparison.Ordinal)))
+        {
+            ShowNativeDialogs(commandLine.Any(a => a.Equals("--links", StringComparison.Ordinal)));
+            return;
+        }
+
         if (commandLine.Any(a => a.Equals("--mqtt", StringComparison.Ordinal)))
         {
             bool branded = commandLine.Any(a => a.Equals("--brand", StringComparison.Ordinal));
@@ -124,6 +136,35 @@ public partial class App : Application
         };
         _hostedControlWindow = new HostedControlWindow(hostedInfo);
         _hostedControlWindow.Activate();
+    }
+
+    /// <summary>
+    /// The headless Win32 layer on screen: dark chrome applied, the task dialog with caption,
+    /// headline, body, detail, icon and two buttons, then a message box reporting the id the dialog
+    /// returned. The wording is the rig's own — the layer carries text, it owns none.
+    /// </summary>
+    private void ShowNativeDialogs(bool commandLinks)
+    {
+        DarkChrome.Apply(DarkChromeMode.AllowDark);
+
+        int pressed = NativeTaskDialog.Show(IntPtr.Zero, new TaskDialogRequest
+        {
+            Caption = "Native Dialog Demo",
+            Headline = "A headline beside the icon",
+            Body = "The body paragraph, worded by the caller. The dialog carries it across and " +
+                   "reports the id of the button pressed.",
+            Detail = "Detail text, collapsed behind the toggle until asked for.",
+            Icon = TaskDialogIcon.Information,
+            Buttons =
+            [
+                new TaskDialogButton(100, commandLinks ? "First choice\nThe note beneath a command link" : "First choice"),
+                new TaskDialogButton(101, commandLinks ? "Second choice\nAnother note" : "Second choice"),
+            ],
+            CommandLinks = commandLinks,
+        });
+
+        NativeMessageBox.Information(IntPtr.Zero, "Native Dialog Demo", $"The dialog returned {pressed}.");
+        Exit();
     }
 
     /// <summary>

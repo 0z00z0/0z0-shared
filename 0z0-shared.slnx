@@ -8,6 +8,7 @@
     <Project Path="src/ZeroZero.Mqtt.Discovery/ZeroZero.Mqtt.Discovery.csproj" />
     <Project Path="src/ZeroZero.Mqtt.WinUI/ZeroZero.Mqtt.WinUI.csproj" />
     <Project Path="src/ZeroZero.Primitives/ZeroZero.Primitives.csproj" />
+    <Project Path="src/ZeroZero.Win32/ZeroZero.Win32.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ZeroZero.Brand.Core.Tests/ZeroZero.Brand.Core.Tests.csproj" />
@@ -15,5 +16,6 @@
     <Project Path="tests/ZeroZero.Mqtt.Tests/ZeroZero.Mqtt.Tests.csproj" />
     <Project Path="tests/ZeroZero.Mqtt.Discovery.Tests/ZeroZero.Mqtt.Discovery.Tests.csproj" />
     <Project Path="tests/ZeroZero.Primitives.Tests/ZeroZero.Primitives.Tests.csproj" />
+    <Project Path="tests/ZeroZero.Win32.Tests/ZeroZero.Win32.Tests.csproj" />
   </Folder>
 </Solution>

@@ -18,4 +18,14 @@
       <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
     </windowsSettings>
   </application>
+
+  <!-- Common controls version 6, the only version that exports the task dialog the Win32 layer
+       shows. The dependency is read from the executable's own manifest when comctl32 loads, so a
+       library cannot declare it on an application's behalf; a consuming app declares the same. -->
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0"
+                        processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*" />
+    </dependentAssembly>
+  </dependency>
 </assembly>

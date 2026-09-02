@@ -19,19 +19,21 @@ take — no domain vocabulary and no dependencies of its own — and is never pa
 |---|---|---|---|---|
 | Config | `config` | `ZeroZero.Config` | Atomic JSON settings files: typed snapshot reads, mutation under one lock, change notification, quarantine of a file that cannot be parsed. The MQTT module stores its settings and its discovery ledger through it. | [`docs/zerozero-config.md`](docs/zerozero-config.md) |
 | Primitives | `primitives` | `ZeroZero.Primitives` | The two-member log sink and its no-op, the reader of the version an assembly reports with its About-box form, the coalescing gate, and the source-revision stamp as build properties and targets. The MQTT module writes to the sink and runs every retained channel on the gate. | [`docs/zerozero-primitives.md`](docs/zerozero-primitives.md) |
+| Win32 | `win32` | `ZeroZero.Win32` | The raw Win32 layer: monitor and DPI metrics as plain numbers, the native task dialog and message boxes, dark native chrome. Headless, so a console tool can take it; the About window takes its monitor metrics from here. | [`docs/zerozero-win32.md`](docs/zerozero-win32.md) |
 
-Dependencies point downward: a component's projects take foundation and each other. The MQTT panel
-additionally references `ZeroZero.Brand.WinUI`, for the info icon and nothing else, so taking the
-MQTT module brings the brand assemblies with it.
+Dependencies point downward: a component's projects take foundation and each other. The About
+window takes `ZeroZero.Win32`, and the MQTT panel additionally references `ZeroZero.Brand.WinUI`,
+for the info icon and nothing else, so taking the MQTT module brings the brand assemblies and the
+Win32 layer with it.
 
 Third-party packages are the Windows App SDK, the Community Toolkit's settings controls, and
 **MQTTnet** — the last confined to `ZeroZero.Mqtt`, where no MQTTnet type reaches a public
-signature. `ZeroZero.Brand.Core`, `ZeroZero.Config` and `ZeroZero.Primitives` reference nothing at
-all.
+signature. `ZeroZero.Brand.Core`, `ZeroZero.Config`, `ZeroZero.Primitives` and `ZeroZero.Win32`
+reference nothing at all.
 
-`ZeroZero.Brand.WinUI.TestHarness` is an interactive exe that opens either UI surface on screen from
-fabricated state; it is never packed and nothing references it. The capture and demo scripts that
-drive it are under `scripts/`.
+`ZeroZero.Brand.WinUI.TestHarness` is an interactive exe that opens either UI surface, or the native
+dialogs, on screen from fabricated state; it is never packed and nothing references it. The capture
+and demo scripts that drive it are under `scripts/`.
 
 ## Consuming
 
@@ -50,9 +52,9 @@ shapes, pinning and the traps; each component's guide adds its own wiring on top
   is enough.
 
 The WinUI projects target `net10.0-windows10.0.26100.0`, so the solution builds on Windows only; the
-plain `net10.0` assemblies and every test project are portable in isolation. The MQTT module
-additionally needs an MQTT 5.0 broker at run time, and Home Assistant 2024.11.0 or later for
-discovery.
+plain `net10.0` assemblies and every test project but `ZeroZero.Win32.Tests` are portable in
+isolation — that one calls user32 and runs on Windows only. The MQTT module additionally needs an
+MQTT 5.0 broker at run time, and Home Assistant 2024.11.0 or later for discovery.
 
 ## Build and test
 
@@ -81,6 +83,7 @@ components are not yet on the feed. [`docs/releasing.md`](docs/releasing.md) is 
 | [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) | The MQTT module end to end: the assemblies, the six wiring steps, the entity model, identity, the encryption model and the panel. |
 | [`docs/zerozero-config.md`](docs/zerozero-config.md) | The config foundation assembly. |
 | [`docs/zerozero-primitives.md`](docs/zerozero-primitives.md) | The primitives foundation assembly: the log sink, the version reader, the coalescing gate and the source-revision stamp. |
+| [`docs/zerozero-win32.md`](docs/zerozero-win32.md) | The Win32 foundation assembly, and the manifest dependency its task dialog needs. |
 | [`docs/consume-brand-about-control.md`](docs/consume-brand-about-control.md) | `BrandAboutControl`, as an adoption checklist. |
 | [`docs/consume-mqtt-settings-panel.md`](docs/consume-mqtt-settings-panel.md) | The panel alone, as an adoption checklist. |
 | [`docs/releasing.md`](docs/releasing.md) | Cutting a component release, what the workflow guards, and how to run the guards locally. |

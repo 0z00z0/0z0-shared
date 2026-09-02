@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0, not net10.0-windows: a net10.0 console tool cannot reference a Windows-TFM
+         assembly, and this layer exists so headless consumers can take it. The assembly declares
+         itself Windows-only through SupportedOSPlatform instead. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Win32</RootNamespace>
+    <Version>$(Win32Version)</Version>
+    <!-- The LibraryImport source generator emits unsafe marshalling code. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <AssemblyTitle>ZeroZero.Win32</AssemblyTitle>
+    <Product>ZeroZero.Win32</Product>
+    <Description>The raw Win32 layer: monitor and DPI metrics, the task dialog and message boxes, dark native chrome. Headless — no XAML, no Windows App SDK.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ZeroZero.Win32.Tests" />
+  </ItemGroup>
+
+</Project>

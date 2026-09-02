@@ -15,6 +15,7 @@
     <ConfigVersion>0.7.0</ConfigVersion>
     <MqttVersion>0.7.0</MqttVersion>
     <PrimitivesVersion>0.7.0</PrimitivesVersion>
+    <Win32Version>0.7.0</Win32Version>
   </PropertyGroup>
 
 </Project>

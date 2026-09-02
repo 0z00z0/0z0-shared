@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Automation.Provider;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Windows.Graphics;
+using ZeroZero.Win32;
 
 namespace ZeroZero.Brand.WinUI.TestHarness;
 
@@ -136,15 +137,15 @@ public sealed partial class MqttPanelWindow : Window
         double contentHeight = Scroller.DesiredSize.Height;
 
         IntPtr window = Win32Interop.GetWindowFromWindowId(AppWindow.Id);
-        double scale = NativeMethods.GetScaleForWindow(window);
-        SizeInt32 chrome = NativeMethods.GetChromeSizeForWindow(window);
+        double scale = MonitorMetrics.ScaleForWindow(window);
+        var (chromeWidth, chromeHeight) = MonitorMetrics.NonClientSize(window);
 
         int workAreaHeight = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary)
                                         .WorkArea.Height;
-        int wanted = (int)Math.Ceiling(contentHeight * scale) + chrome.Height;
+        int wanted = (int)Math.Ceiling(contentHeight * scale) + chromeHeight;
         int height = Math.Min(wanted, (int)(workAreaHeight * MaxWorkAreaFraction));
 
-        AppWindow.Resize(new SizeInt32((int)Math.Ceiling(ClientWidth * scale) + chrome.Width, height));
+        AppWindow.Resize(new SizeInt32((int)Math.Ceiling(ClientWidth * scale) + chromeWidth, height));
         // Cascaded rather than stacked, so each window's title bar stays reachable and the capture
         // script can bring one forward at a time.
         AppWindow.Move(new PointInt32(offset, 0));
