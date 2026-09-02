@@ -12,7 +12,7 @@
 
     <AssemblyTitle>ZeroZero.Win32</AssemblyTitle>
     <Product>ZeroZero.Win32</Product>
-    <Description>The raw Win32 layer: monitor and DPI metrics, the task dialog and message boxes, dark native chrome. Headless — no XAML, no Windows App SDK.</Description>
+    <Description>The raw Win32 layer: monitor, DPI and taskbar metrics, the task dialog and message boxes, dark native chrome. Headless — no XAML, no Windows App SDK.</Description>
   </PropertyGroup>
 
   <ItemGroup>

@@ -11,16 +11,17 @@ licensed, public.
 | `ZeroZero.Brand.WinUI` | `brand` | `net10.0-windows10.0.26100.0` | The About window, the hosted About control, the brand typeface, and the palette as a resource dictionary. |
 | `ZeroZero.Build` | `build` | none — an MSBuild SDK | The build kit: shared property blocks, the unpackaged WinUI application block, the manifest template, the signing script and the family's third-party pins under central package management. Taken through `global.json` and three `Sdk="ZeroZero.Build"` imports, never as a package reference. |
 | `ZeroZero.Config` | `config` (foundation) | `net10.0` | Atomic JSON settings files: typed snapshot reads, mutation under one lock, change notification, quarantine of a file that cannot be parsed. |
-| `ZeroZero.Controls.WinUI` | `controls` (foundation) | `net10.0-windows10.0.26100.0` | WinUI controls with no studio identity: the settings-row info bubble. |
+| `ZeroZero.Controls.WinUI` | `controls` (foundation) | `net10.0-windows10.0.26100.0` | WinUI controls with no studio identity: the settings-row vocabulary — info bubble, section header, card row — title-bar theming, and the single-line text prompt. Takes `ZeroZero.Win32` and the Community Toolkit's settings controls. |
 | `ZeroZero.Diagnostics` | `diagnostics` | `net10.0` | Crash diagnostics: the process-wide unhandled-exception arms routed to one place, a crash-line appender that never throws, and the startup version line. The component's entry point; carries the dump registration with it. |
 | `ZeroZero.Diagnostics.Dumps` | `diagnostics` | `net10.0` | The Windows Error Reporting local dump registration with a lifecycle: arm, disarm, sweep older builds' registrations, remove the shared root once empty, prune old dump files. Windows only. |
-| `ZeroZero.Lifecycle` | `lifecycle` | `net10.0` | The single-instance lock held for the life of the process, the deliberate-exit mark, relaunch on any other clean exit under a sliding-window limit, and the per-user data path. |
+| `ZeroZero.Lifecycle` | `lifecycle` | `net10.0` | The single-instance lock held for the life of the process, the deliberate-exit mark, relaunch on any other clean exit under a sliding-window limit, and the per-user data path. Windows only. |
 | `ZeroZero.Mqtt` | `mqtt` | `net10.0` | An MQTT 5.0 connection for desktop applications: endpoint search and probe, retained per-entity channels, command routing, availability through the Last Will, publish groups. |
 | `ZeroZero.Mqtt.Discovery` | `mqtt` | `net10.0` | The entity and discovery-document layer above it: seven typed component types, one device document, eviction that survives a process restart. |
 | `ZeroZero.Mqtt.WinUI` | `mqtt` | `net10.0-windows10.0.26100.0` | The MQTT settings panel a host embeds. |
 | `ZeroZero.Primitives` | `primitives` (foundation) | `net10.0` | The two-member log sink and its no-op, the reader of the version an assembly reports with its About-box form, the coalescing gate, and the source-revision stamp as build properties and targets. |
-| `ZeroZero.Startup` | `startup` | `net10.0` | The application's logon task in the Task Scheduler: identity, the power-safe elevated definition, registration, the direct enabled read, enable, disable, delete, repair and demand-start verification. |
-| `ZeroZero.Win32` | `win32` (foundation) | `net10.0` | The raw Win32 layer: monitor and DPI metrics as plain numbers, the native task dialog and message boxes, dark native chrome. No XAML, no Windows App SDK. |
+| `ZeroZero.Startup` | `startup` | `net10.0` | The application's logon task in the Task Scheduler: identity, the power-safe elevated definition, registration, the direct enabled read, enable, disable, delete, repair and demand-start verification. Windows only. |
+| `ZeroZero.Tray` | `tray` (foundation) | `net10.0` | The tray icon's container and sizing policy: the PNG-in-ICO file writer, the slot size at the taskbar's own scale, and whether the taskbar is light or dark with the stroke tone that reads on it. Headless, no drawing; takes `ZeroZero.Win32`. Windows only. |
+| `ZeroZero.Win32` | `win32` (foundation) | `net10.0` | The raw Win32 layer: monitor, DPI and taskbar metrics as plain numbers, the native task dialog and message boxes, dark native chrome. No XAML, no Windows App SDK. |
 
 Taking `ZeroZero.Mqtt.WinUI` brings the whole MQTT module and the primitives, config and controls
 foundations with it, so an application with a settings page needs the one reference; the About
@@ -62,13 +63,17 @@ broker at run time, and Home Assistant 2024.11.0 or later for discovery.
 - [`docs/zerozero-config.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-config.md) —
   the config foundation assembly.
 - [`docs/zerozero-controls.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-controls.md) —
-  the controls foundation assembly: the settings-row info bubble.
+  the controls foundation assembly: the settings-row vocabulary, title-bar theming and the text
+  prompt.
 - [`docs/zerozero-diagnostics.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-diagnostics.md) —
   the diagnostics component: the crash handlers, the crash line, the version line, the dump
   registration and its lifecycle, and the wiring order.
 - [`docs/zerozero-primitives.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-primitives.md) —
   the primitives foundation assembly: the log sink, the version reader, the coalescing gate and the
   source-revision stamp.
+- [`docs/zerozero-tray.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-tray.md) —
+  the tray foundation assembly: the icon file writer, the slot size at the taskbar's scale, and the
+  taskbar's theme.
 - [`docs/zerozero-win32.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-win32.md) —
   the Win32 foundation assembly, and the manifest dependency its task dialog needs.
 - [`docs/zerozero-lifecycle.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-lifecycle.md) —
