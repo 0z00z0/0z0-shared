@@ -4,8 +4,9 @@
 two-member log sink and its no-op, the reader of the version an assembly reports and the form an
 About box shows, the coalescing gate, and the source-revision stamp as build properties and targets.
 Plain `net10.0`, no package references, no project references, and no domain vocabulary — which is
-what makes it **foundation** rather than a component: any component may take it, and the MQTT
-module does, for its log sink and for the gate under every retained channel.
+what makes it **foundation** rather than a component: any component may take it. The MQTT module
+does, for its log sink and for the gate under every retained channel, and the diagnostics component
+does, for the sink and for the version reader beneath its startup line.
 
 The assembly is versioned as `PrimitivesVersion` in `Versions.props` and released under
 `primitives-v<x.y.z>` tags, with notes under `docs/release-notes/primitives/`;
