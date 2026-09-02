@@ -2,7 +2,10 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    # A release tag names one component: <key>-v<x.y.z>, as in mqtt-v0.7.0. The bare v* pattern
+    # stays so that a tag in the older single-number form fails the first guard loudly instead of
+    # matching no workflow and publishing nothing in silence.
+    tags: ["*-v*", "v*"]
 
 permissions:
   # gh release create writes to the repository.
@@ -13,11 +16,23 @@ permissions:
 
 jobs:
   release:
-    # ZeroZero.Brand.WinUI targets net10.0-windows and needs the Windows App SDK build tooling.
+    # The WinUI projects target net10.0-windows and need the Windows App SDK build tooling.
     runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v7
+
+      # The tag's prefix is the component key — the first segment of the assembly name after
+      # ZeroZero., lower-cased — and it selects the projects, the notes file and the version
+      # property for everything below. A tag naming no component, or one Versions.props does not
+      # declare, stops here. The guards are scripts rather than inline steps so they can be run,
+      # and made to fail, on a developer's machine.
+      - name: Tag names a component
+        id: component
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: ./.github/scripts/release-guard.ps1 -Tag $env:TAG -Check Tag
 
       # Notes are written per tag and committed beside the code. A generated commit list does not
       # tell a consumer whether a pin bump is a breaking one, so an absent file fails the release
@@ -26,13 +41,7 @@ jobs:
         shell: pwsh
         env:
           TAG: ${{ github.ref_name }}
-        run: |
-          $notes = "docs/release-notes/$env:TAG.md"
-          if (-not (Test-Path $notes)) {
-            Write-Host "::error::$notes is missing. Write the release notes, then retag."
-            exit 1
-          }
-          Write-Host "Found $notes."
+        run: ./.github/scripts/release-guard.ps1 -Tag $env:TAG -Check Notes
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
@@ -43,52 +52,43 @@ jobs:
         run: dotnet restore 0z0-shared.slnx
 
       # A tag that disagrees with the declared version surfaces only in a consumer, long after the
-      # release. Every project under src/ is evaluated, so a per-project override of the shared
-      # Version is caught as well as a mistyped tag. Runs after restore because MSBuild evaluation
-      # imports the restore-generated files.
+      # release. Every packable project of the component is evaluated, so a per-project override of
+      # the component's version is caught as well as a mistyped tag. Runs after restore because
+      # MSBuild evaluation imports the restore-generated files.
       - name: Tag matches the declared version
         shell: pwsh
         env:
           TAG: ${{ github.ref_name }}
-        run: |
-          $expected = $env:TAG.TrimStart("v")
-          $mismatch = $false
-          foreach ($project in Get-ChildItem src -Recurse -Filter *.csproj) {
-            $declared = (dotnet msbuild $project.FullName -getProperty:Version).Trim()
-            if ($declared -ne $expected) {
-              Write-Host "::error::$($project.Name) declares '$declared', the tag says '$expected'."
-              $mismatch = $true
-            }
-          }
-          if ($mismatch) { exit 1 }
-          Write-Host "Every project declares $expected."
+        run: ./.github/scripts/release-guard.ps1 -Tag $env:TAG -Check Versions
+
+      # Packing turns a project reference on another component into a package dependency on that
+      # component's declared version, so that version has to be on the feed already. The check is
+      # against the remote's tags: a component with unreleased changes releases first, under its
+      # own tag and its own notes.
+      - name: Referenced components are released
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: ./.github/scripts/release-guard.ps1 -Tag $env:TAG -Check Dependencies
 
       - name: Build
         run: dotnet build 0z0-shared.slnx -c Release --no-restore
 
-      # Same four steps as CI, and for the same reasons: the solution also holds
-      # ZeroZero.Brand.WinUI.TestHarness, a WinUI application whose Windows App SDK bootstrapper
-      # blocks on a runner with no desktop session, and a single step would report only the last
-      # exit code. The release is gated on all four — a release cut from a red build is worse than
-      # no release.
-      - name: Unit tests — ZeroZero.Brand.Core
-        run: dotnet test tests\ZeroZero.Brand.Core.Tests\ZeroZero.Brand.Core.Tests.csproj -c Release --no-build --nologo
+      # The whole suite, not only the component's: the same definition CI uses, and a release cut
+      # from a red build is worse than no release.
+      - name: Unit tests
+        uses: ./.github/actions/run-tests
 
-      - name: Unit tests — ZeroZero.Config
-        run: dotnet test tests\ZeroZero.Config.Tests\ZeroZero.Config.Tests.csproj -c Release --no-build --nologo
-
-      - name: Unit tests — ZeroZero.Mqtt
-        run: dotnet test tests\ZeroZero.Mqtt.Tests\ZeroZero.Mqtt.Tests.csproj -c Release --no-build --nologo
-
-      - name: Unit tests — ZeroZero.Mqtt.Discovery
-        run: dotnet test tests\ZeroZero.Mqtt.Discovery.Tests\ZeroZero.Mqtt.Discovery.Tests.csproj -c Release --no-build --nologo
-
-      # All six libraries pack, both WinUI assemblies included: their packages carry the compiled
-      # XAML and the .pri index beside the assembly, and a consuming build merges that index into
-      # its own. No -p:Version — the version comes from Directory.Build.props, which the step above
-      # has already checked against the tag, so there is one declaration and not two.
-      - name: Pack
-        run: dotnet pack 0z0-shared.slnx -c Release --no-build -o artifacts
+      # Only the component's projects pack, both WinUI assemblies included where the component has
+      # them: their packages carry the compiled XAML and the .pri index beside the assembly, and a
+      # consuming build merges that index into its own. No -p:Version — the version comes from
+      # Versions.props, which the guard above has already checked against the tag, so there is one
+      # declaration and not two. The script fails unless exactly the expected packages landed.
+      - name: Pack the component
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: ./.github/scripts/pack-component.ps1 -Tag $env:TAG -Output artifacts
 
       # GitHub Packages is the only feed these packages go to. nuget.org is not a fallback and not a
       # later step. This job is the only publish path, so keep it the only place a source is named.
@@ -128,10 +128,12 @@ jobs:
 
       # No artefact is attached: the packages are the artefact and they live on the feed, so a copy
       # on the release page would be a second thing to keep honest. The release is the tag, its
-      # notes and the six packages the step above published.
+      # notes and the component's packages the step above published.
       - name: Create the release
         shell: pwsh
         env:
           TAG: ${{ github.ref_name }}
+          KEY: ${{ steps.component.outputs.key }}
+          VERSION: ${{ steps.component.outputs.version }}
           GH_TOKEN: ${{ github.token }}
-        run: gh release create $env:TAG --title $env:TAG --notes-file "docs/release-notes/$env:TAG.md"
+        run: gh release create $env:TAG --title $env:TAG --notes-file "docs/release-notes/$env:KEY/v$env:VERSION.md"

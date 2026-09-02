@@ -3,7 +3,8 @@
 
 $ErrorActionPreference = "Stop"
 
-$harnessDir = Join-Path $PSScriptRoot "src\ZeroZero.Brand.WinUI.TestHarness"
+$repoRoot   = Split-Path $PSScriptRoot -Parent   # scripts\ sits one level below the repository root
+$harnessDir = Join-Path $repoRoot "src\ZeroZero.Brand.WinUI.TestHarness"
 
 # The harness csproj derives its RuntimeIdentifier from the running process architecture, so the
 # output folder is win-x64 on x64 and win-arm64 on arm64. Locate the exe instead of assuming one.

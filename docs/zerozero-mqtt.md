@@ -1,10 +1,14 @@
 # The MQTT module
 
-Six assemblies that put a Windows desktop application on an MQTT broker and, above that, into a
-discovery-aware receiver as one device with entities. `ZeroZero.Config` stores settings.
-`ZeroZero.Mqtt` speaks the protocol. `ZeroZero.Mqtt.Discovery` adds the entity and document layer.
-`ZeroZero.Mqtt.WinUI` is the settings panel a host embeds, and it draws its typography, colours and
-info icon from `ZeroZero.Brand.WinUI`, which sits over `ZeroZero.Brand.Core`.
+The assemblies that put a Windows desktop application on an MQTT broker and, above that, into a
+discovery-aware receiver as one device with entities. `ZeroZero.Mqtt` speaks the protocol.
+`ZeroZero.Mqtt.Discovery` adds the entity and document layer. `ZeroZero.Mqtt.WinUI` is the settings
+panel a host embeds. Settings persist through `ZeroZero.Config`, a foundation assembly the module
+takes and does not own. The panel's typography and colours resolve from the stock WinUI theme; the
+one thing it takes from `ZeroZero.Brand.WinUI` is the settings-row info icon.
+
+The module is versioned as `MqttVersion` in `Versions.props` and released under `mqtt-v<x.y.z>`
+tags, with notes under `docs/release-notes/mqtt/`; [`releasing.md`](releasing.md) has the procedure.
 
 This document is the implementation guide. It states what the module does and what an application
 must supply; the rationale behind a given rule lives in the source comment beside it.
@@ -18,7 +22,7 @@ must supply; the rationale behind a given rule lives in the source comment besid
 | Receiver | Home Assistant 2024.11.0 or later. Device-based discovery sets that floor: an older receiver never subscribes to the device topic and sees no entities at all. |
 | Panel | Windows 10 1809 (build 10.0.17763) or later, with the Windows App SDK. |
 
-## The six assemblies
+## The assemblies
 
 | Assembly | Target | References | Knows about |
 |---|---|---|---|
@@ -26,8 +30,13 @@ must supply; the rationale behind a given rule lives in the source comment besid
 | `ZeroZero.Brand.Core` | `net10.0` | — | The studio's branding constants and the About-window data contracts |
 | `ZeroZero.Mqtt` | `net10.0` | `ZeroZero.Config`, `MQTTnet` | Topics, payloads, QoS, retain, the Last Will, transports, endpoint search, certificate trust, command routing, publish groups |
 | `ZeroZero.Mqtt.Discovery` | `net10.0` | `ZeroZero.Mqtt`, `ZeroZero.Config` | Entities, component types, the device document, availability, eviction |
-| `ZeroZero.Brand.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Brand.Core` | The About control and window, the info icon, the shared theme keys |
+| `ZeroZero.Brand.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Brand.Core` | The About control and window, and the info icon |
 | `ZeroZero.Mqtt.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Mqtt`, `ZeroZero.Mqtt.Discovery`, `ZeroZero.Brand.WinUI` | Rendering the settings a user edits |
+
+`ZeroZero.Config` is foundation rather than part of the module: it carries no MQTT vocabulary and
+references nothing, and [`zerozero-config.md`](zerozero-config.md) documents it on its own. The two
+brand assemblies are the brand component, documented in [`zerozero-brand.md`](zerozero-brand.md);
+the panel's reference to `ZeroZero.Brand.WinUI` carries `InfoIcon` and nothing else.
 
 The dependency runs one way. `ZeroZero.Mqtt` contains no entity vocabulary and no receiver
 vocabulary beyond the default discovery prefix; a console tool or a service references it alone and
@@ -61,7 +70,7 @@ included; the consuming build merges that index into its own:
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="ZeroZero.Mqtt.WinUI" Version="0.6.0" />
+  <PackageReference Include="ZeroZero.Mqtt.WinUI" Version="0.7.0" />
 </ItemGroup>
 ```
 
@@ -69,8 +78,8 @@ The feed is `https://nuget.pkg.github.com/0z00z0/index.json` and **it authentica
 though the packages are public** — an anonymous request returns `401` — so every machine and every
 runner that restores needs a token with `read:packages`. The consuming repository also needs a
 `nuget.config` naming the feed *and* mapping `ZeroZero.*` to it, so that nothing on nuget.org can
-answer for one of these names. The README's
-[package route](../README.md#the-package-route) carries both files and the credential rules.
+answer for one of these names. [`consuming.md`](consuming.md#the-package-route) carries both files
+and the credential rules.
 
 **As a sibling checkout.** A `ProjectReference`, routed through an MSBuild property so CI can point
 it elsewhere without editing the `.csproj`:
@@ -100,9 +109,10 @@ generates a merged PRI from resources of its own still has MakePRI comparing the
 <DefaultLanguage>en-GB</DefaultLanguage>
 ```
 
-**Pin the checkout to a tag, not a commit.** Every consumer-visible API change is released under a
-`v`-prefixed tag, and the notes for that tag state what it breaks — the module is pre-1.0, so a
-minor bump may. The README's [Pin a tag](../README.md#3-pin-a-tag) carries both CI shapes.
+**Pin the checkout to a tag, not a commit.** Every consumer-visible change to the module is released
+under an `mqtt-v<x.y.z>` tag, and the notes for that tag state what it breaks — the module is
+pre-1.0, so a minor bump may. [`consuming.md`](consuming.md#pin-a-tag) carries both CI shapes and
+the rule for a sibling checkout that pins one ref for several components.
 
 **A sibling pin protects CI. It does not protect a local build.** The reference above resolves through
 `ZeroZeroSharedDir`, which defaults to the sibling folder, and nothing reads the pinned-ref file to
@@ -124,7 +134,7 @@ Three consequences worth stating plainly:
   in the shared tree, a local build takes a partially applied change set, which is worse than either
   the old state or the new one.
 
-**A package pin has none of that.** A `PackageReference` version resolves the same six assemblies
+**A package pin has none of that.** A `PackageReference` version resolves the same assemblies
 everywhere, because a restore never consults a working tree, so the pin governs a developer's
 machine exactly as it governs a runner. That is what the package route buys, and the token every
 restore then needs is what it costs.
@@ -921,7 +931,7 @@ are being typed into. What is remembered leads the sweep once one runs, and deci
 
 `MqttModule.Version` is the module's version **as the loaded assembly carries it**, in the shape
 `0.5.0+1a2b3c4`. It is reflected off `AssemblyInformationalVersionAttribute` rather than compiled in
-from `Directory.Build.props`, because a consumer builds against a sibling working tree rather than
+from `Versions.props`, because a consumer builds against a sibling working tree rather than
 the revision its pin names — a value that cannot disagree with the pin answers nothing. The commit
 half comes from `SourceRevisionId`, stamped in `Directory.Build.props` from `git rev-parse` at build
 time; a tree with no git available reports the bare number.
@@ -1052,7 +1062,7 @@ matching. The WinUI control parts keep platform colours until each control's own
 which for the controls this panel renders is 266 live brush keys; the module carries none of them,
 because they are the application's to declare and they reach every page it has rather than this one
 panel. `consume-mqtt-settings-panel.md`'s
-[What a host's branding reaches](../consume-mqtt-settings-panel.md#what-a-hosts-branding-reaches)
+[What a host's branding reaches](consume-mqtt-settings-panel.md#what-a-hosts-branding-reaches)
 carries the per-surface table, the per-control key counts and the measured contrast of every tier.
 
 `MqttPanelFontFamily` is the only route to the panel's typeface. Every element the panel styles
@@ -1162,6 +1172,37 @@ panel looks wrong. The module's own `.resw` is held to the same standard by test
 text — so the file a consumer copies as a template cannot drift from the text the fallback uses.
 
 ---
+
+### Screenshots
+
+**`MqttSettingsPanel`**, as it opens (light and dark):
+
+| Light | Dark |
+|---|---|
+| ![MQTT panel, light](screenshots/mqtt-panel-light.png) | ![MQTT panel, dark](screenshots/mqtt-panel-dark.png) |
+
+With the Broker group open:
+
+| Light | Dark |
+|---|---|
+| ![MQTT panel, broker group open, light](screenshots/mqtt-panel-light-broker.png) | ![MQTT panel, broker group open, dark](screenshots/mqtt-panel-dark-broker.png) |
+
+With the publish list open:
+
+| Light | Dark |
+|---|---|
+| ![MQTT panel, publish list open, light](screenshots/mqtt-panel-light-groups.png) | ![MQTT panel, publish list open, dark](screenshots/mqtt-panel-dark-groups.png) |
+
+An unapplied broker edit is marked beside the section heading, so a closed group cannot hide it:
+
+| Light | Dark |
+|---|---|
+| ![MQTT panel, unapplied edit, light](screenshots/mqtt-panel-light-edited.png) | ![MQTT panel, unapplied edit, dark](screenshots/mqtt-panel-dark-edited.png) |
+
+All eight images are the output of `scripts/Capture 'MQTT panel' screenshots.ps1`, so they show the
+panel as it actually renders rather than what the XAML claims. The same script's `-Branded` run
+writes the two captures under an extreme palette that
+[What a host's branding reaches](consume-mqtt-settings-panel.md#what-a-hosts-branding-reaches) links.
 
 ## Differences from an earlier shape
 

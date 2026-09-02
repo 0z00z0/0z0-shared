@@ -1,0 +1,19 @@
+<Project>
+
+  <!-- One version per component, and nothing else. The property is <Key>Version, where the key is
+       the first segment of the assembly name after ZeroZero. — ZeroZero.Mqtt.WinUI is mqtt — and
+       every packable project of that key declares <Version>$(<Key>Version)</Version>. A release
+       tag is <key>-v<x.y.z>; .github/workflows/release.yml refuses a tag that disagrees with the
+       property or with any project it selects. Pre-1.0 per component: the minor may break, the
+       patch never does.
+
+       Every component starts at 0.7.0. The feed holds every package at 0.6.0 from the era of one
+       shared number, and a published number never moves backwards, so 0.6.0 and below means
+       "released together" and 0.7.0 and above means "released on its own". -->
+  <PropertyGroup>
+    <BrandVersion>0.7.0</BrandVersion>
+    <ConfigVersion>0.7.0</ConfigVersion>
+    <MqttVersion>0.7.0</MqttVersion>
+  </PropertyGroup>
+
+</Project>
