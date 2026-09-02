@@ -84,8 +84,14 @@ public class AssemblyVersionTextTests
         Assert.Equal("", AssemblyVersionText.Read(new Unversioned()));
 
     [Fact]
-    public void ReadRefusesNoAssemblyRatherThanAnsweringForTheCaller() =>
-        Assert.Throws<ArgumentNullException>(() => AssemblyVersionText.Read(null!));
+    public void ReadRefusesNoAssemblyRatherThanAnsweringForTheCaller()
+    {
+        // The reflection call beneath would refuse a null too, naming its own parameter; the guard
+        // that names the caller's is the one asserted.
+        var refusal = Assert.Throws<ArgumentNullException>(() => AssemblyVersionText.Read(null!));
+
+        Assert.Equal("assembly", refusal.ParamName);
+    }
 
     [Theory]
     [InlineData("0.7.0+0123456789abcdef0123456789abcdef01234567", "0.7.0+0123456")]
