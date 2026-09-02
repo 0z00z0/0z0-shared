@@ -64,11 +64,9 @@ public sealed partial class TextPromptWindow : Window
         RefreshConfirm();
 
         ConfigureChrome();
-        // Resolved before the window is torn down, not after: a continuation queued from Closed
-        // ran into the dispatcher's own shutdown when the prompt was the last window, and the
-        // process died with an access violation (measured through the harness). Closing fires
-        // first for every way out, and Closed stays as the fallback.
-        AppWindow.Closing += (_, _) => _completion.TrySetResult(null);
+        // Cancel and Confirm resolve before they close; this covers every other way out. Not
+        // AppWindow.Closing: with a handler on it the process stayed alive after the prompt, its
+        // last window, had closed (measured through the harness).
         Closed += (_, _) => _completion.TrySetResult(null);
         Root.Loaded += (_, _) =>
         {
@@ -104,14 +102,25 @@ public sealed partial class TextPromptWindow : Window
 
     private void Confirm()
     {
-        // Set before Close, whose handlers resolve null for every other way out.
+        // Set before Close, whose handler resolves null for every other way out.
         _completion.TrySetResult(Field.Text);
-        Close();
+        CloseSettled();
     }
 
     private void Cancel()
     {
         _completion.TrySetResult(null);
+        CloseSettled();
+    }
+
+    // Closing while the field still holds its opening selection took the process down with an
+    // access violation inside the XAML runtime some ten seconds after the last window went,
+    // measured through the harness: cancel with the text untouched crashed every time, cancel
+    // after an edit and confirm never did. Collapsing the selection first is what separates the
+    // two, so the prompt does it on every way out it controls.
+    private void CloseSettled()
+    {
+        Field.Select(Field.Text.Length, 0);
         Close();
     }
 

@@ -495,7 +495,10 @@ public partial class App : Application
         await Task.Delay(1500);
         if (window.Content is FrameworkElement root)
         {
-            if (confirmWith is not null && FindDescendant<TextBox>(root) is { } field) field.Text = confirmWith;
+            // --type "<text>" edits the field before either answer, so a cancel after an edit is
+            // its own case and not only a cancel of the untouched, still-selected initial text.
+            string? typed = confirmWith ?? ValueAfter(Environment.GetCommandLineArgs(), "--type");
+            if (typed is not null && FindDescendant<TextBox>(root) is { } field) field.Text = typed;
             string wanted = cancel ? "Cancel" : "Rename";
             if (FindButton(root, wanted) is { } button &&
                 FrameworkElementAutomationPeer.CreatePeerForElement(button) is IInvokeProvider invoke)
