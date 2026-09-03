@@ -29,4 +29,9 @@ public static class Brand
     public const string ColorPurple = "#7b8cff";
     public const string ColorIndigo = "#3f5be0";
     public const string ColorAmber = "#d8a657";
+
+    // Named for the colour rather than the job it does in the app it came from, so the next
+    // consumer is not reading someone else's meaning into it.
+    public const string ColorSteelBlue = "#7fa8b8";
+    public const string ColorTerracotta = "#c9926b";
 }

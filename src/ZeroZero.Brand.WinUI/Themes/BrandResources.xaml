@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    The studio palette and typeface in the form XAML consumes. Brand.cs carries the same seven
+    The studio palette and typeface in the form XAML consumes. Brand.cs carries the same nine
     colours as hex strings so a console tool can read them; a resource dictionary cannot read a C#
     constant, so they are declared again here and a test pins the two lists to each other.
 
@@ -9,6 +9,19 @@
     user's choice outranks every design decision. A consumer merges this dictionary into its
     application resources and resolves a key with ThemeResource; a colour key feeds a gradient stop
     or code, a brush key feeds a Foreground or a Background.
+
+    Two measured properties of the palette, both pinned by tests in BrandResourcesTests so they
+    cannot rot into folklore:
+
+    Text on an accent is black, not white. Every accent but Indigo clears 4.5:1 against black and
+    falls short of it against white; Indigo is the one that runs the other way. Picking a text
+    colour per accent is how a surface ends up unreadable, so a caller wanting text on a brand fill
+    uses black — or Indigo, and white.
+
+    A tinted fill over the two brand grounds is not derived by opacity. Both grounds sit near
+    black, so a low-opacity accent composites to near black whatever the accent is: at 24 % nothing
+    in the palette clears 1.75:1 against its ground, and even pure white reaches only 2.17:1. Use
+    the solid colour where a fill has to be distinguishable.
 -->
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -29,6 +42,8 @@
             <Color x:Key="BrandPurpleColour">#7b8cff</Color>
             <Color x:Key="BrandIndigoColour">#3f5be0</Color>
             <Color x:Key="BrandAmberColour">#d8a657</Color>
+            <Color x:Key="BrandSteelBlueColour">#7fa8b8</Color>
+            <Color x:Key="BrandTerracottaColour">#c9926b</Color>
             <SolidColorBrush x:Key="BrandBackgroundBrush"    Color="{StaticResource BrandBackgroundColour}"/>
             <SolidColorBrush x:Key="BrandBackgroundAltBrush" Color="{StaticResource BrandBackgroundAltColour}"/>
             <SolidColorBrush x:Key="BrandTealBrush"          Color="{StaticResource BrandTealColour}"/>
@@ -36,6 +51,8 @@
             <SolidColorBrush x:Key="BrandPurpleBrush"        Color="{StaticResource BrandPurpleColour}"/>
             <SolidColorBrush x:Key="BrandIndigoBrush"        Color="{StaticResource BrandIndigoColour}"/>
             <SolidColorBrush x:Key="BrandAmberBrush"         Color="{StaticResource BrandAmberColour}"/>
+            <SolidColorBrush x:Key="BrandSteelBlueBrush"     Color="{StaticResource BrandSteelBlueColour}"/>
+            <SolidColorBrush x:Key="BrandTerracottaBrush"    Color="{StaticResource BrandTerracottaColour}"/>
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Light">
@@ -46,6 +63,8 @@
             <Color x:Key="BrandPurpleColour">#7b8cff</Color>
             <Color x:Key="BrandIndigoColour">#3f5be0</Color>
             <Color x:Key="BrandAmberColour">#d8a657</Color>
+            <Color x:Key="BrandSteelBlueColour">#7fa8b8</Color>
+            <Color x:Key="BrandTerracottaColour">#c9926b</Color>
             <SolidColorBrush x:Key="BrandBackgroundBrush"    Color="{StaticResource BrandBackgroundColour}"/>
             <SolidColorBrush x:Key="BrandBackgroundAltBrush" Color="{StaticResource BrandBackgroundAltColour}"/>
             <SolidColorBrush x:Key="BrandTealBrush"          Color="{StaticResource BrandTealColour}"/>
@@ -53,9 +72,11 @@
             <SolidColorBrush x:Key="BrandPurpleBrush"        Color="{StaticResource BrandPurpleColour}"/>
             <SolidColorBrush x:Key="BrandIndigoBrush"        Color="{StaticResource BrandIndigoColour}"/>
             <SolidColorBrush x:Key="BrandAmberBrush"         Color="{StaticResource BrandAmberColour}"/>
+            <SolidColorBrush x:Key="BrandSteelBlueBrush"     Color="{StaticResource BrandSteelBlueColour}"/>
+            <SolidColorBrush x:Key="BrandTerracottaBrush"    Color="{StaticResource BrandTerracottaColour}"/>
         </ResourceDictionary>
 
-        <!-- The two grounds become the system window colour and the five accents its highlight
+        <!-- The two grounds become the system window colour and the seven accents its highlight
              colour, so a consumer's markup keeps resolving and the palette itself never reaches a
              high-contrast screen. -->
         <ResourceDictionary x:Key="HighContrast">
@@ -66,6 +87,8 @@
             <Color x:Key="BrandPurpleColour">{ThemeResource SystemColorHighlightColor}</Color>
             <Color x:Key="BrandIndigoColour">{ThemeResource SystemColorHighlightColor}</Color>
             <Color x:Key="BrandAmberColour">{ThemeResource SystemColorHighlightColor}</Color>
+            <Color x:Key="BrandSteelBlueColour">{ThemeResource SystemColorHighlightColor}</Color>
+            <Color x:Key="BrandTerracottaColour">{ThemeResource SystemColorHighlightColor}</Color>
             <SolidColorBrush x:Key="BrandBackgroundBrush"    Color="{ThemeResource SystemColorWindowColor}"/>
             <SolidColorBrush x:Key="BrandBackgroundAltBrush" Color="{ThemeResource SystemColorWindowColor}"/>
             <SolidColorBrush x:Key="BrandTealBrush"          Color="{ThemeResource SystemColorHighlightColor}"/>
@@ -73,6 +96,8 @@
             <SolidColorBrush x:Key="BrandPurpleBrush"        Color="{ThemeResource SystemColorHighlightColor}"/>
             <SolidColorBrush x:Key="BrandIndigoBrush"        Color="{ThemeResource SystemColorHighlightColor}"/>
             <SolidColorBrush x:Key="BrandAmberBrush"         Color="{ThemeResource SystemColorHighlightColor}"/>
+            <SolidColorBrush x:Key="BrandSteelBlueBrush"     Color="{ThemeResource SystemColorHighlightColor}"/>
+            <SolidColorBrush x:Key="BrandTerracottaBrush"    Color="{ThemeResource SystemColorHighlightColor}"/>
         </ResourceDictionary>
 
     </ResourceDictionary.ThemeDictionaries>
