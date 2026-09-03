@@ -27,6 +27,7 @@ them.
 | SDK | .NET 10 |
 | Platform | `ZeroZero.Diagnostics` runs anywhere .NET 10 does. `ZeroZero.Diagnostics.Dumps` declares itself Windows-only: it writes the Windows Error Reporting registry key and nothing else. |
 | Elevation | Arming a dump registration writes the machine hive, which needs an elevated process. Windows Error Reporting reads local dump settings from `HKEY_LOCAL_MACHINE` alone; a registration under the current user's hive is accepted by the registry and produces no dump (measured: three crashes, no file). |
+| Error mode | A process whose error mode carries `SEM_NOGPFAULTERRORBOX` never reaches Windows Error Reporting, so no registration produces a dump for it. The mode is inherited from the parent: an application launched by the shell has mode 0, while a build server's job shell runs with the flag set (measured: 0x8003 on the hosted runner) and hands it to every child. A process that must be dumpable under such a parent clears it with `SetErrorMode(0)`. |
 
 ## What it contains
 
@@ -108,4 +109,6 @@ an entry point the tests launch as a separate process, so an unhandled exception
 unhandled, a dropped task is genuinely finalised, and what the handlers wrote is read back from disk.
 The registry lifecycle runs against a real key under the current user's hive, under a scratch path,
 never where Windows Error Reporting reads. The one test that provokes a real dump under a real
-machine-hive registration needs an elevated process and is skipped, with the reason, without one.
+machine-hive registration needs an elevated process and is skipped, with the reason, without one;
+its victim clears the error mode it inherited before crashing, so it is dumpable under a build
+server's job shell as well as under the shell a user launches from.

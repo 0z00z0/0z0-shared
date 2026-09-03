@@ -13,6 +13,8 @@
     <!-- The test SDK builds no apphost; the crash victim needs one, because Windows Error
          Reporting keys the registration on the image name the process dies as. -->
     <UseAppHost>true</UseAppHost>
+    <!-- The LibraryImport source generator emits unsafe marshalling code. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
