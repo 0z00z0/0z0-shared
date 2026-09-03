@@ -35,6 +35,15 @@
     <!-- Direct, not only through the About window: the rig sizes its own windows through the
          monitor metrics and shows the native dialogs on screen. -->
     <ProjectReference Include="..\ZeroZero.Win32\ZeroZero.Win32.csproj" />
+    <!-- The settings window shell, driven here with fabricated sections — one of them the MQTT
+         panel, so the two are seen hosted together. -->
+    <ProjectReference Include="..\ZeroZero.SettingsShell.WinUI\ZeroZero.SettingsShell.WinUI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The rig's own mark, for the shell's navigation icons and pane footer. Beside the exe, where
+         an unpackaged application resolves ms-appx from. -->
+    <Content Update="Assets\harness-mark.svg" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
