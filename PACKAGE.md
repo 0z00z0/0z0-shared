@@ -21,7 +21,8 @@ licensed, public.
 | `ZeroZero.Primitives` | `primitives` (foundation) | `net10.0` | The two-member log sink and its no-op, the reader of the version an assembly reports with its About-box form, the coalescing gate, and the source-revision stamp as build properties and targets. |
 | `ZeroZero.SettingsShell.WinUI` | `settingsshell` | `net10.0-windows10.0.26100.0` | The settings window with every page left to the application: Mica chrome with the title bar painted for the theme, a navigation pane with a product footer, one scroll viewer over the pages, placement against the application's saved rectangle, Escape to close, and a section lifecycle with enter and leave hooks and a per-section build-once flag. Takes `ZeroZero.Controls.WinUI`. |
 | `ZeroZero.Startup` | `startup` | `net10.0` | The application's logon task in the Task Scheduler: identity, the power-safe elevated definition, registration, the direct enabled read, enable, disable, delete, repair and demand-start verification. Windows only. |
-| `ZeroZero.Tray` | `tray` (foundation) | `net10.0` | The tray icon's container and sizing policy: the PNG-in-ICO file writer, the slot size at the taskbar's own scale, and whether the taskbar is light or dark with the stroke tone that reads on it. Headless, no drawing; takes `ZeroZero.Win32`. Windows only. |
+| `ZeroZero.Tray` | `tray` | `net10.0` | The plain half of the tray component: the PNG-in-ICO file writer, the slot size at the taskbar's own scale, and whether the taskbar is light or dark with the stroke tone that reads on it. Headless, no drawing; takes `ZeroZero.Win32`. Windows only. |
+| `ZeroZero.Tray.WinUI` | `tray` | `net10.0-windows10.0.26100.0` | The component's entry point: the tray icon host for a WinUI 3 application — the icon's lifecycle with the notify-icon library's efficiency mode refused, the theme, display and shell-restart listeners, the rendered-file cache, tooltip discipline, click classification and the menu refresh protocol. Drawing and notifications stay with the application. Carries `ZeroZero.Tray` with it; takes the notify-icon library and `Microsoft.Win32.SystemEvents`, and no type of either reaches its public signature. |
 | `ZeroZero.Update` | `update` | `net10.0` | The update flow without its dialogs: the latest GitHub release against the running version, the download into a fresh private directory, verification of the installer — its Authenticode signature and publisher against the expected signer, and its SHA-256 against the hash the release publishes — before it runs, the launch-or-refuse policy, the stale-download sweep and the check scheduler. Takes `ZeroZero.Primitives`. Windows only. |
 | `ZeroZero.Update.Win32` | `update` | `net10.0` | The component's entry point: the update task dialog and message boxes, worded here and marshalled by `ZeroZero.Win32`, and the check-ask-download-verify-launch orchestration that hands over to the application's own shutdown. Carries `ZeroZero.Update` with it. Windows only. |
 | `ZeroZero.Win32` | `win32` (foundation) | `net10.0` | The raw Win32 layer: monitor, DPI and taskbar metrics as plain numbers, the native task dialog and message boxes, dark native chrome. No XAML, no Windows App SDK. |
@@ -51,7 +52,7 @@ name. The recipe, both halves of it, is in
 
 ## Requirements
 
-.NET 10 SDK. The four WinUI packages additionally need Windows 10 1809 (build 10.0.17763) or later
+.NET 10 SDK. The five WinUI packages additionally need Windows 10 1809 (build 10.0.17763) or later
 and the Windows App SDK, which arrives as a package of its own. The MQTT module needs an MQTT 5.0
 broker at run time, and Home Assistant 2024.11.0 or later for discovery.
 
@@ -74,9 +75,13 @@ broker at run time, and Home Assistant 2024.11.0 or later for discovery.
 - [`docs/zerozero-primitives.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-primitives.md) —
   the primitives foundation assembly: the log sink, the version reader, the coalescing gate and the
   source-revision stamp.
+- [`docs/zerozero-settingsshell.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-settingsshell.md) —
+  the settings shell component: the division between shell and pages, the section lifecycle,
+  placement, theming and the traps.
 - [`docs/zerozero-tray.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-tray.md) —
-  the tray foundation assembly: the icon file writer, the slot size at the taskbar's scale, and the
-  taskbar's theme.
+  the tray component: the host's lifecycle, listeners, cache, tooltip discipline, click
+  classification and menu protocol, what stays with the application, and the plain half — the icon
+  file writer, the slot size at the taskbar's scale, and the taskbar's theme.
 - [`docs/zerozero-win32.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-win32.md) —
   the Win32 foundation assembly, and the manifest dependency its task dialog needs.
 - [`docs/zerozero-lifecycle.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-lifecycle.md) —
