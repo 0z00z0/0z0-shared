@@ -292,7 +292,8 @@ another value.
 Registering the logon task needs an elevated process, so the manifest that asks for elevation, and
 the installer that registers on the user's behalf, stay with the application.
 
-Release verification is taken as workflows rather than as a reference: a gate that fails a tagged run
-whose signing material is missing, and a job that fetches back what was published and asserts it is
-what the build produced. Both are called by tag from this repository, and
+Release verification is taken from this repository's own CI rather than as a reference: a composite
+action that fails a tagged run whose signing material is missing, and a reusable workflow that
+fetches back what was published and asserts it is what the build produced. Both are called by tag
+from this repository, and
 [`releasing.md`](releasing.md#verifying-an-applications-release) has the caller's shape.
