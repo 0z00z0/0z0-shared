@@ -4,8 +4,9 @@
 dialog and the four message boxes, and dark native chrome for the process. Plain `net10.0`, no
 package references, no project references, no XAML and no Windows App SDK — which is what makes it
 **foundation** rather than a component, and what lets a console tool take it as readily as a WinUI
-application. The About window and the text prompt take their monitor metrics from here, the tray
-assembly the taskbar's scale, and the update component the marshalling of its dialogs.
+application. The About window, the text prompt and the settings shell take their monitor metrics
+from here, the tray assembly the taskbar's scale, and the update component the marshalling of its
+dialogs.
 
 The assembly is versioned as `Win32Version` in `Versions.props` and released under `win32-v<x.y.z>`
 tags, with notes under `docs/release-notes/win32/`; [`releasing.md`](releasing.md) has the
@@ -70,8 +71,8 @@ kit's application block, shows the dialog under `--native`.
 ## Take the reference
 
 Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Win32` itself; there is
-nothing beneath it. An application taking the brand component, the controls assembly or the tray
-assembly has it transitively and adds nothing.
+nothing beneath it. An application taking the brand component, the controls assembly, the settings
+shell or the tray component has it transitively and adds nothing.
 
 The tests are in `tests/ZeroZero.Win32.Tests`, plain `net10.0`, and run on Windows only: they call
 user32 and shcore against the real desktop, create a hidden framed window to measure, and read the

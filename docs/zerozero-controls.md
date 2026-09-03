@@ -6,7 +6,7 @@ prompt. `net10.0-windows10.0.26100.0`, the Windows App SDK, the Community Toolki
 controls and `ZeroZero.Win32`; no font pack, no palette, and no toolkit type in a public signature.
 That is what makes it **foundation** rather than a component: any UI component may take it without
 dragging the brand assembly's font pack and About window along, and the MQTT settings panel does,
-for the nineteen bubbles on its rows.
+for the nineteen bubbles on its rows, as the settings shell does for its title bar.
 
 The assembly is versioned as `ControlsVersion` in `Versions.props` and released under
 `controls-v<x.y.z>` tags, with notes under `docs/release-notes/controls/`;
@@ -81,8 +81,8 @@ the properties it inherits.
 ## Take the reference
 
 Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Controls.WinUI` itself,
-which brings `ZeroZero.Win32` and the toolkit with it. An application taking the MQTT module has it
-transitively and adds nothing.
+which brings `ZeroZero.Win32` and the toolkit with it. An application taking the MQTT module or the
+settings shell has it transitively and adds nothing.
 
 A settings page in markup — the header, then rows with a field held to one width and a toggle at
 its natural size:
