@@ -58,6 +58,16 @@ the pack step counts it like any other project of its key.
 3. **Release what it depends on first**, if any referenced component has a version with no tag.
 4. **Push the head**, then tag it `<key>-v<x.y.z>` and push the tag.
 
+**Never push more than three tags in one `git push`.** GitHub creates no workflow event at all for a
+push carrying more than three tags: the push reports success, every tag lands on the remote, and
+nothing runs — no guard, no pack, no push to the feed, no release page. Releasing several components
+therefore means pushing in batches of at most three and waiting for each batch, which the dependency
+order requires anyway.
+
+The failure leaves a tag on the remote that no run has ever seen, and re-pushing an existing tag
+updates no ref and so triggers nothing. Recovering means deleting the remote tag and pushing it
+again — the commit is unchanged, so nothing is rewritten.
+
 The workflow then runs, in this order, and stops at the first failure:
 
 | Step | Refuses when |
