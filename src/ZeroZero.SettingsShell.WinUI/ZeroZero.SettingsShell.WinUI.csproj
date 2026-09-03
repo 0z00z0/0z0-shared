@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>ZeroZero.SettingsShell.WinUI</RootNamespace>
+    <Version>$(SettingsShellVersion)</Version>
+
+    <!-- WinUI 3 / Windows App SDK, unpackaged (no MSIX) — a class library consumed by unpackaged
+         apps, so it must not pull in packaging tooling itself. -->
+    <UseWinUI>true</UseWinUI>
+    <WinUISDKReferences>false</WinUISDKReferences>
+
+    <AssemblyTitle>ZeroZero.SettingsShell.WinUI</AssemblyTitle>
+    <Product>ZeroZero.SettingsShell.WinUI</Product>
+    <Description>The settings window shell: Mica chrome, a navigation pane with a product footer, one page host, placement against the application's saved rectangle, Escape to close, and a section lifecycle with enter and leave hooks and a per-section build-once flag. The pages are the application's.</Description>
+  </PropertyGroup>
+
+  <!--
+    Component: the window both applications converged on, with every page left to the application.
+    The two versions are the family's pins in the build kit's ZeroZero.Packages.props, which
+    Directory.Packages.props imports; a pin moves there and nowhere else.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Visual primitives, downward: the title bar is painted through the controls foundation
+         assembly, and the monitor metrics it carries with it place the window. Nothing of the row
+         vocabulary is used here — the shell supplies no page — so a page built on it and one built
+         on anything else are hosted alike. -->
+    <ProjectReference Include="..\ZeroZero.Controls.WinUI\ZeroZero.Controls.WinUI.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -19,6 +19,7 @@
     <LifecycleVersion>0.7.0</LifecycleVersion>
     <MqttVersion>0.7.0</MqttVersion>
     <PrimitivesVersion>0.7.0</PrimitivesVersion>
+    <SettingsShellVersion>0.7.0</SettingsShellVersion>
     <StartupVersion>0.7.0</StartupVersion>
     <TrayVersion>0.7.0</TrayVersion>
     <UpdateVersion>0.7.0</UpdateVersion>

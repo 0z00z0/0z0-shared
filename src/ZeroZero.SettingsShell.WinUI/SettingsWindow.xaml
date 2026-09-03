@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window
+    x:Class="ZeroZero.SettingsShell.WinUI.SettingsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop Kind="BaseAlt"/>
+    </Window.SystemBackdrop>
+
+    <!-- The chrome both applications arrived at: a system title bar over Mica, a left pane that
+         never collapses and carries no toggle, no settings item and no back button, the product
+         footer beneath the pane, and one scroll viewer over the pages. Every page sits in the same
+         grid, all but the current one collapsed, so a page that leaves the screen keeps its state
+         and comes back as it was. -->
+    <Grid x:Name="Root">
+        <Grid.Resources>
+            <!-- Transparent throughout, so the backdrop shows through the pane and the content
+                 alike and no seam divides them. -->
+            <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent"/>
+            <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="Transparent"/>
+            <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="Transparent"/>
+            <SolidColorBrush x:Key="NavigationViewTopPaneBackground" Color="Transparent"/>
+            <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent"/>
+            <Thickness x:Key="NavigationViewContentGridBorderThickness">0</Thickness>
+            <!-- The icon box, aliased so a two-tone SVG icon draws at 28 rather than the stock 16. -->
+            <x:Double x:Key="NavigationViewItemOnLeftIconBoxHeight">28</x:Double>
+        </Grid.Resources>
+
+        <NavigationView x:Name="Navigation"
+                        PaneDisplayMode="Left"
+                        IsSettingsVisible="False"
+                        IsBackButtonVisible="Collapsed"
+                        IsPaneToggleButtonVisible="False"
+                        IsPaneOpen="True"
+                        AlwaysShowHeader="False"
+                        CompactModeThresholdWidth="0"
+                        ExpandedModeThresholdWidth="0"
+                        SelectionChanged="OnSelectionChanged">
+
+            <NavigationView.PaneFooter>
+                <StackPanel x:Name="Footer" Orientation="Horizontal" Spacing="10" Margin="16,8,16,12">
+                    <Image x:Name="FooterMark" Width="28" Height="28" VerticalAlignment="Center"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock x:Name="FooterName" FontSize="12" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="FooterVersion" FontSize="11"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                </StackPanel>
+            </NavigationView.PaneFooter>
+
+            <ScrollViewer x:Name="Scroller" HorizontalScrollBarVisibility="Disabled">
+                <!-- One star column, capped at the page width the application sets, so a page
+                     takes the width the window has up to that cap and sits at the left edge: an
+                     element capped by its own MaxWidth would centre instead. -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="PageColumn" Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid x:Name="Pages"/>
+                </Grid>
+            </ScrollViewer>
+        </NavigationView>
+    </Grid>
+</Window>
