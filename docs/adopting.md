@@ -93,8 +93,12 @@ What works is three imports at the repository's root: the kit's props from `Dire
 its targets from `Directory.Build.targets`, and its pins from `Directory.Packages.props`. **A WinUI
 application project makes a fourth import of its own**, the application block, which is where the
 output type, the target framework, the runtime identifier, the language default and the generated
-manifest come from. The project-level `Sdk` attribute is not a fourth route and resolves nothing.
-The build guide carries all four lines for both routes.
+manifest come from. The project-level `Sdk` attribute is not a fourth route, and it does not
+fail quietly either: `Sdk="Microsoft.NET.Sdk;ZeroZero.Build"` restores cleanly and then stops the
+build at evaluation with `MSB4019`, the imported project `Sdk\Sdk.props` not found. That attribute
+imports `Sdk.props` and `Sdk.targets` by those names and the package carries neither: its `Sdk\`
+folder holds the three files above and the WinUI block under their own names. The build guide
+carries all four lines for both routes.
 
 The kit pins the Windows App SDK and its build tools but references neither, so **a WinUI
 application still declares both package references itself** — without a version, as below.
