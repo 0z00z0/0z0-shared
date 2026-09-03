@@ -38,8 +38,8 @@ take `ZeroZero.Win32`, and `ZeroZero.Mqtt.WinUI` and `ZeroZero.SettingsShell.Win
 release after `primitives`, `update` releases after `primitives` and `win32`, `settingsshell`
 releases after `win32` and `controls`, and `mqtt` releases after `primitives`, `config`, `win32`
 and `controls`. No component references another component: the brand, diagnostics, lifecycle,
-MQTT, settings shell, startup and update components are independent of each other, and the
-build kit references nothing and is referenced by nothing.
+MQTT, settings shell, startup, tray and update components are independent of each other, and
+the build kit references nothing and is referenced by nothing.
 Within a component the order does not matter: the projects release together. The build kit packs
 no assembly — its package is the MSBuild files, the manifest template and the signing script — and
 the pack step counts it like any other project of its key.
