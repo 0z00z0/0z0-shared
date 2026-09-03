@@ -18,7 +18,7 @@ the feed, so a change here releases first.
 | | |
 |---|---|
 | SDK | .NET 10 |
-| Platform | Windows 10 1809 (build 10.0.17763) or later. The assembly declares itself Windows-only, so a call from code that may run elsewhere is a compiler warning. |
+| Platform | Windows. The assembly targets plain `net10.0` and declares itself Windows-only through `SupportedOSPlatform`, with no version: nothing here needs a build floor, and the project states none. A call from code that may run elsewhere is a compiler warning. An application taking it alongside the WinUI components inherits their floor, not one from here. |
 | Manifest | The task dialog needs common controls version 6, declared in the consuming application's own manifest (below). `PerMonitorV2` DPI awareness in the same manifest is what makes the monitor metrics agree with the scale the window is drawn at. |
 
 ## What it contains

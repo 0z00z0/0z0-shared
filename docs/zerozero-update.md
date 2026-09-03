@@ -20,7 +20,7 @@ The assemblies are versioned as `UpdateVersion` in `Versions.props` and released
 | | |
 |---|---|
 | SDK | .NET 10 |
-| Platform | Windows 10 1809 (build 10.0.17763) or later. The signature check is WinVerifyTrust. |
+| Platform | Windows. Both assemblies target plain `net10.0` and declare themselves Windows-only through `SupportedOSPlatform`, with no version: nothing here needs a build floor, and neither project states one. The signature check is WinVerifyTrust. An application taking the component alongside the WinUI components inherits their floor, not one from here. |
 | Manifest | The install dialog is a task dialog, which needs common controls version 6 in the consuming application's own manifest; [`zerozero-win32.md`](zerozero-win32.md) carries the declaration. Without it the question is asked as a yes-or-no message box, which costs two things: the release notes, which the task dialog shows as its detail, and the third choice — "Open the release page" — so a person offered the message box can install or defer and cannot read the notes in a browser first. |
 | The release | A GitHub release, not a draft and not a pre-release, whose tag is a plain version (`v1.2.3`), which carries an asset named exactly as `InstallerFileName` says with the version substituted, and whose body carries the installer's SHA-256 as the only *distinct* 64-digit hexadecimal token in it — one value, repeated as often as the notes like. |
 | The installer | Authenticode-signed by the expected signer, per-user, and able to start while the application exits: the flow launches it without elevation and the application exits once it has started. |
