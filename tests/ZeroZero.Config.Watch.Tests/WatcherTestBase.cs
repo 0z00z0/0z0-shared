@@ -115,7 +115,17 @@ public abstract class WatcherTestBase : IDisposable
 
             watcher.Examined += (_, e) => { lock (Examined) Examined.Add(e); };
             watcher.Changed += (_, e) => { lock (Changed) Changed.Add(e); };
-            watcher.Failed += (_, e) => { lock (Failures) Failures.Add(e.Error); };
+
+            watcher.Failed += (_, e) =>
+            {
+                lock (Failures)
+                {
+                    // Read before the failure is recorded, so it counts only what the operating
+                    // system had delivered by the time the watcher reported this.
+                    if (Failures.Count == 0) SignalsWhenFirstReported = Signals;
+                    Failures.Add(e.Error);
+                }
+            };
         }
 
         public SettingsWatcher<AppSettings> Watcher { get; }
@@ -128,6 +138,11 @@ public abstract class WatcherTestBase : IDisposable
 
         /// <summary>Every notification the operating system delivered, before the quiet window.</summary>
         public int Signals => Watcher.Signals;
+
+        /// <summary>What <see cref="Signals"/> stood at when the first failure was reported. A
+        /// signal counted after this one came from the watcher itself rather than from the
+        /// operating system, which is how a forced examination is told from a delivered one.</summary>
+        public int SignalsWhenFirstReported { get; private set; }
 
         /// <summary>Blocks until the operating system has delivered at least <paramref name="total"/>
         /// notifications for changes the test has already made. Fails the test rather than carrying
@@ -167,6 +182,28 @@ public abstract class WatcherTestBase : IDisposable
                 Assert.True(
                     Environment.TickCount64 < deadline,
                     $"Notifications were still arriving after {Delivery.TotalSeconds:0} s, so the file never settled.");
+            }
+        }
+
+        /// <summary>Blocks until the watcher has reported a failure of the given kind. A liveness
+        /// wait like <see cref="AwaitSignals"/>: reaching the deadline means the report never came,
+        /// which is the failure, not a slow machine.</summary>
+        public TError AwaitFailure<TError>() where TError : Exception
+        {
+            var deadline = Environment.TickCount64 + (long)Delivery.TotalMilliseconds;
+
+            while (true)
+            {
+                lock (Failures)
+                {
+                    if (Failures.OfType<TError>().FirstOrDefault() is { } found) return found;
+                }
+
+                Assert.True(
+                    Environment.TickCount64 < deadline,
+                    $"No {typeof(TError).Name} was reported within {Delivery.TotalSeconds:0} s. Nothing after this point was tested.");
+
+                Thread.Sleep(PollMilliseconds);
             }
         }
 
