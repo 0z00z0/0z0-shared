@@ -14,7 +14,7 @@ and how a pin works, and everything below assumes it.
 |---|---|---|---|
 | Brand | The studio mark, the About box, the typeface, and the palette as brushes XAML can merge | `ZeroZero.Brand.WinUI`; a console tool takes `ZeroZero.Brand.Core` alone | [brand](zerozero-brand.md) |
 | Diagnostics | One place every unhandled exception lands, a crash line that never throws, the version line at startup, and crash dumps | `ZeroZero.Diagnostics`; the dump registration alone is `ZeroZero.Diagnostics.Dumps` | [diagnostics](zerozero-diagnostics.md) |
-| Lifecycle | One instance at a time, relaunch after an unclean exit under a limit, and the per-user data folder | `ZeroZero.Lifecycle` | [lifecycle](zerozero-lifecycle.md) |
+| Lifecycle | One instance at a time, relaunch under a limit after a clean exit nobody asked for, and the per-user data folder | `ZeroZero.Lifecycle` | [lifecycle](zerozero-lifecycle.md) |
 | MQTT | The application on a broker and into Home Assistant as one device with entities, and the settings panel | `ZeroZero.Mqtt.WinUI`; headless, `ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` | [mqtt](zerozero-mqtt.md) |
 | Settings shell | The settings window, with every page left to the application | `ZeroZero.SettingsShell.WinUI` | [settings shell](zerozero-settingsshell.md) |
 | Startup | The run-at-logon task, and the repair of one an older build left | `ZeroZero.Startup` | [startup](zerozero-startup.md) |
