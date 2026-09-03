@@ -13,6 +13,7 @@
     <Project Path="src/ZeroZero.Mqtt.Discovery/ZeroZero.Mqtt.Discovery.csproj" />
     <Project Path="src/ZeroZero.Mqtt.WinUI/ZeroZero.Mqtt.WinUI.csproj" />
     <Project Path="src/ZeroZero.Primitives/ZeroZero.Primitives.csproj" />
+    <Project Path="src/ZeroZero.SettingsShell.WinUI/ZeroZero.SettingsShell.WinUI.csproj" />
     <Project Path="src/ZeroZero.Startup/ZeroZero.Startup.csproj" />
     <Project Path="src/ZeroZero.Tray/ZeroZero.Tray.csproj" />
     <Project Path="src/ZeroZero.Update/ZeroZero.Update.csproj" />
@@ -30,6 +31,7 @@
     <Project Path="tests/ZeroZero.Mqtt.Discovery.Tests/ZeroZero.Mqtt.Discovery.Tests.csproj" />
     <Project Path="tests/ZeroZero.Primitives.Tests/ZeroZero.Primitives.Tests.csproj" />
     <Project Path="tests/ZeroZero.ReleaseVerification.Tests/ZeroZero.ReleaseVerification.Tests.csproj" />
+    <Project Path="tests/ZeroZero.SettingsShell.Tests/ZeroZero.SettingsShell.Tests.csproj" />
     <Project Path="tests/ZeroZero.Startup.Tests/ZeroZero.Startup.Tests.csproj" />
     <Project Path="tests/ZeroZero.Tray.Tests/ZeroZero.Tray.Tests.csproj" />
     <Project Path="tests/ZeroZero.Update.Tests/ZeroZero.Update.Tests.csproj" />

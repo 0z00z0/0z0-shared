@@ -83,6 +83,7 @@ public partial class App : Application
     private readonly List<BrandPaletteWindow> _paletteWindows = [];
     private readonly List<SettingsRowsWindow> _rowWindows = [];
     private readonly List<TitleBarWindow> _titleBarWindows = [];
+    private readonly List<ZeroZero.SettingsShell.WinUI.SettingsWindow> _settingsWindows = [];
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _probeTimer;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _settledTimer;
     private string? _onlyTitle;
@@ -115,6 +116,12 @@ public partial class App : Application
         if (commandLine.Any(a => a.Equals("--titlebar", StringComparison.Ordinal)))
         {
             ShowTitleBars();
+            return;
+        }
+
+        if (commandLine.Any(a => a.Equals("--settings", StringComparison.Ordinal)))
+        {
+            ShowSettingsShell(commandLine);
             return;
         }
 
@@ -455,6 +462,46 @@ public partial class App : Application
             var window = new TitleBarWindow(scenarios[i].Title, scenarios[i].Theme, scenarios[i].Treatment, offset: i * 60);
             _titleBarWindows.Add(window);
             window.Activate();
+        }
+    }
+
+    /// <summary>
+    /// The settings window shell on screen, one per theme, each with four sections: a page from
+    /// the row vocabulary, the MQTT panel built once, a timer page and the About control. The
+    /// second window is nudged off the first so both stay reachable. <c>--only Light|Dark</c>
+    /// opens one; <c>--fit</c> fits it to its pages; <c>--rect X,Y,W,H</c> seeds the rectangle
+    /// store, so the clamp can be seen; <c>--navigate a,b,c</c> walks the sections, and
+    /// <c>--rebuild</c>, <c>--maximise</c> and <c>--close-after &lt;ms&gt;</c> take the steps a
+    /// saved-rectangle measurement needs. Every hook and every store call is logged to
+    /// <c>settings-shell-log.txt</c> in the temp folder.
+    /// </summary>
+    private void ShowSettingsShell(string[] commandLine)
+    {
+        var options = new SettingsShellScenario.Options
+        {
+            Fit = commandLine.Any(a => a.Equals("--fit", StringComparison.Ordinal)),
+            SeedRect = SettingsShellScenario.ParseRect(ValueAfter(commandLine, "--rect")),
+            NavigateTo = ValueAfter(commandLine, "--navigate")?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? [],
+            Rebuild = commandLine.Any(a => a.Equals("--rebuild", StringComparison.Ordinal)),
+            Maximise = commandLine.Any(a => a.Equals("--maximise", StringComparison.Ordinal)),
+            CloseAfterMs = int.TryParse(ValueAfter(commandLine, "--close-after"), out int ms) ? ms : 0,
+        };
+        string? only = ValueAfter(commandLine, "--only");
+
+        (string Title, ElementTheme Theme)[] scenarios =
+        [
+            ("Settings Shell Light", ElementTheme.Light),
+            ("Settings Shell Dark", ElementTheme.Dark),
+        ];
+        int opened = 0;
+        foreach (var (title, theme) in scenarios)
+        {
+            if (only is { Length: > 0 } && !title.EndsWith(only, StringComparison.OrdinalIgnoreCase)) continue;
+            var window = SettingsShellScenario.Open(title, theme, options);
+            _settingsWindows.Add(window);
+            if (opened > 0) SettingsShellScenario.Nudge(window, 60 * opened);
+            window.Activate();
+            opened++;
         }
     }
 

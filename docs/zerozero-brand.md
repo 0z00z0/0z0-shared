@@ -242,8 +242,9 @@ resource dictionary — one window per theme, a swatch per brush key, the wordma
 and a sample line in the brand face, every one resolved through `ThemeResource` the way a consumer
 resolves them; `--probe <path>` beside it writes the colour and face that reached each element.
 `--rows`, `--titlebar` and `--prompt` open the controls foundation assembly's surfaces
-([`zerozero-controls.md`](zerozero-controls.md)), and `--native` the Win32 layer's dialogs. One
-component per run, so unrelated windows never land on top of each other.
+([`zerozero-controls.md`](zerozero-controls.md)), `--settings` the settings window shell
+([`zerozero-settingsshell.md`](zerozero-settingsshell.md)), and `--native` the Win32 layer's
+dialogs. One component per run, so unrelated windows never land on top of each other.
 
 Two scripts under `scripts/` drive the About scenarios:
 

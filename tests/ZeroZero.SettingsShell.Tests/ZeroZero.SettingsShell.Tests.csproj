@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0, and no reference to ZeroZero.SettingsShell.WinUI: the Windows App SDK
+         bootstrapper blocks on a runner with no desktop session, so a WinUI-coupled test assembly
+         would hang CI rather than fail it (issue #13). What can be tested without the XAML runtime
+         is compiled in as linked source, and the markup is read as data. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.SettingsShell.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The framework-free half of the shell: the section lifecycle, which names no WinUI type
+         on purpose so the order of every hook can be pinned here, and the placement arithmetic. -->
+    <Compile Include="..\..\src\ZeroZero.SettingsShell.WinUI\SectionPlan.cs" Link="Linked\SectionPlan.cs" />
+    <Compile Include="..\..\src\ZeroZero.SettingsShell.WinUI\ISectionHost.cs" Link="Linked\ISectionHost.cs" />
+    <Compile Include="..\..\src\ZeroZero.SettingsShell.WinUI\SectionLifecycle.cs" Link="Linked\SectionLifecycle.cs" />
+    <Compile Include="..\..\src\ZeroZero.SettingsShell.WinUI\WindowRect.cs" Link="Linked\WindowRect.cs" />
+    <Compile Include="..\..\src\ZeroZero.SettingsShell.WinUI\WindowPlacement.cs" Link="Linked\WindowPlacement.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The window's markup as data: the chrome both applications converged on, held to what the
+         plan says it is. -->
+    <None Include="..\..\src\ZeroZero.SettingsShell.WinUI\SettingsWindow.xaml"
+          Link="SettingsWindow.xaml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The rectangle type the placement arithmetic clamps with. Headless, no WinUI. -->
+    <ProjectReference Include="..\..\src\ZeroZero.Win32\ZeroZero.Win32.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+</Project>

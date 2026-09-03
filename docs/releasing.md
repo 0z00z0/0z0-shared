@@ -32,13 +32,14 @@ The references that cross component lines today: all three MQTT projects, both d
 projects, `ZeroZero.Lifecycle`, `ZeroZero.Startup` and `ZeroZero.Update` take
 `ZeroZero.Primitives`, `ZeroZero.Mqtt` and `ZeroZero.Mqtt.Discovery` take `ZeroZero.Config`,
 `ZeroZero.Brand.WinUI`, `ZeroZero.Controls.WinUI`, `ZeroZero.Tray` and `ZeroZero.Update.Win32`
-take `ZeroZero.Win32`, and `ZeroZero.Mqtt.WinUI` takes `ZeroZero.Controls.WinUI`. So
-`primitives`, `config`, `win32` and `build` release in any order, `brand`, `controls` and `tray`
-release after `win32`, `diagnostics`, `lifecycle` and `startup` release after `primitives`,
-`update` releases after `primitives` and `win32`, and `mqtt` releases after `primitives`,
-`config`, `win32` and `controls`. No component references another component: the brand,
-diagnostics, lifecycle, MQTT, startup and update components are independent of each other, and
-the build kit references nothing and is referenced by nothing.
+take `ZeroZero.Win32`, and `ZeroZero.Mqtt.WinUI` and `ZeroZero.SettingsShell.WinUI` take
+`ZeroZero.Controls.WinUI`. So `primitives`, `config`, `win32` and `build` release in any order,
+`brand`, `controls` and `tray` release after `win32`, `diagnostics`, `lifecycle` and `startup`
+release after `primitives`, `update` releases after `primitives` and `win32`, `settingsshell`
+releases after `win32` and `controls`, and `mqtt` releases after `primitives`, `config`, `win32`
+and `controls`. No component references another component: the brand, diagnostics, lifecycle,
+MQTT, settings shell, startup and update components are independent of each other, and the
+build kit references nothing and is referenced by nothing.
 Within a component the order does not matter: the projects release together. The build kit packs
 no assembly — its package is the MSBuild files, the manifest template and the signing script — and
 the pack step counts it like any other project of its key.
@@ -71,8 +72,8 @@ The workflow then runs, in this order, and stops at the first failure:
 A green run means the component's packages are on the feed, are the ones this run packed, and a
 GitHub release exists for the tag with the notes as its body. Nothing else is republished: a
 release of `mqtt` leaves the `brand`, `build`, `config`, `controls`, `diagnostics`, `lifecycle`,
-`primitives`, `startup`, `tray`, `update` and `win32` packages at whatever version each last
-released.
+`primitives`, `settingsshell`, `startup`, `tray`, `update` and `win32` packages at whatever
+version each last released.
 
 Tags from `v0.1.0` to `v0.6.0` predate the scheme and released every package together under one
 number; they remain valid refs and their notes stay at `docs/release-notes/v<x.y.z>.md`.

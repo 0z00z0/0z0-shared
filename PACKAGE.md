@@ -19,6 +19,7 @@ licensed, public.
 | `ZeroZero.Mqtt.Discovery` | `mqtt` | `net10.0` | The entity and discovery-document layer above it: seven typed component types, one device document, eviction that survives a process restart. |
 | `ZeroZero.Mqtt.WinUI` | `mqtt` | `net10.0-windows10.0.26100.0` | The MQTT settings panel a host embeds. |
 | `ZeroZero.Primitives` | `primitives` (foundation) | `net10.0` | The two-member log sink and its no-op, the reader of the version an assembly reports with its About-box form, the coalescing gate, and the source-revision stamp as build properties and targets. |
+| `ZeroZero.SettingsShell.WinUI` | `settingsshell` | `net10.0-windows10.0.26100.0` | The settings window with every page left to the application: Mica chrome with the title bar painted for the theme, a navigation pane with a product footer, one scroll viewer over the pages, placement against the application's saved rectangle, Escape to close, and a section lifecycle with enter and leave hooks and a per-section build-once flag. Takes `ZeroZero.Controls.WinUI`. |
 | `ZeroZero.Startup` | `startup` | `net10.0` | The application's logon task in the Task Scheduler: identity, the power-safe elevated definition, registration, the direct enabled read, enable, disable, delete, repair and demand-start verification. Windows only. |
 | `ZeroZero.Tray` | `tray` (foundation) | `net10.0` | The tray icon's container and sizing policy: the PNG-in-ICO file writer, the slot size at the taskbar's own scale, and whether the taskbar is light or dark with the stroke tone that reads on it. Headless, no drawing; takes `ZeroZero.Win32`. Windows only. |
 | `ZeroZero.Update` | `update` | `net10.0` | The update flow without its dialogs: the latest GitHub release against the running version, the download into a fresh private directory, verification of the installer — its Authenticode signature and publisher against the expected signer, and its SHA-256 against the hash the release publishes — before it runs, the launch-or-refuse policy, the stale-download sweep and the check scheduler. Takes `ZeroZero.Primitives`. Windows only. |
@@ -50,7 +51,7 @@ name. The recipe, both halves of it, is in
 
 ## Requirements
 
-.NET 10 SDK. The three WinUI packages additionally need Windows 10 1809 (build 10.0.17763) or later
+.NET 10 SDK. The four WinUI packages additionally need Windows 10 1809 (build 10.0.17763) or later
 and the Windows App SDK, which arrives as a package of its own. The MQTT module needs an MQTT 5.0
 broker at run time, and Home Assistant 2024.11.0 or later for discovery.
 
