@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "general": {
+    "StartMinimised": true,
+    "StartWithWindows": false,
+    "Theme": "System",
+    "Language": "en-GB"
+  },
+  "graph": {
+    "GraphSpan": "P30D",
+    "GraphLineColouring": "ByState",
+    "ShowGrid": true,
+    "PointsPerHour": 4
+  },
+  "smart_charge": {
+    "Enabled": false,
+    "TargetPercent": 80,
+    "ResumeAbovePercent": 20,
+    "Schedule": "PT0S"
+  },
+  "network": {
+    "PreferredAdapter": "",
+    "PollSeconds": 30,
+    "AllowMetered": false
+  },
+  "keep_awake": {
+    "Enabled": true,
+    "WhileCharging": false,
+    "UntilPercent": 95
+  },
+  "lid_close": {
+    "LidDelaySeconds": 45,
+    "LidDelaySavedAcAction": "Sleep",
+    "LidDelaySavedDcAction": "Hibernate"
+  },
+  "notifications": {
+    "OnBridgeLost": true,
+    "OnPowerRestored": true,
+    "OnDiskFull": false,
+    "QuietFrom": "22:00",
+    "QuietUntil": "07:00"
+  },
+  "mqtt": {
+    "LastGoodHost": "broker.invalid",
+    "LastGoodPort": 8883,
+    "LastGoodUsedTls": true,
+    "LastGoodClientId": "fixture-client",
+    "LastGoodAtUtc": "2026-01-02T03:04:05Z"
+  },
+  "diagnostics": {
+    "KeepLogDays": 14,
+    "Verbose": false
+  },
+  "window": {
+    "Width": 1280,
+    "Height": 860,
+    "Left": 120,
+    "Top": 80,
+    "Maximised": false
+  }
+}

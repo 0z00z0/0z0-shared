@@ -26,17 +26,12 @@ namespace ZeroZero.Config;
 /// defaults are the state a missing file stands for.</typeparam>
 public sealed class SettingsFile<T> where T : class, new()
 {
-    private const string TempSuffix = ".tmp";
     private const string QuarantineMarker = ".bad";
     private const string StampFormat = "yyyy-MM-dd-HHmmss";
-    private const int ReplaceAttempts = 5;
-
-    private static readonly TimeSpan ReplacePause = TimeSpan.FromMilliseconds(20);
 
     private readonly Lock _gate = new();
     private readonly SettingsFileOptions _options;
     private readonly JsonSerializerOptions _serialiser;
-    private readonly string _tempPath;
 
     // The stored state, kept serialised: every read deserialises from it, so no caller ever holds
     // the instance the file is written from.
@@ -63,7 +58,6 @@ public sealed class SettingsFile<T> where T : class, new()
         _options = options;
         _serialiser = options.Serialiser;
         FilePath = Path.Combine(options.Directory, options.FileName);
-        _tempPath = FilePath + TempSuffix;
 
         var loaded = Load();
         _hasLoaded = loaded is not null;
@@ -226,58 +220,7 @@ public sealed class SettingsFile<T> where T : class, new()
             : new InvalidOperationException(
                 "The file has not been read since the store opened, so it is not written over: what is on disk may be intact. Reload it first.");
 
-    private Exception? TryWrite(string json)
-    {
-        try
-        {
-            Directory.CreateDirectory(_options.Directory);
-            File.WriteAllText(_tempPath, json);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
-        {
-            TryDeleteTemp();
-            return ex;
-        }
-
-        return Replace();
-    }
-
-    // Windows denies a replace for a moment while a scanner, an indexer or a closing handle still
-    // holds the file, so a burst of saves meets a refusal that clears on its own. A file that is
-    // genuinely locked or read-only still fails, a few milliseconds later.
-    private Exception? Replace()
-    {
-        for (var attempt = 1; ; attempt++)
-        {
-            try
-            {
-                File.Move(_tempPath, FilePath, overwrite: true);
-                return null;
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
-            {
-                if (attempt >= ReplaceAttempts)
-                {
-                    TryDeleteTemp();
-                    return ex;
-                }
-
-                Thread.Sleep(ReplacePause);
-            }
-        }
-    }
-
-    private void TryDeleteTemp()
-    {
-        try
-        {
-            File.Delete(_tempPath);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // A leftover temporary file is replaced by the next write.
-        }
-    }
+    private Exception? TryWrite(string json) => AtomicFile.WriteText(FilePath, json);
 
     private string? Quarantine()
     {
