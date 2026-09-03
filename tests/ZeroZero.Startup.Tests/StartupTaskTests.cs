@@ -122,6 +122,27 @@ public class StartupTaskTests
         Assert.Contains(disposable.Log.Infos, line => line.Contains("registered, enabled, never run", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// The repair promises never to throw, and the current identity is the one read that is not a
+    /// scheduler call: read outside the delegates it would take the application down at start-up
+    /// over a task it never needed to be running.
+    /// </summary>
+    [Fact]
+    public void ARepairThatCannotReadTheCurrentIdentityIsAnOutcomeNotAThrow()
+    {
+        using var disposable = new DisposableTask();
+        disposable.Register();
+        disposable.Tamper(definition => definition.Settings.DisallowStartIfOnBatteries = true);
+        disposable.Task.Identity = () => throw new InvalidOperationException("the identity cannot be read");
+
+        StartupTaskRepairResult? result = null;
+        Exception? thrown = Record.Exception(() => result = disposable.Task.Repair());
+
+        Assert.True(thrown is null, $"Repair threw {thrown?.GetType().Name}; it promises the outcome instead.");
+        Assert.Equal(StartupTaskRepairOutcome.RepairFailed, result!.Outcome);
+        Assert.IsType<InvalidOperationException>(result.Error);
+    }
+
     [UnelevatedFact]
     public void AStandardTokenIsRefusedTheHighestRunLevel()
     {
