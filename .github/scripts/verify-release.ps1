@@ -250,10 +250,22 @@ function Test-Signer([string]$Path, [string]$Name) {
         Fail "$Name is signed by '$subject', not by '$Signer'."
         return
     }
+    # The pin is SHA-1 or SHA-256, separators and case ignored, as the update component takes it,
+    # so the one string an application pins serves the release check too. Any other shape fails:
+    # a pin no certificate can match must not read as "no pin given".
     $thumbprint = $signature.SignerCertificate.Thumbprint
-    if ($SignerThumbprint -and $thumbprint -ne $SignerThumbprint) {
-        Fail "$Name is signed by a certificate with thumbprint $thumbprint, not $SignerThumbprint. The subject '$subject' is right and the certificate is not the release's."
-        return
+    $sha256 = $signature.SignerCertificate.GetCertHashString([System.Security.Cryptography.HashAlgorithmName]::SHA256)
+    if ($SignerThumbprint) {
+        $pin = ($SignerThumbprint -replace '[\s:-]', '').ToUpperInvariant()
+        if ($pin -notmatch '^([0-9A-F]{40}|[0-9A-F]{64})$') {
+            Fail "-SignerThumbprint '$SignerThumbprint' is not a SHA-1 (40 hex) or SHA-256 (64 hex) thumbprint, so no certificate can match it."
+            return
+        }
+        $actual = if ($pin.Length -eq 40) { $thumbprint.ToUpperInvariant() } else { $sha256.ToUpperInvariant() }
+        if ($actual -cne $pin) {
+            Fail "$Name is signed by a certificate with thumbprint $thumbprint (SHA-256 $sha256), not $pin. The subject '$subject' is right and the certificate is not the release's."
+            return
+        }
     }
     # A self-signed studio certificate reads as an untrusted root on a machine that has not been
     # told to trust it; the signature itself is intact. Anything else is a broken signature.

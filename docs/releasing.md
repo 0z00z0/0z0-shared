@@ -105,7 +105,9 @@ the artefacts were published, fetches every recorded artefact from there, and as
   skipped the only evidence that it did not.
 - **Signer** (`-Signer`, `-SignerThumbprint`). Every executable fetched carries an intact
   Authenticode signature by the expected subject, and by the expected certificate where a
-  thumbprint is given.
+  thumbprint is given — SHA-1 or SHA-256, separators and case ignored, the same pin the update
+  component holds in the application, so one string serves both checks. A pin of any other shape
+  fails rather than reading as no pin.
 
 Every assertion fails closed: a location that cannot be reached, a record naming another tag or
 commit, an empty record, a package without a nuspec — each is a failure, never a skip. The hash is
@@ -137,7 +139,7 @@ verify:
     require-signed: true
     unsigned-outcome: ${{ needs.build.outputs.unsigned-outcome }}
     signer: CN=ZeroZero Software
-    signer-thumbprint: <thumbprint>
+    signer-thumbprint: <SHA-256 thumbprint>
 ```
 
 - **The gate.** `0z00z0/0z0-shared/.github/actions/signing-gate@<tag>`, first in the build job

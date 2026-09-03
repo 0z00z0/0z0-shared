@@ -49,6 +49,13 @@ public sealed class SignerTests : IDisposable
         return result.Output.Trim();
     }
 
+    private static string Sha256ThumbprintOf(string executable)
+    {
+        var result = Scripts.Command($"(Get-AuthenticodeSignature -LiteralPath {Scripts.Quote(executable)}).SignerCertificate.GetCertHashString([System.Security.Cryptography.HashAlgorithmName]::SHA256)");
+        Assert.True(result.Passed, result.ToString());
+        return result.Output.Trim();
+    }
+
     private static ScriptResult Verify(string feed, string record, string signer, params string[] more)
     {
         var arguments = new List<string> { "-Tag", Tag, "-Artefacts", record, "-Commit", Commit, "-Location", feed, "-Signer", signer };
@@ -84,6 +91,22 @@ public sealed class SignerTests : IDisposable
     }
 
     [Fact]
+    public void Accepts_the_certificate_by_its_sha256_thumbprint_with_separators()
+    {
+        // The form the update component's guide has an application pin, so the one string serves
+        // the release check and the installed application alike.
+        var subject = SubjectOf(Pwsh);
+        var sha256 = Sha256ThumbprintOf(Pwsh);
+        Assert.Matches("^[0-9A-Fa-f]{64}$", sha256);
+        var separated = string.Join(':', Enumerable.Range(0, 32).Select(i => sha256.Substring(i * 2, 2).ToLowerInvariant()));
+        var (feed, record) = Publish(Pwsh, "pwsh.exe");
+
+        var result = Verify(feed, record, subject, "-SignerThumbprint", separated);
+
+        Assert.True(result.Passed, result.ToString());
+    }
+
+    [Fact]
     public void Refuses_the_right_subject_on_another_certificate()
     {
         // A subject is a string anyone can put on a self-signed certificate; the thumbprint is
@@ -95,6 +118,31 @@ public sealed class SignerTests : IDisposable
 
         Assert.False(result.Passed, result.ToString());
         Assert.Contains("the certificate is not the release's", result.Output);
+    }
+
+    [Fact]
+    public void Refuses_the_right_subject_on_another_certificate_by_sha256()
+    {
+        var subject = SubjectOf(Pwsh);
+        var (feed, record) = Publish(Pwsh, "pwsh.exe");
+
+        var result = Verify(feed, record, subject, "-SignerThumbprint", new string('A', 64));
+
+        Assert.False(result.Passed, result.ToString());
+        Assert.Contains("the certificate is not the release's", result.Output);
+    }
+
+    [Fact]
+    public void Refuses_a_pin_that_is_neither_sha1_nor_sha256()
+    {
+        // A pin no certificate can match must fail, never read as "no pin given".
+        var subject = SubjectOf(Pwsh);
+        var (feed, record) = Publish(Pwsh, "pwsh.exe");
+
+        var result = Verify(feed, record, subject, "-SignerThumbprint", "ABC");
+
+        Assert.False(result.Passed, result.ToString());
+        Assert.Contains("is not a SHA-1 (40 hex) or SHA-256 (64 hex) thumbprint", result.Output);
     }
 
     [Fact]
