@@ -33,6 +33,10 @@ public class PaletteContrastTests
     /// the figure that makes the tint rule a property of the ground rather than of the palette.</summary>
     private const double QuotedWhiteTint = 2.17;
 
+    /// <summary>What the adoption guide quotes for the two brand grounds against each other: the
+    /// second is a raised surface rather than a fill, and this is how little separates them.</summary>
+    private const double QuotedGroundSeparation = 1.06;
+
     private const string Black = "#000000";
     private const string White = "#ffffff";
 
@@ -233,6 +237,20 @@ public class PaletteContrastTests
             .Max(ground => Ratio(Composite(White, ground, TintOpacity), ground));
 
         Assert.Equal(QuotedWhiteTint, Round(white));
+    }
+
+    /// <summary>
+    /// The two brand grounds against each other, which the adoption guide quotes and no other test
+    /// measured: every figure above is an accent or a tint against a ground, never a ground against
+    /// a ground. Without this, moving ColorBg2 leaves that figure stale with nothing to say so.
+    /// </summary>
+    [Fact]
+    public void TheTwoBrandGroundsSeparateByTheFigureTheAdoptionGuideQuotes()
+    {
+        Assert.Equal(QuotedGroundSeparation, Round(Ratio(Brand.ColorBg, Brand.ColorBg2)));
+
+        // A raised surface, not a fill: it separates two panels and distinguishes nothing on them.
+        Assert.True(Ratio(Brand.ColorBg, Brand.ColorBg2) < NonTextFloor);
     }
 
     private static double Round(double ratio) => Math.Round(ratio, 2, MidpointRounding.AwayFromZero);
