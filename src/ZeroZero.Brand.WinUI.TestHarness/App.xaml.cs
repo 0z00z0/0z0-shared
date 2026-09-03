@@ -54,6 +54,15 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// theme; a light page following its theme; and a light page with the bar pinned dark.
 /// </para>
 /// <para>
+/// <c>--settings</c> opens the settings window shell, one per theme, with four fabricated
+/// sections: a page from the row vocabulary, the MQTT panel built once, a timer page and the
+/// About control. <c>--only Light|Dark</c> opens one; <c>--fit</c> fits it to its pages;
+/// <c>--rect X,Y,W,H</c> seeds the rectangle store; <c>--navigate a,b,c</c> walks the sections;
+/// <c>--rebuild</c>, <c>--maximise</c> and <c>--close-after &lt;ms&gt;</c> take the steps a
+/// saved-rectangle measurement needs. Every hook and store call is logged to
+/// <c>settings-shell-log.txt</c> in the temp folder.
+/// </para>
+/// <para>
 /// <c>--prompt</c> opens the text prompt, one per theme; <c>--prompt --confirm "&lt;text&gt;"</c>
 /// or <c>--prompt --cancel</c> opens one, answers it through its own field and button, writes
 /// what its task resolved with to <c>text-prompt-result.txt</c> in the temp folder, and exits.
@@ -182,7 +191,7 @@ public partial class App : Application
         var libraries = new ExternalLibrary[]
         {
             new("Microsoft.WindowsAppSDK", "Microsoft", "WinUI 3 / Windows App SDK runtime", "MIT", "https://github.com/microsoft/WindowsAppSDK"),
-            new("H.NotifyIcon.WinUI", "HavenDV", "Example third-party credit (not an actual dependency of this harness)", "MIT", "https://github.com/HavenDV/H.NotifyIcon"),
+            new("H.NotifyIcon.WinUI", "HavenDV", "The notify-icon library behind the tray host, a dependency of this harness through ZeroZero.Tray.WinUI", "MIT", "https://github.com/HavenDV/H.NotifyIcon"),
         };
 
         var options = new BrandAboutOptions
