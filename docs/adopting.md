@@ -121,18 +121,25 @@ This is the sharpest edge in the set.
 A section is found by its exact spelling, case included, and one the file spells in another case
 reads as **the type's declared defaults** — no exception, no event, nothing in a log, and nothing to
 tell it apart from a section that has never been written. A write then refuses to create the twin,
-so the file cannot end up holding both. Inside a section, member names are matched ignoring case, so
-case there is harmless.
+so the file cannot end up holding both — and the same refusal guards the document's `version` key.
+Inside a section it is the serialiser that matches member names, and the family's default one ignores
+case, so a member's case is harmless under it; an application that supplies a case-sensitive
+serialiser gets the refusal there too.
 
 That guard catches a difference of **case**. Nothing catches a difference of **word**, and an en-US
 spelling where the file holds the en-GB one is a different word — *color* against *colour* matches
-nothing at either level. The section or the member reads as defaults, the next write **adds a second
-key beside the existing one**, and the file ends up holding both spellings while the application
-reads the empty one, every step reporting success.
+nothing at either level. The section or the member reads as defaults, every step reporting success,
+and what happens to the person's value then depends on the store. **One document in sections** keeps
+the file's key and writes the build's beside it, so the file holds both spellings while the
+application reads the empty one. **One file of one type** is worse: the next write serialises the
+type back out, and a key the type does not declare is not in the output, so the person's value is
+deleted rather than left orphaned.
 
 So: **copy every name out of the file rather than retyping it**, and check the spelling against what
-is on disk before shipping a build that reads it. A section reports a conflicting key if asked, and
-the file watcher announces one when it appears — neither says anything unless the application looks.
+is on disk before shipping a build that reads it. A section reports a conflicting key if asked. The
+watcher can push one instead, through its failure event, but only where the application supplies the
+obstruction delegate that asks the store — nothing wires that by default, and a whole-file store has
+nothing to report through it.
 
 ### The two stores keep different promises about the rest of the file
 
