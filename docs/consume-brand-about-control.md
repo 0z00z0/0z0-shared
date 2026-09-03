@@ -8,7 +8,9 @@ routes and the CI shapes are in [`consuming.md`](consuming.md).
 1. Reference `ZeroZero.Brand.WinUI`, either as a package off the studio feed — which authenticates
    every read, so the consuming workflow gains a `read:packages` token — or from a sibling checkout
    of this repository, in which case the workflow gains a checkout of it instead.
-2. Host `BrandAboutControl` in the existing About page's XAML, in place of the bespoke layout.
+2. Host `BrandAboutControl` in the existing About page's XAML, in place of the bespoke layout —
+   or, under the settings shell, return it from the About section's `Build` with no scroll viewer
+   of its own, since the shell puts one over every page.
 3. Call `SetInfo(AboutInfo)` once from the page's constructor or `Loaded` handler.
 4. Supply only app facts: name, version, description, repo URL, external-library credits. The
    control provides the studio mark, company name, tagline, website link and donate link itself.

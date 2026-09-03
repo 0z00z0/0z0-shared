@@ -171,6 +171,9 @@ A full windowed app whose About is an in-navigation `Page` (not a separate popup
 </Page>
 ```
 
+Under the settings shell the About section's `Build` returns the control alone, with no scroll
+viewer of its own: the shell puts one over every page.
+
 **2. Populate it from the app's existing brand-facts source** (whatever plays the same role as this
 repository's `AboutInfo` — a `BrandInfo` static class that also feeds a CLI banner, say):
 
