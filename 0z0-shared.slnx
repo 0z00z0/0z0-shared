@@ -16,6 +16,7 @@
     <Project Path="src/ZeroZero.SettingsShell.WinUI/ZeroZero.SettingsShell.WinUI.csproj" />
     <Project Path="src/ZeroZero.Startup/ZeroZero.Startup.csproj" />
     <Project Path="src/ZeroZero.Tray/ZeroZero.Tray.csproj" />
+    <Project Path="src/ZeroZero.Tray.WinUI/ZeroZero.Tray.WinUI.csproj" />
     <Project Path="src/ZeroZero.Update/ZeroZero.Update.csproj" />
     <Project Path="src/ZeroZero.Update.Win32/ZeroZero.Update.Win32.csproj" />
     <Project Path="src/ZeroZero.Win32/ZeroZero.Win32.csproj" />

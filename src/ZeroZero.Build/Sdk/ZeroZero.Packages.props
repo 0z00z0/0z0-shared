@@ -26,6 +26,10 @@
     <!-- A ceiling, not a preference: a consuming app holds a direct reference at this version, and
          a direct reference below a transitive one is NU1605, an error. Raise both or neither. -->
     <ZeroZeroFamilyPin Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.251219" />
+    <!-- The notify-icon library behind the tray host, and a ceiling for the same reason: both
+         applications hold a direct reference at this version, so a bump here is a bump in both.
+         Not the newest available; the version the applications were measured at. -->
+    <ZeroZeroFamilyPin Include="H.NotifyIcon.WinUI" Version="2.4.1" />
   </ItemGroup>
 
   <ItemGroup Label="MQTT">
@@ -34,8 +38,8 @@
 
   <ItemGroup Label="Process and startup">
     <!-- The scheduler library the startup component registers through, and the session-ending
-         signal the lifecycle component listens for. Neither type reaches a public signature of
-         either assembly. -->
+         signal the lifecycle component listens for, as the tray host listens for the theme and
+         display changes. No type of either reaches a public signature of any assembly. -->
     <ZeroZeroFamilyPin Include="TaskScheduler" Version="2.12.2" />
     <!-- A runtime-companion package: the assembly Microsoft.WindowsDesktop.App ships, republished
          on every .NET 10 servicing release under the runtime's own number, with one API across

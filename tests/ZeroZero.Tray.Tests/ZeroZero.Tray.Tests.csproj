@@ -24,6 +24,20 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The framework-free half of the WinUI host, compiled in as linked source rather than
+         referenced: a test assembly that references a WinUI assembly hangs a runner with no
+         desktop session (issue #13). The host itself is measured through the interactive harness
+         as a child process. -->
+    <Compile Include="..\..\src\ZeroZero.Tray.WinUI\TrayClick.cs" Link="Linked\TrayClick.cs" />
+    <Compile Include="..\..\src\ZeroZero.Tray.WinUI\TrayClickPolicy.cs" Link="Linked\TrayClickPolicy.cs" />
+    <Compile Include="..\..\src\ZeroZero.Tray.WinUI\TrayIconFileCache.cs" Link="Linked\TrayIconFileCache.cs" />
+    <Compile Include="..\..\src\ZeroZero.Tray.WinUI\TrayIconImage.cs" Link="Linked\TrayIconImage.cs" />
+    <Compile Include="..\..\src\ZeroZero.Tray.WinUI\TrayMenuItem.cs" Link="Linked\TrayMenuItem.cs" />
+    <Compile Include="..\..\src\ZeroZero.Tray.WinUI\TrayTooltip.cs" Link="Linked\TrayTooltip.cs" />
+    <Compile Include="..\..\src\ZeroZero.Tray.WinUI\TrayTooltipLine.cs" Link="Linked\TrayTooltipLine.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
