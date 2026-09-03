@@ -61,8 +61,9 @@ the XAML runtime is up.
   written once. The drawing is the application's.
 - `Tooltip` — a delegate returning `TrayTooltipLine`s: a text, and optionally a suffix that
   survives truncation.
-- `Menu` — a delegate returning `TrayMenuItem`s: `Command(text, action)`, `Toggle(text,
-  isChecked, action)`, `Separator()`, each with an enabled flag.
+- `Menu` — a delegate returning `TrayMenuItem`s: `Command(text, action)` and `Toggle(text,
+  isChecked, action)`, each with an enabled flag that defaults to true, and `Separator()`, which
+  takes nothing — a rule between groups has nothing to enable.
 - `LeftClick` and `DoubleClick` — the actions.
 - `CacheDirectory` — where a render is written; the temporary folder when not given.
   `ReopenGuard` — how long after a pop-out's dismissal a click is dropped; the system's
@@ -171,14 +172,16 @@ click policy, the file cache and the descriptors — are compiled in as linked s
 there: the cut before a suffix, the surrogate guard, the stop after a dropped line, the guard
 window and the double-click window, the write-or-skip decision.
 
-The host itself is measured through a child process. Three facts start the interactive harness
-in its tray mode, wait for the probe it writes once the icon is created, and read the process
-from outside through the handle the test holds: the priority class is `Normal` and the
-power-throttling state has no execution-speed bit, with the icon created, so the argument the
-host passes is proved by the process rather than by the argument. They skip, with the reason,
-where the Windows App Runtime the harness is built against is not registered for the user — a
-runner without it would show the bootstrapper's dialog and wait — and they kill a harness that
-writes no probe within thirty seconds.
+The host itself is measured through a child process. Three facts start the interactive harness in
+its tray mode and wait for the probe it writes once the icon is created. One of them then reads the
+process from outside, through the handle the test holds: the priority class is `Normal` and the
+power-throttling state has no execution-speed bit, with the icon created, so the argument the host
+passes is proved by the process rather than by the argument. The other two read the probe — that
+the icon was rendered at the taskbar's own slot and theme, and that an icon the application wrote
+itself is created from its path. All three skip, with the reason, where the Windows App Runtime the
+harness is built against is not registered for the user — a runner without it would show the
+bootstrapper's dialog and wait — and all three kill a harness that writes no probe within thirty
+seconds.
 
 `ZeroZero.Brand.WinUI.TestHarness --tray` puts the icon in the notification area from the rig's
 own drawing, tooltip and menu and stays until Exit is chosen; `--file` hands the host a file
