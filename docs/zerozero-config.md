@@ -40,16 +40,24 @@ edit to take effect without a restart.
   half-applied edit.
 - **`SettingsFileOptions`** — where the file lives, how it serialises, and what to do on failure.
 - **`SettingsFileQuarantine`** — what happens to a file that cannot be parsed: it is copied aside,
-  timestamped and marked `.bad`, *and* the original is overwritten with defaults immediately, as the
-  store is constructed. The copy is the only surviving record and the three most recent are kept.
+  timestamped and marked `.bad`, *and* the original is overwritten with defaults immediately. That
+  happens on every read of the file, so a `Reload` that finds it broken quarantines it exactly as
+  construction does. The copy is the only surviving record and the three most recent are kept.
   Nothing surfaces it, so a host should: `SettingsFile<T>.LastQuarantinePath` names the copy, and a
   host that leaves it unread leaves its user without a configuration and with nothing on screen to
   say so.
 - **`AtomicFile`** — the write itself, usable on its own: the content goes to a temporary sibling, is
   flushed through to the disk, and only then replaces the target, so neither a crash nor a power loss
   can leave half a file where a whole one was. A replace the operating system refuses for a moment —
-  a scanner, an indexer, a closing handle — is retried five times, twenty milliseconds apart. It
-  never throws; the exception that stopped the write is returned.
+  a scanner, an indexer, a closing handle — is attempted five times in all, twenty milliseconds
+  apart: one try and four retries. It never throws; the exception that stopped the write is returned.
+
+**A whole-file store is not a document preserver.** Everything the type does not declare is gone at
+its next write: comments, the file's own key order, and any member no property answers to. Reading
+deserialises the file into the type and holds the result, and every write serialises that type out
+again, so the file after a save is the type's shape and nothing else. That is the trade for a store
+this simple; where a file has to survive being edited by hand, or is shared with a component this
+build has no type for, the sectioned store below is the one that preserves it.
 - **`SettingsSaveFailedEventArgs`** and **`SettingsSaveResult`** — a failed write is reported, never
   swallowed.
 
@@ -60,13 +68,23 @@ result carries an `InvalidOperationException` and `SaveFailed` is raised. The fi
 quarantine cannot cover it, because the copy is taken by reading the file. A `Reload` that meets the
 same failure keeps the state already held. Once any read has succeeded the store stays writable
 whatever a later read finds: writing a good configuration over a file broken by hand is the intended
-repair.
+repair. `SettingsFile<T>` reports the latch through nothing: a host learns of it from the refused
+save, which is why the result is worth reading. The sectioned store carries it as
+`SectionedSettingsFile.HasLoaded`.
 
 ## `ZeroZero.Config.Sections` — one document, many owners
 
-The document is one JSON object. Its first key is `version`, a whole number; every other key holds
-an object, and each of those is a **section** belonging to whichever component asked for it. A store
-addresses one section. It never addresses the document.
+The document is one JSON object. A key holding an object is a **section**, belonging to whichever
+component asked for it, and `version` is the one key that is not: a whole number saying which shape
+of the document this is. A store addresses one section. It never addresses the document.
+
+Neither of those is enforced, and a guide that said they were would be describing a document the
+store rejects and it does not. `version` is written first when the document carries none, and stays
+wherever the file already has it otherwise — key order is the file's own, as
+[below](#what-a-write-touches-and-what-it-does-not). A document may carry no version key at all,
+which is the older flat shape, and `DocumentVersion` reads null for it. A top-level key holding
+something other than an object is carried across like any other byte until a store addresses that
+name, at which point the store replaces what stands in its place, because that name is its section.
 
 **One document is not all of an application's configuration.** A component may own a file of its own
 instead of a section, and a component with a section here may still keep the bulk of its
@@ -80,7 +98,8 @@ a key belonging in another component's own file is carried where it stands, not 
 - **`SectionedSettingsFile`** — the document. `Section<T>(name)` hands out a store over one named
   section; several may address one document. `Reload()` re-reads it, `Keys` lists what it carries
   whether or not this build has a type for any of it, `DocumentVersion` and `IsFromNewerVersion`
-  report the version, and `SaveFailed` reports a write that did not land.
+  report the version, `HasLoaded` says whether a read has ever succeeded — false is the latch below,
+  with every write refused — and `SaveFailed` reports a write that did not land.
 - **`SettingsSection<T>`** — the store: `Read()`, `Update(Action<T>)`, `Write(T)` and a `Changed`
   event. `IsPresent` and `IsUnreadable` say whether the document carries the section and whether this
   build can read it.
@@ -136,8 +155,19 @@ such a document as one to repair, not one the store has damaged.
 A reader takes the last of two keys of the same name, so a build that writes its own spelling beside
 the file's leaves the person's value in the file with nothing reading it. **Every write that would
 create such a pair is refused**, with `SettingsKeyCaseConflictException` naming both spellings and the
-file left exactly as it was — whether the pair would be two sections, two members inside one section,
-or two version keys. `SaveFailed` announces it like any other refused write.
+file left exactly as it was. `SaveFailed` announces it like any other refused write.
+
+**The three places it can happen do not behave alike, and the difference is the whole of it.** A
+section key and the version key are matched letter for letter, always: the document walk compares
+them ordinally, whatever the serialiser is set to, so `Mqtt` never finds `mqtt` and the write that
+would add the second one is refused. A member inside a section is matched the way the serialiser
+matches it — and the family's serialiser is case-insensitive, so the write finds the file's own
+spelling and replaces the value behind it. **Under the default serialiser a member can never reach
+the refusal at all.** It is reachable only where a consumer supplies a case-sensitive serialiser, and
+then it behaves like the other two.
+
+So the case a consumer will actually meet is a section key, and it is the one worth planning for:
+address a section by the spelling the installed file already uses.
 
 On the read side, `SettingsSection<T>.ConflictingKey` names the spelling the file holds when it
 differs from the section's own name only in case. Without it a host would show an empty page and have
@@ -323,8 +353,10 @@ than by sleeping for it.
   unhandled-exception handler and takes the process with it. After a dropped-notification failure
   the watcher rebuilds itself and forces an examination, so a missed edit costs a moment rather than
   a reload that never happens.
-- `NotificationContext` posts both events to a captured context, for a consumer that touches a user
-  interface.
+- `NotificationContext` posts all three — `Examined`, `Changed` and `Failed` — to a captured context,
+  for a consumer that touches a user interface. All three, because an event whose thread depends on
+  why it fired is one nothing correct can be written against: a consumer that has given a context
+  never has to ask which thread it is on.
 
 ### When the store can read the file and still see nothing in it
 

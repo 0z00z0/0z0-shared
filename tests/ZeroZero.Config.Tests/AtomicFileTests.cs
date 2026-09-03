@@ -76,6 +76,19 @@ public sealed class AtomicFileTests : IDisposable
             $"A refused replace returned after {clock.ElapsedMilliseconds} ms, so it was not retried.");
     }
 
+    /// <summary>
+    /// The figures the config guide quotes, held to the code. Elapsed time cannot tell four
+    /// attempts from five — a sleep is a floor, not a duration — so the numbers themselves are
+    /// pinned, and a guide saying "retried five times" rather than "attempted five times" is
+    /// describing six.
+    /// </summary>
+    [Fact]
+    public void AReplaceIsAttemptedFiveTimesTwentyMillisecondsApart()
+    {
+        Assert.Equal(5, AtomicFile.ReplaceAttempts);
+        Assert.Equal(TimeSpan.FromMilliseconds(20), AtomicFile.ReplacePause);
+    }
+
     [Fact]
     public void DeletingWhatIsNotThereReportsNothing()
     {
