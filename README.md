@@ -83,13 +83,14 @@ shapes, pinning and the traps; each component's guide adds its own wiring on top
   is enough.
 
 The WinUI projects target `net10.0-windows10.0.26100.0`, so the solution builds on Windows only; the
-plain `net10.0` assemblies and every test project but six are portable in isolation.
+plain `net10.0` assemblies and every test project but seven are portable in isolation.
 `ZeroZero.Win32.Tests` calls user32, `ZeroZero.Diagnostics.Dumps.Tests` writes the registry,
 `ZeroZero.Lifecycle.Tests` takes named mutexes and starts a child process, `ZeroZero.Startup.Tests`
 registers tasks in the real Task Scheduler, `ZeroZero.Tray.Tests` reads the taskbar window and the
-personalisation key, and `ZeroZero.Update.Tests` calls wintrust and signs files through PowerShell,
-so those six run on Windows only. The MQTT module additionally needs an MQTT 5.0 broker at run
-time, and Home Assistant 2024.11.0 or later for discovery.
+personalisation key, `ZeroZero.Update.Tests` calls wintrust and signs files through PowerShell, and
+`ZeroZero.ReleaseVerification.Tests` reads Authenticode signatures through PowerShell, so those
+seven run on Windows only. The MQTT module additionally needs an MQTT 5.0 broker at run time, and
+Home Assistant 2024.11.0 or later for discovery.
 
 ## Build and test
 
