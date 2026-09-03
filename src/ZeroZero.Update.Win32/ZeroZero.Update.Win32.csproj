@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0: the update dialog is a Win32 task dialog taking a window handle and touching
+         no XAML, so this is a Win32 dependency and not a WinUI one. The assembly declares itself
+         Windows-only through SupportedOSPlatform, as the two it takes do. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Update.Win32</RootNamespace>
+    <Version>$(UpdateVersion)</Version>
+
+    <AssemblyTitle>ZeroZero.Update.Win32</AssemblyTitle>
+    <Product>ZeroZero.Update.Win32</Product>
+    <Description>The update component's entry point: the update task dialog and message boxes, worded here and marshalled by the Win32 foundation, and the check-ask-download-verify-launch orchestration that hands over to the application's own shutdown. Carries ZeroZero.Update with it.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The component's entry point carries its other project, so one reference adopts the whole. -->
+    <ProjectReference Include="..\ZeroZero.Update\ZeroZero.Update.csproj" />
+    <ProjectReference Include="..\ZeroZero.Win32\ZeroZero.Win32.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ZeroZero.Update.Win32.Tests" />
+  </ItemGroup>
+
+</Project>
