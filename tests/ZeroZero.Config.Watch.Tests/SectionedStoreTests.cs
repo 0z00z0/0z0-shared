@@ -36,6 +36,17 @@ public sealed class SectionedStoreTests : WatcherTestBase
     private SectionedSettingsFile Document() =>
         new(new SectionedSettingsOptions(Root, FileName) { SectionOrder = [SectionName] });
 
+    /// <summary>Rewrites the document and crosses the quiet window, waiting for the operating system
+    /// to deliver first. Without that wait the clock can be moved before any notification has
+    /// arrived, which arms no window and examines nothing — green on a fast machine and red on a
+    /// runner, which is exactly what happened.</summary>
+    private void Edit(Harness harness, string section, string broker)
+    {
+        var delivered = harness.Signals;
+        GivenDocument(section, broker);
+        harness.AwaitSignals(delivered + 1);
+        CrossTheWindow(harness);
+    }
     private Harness Watch(SectionedSettingsFile document, SettingsSection<AppSettings> section) =>
         new(new SettingsWatcher<AppSettings>(
             new SettingsWatcherOptions<AppSettings>(FilePath, section.Read, () => document.Reload(), Classifier())
@@ -59,8 +70,7 @@ public sealed class SectionedStoreTests : WatcherTestBase
         Assert.Null(section.ConflictingKey);
         Assert.Equal("localhost", section.Read().Broker);
 
-        GivenDocument(SectionName, "elsewhere.invalid");
-        CrossTheWindow(harness);
+        Edit(harness, SectionName, "elsewhere.invalid");
 
         var change = Assert.Single(harness.Changed);
         Assert.Equal("localhost", change.Before.Broker);
@@ -104,8 +114,7 @@ public sealed class SectionedStoreTests : WatcherTestBase
         var section = document.Section<AppSettings>(SectionName);
         using var harness = Watch(document, section);
 
-        GivenDocument("General", "elsewhere.invalid");
-        CrossTheWindow(harness);
+        Edit(harness, "General", "elsewhere.invalid");
 
         // Examined, because the file did move. Not Changed, because nothing the store can see moved.
         var examined = Assert.Single(harness.Examined);
@@ -129,11 +138,9 @@ public sealed class SectionedStoreTests : WatcherTestBase
         var section = document.Section<AppSettings>(SectionName);
         using var harness = Watch(document, section);
 
-        GivenDocument("General", "one.invalid");
-        CrossTheWindow(harness);
+        Edit(harness, "General", "one.invalid");
 
-        GivenDocument("General", "two.invalid");
-        CrossTheWindow(harness);
+        Edit(harness, "General", "two.invalid");
 
         Assert.Equal(2, harness.Examined.Count);
         Assert.All(harness.Examined, e => Assert.NotNull(e.Obstruction));
@@ -151,19 +158,16 @@ public sealed class SectionedStoreTests : WatcherTestBase
         var section = document.Section<AppSettings>(SectionName);
         using var harness = Watch(document, section);
 
-        GivenDocument("General", "one.invalid");
-        CrossTheWindow(harness);
+        Edit(harness, "General", "one.invalid");
         Assert.Single(harness.Failures);
 
-        GivenDocument(SectionName, "two.invalid");
-        CrossTheWindow(harness);
+        Edit(harness, SectionName, "two.invalid");
 
         Assert.Null(harness.Examined[^1].Obstruction);
         Assert.Equal("two.invalid", Assert.Single(harness.Changed).After.Broker);
         Assert.Single(harness.Failures);
 
-        GivenDocument("General", "three.invalid");
-        CrossTheWindow(harness);
+        Edit(harness, "General", "three.invalid");
 
         Assert.NotNull(harness.Examined[^1].Obstruction);
         Assert.Equal(2, harness.Failures.Count);
@@ -179,7 +183,9 @@ public sealed class SectionedStoreTests : WatcherTestBase
         var store = Store();
         using var harness = Watch(store);
 
+        var delivered = harness.Signals;
         Given(new AppSettings { Broker = "elsewhere.invalid" });
+        harness.AwaitSignals(delivered + 1);
         CrossTheWindow(harness);
 
         Assert.Null(Assert.Single(harness.Examined).Obstruction);
