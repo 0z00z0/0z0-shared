@@ -16,7 +16,9 @@ runs:
     # Each test project is invoked by name rather than through the solution: the solution also holds
     # the interactive harness, a WinUI application whose Windows App SDK bootstrapper blocks on a
     # runner with no desktop session. Every test project is plain net10.0 and references only plain
-    # net10.0 libraries, so none can reach that bootstrapper. Some tests bind a loopback TcpListener
+    # net10.0 libraries, so no test assembly loads that bootstrapper; the tray tests start the harness
+    # as a child process, and skip where the Windows App Runtime is not registered for the user, so a
+    # runner without it never starts the bootstrapper either. Some tests bind a loopback TcpListener
     # and speak MQTT to it, so the runner needs nothing beyond the loopback interface — no broker,
     # and no outbound network.
     - name: Unit tests — every project under tests/
