@@ -26,8 +26,10 @@ takes `ZeroZero.Brand.Core` alone.
 ### `ZeroZero.Brand.Core`
 
 - **`Brand`** — studio-wide constants: name, tagline, website, Buy Me a Coffee URL, GitHub org URL,
-  and the brand palette as hex strings (teal / blue / purple / indigo / amber, plus the two background
-  tones).
+  and the brand palette as hex strings (teal / blue / purple / indigo / amber / steel blue /
+  terracotta, plus the two background tones). Each accent is named for the colour itself rather than
+  for a job it does in one application, so a second application can take it without inheriting the
+  first one's meaning.
 - **`ExternalLibrary`** — a small record describing a third-party dependency to credit (name, author,
   purpose, licence, optional URL).
 - **`AboutInfo`** — the per-app data an About surface needs: app name, version, description, repo
@@ -62,13 +64,14 @@ References `ZeroZero.Brand.Core` and `ZeroZero.Win32`.
   `lib\<tfm>\ZeroZero.Brand.WinUI\Assets\Fonts\`, the folder a consuming WinUI build resolves a
   referenced library's assets from.
 - **The brand resource dictionary**, `Themes/BrandResources.xaml` — the palette and the typeface in
-  the form XAML consumes. Seven colour keys, `BrandBackgroundColour`, `BrandBackgroundAltColour`,
-  `BrandTealColour`, `BrandBlueColour`, `BrandPurpleColour`, `BrandIndigoColour` and
-  `BrandAmberColour`; a brush per colour, `BrandTealBrush` and so on; and `BrandFontFamily`, the
-  brand face. Light and dark carry the palette unchanged, because identity does not follow the
-  theme; high contrast resolves every key to the system's own window and highlight colours, because
-  that mode exists so the user's choice outranks the studio's. A test holds every colour to the
-  constant in `Brand`, so the two declarations cannot drift.
+  the form XAML consumes. Nine colour keys, `BrandBackgroundColour`, `BrandBackgroundAltColour`,
+  `BrandTealColour`, `BrandBlueColour`, `BrandPurpleColour`, `BrandIndigoColour`,
+  `BrandAmberColour`, `BrandSteelBlueColour` and `BrandTerracottaColour`; a brush per colour,
+  `BrandTealBrush` and so on; and `BrandFontFamily`, the brand face. Light and dark carry the
+  palette unchanged, because identity does not follow the theme; high contrast resolves every key to
+  the system's own window and highlight colours, because that mode exists so the user's choice
+  outranks the studio's. A test holds every colour to the constant in `Brand`, so the two
+  declarations cannot drift.
 
 ### The palette from XAML
 
@@ -92,6 +95,40 @@ colour key feeds a gradient stop or code; a brush key feeds a `Foreground` or a 
 
 The harness renders every key under `--palette` (below), which is how a change to the dictionary is
 looked at rather than read.
+
+### What the palette measures
+
+Every figure below is a WCAG 2.x contrast ratio, and each is pinned in
+`tests/ZeroZero.Brand.Core.Tests/PaletteContrastTests.cs`, so editing a constant trips a test rather
+than moving a colour past a floor unnoticed.
+
+| Accent | On the brand background | On black text | On white text |
+|---|---:|---:|---:|
+| Teal | 11.51 | 12.58 | 1.67 |
+| Blue | 7.01 | 7.67 | 2.74 |
+| Purple | 6.44 | 7.04 | 2.98 |
+| Indigo | 3.46 | 3.78 | 5.55 |
+| Amber | 8.70 | 9.51 | 2.21 |
+| Steel blue | 7.49 | 8.20 | 2.56 |
+| Terracotta | 7.14 | 7.81 | 2.69 |
+
+Two rules follow, and both are properties of the palette rather than advice.
+
+**Text on an accent is black.** Every accent but Indigo clears 4.5:1 against black and falls short
+of it against white, and Indigo is the one that runs the other way. Choosing per fill is how a
+surface ends up unreadable, so a caller putting text on a brand colour uses black — or Indigo, and
+white.
+
+**A tinted fill is not derived by opacity.** Both brand grounds sit near black, so three quarters of
+a low-opacity result is ground whatever is laid over it. At 24 % nothing in the palette clears
+1.75:1 against its ground, and even pure white reaches only 2.17:1 — no choice of accent can produce
+a distinguishable tint there. Use the solid colour where a fill has to be seen. This is a property
+of the ground, not of any one colour: Indigo is the dimmest tint of the nine, and Indigo cannot
+reach the 3:1 non-text floor at any opacity because it does not reach it at full strength.
+
+The floor the palette as a whole is held to is therefore the 3:1 non-text figure, not 4.5:1 —
+Indigo sits at 3.46 on the brand background. Steel blue and terracotta both clear 4.5:1 on both
+brand grounds.
 
 Deliberately **not** shared: each app's own update-check networking and dialogue plumbing. Only the
 window chrome and layout are unified — `OnCheckForUpdates` is a plain `Func<Task<bool>>` the consumer
@@ -241,8 +278,9 @@ dotnet run --project src/ZeroZero.Brand.WinUI.TestHarness
 It opens two windows: the `BrandAboutWindow` popup ("Window Mode") and a plain window hosting
 `BrandAboutControl` directly with ordinary title-bar chrome and no update button ("Hosted Control
 Demo"). With `--mqtt` it opens the MQTT panel scenario instead, and with `--palette` the brand
-resource dictionary — one window per theme, a swatch per brush key, the wordmark on two colour keys
-and a sample line in the brand face, every one resolved through `ThemeResource` the way a consumer
+resource dictionary — one window per theme, a swatch per brush key, a strip putting black and white
+text on an accent and a 24 % tint of it on the brand ground, the wordmark on two colour keys and a
+sample line in the brand face, every one resolved through `ThemeResource` the way a consumer
 resolves them; `--probe <path>` beside it writes the colour and face that reached each element.
 `--rows`, `--titlebar` and `--prompt` open the controls foundation assembly's surfaces
 ([`zerozero-controls.md`](zerozero-controls.md)), `--settings` the settings window shell

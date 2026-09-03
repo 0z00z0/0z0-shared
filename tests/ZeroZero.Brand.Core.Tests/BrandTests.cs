@@ -48,6 +48,8 @@ public class BrandTests
     [InlineData(Brand.ColorPurple)]
     [InlineData(Brand.ColorIndigo)]
     [InlineData(Brand.ColorAmber)]
+    [InlineData(Brand.ColorSteelBlue)]
+    [InlineData(Brand.ColorTerracotta)]
     public void Palette_IsSixDigitLowercaseHexWithAHash(string colour)
         => Assert.Matches(new Regex("^#[0-9a-f]{6}$"), colour);
 
@@ -66,6 +68,7 @@ public class BrandTests
         [
             Brand.ColorBg, Brand.ColorBg2, Brand.ColorTeal, Brand.ColorBlue,
             Brand.ColorPurple, Brand.ColorIndigo, Brand.ColorAmber,
+            Brand.ColorSteelBlue, Brand.ColorTerracotta,
         ];
 
         Assert.Equal(palette.Length, palette.Distinct(StringComparer.Ordinal).Count());

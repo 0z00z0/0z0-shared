@@ -55,6 +55,68 @@
                     <Border Width="140" Height="28" CornerRadius="4" Background="{ThemeResource BrandAmberBrush}"/>
                     <TextBlock Grid.Column="1" Text="BrandAmberBrush" VerticalAlignment="Center"/>
                 </Grid>
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Border Width="140" Height="28" CornerRadius="4" Background="{ThemeResource BrandSteelBlueBrush}"/>
+                    <TextBlock Grid.Column="1" Text="BrandSteelBlueBrush" VerticalAlignment="Center"/>
+                </Grid>
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Border Width="140" Height="28" CornerRadius="4" Background="{ThemeResource BrandTerracottaBrush}"/>
+                    <TextBlock Grid.Column="1" Text="BrandTerracottaBrush" VerticalAlignment="Center"/>
+                </Grid>
+            </StackPanel>
+
+            <!-- The palette's two measured rules, on screen rather than only in the test that pins
+                 them: black text reads on an accent where white does not, and a low-opacity tint
+                 over the brand ground is not a fill anyone can see. -->
+            <TextBlock Text="Text on a fill, and a 24% tint on the brand ground" FontSize="13"
+                       FontWeight="SemiBold" Margin="0,12,0,0"/>
+            <StackPanel x:Name="Rules" Spacing="6">
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Height="30" CornerRadius="4" Background="{ThemeResource BrandSteelBlueBrush}">
+                        <TextBlock Text="black" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border Grid.Column="1" Height="30" CornerRadius="4" Background="{ThemeResource BrandSteelBlueBrush}">
+                        <TextBlock Text="white" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border Grid.Column="2" Height="30" CornerRadius="4" Background="{ThemeResource BrandBackgroundBrush}">
+                        <Border CornerRadius="4" Background="{ThemeResource BrandSteelBlueBrush}" Opacity="0.24"/>
+                    </Border>
+                </Grid>
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Height="30" CornerRadius="4" Background="{ThemeResource BrandTerracottaBrush}">
+                        <TextBlock Text="black" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border Grid.Column="1" Height="30" CornerRadius="4" Background="{ThemeResource BrandTerracottaBrush}">
+                        <TextBlock Text="white" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border Grid.Column="2" Height="30" CornerRadius="4" Background="{ThemeResource BrandBackgroundBrush}">
+                        <Border CornerRadius="4" Background="{ThemeResource BrandTerracottaBrush}" Opacity="0.24"/>
+                    </Border>
+                </Grid>
+                <!-- Indigo alongside, because it is the accent that runs the other way on text and
+                     the dimmest tint of the nine — the pair that made the rule palette-wide. -->
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Height="30" CornerRadius="4" Background="{ThemeResource BrandIndigoBrush}">
+                        <TextBlock Text="black" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border Grid.Column="1" Height="30" CornerRadius="4" Background="{ThemeResource BrandIndigoBrush}">
+                        <TextBlock Text="white" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border Grid.Column="2" Height="30" CornerRadius="4" Background="{ThemeResource BrandBackgroundBrush}">
+                        <Border CornerRadius="4" Background="{ThemeResource BrandIndigoBrush}" Opacity="0.24"/>
+                    </Border>
+                </Grid>
             </StackPanel>
 
             <!-- The colour keys, as a consumer uses them: gradient stops, which take a Color and not
