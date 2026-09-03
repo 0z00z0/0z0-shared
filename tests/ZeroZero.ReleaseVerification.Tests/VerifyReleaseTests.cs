@@ -147,8 +147,10 @@ public sealed class VerifyReleaseTests(PackedRelease release)
     {
         var result = VerifyRecord(Path.Combine(release.NewDirectory("record"), "release-artefacts.json"), "-Location", release.Feed);
 
+        // The verifier's own wording, not the file system's: a read that throws also says "does
+        // not exist", and that phrase alone could not tell the guard from an incidental error.
         Assert.False(result.Passed, result.ToString());
-        Assert.Contains("does not exist", result.Output);
+        Assert.Contains("pack-component.ps1 writes it beside the packages", result.Output);
     }
 
     [Fact]
