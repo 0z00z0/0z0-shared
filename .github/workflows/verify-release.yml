@@ -4,7 +4,7 @@ name: Verify release
 # is what the build produced — the check that catches a feed or a manifest describing another build
 # while every shape check reports green. It runs as a job of its own, so nothing local to the build
 # job is in reach and the only thing verified is what came down the wire. The build's record of
-# hashes arrives as an artifact that job uploaded; a token for a feed that authenticates reads
+# hashes arrives as a workflow artefact that job uploaded; a token for a feed that authenticates reads
 # arrives as a secret; the recorded outcome of the caller's signing step arrives as an input, taken
 # from steps.<id>.outcome by way of a job output, because a warn-only step cannot fail a job and a
 # green run says nothing about whether signing happened.
@@ -22,7 +22,7 @@ on:
         required: true
         type: string
       record-artifact:
-        description: Name of the uploaded artifact holding release-artefacts.json, written by pack-component.ps1 or to its shape.
+        description: Name of the uploaded workflow artefact holding release-artefacts.json, written by pack-component.ps1 or to its shape.
         required: true
         type: string
       location:
@@ -36,7 +36,7 @@ on:
         type: string
         default: Flat
       manifest:
-        description: Paths, relative to the workspace and space-separated, of manifests whose URL, hash and version keys must describe this build. A manifest committed in the caller's tree is at its path there; one rewritten during the build job travels beside release-artefacts.json in the record artifact and is at .zerozero-release-record/<its path within the artifact>.
+        description: Paths, relative to the workspace and space-separated, of manifests whose URL, hash and version keys must describe this build. A manifest committed in the caller's tree is at its path there; one rewritten during the build job travels beside release-artefacts.json in the record artefact and is at .zerozero-release-record/<its path within that artefact>.
         required: false
         type: string
         default: ""

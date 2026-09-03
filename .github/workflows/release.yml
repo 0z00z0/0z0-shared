@@ -97,7 +97,7 @@ jobs:
         run: ./.github/scripts/pack-component.ps1 -Tag $env:TAG -Output artifacts
 
       # The build's own statement of what it packed — the tag, the commit and every package's
-      # SHA-256, written by the pack script beside the packages — kept as an artifact so the verify
+      # SHA-256, written by the pack script beside the packages — kept as a workflow artefact so the verify
       # job below, which has none of this job's files in reach, can compare what the feed serves
       # with what was packed here. Kept before the push, so a failed push still leaves the record
       # of what was meant to go.
