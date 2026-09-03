@@ -201,14 +201,16 @@ application creates with the library's default arms it for everything**, the sha
 The host needs no window, but it does need the XAML runtime and a dispatcher on the thread that
 starts it.
 
-### The single-instance lock outlives the thread that takes it
+### The single-instance lock belongs to the thread that takes it
 
 It is held for the life of the process and never released, so it must be taken on a thread that lasts
 that long: taken on a thread that ends, it is abandoned, and the next instance takes it as its own.
+That is the whole trap — the handle is rooted for the process, the ownership is not.
 
-A lock name in the global namespace needs a privilege a standard user token does not carry, and the
-refusal escapes as an exception rather than coming back as "someone else has it". A name in the local
-namespace is what the tests exercise and what a per-user application wants.
+The name is the application's own and the component takes no position on it beyond refusing a blank
+one. A `Global\` name is what the lifecycle guide's wiring uses and what an installer's `AppMutex`
+matches, so it is the usual choice; the tests use `Local\` names because they run several instances
+of their own side by side.
 
 ### A tinted fill over a brand ground is a solid colour, not an opacity
 
