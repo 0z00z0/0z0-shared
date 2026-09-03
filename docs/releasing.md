@@ -71,7 +71,8 @@ The workflow then runs, in this order, and stops at the first failure:
 A green run means the component's packages are on the feed, are the ones this run packed, and a
 GitHub release exists for the tag with the notes as its body. Nothing else is republished: a
 release of `mqtt` leaves the `brand`, `build`, `config`, `controls`, `diagnostics`, `lifecycle`,
-`primitives`, `startup`, `tray` and `win32` packages at whatever version each last released.
+`primitives`, `startup`, `tray`, `update` and `win32` packages at whatever version each last
+released.
 
 Tags from `v0.1.0` to `v0.6.0` predate the scheme and released every package together under one
 number; they remain valid refs and their notes stay at `docs/release-notes/v<x.y.z>.md`.
