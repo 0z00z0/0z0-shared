@@ -283,6 +283,7 @@ not yet taken the kit:
 | `Microsoft.NET.Test.Sdk` | `18.8.1` | The test trio, for a consumer's own test projects. |
 | `xunit` | `2.9.3` | |
 | `xunit.runner.visualstudio` | `3.1.5` | |
+| `Microsoft.Extensions.TimeProvider.Testing` | `10.9.0` | Test-only, and taken only by a suite that moves a clock rather than waiting on one. Nothing under `src/` references it, so it reaches no consumer that does not ask for it. |
 
 **The two Windows App SDK pins are a floor, not a lock.** A consuming app that pins on its own may
 pin higher, and NuGet unifies a package graph on the version nearest the consuming project, so the
