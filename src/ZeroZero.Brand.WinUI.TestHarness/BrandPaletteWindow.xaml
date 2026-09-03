@@ -4,9 +4,11 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- The brand dictionary merged where a consuming application merges it, and every key resolved
-         through ThemeResource, so what is on screen is what a consumer gets and not what the
-         dictionary claims. -->
+    <!-- The brand dictionary merged into this window's own tree rather than the application's, which
+         is all a rig with one palette window needs; a consuming application merges it once in
+         Application.Resources so every window resolves it. Every key is read through ThemeResource
+         either way, so what is on screen is what a consumer gets and not what the dictionary
+         claims. -->
     <Grid x:Name="Root" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.Resources>
             <ResourceDictionary>
