@@ -157,8 +157,12 @@ to everything the application did not write is where they part.
 Neither store's tolerance of comments is a property of JSON, so a comment in a document another
 program also reads may be unreadable there. Check before putting one in.
 
-Neither store writes anything until a load has succeeded. That latch is the store's own and cannot
-be switched off, and it is what stops a transient read failure replacing a good file with defaults.
+Neither store writes on the application's behalf until a load has succeeded. That latch is the
+store's own and cannot be switched off, and it is what stops a transient read failure replacing a
+good file with defaults. The quarantine repair is not held by it: a whole-file store that finds a
+broken file as it is constructed copies it aside and lays down defaults before the latch is ever
+set. Only the sectioned store publishes the latch, as `HasLoaded`; with a whole-file store the
+refused save is the only way a host hears of it, which is why the save result is worth reading.
 
 A settings class must be a class with a public parameterless constructor, and its properties must be
 settable rather than init-only wherever the application changes them through the store. A positional
