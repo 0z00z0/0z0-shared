@@ -3,9 +3,10 @@ namespace ZeroZero.Config.Watch;
 /// <summary>Everything a <see cref="SettingsWatcher{T}"/> needs: which file to watch, how to ask the
 /// store what it holds, how to tell it to look again, and what counts as a change worth reporting.
 /// </summary>
-/// <remarks>The store is reached through two delegates rather than a type, so one watcher serves a
+/// <remarks>The store is reached through delegates rather than a type, so one watcher serves a
 /// whole-file store and a single named section of a shared document alike, and the watcher never
-/// needs to know the document's shape.</remarks>
+/// needs to know the document's shape. Two of them are what an examination is; the third,
+/// <see cref="Obstruction"/>, is how a store that can see nothing says so.</remarks>
 /// <typeparam name="T">The settings shape.</typeparam>
 /// <param name="FilePath">The file to watch. Its folder is created if absent, because a folder that
 /// does not exist cannot be watched and an absent settings folder is the ordinary first-run state.</param>
