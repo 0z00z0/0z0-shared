@@ -26,7 +26,9 @@ them against `en-US` and warns `PRI257`.
 ## Host it
 
 The panel is a tall `StackPanel` and scrolls nothing itself, so it goes inside the page's own
-`ScrollViewer`. The section heading above it stays with the application.
+`ScrollViewer`. Under the settings shell the page adds no scroll viewer of its own: the shell puts
+one over every page, and the section's `Build` returns the `StackPanel` alone, as the shell guide's
+sample does. The section heading above it stays with the application.
 
 ```xml
 <Page ... xmlns:mqtt="using:ZeroZero.Mqtt.WinUI">
@@ -79,8 +81,8 @@ entities.
 | Call | When |
 |---|---|
 | `Initialise(setup)` | Once, on the UI thread, before anything else. |
-| `Reload()` | Whenever the host re-shows the page. Keeps whatever is being typed. Throws before `Initialise`. |
-| `Refresh()` | When the page comes back on screen with nothing edited. |
+| `Reload()` | Whenever the host re-shows the page and the store may have changed while it was away — a write the panel did not make. Re-reads the store; keeps whatever is being typed. Throws before `Initialise`. |
+| `Refresh()` | When the page comes back on screen with nothing edited and the store as the panel left it: re-reads the live connection only. Under the settings shell, the section's `Enter` hook — or `Reload` there, in an application whose settings change outside the panel. |
 | `Revert()` | Only behind an explicit control: it discards staged broker edits. Throws before `Initialise`. |
 | `Cancel()` | On window close only — an in-flight probe outlives the window. Final: the panel never touches its controls again, so a host that keeps the page for the next visit, as the settings shell does, calls it from the window's `Closed` and never from a leave hook. |
 
