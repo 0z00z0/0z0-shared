@@ -21,6 +21,7 @@ rule.
 | Diagnostics | `diagnostics` | `ZeroZero.Diagnostics`, `ZeroZero.Diagnostics.Dumps` | Crash diagnostics: the process-wide unhandled-exception arms routed to one place, a crash-line file that never throws, the startup version line, and the Windows Error Reporting dump registration with its lifecycle. Logging configuration stays with the application. Entry point `ZeroZero.Diagnostics`; a consumer wanting the registration alone takes `ZeroZero.Diagnostics.Dumps`. | [`docs/zerozero-diagnostics.md`](docs/zerozero-diagnostics.md) |
 | Lifecycle | `lifecycle` | `ZeroZero.Lifecycle` | The single-instance lock held for the life of the process, the deliberate-exit mark, relaunch on any other clean exit under a three-in-ten-minutes limit, and the per-user data path. Entry point `ZeroZero.Lifecycle`; no user interface. | [`docs/zerozero-lifecycle.md`](docs/zerozero-lifecycle.md) |
 | MQTT | `mqtt` | `ZeroZero.Mqtt`, `ZeroZero.Mqtt.Discovery`, `ZeroZero.Mqtt.WinUI` | An MQTT 5.0 connection, the device document that puts an application into a discovery-aware receiver as one device with entities, and the settings panel a host embeds. Entry point `ZeroZero.Mqtt.WinUI`; a headless consumer takes `ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` and pulls in no WinUI. | [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) |
+| Settings shell | `settingsshell` | `ZeroZero.SettingsShell.WinUI` | The settings window with every page left to the application: Mica chrome with the title bar painted for the theme, a navigation pane with a product footer, one scroll viewer over the pages, placement against the application's saved rectangle, Escape to close, and a section lifecycle with enter and leave hooks and a per-section build-once flag. Entry point `ZeroZero.SettingsShell.WinUI`. | [`docs/zerozero-settingsshell.md`](docs/zerozero-settingsshell.md) |
 | Startup | `startup` | `ZeroZero.Startup` | The application's logon task in the Task Scheduler: its identity, the power-safe elevated definition, registration, the direct enabled read, enable, disable, delete, repair of a task an older build registered, and a demand start that proves the task runs. The manifest, the installer and the watchdog task stay with the application. Entry point `ZeroZero.Startup`; no user interface. | [`docs/zerozero-startup.md`](docs/zerozero-startup.md) |
 | Update | `update` | `ZeroZero.Update`, `ZeroZero.Update.Win32` | The update flow: the latest GitHub release against the running version, the download into a fresh private directory, verification of the installer before it runs — its Authenticode signature and publisher against the expected signer, and its SHA-256 against the hash the release publishes — the launch and the hand-over to the application's own shutdown, the stale-download sweep and the check scheduler; and the update dialogs, worded here and marshalled by the Win32 foundation. The options, the installer and when the application exits stay with the application. Entry point `ZeroZero.Update.Win32`; a headless consumer takes `ZeroZero.Update`. | [`docs/zerozero-update.md`](docs/zerozero-update.md) |
 
@@ -39,7 +40,8 @@ rule.
 Dependencies point downward: a component's projects take foundation and each other, and never
 another component; a foundation assembly may take another foundation assembly beneath it. The
 MQTT projects take `ZeroZero.Primitives` and `ZeroZero.Config`, the MQTT panel takes
-`ZeroZero.Controls.WinUI` for the info bubble, the About window takes `ZeroZero.Win32`,
+`ZeroZero.Controls.WinUI` for the info bubble, the settings shell takes `ZeroZero.Controls.WinUI`
+for the title bar and the monitor metrics beneath it, the About window takes `ZeroZero.Win32`,
 `ZeroZero.Controls.WinUI` and `ZeroZero.Tray` take `ZeroZero.Win32` for their monitor and taskbar
 metrics, the update dialog project takes `ZeroZero.Win32` for the task dialog and the message
 boxes, and the diagnostics, lifecycle, startup and update components take `ZeroZero.Primitives` —
@@ -54,14 +56,15 @@ any of them reaches a public signature. `ZeroZero.Brand.Core`, `ZeroZero.Config`
 `ZeroZero.Primitives` and `ZeroZero.Win32` reference nothing at all; the diagnostics assemblies,
 the update assemblies and `ZeroZero.Tray` reference foundation assemblies and no package;
 `ZeroZero.Controls.WinUI` references the Windows App SDK and the toolkit, and no toolkit type
-reaches its public signature.
+reaches its public signature; `ZeroZero.SettingsShell.WinUI` references the Windows App SDK and
+the controls foundation assembly, and takes the toolkit only through it.
 Every third-party version is pinned once, in the build kit's `ZeroZero.Packages.props`, which this
 repository's `Directory.Packages.props` imports and every consuming repository imports the same
 way.
 
 `ZeroZero.Brand.WinUI.TestHarness` is an interactive exe that opens either UI surface, the brand
-palette, the settings rows, the title bars, the text prompt, or the native dialogs, on screen from
-fabricated state; it is never packed and nothing references it. It builds under the kit's WinUI
+palette, the settings rows, the title bars, the text prompt, the settings window shell, or the
+native dialogs, on screen from fabricated state; it is never packed and nothing references it. It builds under the kit's WinUI
 application block, the one project in the repository that does, so the block and the manifest
 writer are exercised by every build here. The capture and demo scripts that drive it are under
 `scripts/`.
@@ -125,6 +128,7 @@ reusable workflow the applications call, with a signing gate and a manifest rewr
 | [`docs/zerozero-config.md`](docs/zerozero-config.md) | The config foundation assembly. |
 | [`docs/zerozero-controls.md`](docs/zerozero-controls.md) | The controls foundation assembly: the settings-row vocabulary, title-bar theming, the text prompt, and how the harness shows each. |
 | [`docs/zerozero-primitives.md`](docs/zerozero-primitives.md) | The primitives foundation assembly: the log sink, the version reader, the coalescing gate and the source-revision stamp. |
+| [`docs/zerozero-settingsshell.md`](docs/zerozero-settingsshell.md) | The settings shell component: the division between shell and pages, the section lifecycle, placement, theming, the traps, and how the harness shows it. |
 | [`docs/zerozero-tray.md`](docs/zerozero-tray.md) | The tray foundation assembly: the icon file writer, the slot size at the taskbar's scale, and the taskbar's theme. |
 | [`docs/zerozero-win32.md`](docs/zerozero-win32.md) | The Win32 foundation assembly, and the manifest dependency its task dialog needs. |
 | [`docs/zerozero-lifecycle.md`](docs/zerozero-lifecycle.md) | The lifecycle component: the lock, the relaunch and its limit, the data path, the wiring order and its traps. |
