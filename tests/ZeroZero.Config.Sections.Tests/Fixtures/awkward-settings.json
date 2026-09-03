@@ -1,0 +1,35 @@
+﻿{
+    // Hand-edited on the workshop machine after the December outage.
+    // Vinterstua — målepunkt øst, satt opp for hånd.
+    "startMinimised": true,
+    "pollSeconds": 30,
+    "graphSpan": "P30D",
+    "legacyBridgeMode": "FailoverThenHold",
+    "thresholdWarn": 0.750,
+    "notifyOn": ["BridgeLost", "PowerRestored", "DiskFull"],
+    "label": "Vinterstua — målepunkt øst",
+  "windowWidth": 1280,
+  "windowHeight": 860,
+    /* The broker moved in March; the old block is kept below in case it comes back. */
+    "mqtt": {
+        "Enabled": true,
+        "Host": "broker.invalid",
+        "Port": 8883,
+        "Qos": "AtLeastOnce",
+        "Topics": {
+            "state": "vinterstua/state",
+            "command": "vinterstua/cmd"
+        }
+    },
+    "retiredInBuild14": {
+        /* nothing here has been read since build 14 */
+        "Mode": "Scorching",
+        "Rules": [
+            { "when": "temp>4", "then": "hold" },
+            { "when": "temp<0", "then": "boost", "escalate": [1, 2, { "after": "PT15M" }] }
+        ]
+    },
+    "pollSeconds": 45,
+    // Left off deliberately on the workshop machine.
+    "keepAwakeWhileCharging": false,
+}
