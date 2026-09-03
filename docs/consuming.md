@@ -2,7 +2,9 @@
 
 How an application takes a component of this library: the two reference routes and what each
 costs, making the reference resolve in CI, pinning, and the rules that hold on either route. This
-document is component-neutral; each component's guide links here and adds only its own wiring.
+document is component-neutral; each component's guide links here and adds only its own wiring, and
+[`adopting.md`](adopting.md) sits above both with what to take, in what order, and what changes on
+the application's side.
 
 ## One reference per component, one route per repository
 

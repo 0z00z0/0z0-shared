@@ -84,6 +84,10 @@ a sibling checkout, which needs no credential at all. One reference per adopted 
 per consuming repository. [`docs/consuming.md`](docs/consuming.md) carries both routes, the CI
 shapes, pinning and the traps; each component's guide adds its own wiring on top.
 
+An application taking several components starts at [`docs/adopting.md`](docs/adopting.md), which
+says what to reference for each, in what order, what the application supplies, and the traps that
+only appear while adopting.
+
 ## Requirements
 
 - **.NET 10 SDK.**
@@ -129,6 +133,7 @@ reusable workflow the applications call, with a signing gate and a manifest rewr
 
 | Document | Covers |
 |---|---|
+| [`docs/adopting.md`](docs/adopting.md) | Taking the set: what to reference for each component, in what order, what the application supplies, and the traps that only appear while adopting. |
 | [`docs/consuming.md`](docs/consuming.md) | Both reference routes, the CI shapes, pinning per component, the traps, the third-party pins. |
 | [`docs/zerozero-brand.md`](docs/zerozero-brand.md) | The brand component: the assemblies, the two hosting styles, the screenshots, the harness. |
 | [`docs/zerozero-diagnostics.md`](docs/zerozero-diagnostics.md) | The diagnostics component: the crash handlers, the crash line, the version line, the dump registration and its lifecycle, the wiring order, and what stays with the application. |
