@@ -10,9 +10,10 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 
 /// <summary>
 /// The brand resource dictionary on screen: one swatch per brush key, a strip putting black and
-/// white text on the two newest accents and a 24 % tint of each on the brand ground, the wordmark
-/// on two colour keys, and a sample line in the brand face, every one resolved through
-/// ThemeResource the way a consuming application resolves them. One window per theme, so light and
+/// white text on three accents — steel blue, terracotta and Indigo — and a 24 % tint of each on the
+/// brand ground, the wordmark on two colour keys, and a sample line in the brand face, every one
+/// resolved through ThemeResource the way a consuming application resolves them. Indigo is there
+/// because it is the accent both rules run the other way on. One window per theme, so light and
 /// dark sit side by side.
 /// </summary>
 public sealed partial class BrandPaletteWindow : Window

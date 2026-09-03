@@ -122,13 +122,14 @@ white.
 **A tinted fill is not derived by opacity.** Both brand grounds sit near black, so three quarters of
 a low-opacity result is ground whatever is laid over it. At 24 % nothing in the palette clears
 1.75:1 against its ground, and even pure white reaches only 2.17:1 — no choice of accent can produce
-a distinguishable tint there. Use the solid colour where a fill has to be seen. This is a property
-of the ground, not of any one colour: Indigo is the dimmest tint of the nine, and Indigo cannot
-reach the 3:1 non-text floor at any opacity because it does not reach it at full strength.
+a distinguishable tint there. Use the solid colour where a fill has to be seen. This is a property of
+the ground, not of any one colour — every accent falls short, and so does white.
 
-The floor the palette as a whole is held to is therefore the 3:1 non-text figure, not 4.5:1 —
-Indigo sits at 3.46 on the brand background. Steel blue and terracotta both clear 4.5:1 on both
-brand grounds.
+Indigo is the tightest of the seven accents on both counts: the dimmest tint on either ground, and
+the only accent that clears the 3:1 non-text floor without clearing 4.5:1 for body text. So the floor
+the palette as a whole is held to is the 3:1 non-text figure, not 4.5:1 — Indigo sits at 3.46 on the
+brand background. Steel blue and terracotta both clear 4.5:1 on both brand grounds, so neither joined
+below Indigo.
 
 Deliberately **not** shared: each app's own update-check networking and dialogue plumbing. Only the
 window chrome and layout are unified — `OnCheckForUpdates` is a plain `Func<Task<bool>>` the consumer
@@ -279,7 +280,7 @@ It opens two windows: the `BrandAboutWindow` popup ("Window Mode") and a plain w
 `BrandAboutControl` directly with ordinary title-bar chrome and no update button ("Hosted Control
 Demo"). With `--mqtt` it opens the MQTT panel scenario instead, and with `--palette` the brand
 resource dictionary — one window per theme, a swatch per brush key, a strip putting black and white
-text on an accent and a 24 % tint of it on the brand ground, the wordmark on two colour keys and a
+text on three accents and a 24 % tint of each on the brand ground, the wordmark on two colour keys and a
 sample line in the brand face, every one resolved through `ThemeResource` the way a consumer
 resolves them; `--probe <path>` beside it writes the colour and face that reached each element.
 `--rows`, `--titlebar` and `--prompt` open the controls foundation assembly's surfaces

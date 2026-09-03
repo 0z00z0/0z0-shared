@@ -40,8 +40,9 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// </para>
 /// <para>
 /// <c>--palette</c> opens the brand resource dictionary instead, one window per theme, with every
-/// key resolved through ThemeResource; <c>--probe &lt;path&gt;</c> writes the colour and face that
-/// reached each element.
+/// key resolved through ThemeResource, and a strip putting black and white text on three accents
+/// with a 24 % tint of each so the palette's two measured rules can be looked at rather than read;
+/// <c>--probe &lt;path&gt;</c> writes the colour and face that reached each element.
 /// </para>
 /// <para>
 /// <c>--rows</c> opens the settings-row vocabulary instead: section headers and rows in every

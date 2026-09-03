@@ -10,8 +10,8 @@
     application resources and resolves a key with ThemeResource; a colour key feeds a gradient stop
     or code, a brush key feeds a Foreground or a Background.
 
-    Two measured properties of the palette, both pinned by tests in BrandResourcesTests so they
-    cannot rot into folklore:
+    Two measured properties of the palette, both pinned by tests in PaletteContrastTests so they
+    cannot rot into folklore. BrandResourcesTests pins this file against Brand.cs and nothing else:
 
     Text on an accent is black, not white. Every accent but Indigo clears 4.5:1 against black and
     falls short of it against white; Indigo is the one that runs the other way. Picking a text

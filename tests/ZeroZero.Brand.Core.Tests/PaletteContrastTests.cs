@@ -69,7 +69,12 @@ public class PaletteContrastTests
         Assert.Equal(againstWhite, Round(Ratio(colour, White)));
     }
 
-    /// <summary>Nothing in the table may be an accent this file forgot to measure.</summary>
+    /// <summary>Nothing in the palette may be an accent this file forgot to measure. Both halves are
+    /// needed and neither is the other: the first says every constant is accounted for, the second
+    /// that every accent so accounted for has a row of figures. Without the second, adding a colour
+    /// to <see cref="Accents"/> and to <c>Brand</c> and stopping there leaves it measured by
+    /// nothing, because the theory above is driven by <see cref="Measured"/> and not by
+    /// <see cref="Accents"/>.</summary>
     [Fact]
     public void EveryPaletteConstantIsEitherAGroundOrAMeasuredAccent()
     {
@@ -80,6 +85,10 @@ public class PaletteContrastTests
 
         string[] covered = [Brand.ColorBg, Brand.ColorBg2, .. Accents.Select(a => a.Colour)];
         Assert.Equal(constants.Order(), covered.Order());
+
+        Assert.Equal(
+            Accents.Select(a => a.Name).Order(),
+            Measured.Select(row => (string)row[0]!).Order());
     }
 
     [Fact]
@@ -170,19 +179,30 @@ public class PaletteContrastTests
     }
 
     /// <summary>
-    /// Steel blue is not the palette's worst tint, which is why it carries no exception of its own:
-    /// Indigo composites dimmer, and Indigo cannot reach the non-text floor at any opacity because
-    /// it does not reach it at full strength.
+    /// Indigo is the palette's tightest accent on both counts, which is why steel blue joining below
+    /// it would have needed an exception of its own and does not: Indigo composites to the dimmest
+    /// tint of the seven, and it is the only accent that clears the non-text floor without clearing
+    /// the body-text one. Both grounds sit near black, so the tint order is a property of the accent.
     /// </summary>
     [Fact]
-    public void SteelBlueTintsBetterThanIndigoAndIndigoCannotReachTheFloorAtAnyOpacity()
+    public void IndigoIsTheDimmestTintAndTheOnlyAccentBelowTheTextFloor()
     {
-        double steel = Ratio(Composite(Brand.ColorSteelBlue, Brand.ColorBg, TintOpacity), Brand.ColorBg);
-        double indigo = Ratio(Composite(Brand.ColorIndigo, Brand.ColorBg, TintOpacity), Brand.ColorBg);
-        Assert.True(steel > indigo, $"Steel blue {Round(steel)}:1, Indigo {Round(indigo)}:1.");
+        foreach (string ground in new[] { Brand.ColorBg, Brand.ColorBg2 })
+        {
+            var dimmest = Accents
+                .MinBy(a => Ratio(Composite(a.Colour, ground, TintOpacity), ground));
 
-        // Full strength is the ceiling every opacity below it sits under.
-        Assert.True(Ratio(Brand.ColorIndigo, Brand.ColorBg) < NonTextFloor + 0.5);
+            Assert.Equal("Indigo", dimmest.Name);
+        }
+
+        foreach (var (name, colour) in Accents)
+        {
+            bool text = Ratio(colour, Brand.ColorBg) >= TextFloor && Ratio(colour, Brand.ColorBg2) >= TextFloor;
+
+            Assert.True(
+                name == "Indigo" ? !text : text,
+                $"{name} is {Round(Ratio(colour, Brand.ColorBg))}:1 on the brand background and {Round(Ratio(colour, Brand.ColorBg2))}:1 on the alternate one, against a {TextFloor}:1 text floor.");
+        }
     }
 
     private static double Round(double ratio) => Math.Round(ratio, 2, MidpointRounding.AwayFromZero);
