@@ -267,8 +267,11 @@ an application's behalf. The kit's template declares both. Without the dependenc
 question falls back to a yes-or-no box, which loses the release notes and the way through to the
 release page, so it is a smaller offer rather than the same one drawn differently.
 
-An application shipping language-folder resources declares `en-GB` as its default language in its own
-project; a library can only declare its own.
+An application shipping language-folder resources needs `en-GB` as its default language, because a
+merged app PRI is built from the application's own resources and no referenced library can declare
+the default on its behalf. The WinUI application block already sets it, so a project importing the
+block has it and the line is the application's own only where it does not import the block or wants
+another value.
 
 Registering the logon task needs an elevated process, so the manifest that asks for elevation, and
 the installer that registers on the user's behalf, stay with the application.
