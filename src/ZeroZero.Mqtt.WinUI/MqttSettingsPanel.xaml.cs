@@ -136,8 +136,9 @@ public sealed partial class MqttSettingsPanel : UserControl
     }
 
     /// <summary>Abandons anything in flight and stops the panel touching its controls again. Call on
-    /// window close, and when the host navigates away from the page holding the panel — an in-flight
-    /// probe outlives the window by up to its budget.</summary>
+    /// window close — an in-flight probe outlives the window by up to its budget. Final, so a host
+    /// that keeps the page for the next visit calls it from the window's close and never on leaving
+    /// the page: the next visit would find a dead panel.</summary>
     public void Cancel()
     {
         _closed = true;

@@ -82,7 +82,7 @@ entities.
 | `Reload()` | Whenever the host re-shows the page. Keeps whatever is being typed. Throws before `Initialise`. |
 | `Refresh()` | When the page comes back on screen with nothing edited. |
 | `Revert()` | Only behind an explicit control: it discards staged broker edits. Throws before `Initialise`. |
-| `Cancel()` | On window close, and when navigating away — an in-flight probe outlives the window. |
+| `Cancel()` | On window close only — an in-flight probe outlives the window. Final: the panel never touches its controls again, so a host that keeps the page for the next visit, as the settings shell does, calls it from the window's `Closed` and never from a leave hook. |
 
 `Reload` and `Revert` read the settings store the panel is handed on `Initialise`, so both throw an
 `InvalidOperationException` naming the ordering when it has not been called. `Refresh` and `Cancel`
