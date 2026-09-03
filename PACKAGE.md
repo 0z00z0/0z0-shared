@@ -10,7 +10,9 @@ licensed, public.
 | `ZeroZero.Brand.Core` | `brand` | `net10.0` | Brand constants and the About-window data contracts. |
 | `ZeroZero.Brand.WinUI` | `brand` | `net10.0-windows10.0.26100.0` | The About window, the hosted About control, the brand typeface, and the palette as a resource dictionary. |
 | `ZeroZero.Build` | `build` | none — an MSBuild SDK | The build kit: shared property blocks, the unpackaged WinUI application block, the manifest template, the signing script and the family's third-party pins under central package management. Taken through `global.json` and three `Sdk="ZeroZero.Build"` imports, never as a package reference. |
-| `ZeroZero.Config` | `config` (foundation) | `net10.0` | Atomic JSON settings files: typed snapshot reads, mutation under one lock, change notification, quarantine of a file that cannot be parsed. |
+| `ZeroZero.Config` | `config` (foundation) | `net10.0` | One JSON settings file holding one type: typed snapshot reads, mutation under one lock, a write that lands whole or not at all, change notification, quarantine of a file that cannot be parsed. |
+| `ZeroZero.Config.Sections` | `config` (foundation) | `net10.0` | One settings document whose top-level keys are sections owned by different components, addressed one section at a time. A sibling section, a section from a build that no longer exists and a hand-written comment all survive a write untouched; no write adds a comment or a second key differing from another only in case. Carries the migration from an older file, which writes the new one and leaves the old one where it was. Takes `ZeroZero.Config`. |
+| `ZeroZero.Config.Watch` | `config` (foundation) | `net10.0` | Picks up an edit made to a settings file outside the application, without a restart: one file watcher, a quiet window so a single save is examined once, and a classifier naming which values are only cosmetic — everything it does not name counts. Takes `ZeroZero.Config`, and watches a whole-file store or a single section alike. |
 | `ZeroZero.Controls.WinUI` | `controls` (foundation) | `net10.0-windows10.0.26100.0` | WinUI controls with no studio identity: the settings-row vocabulary — info bubble, section header, card row — title-bar theming, and the single-line text prompt. Takes `ZeroZero.Win32` and the Community Toolkit's settings controls. |
 | `ZeroZero.Diagnostics` | `diagnostics` | `net10.0` | Crash diagnostics: the process-wide unhandled-exception arms routed to one place, a crash-line appender that never throws, and the startup version line. The component's entry point; carries the dump registration with it. |
 | `ZeroZero.Diagnostics.Dumps` | `diagnostics` | `net10.0` | The Windows Error Reporting local dump registration with a lifecycle: arm, disarm, sweep older builds' registrations, remove the shared root once empty, prune old dump files. Windows only. |
@@ -65,7 +67,9 @@ broker at run time, and Home Assistant 2024.11.0 or later for discovery.
 - [`docs/zerozero-brand.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-brand.md) —
   the brand component: the About control and window, the two hosting styles.
 - [`docs/zerozero-config.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-config.md) —
-  the config foundation assembly.
+  the config foundation assemblies: the single-type settings file and its atomic write, the
+  section-addressed document and what a write does and does not touch, the migration, and the
+  watcher with its quiet window and change classifier.
 - [`docs/zerozero-controls.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-controls.md) —
   the controls foundation assembly: the settings-row vocabulary, title-bar theming and the text
   prompt.
