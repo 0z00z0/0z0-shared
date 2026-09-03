@@ -249,8 +249,9 @@ mismatch as a decision — which of the two is right — rather than a typo to f
 ### The update flow verifies before it executes, and a checksum is not that
 
 Two checks stand between a downloaded installer and running it: its SHA-256 against a hash published
-in the release body, and then its Authenticode signature and publisher against a fingerprint the
-application pins. Both must pass, and a refusal deletes the whole download and runs nothing. Where no
+in the release body, and then its Authenticode signature and publisher against a subject the
+application pins — with a pinned certificate fingerprint required on top wherever the machine does
+not trust the signing chain. Both must pass, and a refusal deletes the whole download and runs nothing. Where no
 hash is published, or two different ones are, nothing is downloaded at all.
 
 A checksum file published beside the installer is not the second check and cannot become one. It
