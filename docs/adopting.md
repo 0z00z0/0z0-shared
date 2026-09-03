@@ -75,7 +75,7 @@ costs to take.
 | Diagnostics | The folder for the crash line, its own error mode, and the dump policy | Where Windows Error Reporting reads its settings |
 | Lifecycle | The lock's name, the product folder's name, and the decision to exit deliberately | The relaunch limit, which is fixed |
 | Startup | The task name, the executable and its arguments, and an elevated process to register from | The settings that keep the task running on battery and past the scheduler's own time limit |
-| Tray | The drawing, the tooltip text, the menu, and every notification | The icon file, the slot size, the taskbar's theme |
+| Tray | The drawing, the tooltip text, the menu, and the click actions | The icon file, the slot size, the taskbar's theme |
 | Brand | Name, version, description, repository link, third-party credits | The studio mark, company name, tagline, website and donate links |
 | Settings shell | The ordered sections, the saved-rectangle store, the product name, mark and version, the theme, and the few measurements the two applications choose differently | The window, the pane, the scroll viewer, the placement arithmetic |
 | MQTT | The topic root, the device and origin blocks, the entity table, the publish groups, the settings store, the ledger, and the panel's application-shaped copy | Anything about the protocol, the discovery document, or the panel's own vocabulary |
