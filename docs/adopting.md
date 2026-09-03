@@ -35,11 +35,20 @@ checkout, never a mixture: a mixture resolves a foundation assembly twice, once 
 as the sibling's project, and two assemblies of one identity from two sources is a conflict the build
 may only warn about.
 
+**The two adopters do not start from the same place, and this document is not a version bump for
+either of them.** One consumes released packages. The other references the shared code by source
+through a sibling working directory and declares no package reference and no package configuration
+anywhere in its repository, so taking a component there is a project reference and an import, with no
+version to move and no pin to write. Putting that repository onto packages is a change of mechanism
+rather than a step inside adopting a component: it is its own piece of work, planned on its own, and
+nothing below asks for it.
+
 **Three things an entry point does not bring, by design.**
 
 - **The file watcher**, `ZeroZero.Config.Watch`. Noticing an edit made outside the application is a
   choice rather than a consequence of storing settings, so a consumer that wants it adds a second
-  reference of the same component. It releases under the same tag and costs no extra pin.
+  reference of the same component. It releases under the same tag, so it costs no extra pin on the
+  package route and no extra import on the source one.
 - **The commit stamp**, which makes the version an assembly reports name the source it came from. It
   travels with a direct reference to `ZeroZero.Primitives` and with nothing else, so a component
   never restamps the application above it unasked. On the sibling route it is an import by path; the
