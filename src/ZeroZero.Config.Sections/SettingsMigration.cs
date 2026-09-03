@@ -66,8 +66,17 @@ public sealed record SettingsMigrationResult(SettingsMigrationOutcome Outcome)
     /// replaces.</summary>
     public IReadOnlyList<string> Carried { get; init; } = [];
 
-    /// <summary>How many comments were carried across.</summary>
-    public int Comments { get; init; }
+    /// <summary>Every comment the old document carried outside a value, in file order. None of them is
+    /// in the new document: the migration writes no comment of its own, because a reader that
+    /// disallows comments fails the file rather than degrading, and the person sees a settings file
+    /// that has stopped working. They are named here, and the old document — never touched — still
+    /// holds them.</summary>
+    public IReadOnlyList<string> CommentsNotCarried { get; init; } = [];
+
+    /// <summary>Every comment that sat inside a value, in file order. A value is carried as the bytes
+    /// the old file held, so these are in the new document: preserved, not authored. An application
+    /// whose reader disallows comments cannot read the new file while this list is non-empty.</summary>
+    public IReadOnlyList<string> CommentsInsideValues { get; init; } = [];
 
     /// <summary>Why it stopped, where an exception is what stopped it.</summary>
     public Exception? Error { get; init; }
@@ -86,10 +95,17 @@ public sealed record SettingsMigrationResult(SettingsMigrationOutcome Outcome)
 /// because the file it came from is still exactly where it was.</para>
 /// <para>Every top-level key of the old document lands in the new one, either inside the section it
 /// was mapped into or at the top level where it already was, and its value is carried as the bytes
-/// the old file held rather than re-serialised through any type. Comments are carried with the key
-/// they sit above. Before the migration reports success it reads the new document back off the disk
-/// and checks that every key, every value and every comment arrived; if any did not, the new
-/// document is removed and the failure is reported.</para>
+/// the old file held rather than re-serialised through any type.</para>
+/// <para>No comment is written. A reader that disallows comments does not degrade on one, it fails
+/// the whole file, so a migration that copied a hand-written note forward would hand the application
+/// a settings file it cannot open. Comments outside a value are named on the result instead, and the
+/// old document still holds them. A comment inside a value travels with that value's bytes, because
+/// the value is carried rather than rebuilt, and is named separately so an application knows before
+/// it reads.</para>
+/// <para>Before the migration reports success it reads the new document back off the disk and checks
+/// that every key and every value arrived and that the only comments in it are the ones a value
+/// brought with it; if any of that fails, the new document is removed and the failure is
+/// reported.</para>
 /// </remarks>
 public static class SettingsMigration
 {
@@ -132,22 +148,13 @@ public static class SettingsMigration
             return new SettingsMigrationResult(SettingsMigrationOutcome.SourceNotADocument);
         }
 
-        // A section whose name the old document already uses would be written twice, so the
-        // application is told to say what it means rather than have a merge guessed for it.
-        foreach (var move in request.Moves.Where(move => root.Find(move.Section) is not null))
-        {
-            return new SettingsMigrationResult(SettingsMigrationOutcome.RequestRefused)
-            {
-                Error = new ArgumentException(
-                    $"The old document already carries a top-level key '{move.Section}', so moving keys into a section of that name would write it twice."),
-            };
-        }
+        if (RefuseAgainst(request, root) is { } mismatch) return mismatch;
 
         var layout = JsonLayout.Detect(source);
         var comments = Comments(source, root);
         var plan = Plan.Build(root, request.Moves);
 
-        var target = Compose(source, root, layout, comments, plan, request.Version);
+        var target = Compose(source, layout, plan, request.Version);
 
         if (AtomicFile.Write(request.TargetPath, target) is { } failure)
         {
@@ -168,6 +175,39 @@ public static class SettingsMigration
         return Prove(request, source, root, Comments(source, root), Plan.Build(root, request.Moves));
     }
 
+    // What the request and the document say together, which cannot be checked until the document has
+    // been read. Both refusals exist because a key differing from another only in case leaves a reader
+    // taking the last of the two and the other one governing nothing.
+    private static SettingsMigrationResult? RefuseAgainst(SettingsMigrationRequest request, JsonObjectSpan root)
+    {
+        foreach (var move in request.Moves)
+        {
+            if (root.Find(move.Section, StringComparison.OrdinalIgnoreCase) is not { } clash) continue;
+
+            return Contradiction(string.Equals(clash.Name, move.Section, StringComparison.Ordinal)
+                ? $"The old document already carries a top-level key '{move.Section}', so moving keys into a section of that name would write it twice."
+                : $"The old document carries a top-level key '{clash.Name}', which differs from the section '{move.Section}' only in case, so the new document would carry both and a reader would take the last.");
+        }
+
+        // A move naming a key the document does not carry at all is ordinary — the application may
+        // describe more keys than a given file holds. A move naming one the document carries under a
+        // different case is a mistake, and carrying on would leave the key at the top level with
+        // nothing to say why.
+        foreach (var key in request.Moves.SelectMany(static move => move.Keys))
+        {
+            if (root.Find(key, StringComparison.Ordinal) is not null) continue;
+            if (root.Find(key, StringComparison.OrdinalIgnoreCase) is not { } clash) continue;
+
+            return Contradiction(
+                $"The move names the key '{key}' and the old document carries '{clash.Name}', which differs from it only in case, so the key would silently stay where it is.");
+        }
+
+        return null;
+    }
+
+    private static SettingsMigrationResult Contradiction(string message) =>
+        new(SettingsMigrationOutcome.RequestRefused) { Error = new ArgumentException(message) };
+
     private static SettingsMigrationResult? Refuse(SettingsMigrationRequest request)
     {
         if (string.Equals(
@@ -183,8 +223,10 @@ public static class SettingsMigration
             };
         }
 
-        var claimed = new HashSet<string>(StringComparer.Ordinal);
-        var sections = new HashSet<string>(StringComparer.Ordinal);
+        // Ignoring case throughout: two names that differ only in case cannot both govern a document,
+        // so a request asking for both is as contradictory as one asking for the same name twice.
+        var claimed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var sections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var move in request.Moves)
         {
@@ -208,13 +250,10 @@ public static class SettingsMigration
         }
 
         return null;
-
-        static SettingsMigrationResult Contradiction(string message) =>
-            new(SettingsMigrationOutcome.RequestRefused) { Error = new ArgumentException(message) };
     }
 
-    // Every comment that is not inside a value, paired with the key it sits above — or with nothing,
-    // when it sits after the last key.
+    // Every comment in the document, each marked by whether it sits inside a value. A comment inside a
+    // value travels with that value's bytes; one outside is not written at all.
     private static List<CommentSpan> Comments(byte[] source, JsonObjectSpan root)
     {
         var options = new JsonReaderOptions
@@ -237,16 +276,12 @@ public static class SettingsMigration
                 var at = start + (int)reader.TokenStartIndex;
                 var end = start + (int)reader.BytesConsumed;
 
-                // A comment inside a value travels with that value's bytes, so it is not one of the
-                // comments this pass has to place.
-                if (root.Members.Any(member => at >= member.ValueStart && at < member.ValueEnd)) continue;
+                var inside = root.Members.Any(member => at >= member.ValueStart && at < member.ValueEnd);
 
-                var owner = root.Members.FirstOrDefault(member => member.NameStart > at).Name;
-
-                // A line comment's token runs to the line break, so the text is trimmed: what has to
-                // arrive in the new document is the comment, not the newline that ended it.
+                // A line comment's token runs to the line break, so the text is trimmed: the comment
+                // is what is being counted, not the newline that ended it.
                 var text = Encoding.UTF8.GetString(source.AsSpan(at, end - at)).TrimEnd();
-                found.Add(new CommentSpan(text, owner));
+                found.Add(new CommentSpan(text, inside));
             }
         }
         catch (JsonException)
@@ -258,13 +293,7 @@ public static class SettingsMigration
         return found;
     }
 
-    private static byte[] Compose(
-        byte[] source,
-        JsonObjectSpan root,
-        JsonLayout layout,
-        List<CommentSpan> comments,
-        Plan plan,
-        int version)
+    private static byte[] Compose(byte[] source, JsonLayout layout, Plan plan, int version)
     {
         var text = new StringBuilder();
 
@@ -275,12 +304,7 @@ public static class SettingsMigration
         foreach (var entry in plan.Entries)
         {
             text.Append(',').Append(layout.NewLine);
-            Append(text, source, layout, comments, entry, layout.Unit);
-        }
-
-        foreach (var comment in comments.Where(static c => c.Owner is null))
-        {
-            text.Append(layout.NewLine).Append(layout.Unit).Append(comment.Text);
+            Append(text, source, layout, entry, layout.Unit);
         }
 
         text.Append(layout.NewLine).Append('}').Append(layout.NewLine);
@@ -293,7 +317,6 @@ public static class SettingsMigration
         StringBuilder text,
         byte[] source,
         JsonLayout layout,
-        List<CommentSpan> comments,
         PlanEntry entry,
         string indent)
     {
@@ -308,7 +331,7 @@ public static class SettingsMigration
                 if (!first) text.Append(',');
                 text.Append(layout.NewLine);
                 first = false;
-                Append(text, source, layout, comments, new PlanEntry(null, [member]), inner);
+                Append(text, source, layout, new PlanEntry(null, [member]), inner);
             }
 
             text.Append(layout.NewLine).Append(indent).Append('}');
@@ -316,11 +339,6 @@ public static class SettingsMigration
         }
 
         var only = entry.Members[0];
-        foreach (var comment in comments.Where(c => c.Owner == only.Name))
-        {
-            text.Append(indent).Append(comment.Text).Append(layout.NewLine);
-        }
-
         var value = layout.Shift(source.AsSpan(only.ValueStart..only.ValueEnd), Shift(layout, indent));
 
         // The name is carried as the file's own bytes, colon included, so a key holding an escape
@@ -350,7 +368,6 @@ public static class SettingsMigration
         try
         {
             var written = File.ReadAllBytes(request.TargetPath);
-            var text = Encoding.UTF8.GetString(written);
 
             if (JsonObjectSpans.TryReadDocument(written) is not { } root)
             {
@@ -388,10 +405,18 @@ public static class SettingsMigration
                 if (!Equivalent(source, member, written, landed[index])) missing.Add(member.Name);
             }
 
-            foreach (var comment in comments.Where(comment => !text.Contains(comment.Text, StringComparison.Ordinal)))
+            // Exactly the comments a carried value brought with it, and no others: one the new
+            // document carries that no value brought is one the migration authored, and a reader that
+            // disallows comments would fail the whole file over it.
+            var expected = comments.Where(static comment => comment.InsideValue).Select(static comment => comment.Text);
+            var found = Comments(written, root).Select(static comment => comment.Text).ToList();
+
+            foreach (var comment in expected)
             {
-                missing.Add(comment.Text);
+                if (!found.Remove(comment)) missing.Add(comment);
             }
+
+            foreach (var extra in found) missing.Add($"a comment the old document did not have: {extra}");
         }
         catch (Exception ex) when (AtomicFile.IsFileFailure(ex))
         {
@@ -403,7 +428,8 @@ public static class SettingsMigration
         return new SettingsMigrationResult(SettingsMigrationOutcome.Migrated)
         {
             Carried = [.. sourceRoot.Members.Select(static m => m.Name).Where(static n => n != SettingsDocument.VersionKey)],
-            Comments = comments.Count,
+            CommentsNotCarried = [.. comments.Where(static c => !c.InsideValue).Select(static c => c.Text)],
+            CommentsInsideValues = [.. comments.Where(static c => c.InsideValue).Select(static c => c.Text)],
         };
     }
 
@@ -440,7 +466,7 @@ public static class SettingsMigration
         return new SettingsMigrationResult(SettingsMigrationOutcome.NotProven) { Missing = missing, Error = error };
     }
 
-    private readonly record struct CommentSpan(string Text, string? Owner);
+    private readonly record struct CommentSpan(string Text, bool InsideValue);
 
     private readonly record struct PlanEntry(string? Section, IReadOnlyList<JsonMemberSpan> Members);
 

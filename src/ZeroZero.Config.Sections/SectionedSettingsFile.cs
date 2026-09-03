@@ -158,6 +158,11 @@ public sealed class SectionedSettingsFile
         return changed.Count > 0;
     }
 
+    internal string? ConflictingKey(string name)
+    {
+        lock (_gate) return _document.ConflictingKey(name);
+    }
+
     internal SectionOutcome ReadSection<T>(string name, out T value) where T : class, new()
     {
         lock (_gate)
@@ -224,7 +229,18 @@ public sealed class SectionedSettingsFile
         }
 
         var value = produce(draft);
-        var written = document.WriteSection(name, value, _options.Serialiser, _options.SectionOrder, _options.Version);
+
+        byte[]? written;
+        try
+        {
+            written = document.WriteSection(name, value, _options.Serialiser, _options.SectionOrder, _options.Version);
+        }
+        catch (SettingsKeyCaseConflictException conflict)
+        {
+            // Nothing is written: a key differing only in case would retire the one already there.
+            _document = document;
+            return conflict;
+        }
 
         if (written is null)
         {

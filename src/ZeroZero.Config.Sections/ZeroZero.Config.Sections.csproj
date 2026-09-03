@@ -7,7 +7,7 @@
 
     <AssemblyTitle>ZeroZero.Config.Sections</AssemblyTitle>
     <Product>ZeroZero.Config.Sections</Product>
-    <Description>A settings document addressed one section at a time: a section is read and written on its own, every sibling section and comment is carried through byte for byte, and a migration writes the new file without touching the old one.</Description>
+    <Description>A settings document addressed one section at a time: a section is read and written on its own, every sibling section and comment is carried through byte for byte, no write ever adds a comment, and a migration writes the new file without touching the old one.</Description>
   </PropertyGroup>
 
   <ItemGroup>

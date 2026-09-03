@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Xunit;
 
 namespace ZeroZero.Config.Sections.Tests;
@@ -165,7 +166,25 @@ public sealed class MigrationTests : SectionedTestBase
     }
 
     [Fact]
-    public void A_comment_travels_with_the_key_it_sits_above()
+    public void A_new_file_declaring_a_version_other_than_the_requested_one_is_refused_and_removed()
+    {
+        var source = GivenSource("""{ "startMinimised": true }""");
+
+        // Present but wrong: the version is the one value a migration replaces, so a new file that
+        // declares something else is not the file that was asked for.
+        File.WriteAllText(FilePath, """{ "version": 9, "general": { "startMinimised": true } }""");
+
+        var result = SettingsMigration.ProveTarget(
+            Request(new SettingsSectionMove("general", ["startMinimised"])) with { Version = 1 },
+            source);
+
+        Assert.Equal(SettingsMigrationOutcome.NotProven, result.Outcome);
+        Assert.Contains("version", result.Missing);
+        Assert.False(File.Exists(FilePath));
+    }
+
+    [Fact]
+    public void A_comment_above_a_key_is_named_and_not_written()
     {
         GivenSource("""
             {
@@ -178,16 +197,32 @@ public sealed class MigrationTests : SectionedTestBase
         var result = SettingsMigration.Run(Request(new SettingsSectionMove("general", ["pollSeconds"])));
 
         Assert.True(result.Migrated);
-        Assert.Equal(1, result.Comments);
-
-        var target = OnDisk();
-        var comment = target.IndexOf("// raised after the December outage", StringComparison.Ordinal);
-        var key = target.IndexOf("\"pollSeconds\"", StringComparison.Ordinal);
-        Assert.True(comment >= 0 && comment < key);
+        Assert.Equal(["// raised after the December outage"], result.CommentsNotCarried);
+        Assert.Empty(result.CommentsInsideValues);
+        Assert.DoesNotContain("// raised after the December outage", OnDisk(), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void A_comment_inside_a_value_travels_inside_that_value()
+    public void A_new_file_the_application_can_read_is_what_a_commented_old_one_becomes()
+    {
+        GivenSource("""
+            {
+              // raised after the December outage
+              "pollSeconds": 45
+            }
+            """);
+
+        Assert.True(SettingsMigration.Run(Request(new SettingsSectionMove("general", ["pollSeconds"]))).Migrated);
+
+        // The reader the application uses disallows comments, so this is the check that matters: the
+        // new file parses under those settings, where the old one would not have.
+        var strict = new JsonReaderOptions { CommentHandling = JsonCommentHandling.Disallow };
+        Assert.True(Parses(OnDiskBytes(), strict));
+        Assert.False(Parses(File.ReadAllBytes(SourcePath), strict));
+    }
+
+    [Fact]
+    public void A_comment_inside_a_value_travels_inside_that_value_and_is_named()
     {
         GivenSource("""
             {
@@ -201,7 +236,27 @@ public sealed class MigrationTests : SectionedTestBase
         var result = SettingsMigration.Run(Request());
 
         Assert.True(result.Migrated);
+        Assert.Equal(["/* nobody remembers what this did */"], result.CommentsInsideValues);
+        Assert.Empty(result.CommentsNotCarried);
         Assert.Contains("/* nobody remembers what this did */", OnDisk(), StringComparison.Ordinal);
+    }
+
+    private static bool Parses(byte[] content, JsonReaderOptions options)
+    {
+        try
+        {
+            var reader = new Utf8JsonReader(content, options);
+            while (reader.Read())
+            {
+                // Reading to the end is the whole check: the reader throws on what it will not accept.
+            }
+
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     [Fact]

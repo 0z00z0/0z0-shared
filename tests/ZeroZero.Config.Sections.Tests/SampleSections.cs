@@ -49,3 +49,39 @@ public sealed class MigratedGraphSection
 
 /// <summary>A type that serialises to an array rather than an object, which no section can be.</summary>
 public sealed class NotASection : List<int>;
+
+/// <summary>The graph section of an installed file, spelled the way that file spells it — including
+/// the en-GB member name a binder would reach for in en-US.</summary>
+public sealed class InstalledGraphSection
+{
+    public string GraphSpan { get; set; } = "P1D";
+    public string GraphLineColouring { get; set; } = string.Empty;
+    public bool ShowGrid { get; set; }
+    public int PointsPerHour { get; set; }
+}
+
+/// <summary>The same section with the en-US spelling. A different word is not a different case, so
+/// nothing can match it to the file's own member.</summary>
+public sealed class AmericanGraphSection
+{
+    public string GraphSpan { get; set; } = "P1D";
+    public string GraphLineColoring { get; set; } = string.Empty;
+}
+
+/// <summary>The lid-close section as an installed file spells it: a lower-case second letter, not the
+/// initialism.</summary>
+public sealed class InstalledLidCloseSection
+{
+    public int LidDelaySeconds { get; set; }
+    public string LidDelaySavedAcAction { get; set; } = string.Empty;
+    public string LidDelaySavedDcAction { get; set; } = string.Empty;
+}
+
+/// <summary>The same section with the initialism, which is the spelling a type is written with when
+/// nobody has looked at the file.</summary>
+public sealed class InitialismLidCloseSection
+{
+    public int LidDelaySeconds { get; set; }
+    public string LidDelaySavedACAction { get; set; } = string.Empty;
+    public string LidDelaySavedDCAction { get; set; } = string.Empty;
+}

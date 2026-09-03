@@ -18,6 +18,27 @@ internal enum SectionOutcome
     Unparseable,
 }
 
+/// <summary>A write refused because it would leave the document carrying two keys that differ only in
+/// case.</summary>
+/// <remarks>A reader takes the last of two such keys, so adding one silently retires the other and
+/// the values behind it. Refusing is the only outcome that neither loses the person's settings nor
+/// hides that something is wrong: the message names both spellings, and the file is left alone.</remarks>
+public sealed class SettingsKeyCaseConflictException : InvalidOperationException
+{
+    internal SettingsKeyCaseConflictException(string wanted, string found, string where)
+        : base($"Writing '{wanted}' {where} would put it beside '{found}', which differs from it only in case. A reader takes the last of two such keys, so the other one would stop governing anything. Nothing has been written.")
+    {
+        Wanted = wanted;
+        Found = found;
+    }
+
+    /// <summary>The name this build wanted to write.</summary>
+    public string Wanted { get; }
+
+    /// <summary>The name the document already carries, differing only in case.</summary>
+    public string Found { get; }
+}
+
 /// <summary>A sectioned settings document, held as the bytes that are on disk.</summary>
 /// <remarks>
 /// <para>Nothing here binds the document to a type. Sections are located as byte ranges, one section
@@ -89,6 +110,25 @@ internal sealed class SettingsDocument
         return new SettingsDocument(content, root, layout);
     }
 
+    /// <summary>The top-level key the document carries that differs from <paramref name="name"/> only
+    /// in case, or null when there is none. A section addressed under one spelling while the file
+    /// carries another reads as its defaults, so a host has to be able to say which spelling the file
+    /// holds.</summary>
+    internal string? ConflictingKey(string name) => Conflict(_root, name);
+
+    // The first name in the object that matches ignoring case but not exactly. Anything this returns
+    // is a key that would be shadowed by, or would shadow, the one being written.
+    private static string? Conflict(JsonObjectSpan obj, string name)
+    {
+        foreach (var member in obj.Members)
+        {
+            if (!string.Equals(member.Name, name, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!string.Equals(member.Name, name, StringComparison.Ordinal)) return member.Name;
+        }
+
+        return null;
+    }
+
     /// <summary>The bytes one section occupies, or nothing when the document has no such key. Used to
     /// tell whether a reload moved a section without binding it to anything.</summary>
     internal ReadOnlySpan<byte> SectionContent(string name) =>
@@ -138,7 +178,15 @@ internal sealed class SettingsDocument
 
         var edits = new List<JsonEdit>();
 
-        if (_root.Find(name) is not { } member) edits.Add(AddSection(name, draftBytes, order));
+        if (_root.Find(name) is not { } member)
+        {
+            if (Conflict(_root, name) is { } clash)
+            {
+                throw new SettingsKeyCaseConflictException(name, clash, "as a section");
+            }
+
+            edits.Add(AddSection(name, draftBytes, order));
+        }
         else if (JsonObjectSpans.TryRead(_content, member.ValueStart..member.ValueEnd) is not { } section)
         {
             // The key is there but does not hold an object, so there is no member to preserve: the
@@ -152,7 +200,15 @@ internal sealed class SettingsDocument
 
         // Stamped last but listed first, because whether it needs a trailing comma depends on
         // whether this same write is adding the document's only other key.
-        if (_root.Find(VersionKey) is null) edits.Insert(0, StampVersion(documentVersion));
+        if (_root.Find(VersionKey) is null)
+        {
+            if (Conflict(_root, VersionKey) is { } clash)
+            {
+                throw new SettingsKeyCaseConflictException(VersionKey, clash, "as the document version");
+            }
+
+            edits.Insert(0, StampVersion(documentVersion));
+        }
 
         return JsonSplice.Apply(_content, edits);
     }
@@ -181,6 +237,14 @@ internal sealed class SettingsDocument
 
             if (section.Find(member.Name, comparison) is not { } existing)
             {
+                // Only reachable with a case-sensitive serialiser: the file spells the member one way,
+                // the type another, and appending the type's spelling would leave the person's value
+                // in the file with nothing reading it.
+                if (Conflict(section, member.Name) is { } clash)
+                {
+                    throw new SettingsKeyCaseConflictException(member.Name, clash, $"into section '{sectionMember.Name}'");
+                }
+
                 additions.Add((member.Name, replacement.ToArray()));
                 continue;
             }
@@ -221,11 +285,13 @@ internal sealed class SettingsDocument
 
         if (last is { } member) return JsonEdit.Insert(member.ValueEnd, Encoding.UTF8.GetBytes(text.ToString()));
 
-        // An empty section has no member to hang a comma off, so the leading comma goes and the
-        // closing brace gains the line it needs.
+        // A section with no members has nothing to hang a comma off, so the leading comma goes. The
+        // insertion is still an insertion, in front of the closing brace: replacing everything between
+        // the braces would delete whatever sits there without being a member — a hand-written comment
+        // is the case that costs something.
         text.Remove(0, inline ? 2 : 1);
         if (!inline) text.Append(Layout.NewLine).Append(sectionIndent);
-        return new JsonEdit(section.Start + 1, section.CloseBrace, Encoding.UTF8.GetBytes(text.ToString()));
+        return JsonEdit.Insert(section.CloseBrace, Encoding.UTF8.GetBytes(text.ToString()));
     }
 
     // A section the document has never carried takes the slot the declared order gives it, before the

@@ -4,13 +4,20 @@ using Xunit;
 
 namespace ZeroZero.Config.Sections.Tests;
 
-/// <summary>The migration proved against a settings file with the awkward properties an installed
-/// one has: a byte-order mark, hand-written comments, indentation that changed halfway down, a key
-/// left in twice by an edit, a section from a build that no longer exists carrying values no type
-/// here could bind, a trailing comma, a number written as <c>0.750</c>, non-ASCII text, and keys in
-/// no useful order.</summary>
-/// <remarks>The file is a fixture rather than a copy of any installed document — the shape is taken
-/// from the settings decision record, and no application's own file is read.</remarks>
+/// <summary>The migration proved against a hand-edited worst case: a byte-order mark, hand-written
+/// comments, indentation that changed halfway down, a key left in twice by an edit, a section from a
+/// build that no longer exists carrying values no type here could bind, a trailing comma, a number
+/// written as <c>0.750</c>, non-ASCII text, and keys in no useful order.</summary>
+/// <remarks>
+/// <para><b>An installed file does not look like this.</b> The shape a real one has is proven
+/// separately in <see cref="InstalledShapeMigrationTests"/>: already sectioned, version-stamped, and
+/// carrying no comment and no byte-order mark. This fixture exists because reading a file somebody
+/// has edited by hand, without losing any of it, is what the design claims — not because a file in
+/// the field is expected to carry a comment. For the reader a consuming application uses, one that
+/// does is a file it cannot open at all.</para>
+/// <para>The file is a fixture rather than a copy of any installed document, and no application's own
+/// file is read.</para>
+/// </remarks>
 public sealed class AwkwardFileMigrationTests : SectionedTestBase
 {
     private static readonly SettingsSectionMove[] Moves =
@@ -90,22 +97,35 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
     }
 
     [Fact]
-    public void Every_comment_arrives()
+    public void Every_comment_outside_a_value_is_named_and_none_of_them_is_written()
     {
         var result = Run();
         var target = OnDisk();
 
-        Assert.Equal(4, result.Comments);
-        Assert.Contains("// Hand-edited on the workshop machine after the December outage.", target, StringComparison.Ordinal);
-        Assert.Contains("// Vinterstua — målepunkt øst, satt opp for hånd.", target, StringComparison.Ordinal);
-        Assert.Contains("// Left off deliberately on the workshop machine.", target, StringComparison.Ordinal);
-        Assert.Contains("/* The broker moved in March; the old block is kept below in case it comes back. */", target, StringComparison.Ordinal);
+        Assert.Equal(4, result.CommentsNotCarried.Count);
+        Assert.Empty(result.CommentsNotCarried.Where(comment => target.Contains(comment, StringComparison.Ordinal)));
+        Assert.Contains("// Hand-edited on the workshop machine after the December outage.", result.CommentsNotCarried);
+        Assert.Contains("// Vinterstua — målepunkt øst, satt opp for hånd.", result.CommentsNotCarried);
+        Assert.Contains("// Left off deliberately on the workshop machine.", result.CommentsNotCarried);
+        Assert.Contains("/* The broker moved in March; the old block is kept below in case it comes back. */", result.CommentsNotCarried);
     }
 
     [Fact]
-    public void A_comment_written_inside_a_value_travels_inside_that_value()
+    public void The_old_file_still_holds_the_comments_the_new_one_does_not()
     {
-        Assert.True(Run().Migrated);
+        var result = Run();
+        var old = File.ReadAllText(SourcePath);
+
+        Assert.NotEmpty(result.CommentsNotCarried);
+        Assert.All(result.CommentsNotCarried, comment => Assert.Contains(comment, old, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_comment_written_inside_a_value_travels_inside_that_value_and_is_named()
+    {
+        var result = Run();
+        Assert.True(result.Migrated);
+        Assert.Equal(["/* nothing here has been read since build 14 */"], result.CommentsInsideValues);
 
         var target = OnDisk();
         var comment = target.IndexOf("/* nothing here has been read since build 14 */", StringComparison.Ordinal);
@@ -133,7 +153,7 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
         var target = OnDisk();
         Assert.Contains("\"thresholdWarn\": 0.750", target, StringComparison.Ordinal);
         Assert.Contains("\"Vinterstua \u2014 m\u00e5lepunkt \u00f8st\"", target, StringComparison.Ordinal);
-        Assert.Contains("målepunkt øst, satt opp for hånd", target, StringComparison.Ordinal);
+        Assert.DoesNotContain("satt opp for h", target, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -190,8 +210,10 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
         Assert.Contains("\"thresholdWarn\": 0.75", after, StringComparison.Ordinal);
         Assert.Contains("\"retiredInBuild14\"", after, StringComparison.Ordinal);
         Assert.Contains("\"legacyBridgeMode\": \"FailoverThenHold\"", after, StringComparison.Ordinal);
-        Assert.Contains("// Hand-edited on the workshop machine after the December outage.", after, StringComparison.Ordinal);
-        Assert.Contains("målepunkt øst, satt opp for hånd", after, StringComparison.Ordinal);
+        // The migration wrote no comment, so a reader that disallows them can open the new file; the
+        // one comment there is came in inside a value's bytes.
+        Assert.DoesNotContain("// Hand-edited on the workshop machine after the December outage.", after, StringComparison.Ordinal);
+        Assert.Contains("/* nothing here has been read since build 14 */", after, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -237,18 +259,41 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
     }
 
     [Fact]
-    public void A_new_file_that_dropped_a_comment_is_refused_and_removed()
+    public void A_new_file_that_dropped_the_comment_inside_a_value_is_refused_and_removed()
     {
         var source = File.ReadAllBytes(SourcePath);
         Assert.True(Run().Migrated);
 
-        var damaged = OnDisk().Replace("// Left off deliberately on the workshop machine.", "", StringComparison.Ordinal);
+        var damaged = OnDisk().Replace("/* nothing here has been read since build 14 */", "", StringComparison.Ordinal);
         File.WriteAllText(FilePath, damaged);
 
         var result = SettingsMigration.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
 
         Assert.Equal(SettingsMigrationOutcome.NotProven, result.Outcome);
-        Assert.Contains("// Left off deliberately on the workshop machine.", result.Missing);
+        Assert.Contains("/* nothing here has been read since build 14 */", result.Missing);
+        Assert.False(File.Exists(FilePath));
+    }
+
+    [Fact]
+    public void A_new_file_carrying_a_comment_no_value_brought_is_refused_and_removed()
+    {
+        var source = File.ReadAllBytes(SourcePath);
+        Assert.True(Run().Migrated);
+
+        // What a migration that copied a hand-written note forward would leave behind: a comment the
+        // application's own reader would fail the whole file on.
+        var damaged = OnDisk().Replace(
+            "\"version\": 1,",
+            "\"version\": 1,\r\n    // Hand-edited on the workshop machine after the December outage.",
+            StringComparison.Ordinal);
+        File.WriteAllText(FilePath, damaged);
+
+        var result = SettingsMigration.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
+
+        Assert.Equal(SettingsMigrationOutcome.NotProven, result.Outcome);
+        Assert.Contains(
+            "a comment the old document did not have: // Hand-edited on the workshop machine after the December outage.",
+            result.Missing);
         Assert.False(File.Exists(FilePath));
     }
 

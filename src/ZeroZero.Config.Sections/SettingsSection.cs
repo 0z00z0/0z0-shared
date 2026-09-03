@@ -41,6 +41,11 @@ public sealed class SettingsSection<T> : ISectionNotification where T : class, n
     /// in the file, and the document has been copied aside.</summary>
     public bool IsUnreadable => _document.ReadSection<T>(Name, out _) == SectionOutcome.Unparseable;
 
+    /// <summary>The spelling the document carries when it differs from <see cref="Name"/> only in
+    /// case, and null otherwise. That section reads as its type's defaults and cannot be written, so
+    /// a host with nothing else to go on would see an empty page and no reason for it.</summary>
+    public string? ConflictingKey => _document.ConflictingKey(Name);
+
     /// <summary>Raised after this section's stored state changes, outside the document's lock because
     /// a subscriber does real work.</summary>
     public event EventHandler? Changed;
