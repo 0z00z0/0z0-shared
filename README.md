@@ -22,6 +22,7 @@ rule.
 | Lifecycle | `lifecycle` | `ZeroZero.Lifecycle` | The single-instance lock held for the life of the process, the deliberate-exit mark, relaunch on any other clean exit under a three-in-ten-minutes limit, and the per-user data path. Entry point `ZeroZero.Lifecycle`; no user interface. | [`docs/zerozero-lifecycle.md`](docs/zerozero-lifecycle.md) |
 | MQTT | `mqtt` | `ZeroZero.Mqtt`, `ZeroZero.Mqtt.Discovery`, `ZeroZero.Mqtt.WinUI` | An MQTT 5.0 connection, the device document that puts an application into a discovery-aware receiver as one device with entities, and the settings panel a host embeds. Entry point `ZeroZero.Mqtt.WinUI`; a headless consumer takes `ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` and pulls in no WinUI. | [`docs/zerozero-mqtt.md`](docs/zerozero-mqtt.md) |
 | Startup | `startup` | `ZeroZero.Startup` | The application's logon task in the Task Scheduler: its identity, the power-safe elevated definition, registration, the direct enabled read, enable, disable, delete, repair of a task an older build registered, and a demand start that proves the task runs. The manifest, the installer and the watchdog task stay with the application. Entry point `ZeroZero.Startup`; no user interface. | [`docs/zerozero-startup.md`](docs/zerozero-startup.md) |
+| Update | `update` | `ZeroZero.Update`, `ZeroZero.Update.Win32` | The update flow: the latest GitHub release against the running version, the download into a fresh private directory, verification of the installer before it runs — its Authenticode signature and publisher against the expected signer, and its SHA-256 against the hash the release publishes — the launch and the hand-over to the application's own shutdown, the stale-download sweep and the check scheduler; and the update dialogs, worded here and marshalled by the Win32 foundation. The options, the installer and when the application exits stay with the application. Entry point `ZeroZero.Update.Win32`; a headless consumer takes `ZeroZero.Update`. | [`docs/zerozero-update.md`](docs/zerozero-update.md) |
 
 | Foundation | Key | Package | What it is | Guide |
 |---|---|---|---|---|
@@ -40,18 +41,20 @@ another component; a foundation assembly may take another foundation assembly be
 MQTT projects take `ZeroZero.Primitives` and `ZeroZero.Config`, the MQTT panel takes
 `ZeroZero.Controls.WinUI` for the info bubble, the About window takes `ZeroZero.Win32`,
 `ZeroZero.Controls.WinUI` and `ZeroZero.Tray` take `ZeroZero.Win32` for their monitor and taskbar
-metrics, and the diagnostics, lifecycle and startup components take `ZeroZero.Primitives` — for
-the log sink, and in diagnostics for the version reader as well. Taking the MQTT module therefore
-brings four foundation assemblies with it and no brand assembly; an application that wants the
-About control takes the brand component as well.
+metrics, the update dialog project takes `ZeroZero.Win32` for the task dialog and the message
+boxes, and the diagnostics, lifecycle, startup and update components take `ZeroZero.Primitives` —
+for the log sink, and in diagnostics and update for the version reader as well. Taking the MQTT
+module therefore brings four foundation assemblies with it and no brand assembly; an application
+that wants the About control takes the brand component as well.
 
 Third-party packages are the Windows App SDK, the Community Toolkit's settings controls,
 **MQTTnet**, the **TaskScheduler** library and **Microsoft.Win32.SystemEvents** — the last three
 confined to `ZeroZero.Mqtt`, `ZeroZero.Startup` and `ZeroZero.Lifecycle` in turn, where no type of
 any of them reaches a public signature. `ZeroZero.Brand.Core`, `ZeroZero.Config`,
-`ZeroZero.Primitives` and `ZeroZero.Win32` reference nothing at all; the diagnostics assemblies
-and `ZeroZero.Tray` reference a foundation assembly and no package; `ZeroZero.Controls.WinUI`
-references the Windows App SDK and the toolkit, and no toolkit type reaches its public signature.
+`ZeroZero.Primitives` and `ZeroZero.Win32` reference nothing at all; the diagnostics assemblies,
+the update assemblies and `ZeroZero.Tray` reference foundation assemblies and no package;
+`ZeroZero.Controls.WinUI` references the Windows App SDK and the toolkit, and no toolkit type
+reaches its public signature.
 Every third-party version is pinned once, in the build kit's `ZeroZero.Packages.props`, which this
 repository's `Directory.Packages.props` imports and every consuming repository imports the same
 way.
@@ -80,12 +83,13 @@ shapes, pinning and the traps; each component's guide adds its own wiring on top
   is enough.
 
 The WinUI projects target `net10.0-windows10.0.26100.0`, so the solution builds on Windows only; the
-plain `net10.0` assemblies and every test project but five are portable in isolation.
+plain `net10.0` assemblies and every test project but six are portable in isolation.
 `ZeroZero.Win32.Tests` calls user32, `ZeroZero.Diagnostics.Dumps.Tests` writes the registry,
 `ZeroZero.Lifecycle.Tests` takes named mutexes and starts a child process, `ZeroZero.Startup.Tests`
-registers tasks in the real Task Scheduler and `ZeroZero.Tray.Tests` reads the taskbar window and
-the personalisation key, so those five run on Windows only. The MQTT module additionally needs an
-MQTT 5.0 broker at run time, and Home Assistant 2024.11.0 or later for discovery.
+registers tasks in the real Task Scheduler, `ZeroZero.Tray.Tests` reads the taskbar window and the
+personalisation key, and `ZeroZero.Update.Tests` calls wintrust and signs files through PowerShell,
+so those six run on Windows only. The MQTT module additionally needs an MQTT 5.0 broker at run
+time, and Home Assistant 2024.11.0 or later for discovery.
 
 ## Build and test
 
@@ -120,6 +124,7 @@ components are not yet on the feed. [`docs/releasing.md`](docs/releasing.md) is 
 | [`docs/zerozero-win32.md`](docs/zerozero-win32.md) | The Win32 foundation assembly, and the manifest dependency its task dialog needs. |
 | [`docs/zerozero-lifecycle.md`](docs/zerozero-lifecycle.md) | The lifecycle component: the lock, the relaunch and its limit, the data path, the wiring order and its traps. |
 | [`docs/zerozero-startup.md`](docs/zerozero-startup.md) | The startup component: the logon task, its definition and repair, what stays with the application, and the token it needs. |
+| [`docs/zerozero-update.md`](docs/zerozero-update.md) | The update component: the two verification checks and why a checksum beside the file is not one of them, where the published hash comes from, the wiring, what stays with the application, and the traps. |
 | [`docs/zerozero-build.md`](docs/zerozero-build.md) | The build kit: the shared property blocks, the WinUI application block, the manifest template, signing, the pin rule and its guards, and how a repository takes it on either route. |
 | [`docs/consume-brand-about-control.md`](docs/consume-brand-about-control.md) | `BrandAboutControl`, as an adoption checklist. |
 | [`docs/consume-mqtt-settings-panel.md`](docs/consume-mqtt-settings-panel.md) | The panel alone, as an adoption checklist. |

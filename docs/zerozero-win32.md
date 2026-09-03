@@ -4,8 +4,8 @@
 dialog and the four message boxes, and dark native chrome for the process. Plain `net10.0`, no
 package references, no project references, no XAML and no Windows App SDK — which is what makes it
 **foundation** rather than a component, and what lets a console tool take it as readily as a WinUI
-application. The About window and the text prompt take their monitor metrics from here, and the
-tray assembly the taskbar's scale.
+application. The About window and the text prompt take their monitor metrics from here, the tray
+assembly the taskbar's scale, and the update component the marshalling of its dialogs.
 
 The assembly is versioned as `Win32Version` in `Versions.props` and released under `win32-v<x.y.z>`
 tags, with notes under `docs/release-notes/win32/`; [`releasing.md`](releasing.md) has the

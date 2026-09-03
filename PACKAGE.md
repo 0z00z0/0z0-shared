@@ -21,6 +21,8 @@ licensed, public.
 | `ZeroZero.Primitives` | `primitives` (foundation) | `net10.0` | The two-member log sink and its no-op, the reader of the version an assembly reports with its About-box form, the coalescing gate, and the source-revision stamp as build properties and targets. |
 | `ZeroZero.Startup` | `startup` | `net10.0` | The application's logon task in the Task Scheduler: identity, the power-safe elevated definition, registration, the direct enabled read, enable, disable, delete, repair and demand-start verification. Windows only. |
 | `ZeroZero.Tray` | `tray` (foundation) | `net10.0` | The tray icon's container and sizing policy: the PNG-in-ICO file writer, the slot size at the taskbar's own scale, and whether the taskbar is light or dark with the stroke tone that reads on it. Headless, no drawing; takes `ZeroZero.Win32`. Windows only. |
+| `ZeroZero.Update` | `update` | `net10.0` | The update flow without its dialogs: the latest GitHub release against the running version, the download into a fresh private directory, verification of the installer — its Authenticode signature and publisher against the expected signer, and its SHA-256 against the hash the release publishes — before it runs, the launch-or-refuse policy, the stale-download sweep and the check scheduler. Takes `ZeroZero.Primitives`. Windows only. |
+| `ZeroZero.Update.Win32` | `update` | `net10.0` | The component's entry point: the update task dialog and message boxes, worded here and marshalled by `ZeroZero.Win32`, and the check-ask-download-verify-launch orchestration that hands over to the application's own shutdown. Carries `ZeroZero.Update` with it. Windows only. |
 | `ZeroZero.Win32` | `win32` (foundation) | `net10.0` | The raw Win32 layer: monitor, DPI and taskbar metrics as plain numbers, the native task dialog and message boxes, dark native chrome. No XAML, no Windows App SDK. |
 
 Taking `ZeroZero.Mqtt.WinUI` brings the whole MQTT module and the primitives, config, controls and
@@ -80,6 +82,9 @@ broker at run time, and Home Assistant 2024.11.0 or later for discovery.
   the lifecycle component: the lock, the relaunch and its limit, the data path, and the wiring order.
 - [`docs/zerozero-startup.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-startup.md) —
   the startup component: the logon task, its definition and repair, and what stays with the application.
+- [`docs/zerozero-update.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-update.md) —
+  the update component: the two verification checks, where the published hash comes from, the
+  wiring, and what stays with the application.
 - [`docs/zerozero-build.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-build.md) —
   the build kit: the property blocks, the WinUI application block, the manifest template, signing,
   the pin rule and its guards, and the two ways to take it.

@@ -251,7 +251,8 @@ token every restore then needs.
 - **Common controls 6.** The task dialog in `ZeroZero.Win32` exists in version 6 of the common
   controls only, and the consuming app's own manifest is the one place that decides which version
   its process loads; [`zerozero-win32.md`](zerozero-win32.md) carries the declaration. Without it
-  `NativeTaskDialog.IsAvailable` is false and `Show` throws, naming the dependency.
+  `NativeTaskDialog.IsAvailable` is false and `Show` throws, naming the dependency; the update
+  component's install question falls back to a yes-or-no message box.
 
 ## The build kit
 
