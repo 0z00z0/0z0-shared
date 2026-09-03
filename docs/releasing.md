@@ -33,7 +33,9 @@ projects, `ZeroZero.Lifecycle`, `ZeroZero.Startup` and `ZeroZero.Update` take
 `ZeroZero.Primitives`, `ZeroZero.Mqtt` and `ZeroZero.Mqtt.Discovery` take `ZeroZero.Config`,
 `ZeroZero.Brand.WinUI`, `ZeroZero.Controls.WinUI`, `ZeroZero.Tray` and `ZeroZero.Update.Win32`
 take `ZeroZero.Win32`, and `ZeroZero.Mqtt.WinUI` and `ZeroZero.SettingsShell.WinUI` take
-`ZeroZero.Controls.WinUI`. So `primitives`, `config`, `win32` and `build` release in any order,
+`ZeroZero.Controls.WinUI`. `ZeroZero.Config.Sections` takes `ZeroZero.Config`, which is the same
+key and so not a crossing: the two release together under one tag.
+So `primitives`, `config`, `win32` and `build` release in any order,
 `brand`, `controls` and `tray` release after `win32`, `diagnostics`, `lifecycle` and `startup`
 release after `primitives`, `update` releases after `primitives` and `win32`, `settingsshell`
 releases after `win32` and `controls`, and `mqtt` releases after `primitives`, `config`, `win32`
