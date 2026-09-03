@@ -47,8 +47,9 @@ public sealed record SettingsWatcherOptions<T>(
     /// the machine is.</summary>
     public TimeProvider Time { get; init; } = TimeProvider.System;
 
-    /// <summary>Where notifications are raised. Null raises them on the thread the examination ran
-    /// on, which is a timer thread; a consumer that touches a user interface passes the context
-    /// captured on its own thread.</summary>
+    /// <summary>Where notifications are raised — <c>Examined</c>, <c>Changed</c> and <c>Failed</c>
+    /// alike, so a consumer never has to ask which thread an event arrived on. Null raises them on
+    /// the thread the examination ran on, which is a timer thread; a consumer that touches a user
+    /// interface passes the context captured on its own thread.</summary>
     public SynchronizationContext? NotificationContext { get; init; }
 }

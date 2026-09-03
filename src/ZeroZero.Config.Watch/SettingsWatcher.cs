@@ -248,8 +248,9 @@ public sealed class SettingsWatcher<T> : IDisposable where T : class, new()
         }
 
         // Before the examination is announced, because it is the reason that examination found
-        // nothing and reading them the other way round makes it look like an afterthought.
-        if (announce is not null) Notify(() => Report(new SettingsWatchObstructedException(FilePath, announce)));
+        // nothing and reading them the other way round makes it look like an afterthought. Report
+        // posts to the context itself, so this is not wrapped in Notify.
+        if (announce is not null) Report(new SettingsWatchObstructedException(FilePath, announce));
 
         Notify(() => Examined?.Invoke(this, result));
         if (result.IsSubstantive) Notify(() => Changed?.Invoke(this, result));
@@ -275,7 +276,21 @@ public sealed class SettingsWatcher<T> : IDisposable where T : class, new()
         }
     }
 
+    // Failed goes to the context like everything else. A consumer cannot marshal what it cannot
+    // predict, and one event arriving on the interface thread when it carries an obstruction and on
+    // a timer thread when it carries a dropped notification is not something correct code can be
+    // written against.
     private void Report(Exception error)
+    {
+        var context = _options.NotificationContext;
+
+        if (context is null) Raise(error);
+        else context.Post(static state => ((Action)state!)(), () => Raise(error));
+    }
+
+    // Not through Guarded: a Failed subscriber that throws would otherwise be reported through
+    // Failed again, and the report is the last place a failure has to go.
+    private void Raise(Exception error)
     {
         try
         {
