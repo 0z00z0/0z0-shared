@@ -147,6 +147,11 @@ verify:
 - **The outcome.** Give the warn-only unsigned-installer step an `id`, expose
   `${{ steps.<id>.outcome }}` as a job output, and pass it as `unsigned-outcome`; or pass the
   signing step's own outcome as `signing-outcome`. Both may be given, and each must hold.
+- **The release body.** An application that ships the update component writes the installer's
+  SHA-256 — the hash its record carries for that file — into the release body, as the only
+  64-digit hexadecimal token in it. The update flow reads the hash there and downloads nothing
+  without it, and refuses a body carrying two; [`zerozero-update.md`](zerozero-update.md) has the
+  rule. The record and the manifest are workflow artefacts, and the updater reads neither.
 - **The manifest.** Rewrite it through `manifest.ps1`: dot-source the script and call
   `Set-ManifestValue <path> <Key> <value>`. The key must match exactly one line — at any
   indentation, as a list item, never in a comment — and a key that matches nothing or twice
