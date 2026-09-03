@@ -36,6 +36,11 @@ public sealed class StartupTask : IDisposable
 
     public string TaskName => _options.TaskName;
 
+    /// <summary>Who the task runs as. A delegate rather than a direct call so a test can make the
+    /// one read in <see cref="Repair"/> that is not obviously a scheduler call fail, and prove the
+    /// outcome carries it instead of a throw reaching the application's start-up path.</summary>
+    internal Func<TaskIdentity> Identity { get; set; } = TaskIdentity.Current;
+
     /// <summary>Registered and enabled. A direct fetch by name rather than a walk of the folder,
     /// because this is read on every refresh of a tray menu.</summary>
     public bool IsEnabled
@@ -56,7 +61,7 @@ public sealed class StartupTask : IDisposable
     /// <summary>Registers the power-safe elevated logon task, replacing any task of the name.</summary>
     public void Register()
     {
-        TaskIdentity identity = TaskIdentity.Current();
+        TaskIdentity identity = Identity();
         using TaskDefinition definition = StartupTaskDefinition.Build(_service, _options, identity, _executablePath, enabled: true);
         RegisterDefinition(definition, identity);
         _log.Info($"Startup task '{TaskName}' registered for {identity.AccountName}.");
@@ -82,11 +87,11 @@ public sealed class StartupTask : IDisposable
 
     /// <summary>Rewrites a task an older build registered so it carries the current settings and
     /// points at the current executable, keeping whether the user has it enabled. Never creates one.
-    /// Never throws: the outcome says what happened, and the task's state is logged after.</summary>
+    /// Never throws: everything that touches the scheduler or the current identity is inside a
+    /// delegate whose failure is the outcome, and the state logged afterwards is a line rather than
+    /// part of the answer.</summary>
     public StartupTaskRepairResult Repair()
     {
-        TaskIdentity identity = TaskIdentity.Current();
-
         StartupTaskRepairResult result = StartupTaskRepair.Run(
             exists: () =>
             {
@@ -104,14 +109,17 @@ public sealed class StartupTask : IDisposable
                 using (ScheduledTask task = Find() ?? throw new InvalidOperationException($"The startup task '{TaskName}' vanished during repair."))
                     enabled = task.Enabled;
 
+                // Read inside the delegate, where a failure is the RepairFailed outcome. Read
+                // before the call it would be the one thing here that throws out of a repair.
+                TaskIdentity identity = Identity();
+
                 using TaskDefinition definition = StartupTaskDefinition.Build(_service, _options, identity, _executablePath, enabled);
                 RegisterDefinition(definition, identity);
             },
             verify: _options.VerifyByDemandStart ? () => DemandStart(VerificationWait).Succeeded : null,
             _log);
 
-        using ScheduledTask? after = Find();
-        if (after is not null) _log.Info(Describe(StateOf(after)));
+        LogStateAfterRepair();
         return result;
     }
 
@@ -143,6 +151,21 @@ public sealed class StartupTask : IDisposable
     public void Dispose() => _service.Dispose();
 
     private ScheduledTask? Find() => _service.GetTask(TaskName);
+
+    // The state after a repair is a log line, not part of the outcome, so a scheduler that refuses
+    // the read costs the line and nothing else. Repair promises never to throw.
+    private void LogStateAfterRepair()
+    {
+        try
+        {
+            using ScheduledTask? after = Find();
+            if (after is not null) _log.Info(Describe(StateOf(after)));
+        }
+        catch (Exception ex)
+        {
+            _log.Error(nameof(StartupTask), ex);
+        }
+    }
 
     private void RegisterDefinition(TaskDefinition definition, TaskIdentity identity) =>
         _service.RootFolder.RegisterTaskDefinition(TaskName, definition, TaskCreation.CreateOrUpdate,

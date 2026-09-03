@@ -14,9 +14,11 @@ public static class AtomicFile
     /// <summary>The suffix of the temporary sibling a write goes through.</summary>
     public const string TempSuffix = ".tmp";
 
-    private const int ReplaceAttempts = 5;
+    /// <summary>How many times the replace is attempted in all — one try and four retries, not five
+    /// retries. Internal so the number the guides quote is held to the number the code uses.</summary>
+    internal const int ReplaceAttempts = 5;
 
-    private static readonly TimeSpan ReplacePause = TimeSpan.FromMilliseconds(20);
+    internal static readonly TimeSpan ReplacePause = TimeSpan.FromMilliseconds(20);
 
     /// <summary>Writes <paramref name="content"/> to <paramref name="path"/>, creating the directory
     /// if it is absent. Returns null on success, or the exception that stopped it.</summary>

@@ -76,7 +76,9 @@ References `ZeroZero.Brand.Core` and `ZeroZero.Win32`.
 ### The palette from XAML
 
 Merge the dictionary once, in the application's resources, and resolve a key with `ThemeResource`. A
-colour key feeds a gradient stop or code; a brush key feeds a `Foreground` or a `Background`:
+colour key feeds a gradient stop or code; a brush key feeds a `Foreground` or a `Background`. A merge
+lower down — a window's or a page's own resources — resolves too, scoped to that subtree, which is
+what the harness's palette window does and all a rig with one such window needs:
 
 ```xml
 <Application.Resources>
@@ -99,8 +101,9 @@ looked at rather than read.
 ### What the palette measures
 
 Every figure below is a WCAG 2.x contrast ratio, and each is pinned in
-`tests/ZeroZero.Brand.Core.Tests/PaletteContrastTests.cs`, so editing a constant trips a test rather
-than moving a colour past a floor unnoticed.
+`tests/ZeroZero.Brand.Core.Tests/PaletteContrastTests.cs` — the table's rows and the two tint figures
+in the prose under it alike — so editing a constant trips a test rather than moving a colour past a
+floor unnoticed.
 
 | Accent | On the brand background | On black text | On white text |
 |---|---:|---:|---:|
@@ -233,8 +236,11 @@ public AboutPage()
 }
 ```
 
-`SetInfo` is a method rather than a settable property — **call it exactly once, from the hosting
-page's constructor or its `Loaded` handler**, after `InitializeComponent`.
+`SetInfo` is a method rather than a settable property — call it from the hosting page's constructor
+or its `Loaded` handler, after `InitializeComponent`. **Calling it again is safe and is the expected
+case**: a cached in-navigation page calls it on every visit, and the control is written for that —
+the link handlers are wired once at construction and read the current info, and the credit list is
+cleared before every repopulate. Neither the buttons nor the credits accumulate.
 
 **3. Delete the bespoke About view-model and layout** once the control renders correctly; keeping
 both is what lets them drift. The app's own brand-facts class stays as the single source of truth —

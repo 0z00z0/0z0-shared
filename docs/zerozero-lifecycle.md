@@ -17,7 +17,7 @@ releases after `primitives` is on the feed at the version it references.
 | | |
 |---|---|
 | SDK | .NET 10 |
-| Platform | Windows 10 1809 (build 10.0.17763) or later. The assembly declares itself Windows-only. |
+| Platform | Windows. The assembly targets plain `net10.0` and declares itself Windows-only through `SupportedOSPlatform`, with no version: nothing here needs a build floor, and the project states none. An application taking it alongside the WinUI components inherits their floor, not one from here. |
 
 ## What it contains
 
@@ -43,8 +43,10 @@ releases after `primitives` is on the feed at the version it references.
   ending, once. `MarkDeliberateExit()` says the exit about to happen was asked for. On any process
   exit the hook decides, in this order: a deliberate exit starts nothing; an exit while Windows is
   logging off or shutting down starts nothing; an exit past the limiter's budget starts nothing;
-  anything else starts the executable again with the relaunch argument. Each decision is logged as
-  a `RelaunchDecision`.
+  anything else starts the executable again with the relaunch argument. A deliberate exit and a
+  session ending each log a sentence saying so; a relaunch logs what it started, and the budget
+  having run out is already the limiter's own line. The decision is the component's own: nothing
+  hands it out, so an application that wants to know why it came back reads the log.
 
 **A crash never reaches the hook.** The runtime raises no exit event for an unhandled exception,
 so relaunch covers the clean exit nobody asked for — a message loop that ended, an exit path taken

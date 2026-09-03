@@ -272,10 +272,11 @@ it, which its guards enforce.
 
 Every version is declared once, in the build kit's `ZeroZero.Packages.props`, which this
 repository's `Directory.Packages.props` and every consuming repository's import. A consumer that
-imports the file resolves exactly these versions: an `Update`, a second `PackageVersion` or a
-`VersionOverride` fails the build (`ZZB006`, `NU1013`), and a pin moves in the kit and nowhere
-else. The pins do not all behave the same way, and the difference matters to a consumer that has
-not yet taken the kit:
+imports the file resolves exactly these versions: a second `PackageVersion` for a pinned name, or an
+`Update` that moves one, fails the build (`ZZB006`), and a `VersionOverride` on a `PackageReference`
+is refused by NuGet (`NU1013`) — the kit's guard reads `PackageVersion` items and never sees an
+override. A pin moves in the kit and nowhere else. The pins do not all behave the same way, and the
+difference matters to a consumer that has not yet taken the kit:
 
 | Package | Version | What the pin is |
 |---|---|---|

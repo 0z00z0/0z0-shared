@@ -306,6 +306,40 @@ public sealed class WatcherOnDiskTests : WatcherTestBase
         Assert.Single(harness.Changed);
     }
 
+    /// <summary>
+    /// A failure goes to the context as well. Without this, one event arrives on the interface
+    /// thread when it carries an obstruction and on a timer thread when it carries a store that
+    /// threw, and a consumer following the guide would touch its interface off that thread.
+    /// </summary>
+    [Fact]
+    public void A_failure_goes_to_the_context_as_every_other_notification_does()
+    {
+        Given(new AppSettings());
+        var context = new RecordingContext();
+
+        using var watcher = new SettingsWatcher<AppSettings>(
+            new SettingsWatcherOptions<AppSettings>(
+                FilePath,
+                () => throw new InvalidOperationException("the store is in no state to be read"),
+                () => { },
+                Classifier())
+            {
+                Quiet = Quiet,
+                Time = Clock,
+                NotificationContext = context,
+            });
+
+        using var harness = new Harness(watcher);
+
+        Given(new AppSettings { Retries = 9 });
+        harness.AwaitSignals(1);
+        CrossTheWindow(harness);
+
+        // The examination threw, so nothing was examined and the failure is the only notification.
+        Assert.Single(harness.Failures);
+        Assert.Equal(1, context.Posts);
+    }
+
     [Fact]
     public void A_folder_that_does_not_exist_yet_is_created_so_it_can_be_watched()
     {

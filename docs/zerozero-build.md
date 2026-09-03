@@ -45,16 +45,24 @@ the kit, and takes the kit's next release.
 
 Three guards make the rule mechanical rather than advisory: a project that has opted out of central
 package management fails (`ZZB003`), a project whose `Directory.Packages.props` does not import the
-family's pins fails (`ZZB002`), and a family pin that a later file has moved — by an `Update`, by a
-second `PackageVersion` for the same name, at any version — fails (`ZZB006`). A `VersionOverride`
-on a `PackageReference` is refused by NuGet itself (`NU1013`), because the pin file switches the
-override off.
+family's pins fails (`ZZB002`), and a family pin a later file has moved fails (`ZZB006`). What
+`ZZB006` compares is the resolved pin list against the declared one, name and version together, so
+a second `PackageVersion` for the same name fails at any version — two declarations are two
+declarations — while an `Update` fails only where it changes the version. An `Update` restating the
+pinned version passes, which is what it deserves: it moves nothing.
+
+A `VersionOverride` on a `PackageReference` is outside all of this. It is metadata on a reference
+rather than a `PackageVersion` item, so `ZZB006` never sees it; NuGet refuses it (`NU1013`) because
+the pin file switches overriding off.
 
 ## Take the kit
 
 One route per consuming repository, as for every component ([`consuming.md`](consuming.md)). On
-either route the kit is three imports, each in the file the SDK already reserves for it. Nothing
-else in the repository names the kit.
+either route the kit is three imports, each in the file the SDK already reserves for it: the props
+in `Directory.Build.props`, the targets in `Directory.Build.targets`, the pins in
+`Directory.Packages.props`. A repository with an application project adds a fourth, the WinUI block,
+in that project's own file ([below](#an-application-project)); nothing else in the repository names
+the kit.
 
 **Sibling-checkout route.** `ZeroZeroSharedDir` is the consumer's one line, set before the import
 so the import can find the checkout; CI overrides it through the environment exactly as for a
@@ -103,10 +111,13 @@ same files, reached by name through the `Sdk` attribute.
 **Never a `PackageReference`.** A `PackageReference` to the kit restores without complaint and
 applies nothing: central package management is decided before restore runs, and a package's files
 reach a project only after it. The kit's `build\` folder holds one target for that case, which fails
-the build with `ZZB011` and names the route above. Nor can the kit be taken through the project's
-`Sdk` attribute alone (`Sdk="Microsoft.NET.Sdk;ZeroZero.Build"`): NuGet enables central package
-management only when a `Directory.Packages.props` was imported, so the pins have to arrive through
-that file.
+the build with `ZZB011` and names the route above.
+
+**Nor the project's own `Sdk` attribute.** `Sdk="Microsoft.NET.Sdk;ZeroZero.Build"` fails at
+evaluation with `MSB4019`, the imported project `Sdk\Sdk.props` not found — measured. That attribute
+imports `Sdk.props` and `Sdk.targets` by those names, and the kit's `Sdk\` folder holds the three
+files above and the WinUI block and nothing called either of those. Each of the three is imported by
+name from the file that owns it, which is where the pins have to arrive from in any case.
 
 ### An application project
 
@@ -171,7 +182,9 @@ which the kit does not carry. An application adopting the kit compares its inlin
 
 ## The guards
 
-Every guard is an error, never a warning, and names what to change.
+Every guard is an error, never a warning, and names what to change. Four of them belong to the WinUI
+application block and can only be met by a project that imports it and lets the kit write its
+manifest; a library project never sees them.
 
 | Code | Fails when |
 |---|---|
@@ -179,10 +192,10 @@ Every guard is an error, never a warning, and names what to change.
 | `ZZB002` | The project does not see the family's pins: `Directory.Packages.props` lacks the import. |
 | `ZZB003` | The project has opted out of central package management. |
 | `ZZB004` | A project importing the WinUI block sets `WindowsPackageType` to anything but `None`. |
-| `ZZB005` | `ZeroZeroManifestExecutionLevel` is not `asInvoker`, `highestAvailable` or `requireAdministrator`. |
+| `ZZB005` | A project importing the WinUI block, with no `ApplicationManifest` of its own, sets `ZeroZeroManifestExecutionLevel` to something other than `asInvoker`, `highestAvailable` or `requireAdministrator`. |
 | `ZZB006` | A family pin resolves at another version, or is declared more than once. |
-| `ZZB007` | The manifest template does not exist. |
-| `ZZB008` | The manifest template carries a token the kit does not know. |
+| `ZZB007` | The manifest template does not exist. Only where the WinUI block is imported and the kit writes the manifest. |
+| `ZZB008` | The manifest template carries a token the kit does not know. Only where the WinUI block is imported and the kit writes the manifest. |
 | `ZZB009` | The file to sign is not there after publish. |
 | `ZZB010` | The signing script does not exist. |
 | `ZZB011` | The kit is taken as a `PackageReference`. |

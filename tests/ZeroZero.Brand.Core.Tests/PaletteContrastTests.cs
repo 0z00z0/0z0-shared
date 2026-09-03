@@ -25,6 +25,14 @@ public class PaletteContrastTests
     /// <summary>The opacity a tinted fill was assumed to be derived at.</summary>
     private const double TintOpacity = 0.24;
 
+    /// <summary>The ceiling the brand guide quotes for a tinted accent: nothing in the palette
+    /// clears it at <see cref="TintOpacity"/>, on either ground.</summary>
+    private const double QuotedTintCeiling = 1.75;
+
+    /// <summary>What the brand guide quotes for pure white at <see cref="TintOpacity"/>, which is
+    /// the figure that makes the tint rule a property of the ground rather than of the palette.</summary>
+    private const double QuotedWhiteTint = 2.17;
+
     private const string Black = "#000000";
     private const string White = "#ffffff";
 
@@ -203,6 +211,28 @@ public class PaletteContrastTests
                 name == "Indigo" ? !text : text,
                 $"{name} is {Round(Ratio(colour, Brand.ColorBg))}:1 on the brand background and {Round(Ratio(colour, Brand.ColorBg2))}:1 on the alternate one, against a {TextFloor}:1 text floor.");
         }
+    }
+
+    /// <summary>
+    /// The two figures the brand guide states in prose rather than in its table, pinned like every
+    /// figure in the table. The guide says each of its contrast figures is held by a test, and these
+    /// two were the exception: a ceiling no accent clears as a tint, and what white reaches.
+    /// </summary>
+    [Fact]
+    public void TheTintFiguresQuotedInProseAreTheOnesMeasured()
+    {
+        double highest = Accents
+            .SelectMany(a => new[] { Brand.ColorBg, Brand.ColorBg2 },
+                        (a, ground) => Ratio(Composite(a.Colour, ground, TintOpacity), ground))
+            .Max();
+
+        Assert.True(highest < QuotedTintCeiling,
+                    $"The highest tint in the palette is {Round(highest)}:1, and the guide says nothing clears {QuotedTintCeiling}:1.");
+
+        double white = new[] { Brand.ColorBg, Brand.ColorBg2 }
+            .Max(ground => Ratio(Composite(White, ground, TintOpacity), ground));
+
+        Assert.Equal(QuotedWhiteTint, Round(white));
     }
 
     private static double Round(double ratio) => Math.Round(ratio, 2, MidpointRounding.AwayFromZero);

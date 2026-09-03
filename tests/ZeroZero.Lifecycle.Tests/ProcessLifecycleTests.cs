@@ -1,3 +1,4 @@
+using System.Reflection;
 using Xunit;
 using ZeroZero.Lifecycle;
 
@@ -18,6 +19,27 @@ public sealed class ProcessLifecycleTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_dir)) Directory.Delete(_dir, recursive: true);
+    }
+
+    /// <summary>
+    /// The decision is internal, and the guide has to say so. A consumer cannot read a
+    /// <see cref="RelaunchDecision"/> off anything — the hook decides, logs a sentence and acts —
+    /// so a guide promising the enum in a log line or on a public member is promising a surface
+    /// that is not there.
+    /// </summary>
+    [Fact]
+    public void TheDecisionIsReturnedByNoPublicMember()
+    {
+        var returning = typeof(ProcessLifecycle).Assembly.GetExportedTypes()
+            .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
+            .Where(method => method.ReturnType == typeof(RelaunchDecision))
+            .Select(method => $"{method.DeclaringType!.Name}.{method.Name}")
+            .Order()
+            .ToArray();
+
+        Assert.True(
+            returning.Length == 0,
+            $"RelaunchDecision is returned by {string.Join(", ", returning)}. The lifecycle guide says the decision is not a consumer's to read.");
     }
 
     [Fact]

@@ -36,7 +36,7 @@ releases after `primitives` is on the feed at the version it references.
 | | |
 |---|---|
 | SDK | .NET 10 |
-| Platform | Windows 10 1809 (build 10.0.17763) or later. The assembly declares itself Windows-only. |
+| Platform | Windows. The assembly targets plain `net10.0` and declares itself Windows-only through `SupportedOSPlatform`, with no version: nothing here needs a build floor, and the project states none. An application taking it alongside the WinUI components inherits their floor, not one from here. |
 | Token | Registering or repairing needs an elevated process: the scheduler refuses a highest-run-level task from a standard token, with an access-denied error. Reading, enabling, disabling, deleting and demand-starting work from any token that owns the task. |
 | Globalisation | The consuming application must not set `InvariantGlobalization`. Every write through the scheduler library then fails with a type-initialisation error while every read still works, so the failure looks like a permissions problem. |
 
@@ -63,8 +63,12 @@ releases after `primitives` is on the feed at the version it references.
   when, and with what exit code; `Succeeded` is a run that ended with zero.
 - **`StartupTaskRepair`** — the repair decision over delegates, so the decision is testable
   without a scheduler, and the outcomes: `NotRegistered`, `AlreadyCorrect`, `Repaired`,
-  `RepairFailed` and `VerificationFailed`. Nothing in it throws: it runs at application start,
-  where a throw would take the application down over a task it never needed to be running.
+  `RepairFailed` and `VerificationFailed`. No failure in a delegate escapes it — a scheduler that
+  refuses, a task that vanishes mid-repair, a verification that throws — because it runs at
+  application start, where a throw would take the application down over a task it never needed to
+  be running. A delegate passed as null is the one exception, and it is an argument error rather
+  than a failure: nothing has run yet. `StartupTask.Repair()` keeps the same promise end to end,
+  the current identity read and the state logged afterwards included.
 
 ### The definition
 
