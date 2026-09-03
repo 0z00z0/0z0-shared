@@ -178,7 +178,10 @@ An installation whose file is already sectioned has nothing to migrate: point th
 and it reads it as it stands. Running the migration there is not how a section is added — a section
 is written by the component that owns it, on first use. The two things it is still good for on such
 a file are moving the document somewhere else and raising the version it declares, which a section
-write never does.
+write never does. Moving it is not a byte-for-byte copy: the migration writes no comment of its own,
+because a reader that disallows comments fails the whole file rather than degrading, so every
+comment sitting outside a value is dropped and named on the result instead, and only the old file
+still holds them. A comment inside a value travels, because the value is carried as bytes.
 
 **Nothing migrates a consumer's own values.** No component reads a setting the application stored
 somewhere else, and none detects that nothing was carried across: a missing value is
