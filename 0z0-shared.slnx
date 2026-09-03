@@ -27,6 +27,7 @@
     <Project Path="tests/ZeroZero.Mqtt.Tests/ZeroZero.Mqtt.Tests.csproj" />
     <Project Path="tests/ZeroZero.Mqtt.Discovery.Tests/ZeroZero.Mqtt.Discovery.Tests.csproj" />
     <Project Path="tests/ZeroZero.Primitives.Tests/ZeroZero.Primitives.Tests.csproj" />
+    <Project Path="tests/ZeroZero.ReleaseVerification.Tests/ZeroZero.ReleaseVerification.Tests.csproj" />
     <Project Path="tests/ZeroZero.Startup.Tests/ZeroZero.Startup.Tests.csproj" />
     <Project Path="tests/ZeroZero.Tray.Tests/ZeroZero.Tray.Tests.csproj" />
     <Project Path="tests/ZeroZero.Win32.Tests/ZeroZero.Win32.Tests.csproj" />

@@ -1,0 +1,151 @@
+name: Verify release
+
+# A reusable workflow. After a release has published, it fetches what was published and asserts it
+# is what the build produced — the check that catches a feed or a manifest describing another build
+# while every shape check reports green. It runs as a job of its own, so nothing local to the build
+# job is in reach and the only thing verified is what came down the wire. The build's record of
+# hashes arrives as a workflow artefact that job uploaded; a token for a feed that authenticates reads
+# arrives as a secret; the recorded outcome of the caller's signing step arrives as an input, taken
+# from steps.<id>.outcome by way of a job output, because a warn-only step cannot fail a job and a
+# green run says nothing about whether signing happened.
+#
+# Called from this repository as ./.github/workflows/verify-release.yml, and from another
+# repository as 0z00z0/0z0-shared/.github/workflows/verify-release.yml@<tag>, where any component
+# tag is a whole-tree snapshot. The scripts run from this repository at the workflow's own commit,
+# checked out beside the caller's tree, so the workflow and the scripts cannot drift apart.
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: The release tag, as in mqtt-v0.7.0 or v1.2.3. The record must name the same tag.
+        required: true
+        type: string
+      record-artifact:
+        description: Name of the uploaded workflow artefact holding release-artefacts.json, written by pack-component.ps1 or to its shape.
+        required: true
+        type: string
+      location:
+        description: Where the artefacts were published. Every recorded artefact is fetched from beneath this URL.
+        required: false
+        type: string
+        default: ""
+      layout:
+        description: Flat, <location>/<name>; or NuGet, <location>/<id>/<version>/<id>.<version>.nupkg lower-cased, the v3 package base address GitHub Packages serves.
+        required: false
+        type: string
+        default: Flat
+      manifest:
+        description: Paths, relative to the workspace and space-separated, of manifests whose URL, hash and version keys must describe this build. A manifest committed in the caller's tree is at its path there; one rewritten during the build job travels beside release-artefacts.json in the record artefact and is at .zerozero-release-record/<its path within that artefact>.
+        required: false
+        type: string
+        default: ""
+      manifest-keys:
+        description: The URL, hash and version key names in the manifests, comma-separated, in that order.
+        required: false
+        type: string
+        default: InstallerUrl,InstallerSha256,PackageVersion
+      require-signed:
+        description: Whether signing must have happened. With it, signing-outcome must be "success" or unsigned-outcome "skipped", whichever is given, and both when both are.
+        required: false
+        type: boolean
+        default: false
+      signing-outcome:
+        description: steps.<id>.outcome of the caller's step that signs, passed through a job output. "skipped" means the step never ran and nothing was signed.
+        required: false
+        type: string
+        default: ""
+      unsigned-outcome:
+        description: steps.<id>.outcome of the caller's warn-only unsigned-installer step, passed through a job output. "skipped" is the evidence that signing happened; a step that ran says the installer shipped unsigned, whatever the job's colour.
+        required: false
+        type: string
+        default: ""
+      signer:
+        description: The certificate subject every fetched executable must carry an intact signature by.
+        required: false
+        type: string
+        default: ""
+      signer-thumbprint:
+        description: The thumbprint of the signing certificate, where the subject alone would not identify it — a self-signed studio certificate carries a subject anyone can put on their own.
+        required: false
+        type: string
+        default: ""
+    secrets:
+      feed-token:
+        description: A token that can read the feed, for one that authenticates reads. GitHub Packages needs the run's GITHUB_TOKEN; public release assets need nothing.
+        required: false
+
+jobs:
+  verify:
+    runs-on: windows-latest
+
+    steps:
+      # The caller's tree, only for manifests that live in it; a caller with none pays nothing.
+      - name: Check out the caller's tree
+        if: inputs.manifest != ''
+        uses: actions/checkout@v7
+
+      # This repository at the commit the workflow itself came from. github.job_workflow_sha is that
+      # commit, so a caller pinned at a tag runs the scripts of that tag.
+      - name: Check out the release scripts
+        uses: actions/checkout@v7
+        with:
+          repository: 0z00z0/0z0-shared
+          ref: ${{ github.job_workflow_sha }}
+          path: .zerozero-release
+
+      # The hashes as the build computed them. Never recomputed here: a hash taken again from a
+      # rebuilt artefact agrees with itself and proves nothing.
+      - name: Fetch the build's record
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.record-artifact }}
+          path: .zerozero-release-record
+
+      - name: Fetch what was published and compare it with the build
+        shell: pwsh
+        env:
+          TAG: ${{ inputs.tag }}
+          LOCATION: ${{ inputs.location }}
+          LAYOUT: ${{ inputs.layout }}
+          MANIFEST: ${{ inputs.manifest }}
+          MANIFEST_KEYS: ${{ inputs.manifest-keys }}
+          REQUIRE_SIGNED: ${{ inputs.require-signed }}
+          SIGNING_OUTCOME: ${{ inputs.signing-outcome }}
+          UNSIGNED_OUTCOME: ${{ inputs.unsigned-outcome }}
+          SIGNER: ${{ inputs.signer }}
+          SIGNER_THUMBPRINT: ${{ inputs.signer-thumbprint }}
+          ZEROZERO_FEED_TOKEN: ${{ secrets.feed-token }}
+        run: |
+          $keys = @($env:MANIFEST_KEYS -split ',' | ForEach-Object { $_.Trim() })
+          if ($keys.Count -ne 3) {
+            Write-Host "::error::manifest-keys must name three keys, URL, hash and version, comma-separated; got '$env:MANIFEST_KEYS'."
+            exit 1
+          }
+          $arguments = @{
+            Tag        = $env:TAG
+            Artefacts  = ".zerozero-release-record/release-artefacts.json"
+            Layout     = $env:LAYOUT
+            UrlKey     = $keys[0]
+            HashKey    = $keys[1]
+            VersionKey = $keys[2]
+            Report     = "verification.json"
+          }
+          if ($env:LOCATION) { $arguments.Location = $env:LOCATION }
+          if ($env:MANIFEST) { $arguments.Manifest = @($env:MANIFEST -split '\s+' | Where-Object { $_ }) }
+          if ($env:SIGNING_OUTCOME) { $arguments.SigningOutcome = $env:SIGNING_OUTCOME }
+          if ($env:UNSIGNED_OUTCOME) { $arguments.UnsignedOutcome = $env:UNSIGNED_OUTCOME }
+          if ($env:REQUIRE_SIGNED -eq 'true') { $arguments.RequireSigned = $true }
+          if ($env:SIGNER) { $arguments.Signer = $env:SIGNER }
+          if ($env:SIGNER_THUMBPRINT) { $arguments.SignerThumbprint = $env:SIGNER_THUMBPRINT }
+          & ./.zerozero-release/.github/scripts/verify-release.ps1 @arguments
+          exit $LASTEXITCODE
+
+      # What was resolved and what came down, per artefact, kept whether or not it passed.
+      - name: Keep the verification report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: verification-${{ inputs.tag }}
+          path: verification.json
+          if-no-files-found: ignore

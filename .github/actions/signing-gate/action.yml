@@ -1,0 +1,29 @@
+name: Signing gate
+description: >-
+  Fails a tagged run whose signing secret is absent, so a release cannot ship unsigned in silence.
+  Runs before anything is built or published. A branch run without the secret passes and says so,
+  because a pull-request build carries no secrets and what it produces is not a release. Only the
+  presence of the secret is read; it is never printed. Whether signing then happened is the
+  recorded outcome of the signing step itself, which the verify-release workflow asserts on.
+
+inputs:
+  secret:
+    description: The signing secret, passed as the caller's ${{ secrets.<NAME> }}. Only its presence is read.
+    required: false
+    default: ""
+  ref-type:
+    description: github.ref_type, tag or branch.
+    required: false
+    default: ${{ github.ref_type }}
+
+runs:
+  using: composite
+  steps:
+    - name: A tagged run has its signing secret
+      shell: pwsh
+      env:
+        RELEASE_SIGNING_SECRET: ${{ inputs.secret }}
+        REF_TYPE: ${{ inputs.ref-type }}
+      run: |
+        & "$env:GITHUB_ACTION_PATH/../../scripts/signing-gate.ps1" -RefType $env:REF_TYPE
+        exit $LASTEXITCODE

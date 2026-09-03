@@ -103,7 +103,11 @@ under `tests/`, runs each against the Release build, and fails naming every proj
 Each component carries its own version in `Versions.props` and releases under its own tag,
 `<key>-v<x.y.z>`, with notes under `docs/release-notes/<key>/`. The release workflow refuses a tag
 that disagrees with the declared version, has no notes, or names a component whose referenced
-components are not yet on the feed. [`docs/releasing.md`](docs/releasing.md) is the procedure.
+components are not yet on the feed. After the push, a job of its own fetches every package back
+from the feed and asserts it is the one this run packed — the bytes, the nuspec's commit and every
+assembly's stamp — and the release page is created only when that passes; the same check is a
+reusable workflow the applications call, with a signing gate and a manifest rewriter beside it.
+[`docs/releasing.md`](docs/releasing.md) is the procedure.
 
 ## Documentation
 
