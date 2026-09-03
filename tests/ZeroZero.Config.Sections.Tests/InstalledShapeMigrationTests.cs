@@ -11,7 +11,11 @@ namespace ZeroZero.Config.Sections.Tests;
 /// lower case with underscores, member names in upper camel case, no byte-order mark, no comments and
 /// no trailing commas. The shape was measured by that application's own session and reported. Nothing
 /// here reads any installed file, and the member names inside the sections are this fixture's own
-/// except the three that were reported because they defeat a binder.</para>
+/// except the three that were reported because they defeat a binder — and the endpoint memory, whose
+/// members are those of <c>ZeroZero.Mqtt</c>'s own <c>MqttEndpointMemory</c>, because that type is
+/// declared in this repository and the section would otherwise depict it under names it cannot
+/// produce. Its <c>Encrypted</c> is deliberately present and true: the type holds it as a nullable
+/// so that absent means "not recorded" rather than "plain".</para>
 /// <para>So the flat-to-sectioned move is not what a current installation needs. What the migration
 /// does for an already-sectioned document is carry every key across into a new file and stamp the
 /// version this build asks for — the one thing the store deliberately refuses to do — while leaving

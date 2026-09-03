@@ -41,11 +41,11 @@
     "QuietUntil": "07:00"
   },
   "mqtt": {
-    "LastGoodHost": "broker.invalid",
-    "LastGoodPort": 8883,
-    "LastGoodUsedTls": true,
-    "LastGoodClientId": "fixture-client",
-    "LastGoodAtUtc": "2026-01-02T03:04:05Z"
+    "Host": "broker.invalid",
+    "Username": "fixture",
+    "Port": 8883,
+    "Transport": "Tcp",
+    "Encrypted": true
   },
   "diagnostics": {
     "KeepLogDays": 14,

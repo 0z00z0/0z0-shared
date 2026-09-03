@@ -365,7 +365,9 @@ The migration is proven against two fixtures, and the difference between them is
   mark, no comments, no trailing commas. It carries the three member spellings that defeat a binder,
   and the proof is that the migration leaves every one of them alone. The shape was measured by a
   consuming application's own session and reported; no installed file is read here, and the member
-  names other than those three are the fixture's own.
+  names other than those three are the fixture's own — except the `mqtt` section, which holds a
+  last-good endpoint memory and therefore carries the members `MqttEndpointMemory` declares, since
+  that type belongs to this repository.
 - `Fixtures/awkward-settings.json` is a hand-edited worst case, not an installed shape: a byte-order
   mark, comments, indentation that changes halfway down, a duplicated key, a section from a build
   that no longer exists, a trailing comma. **A real file does not look like this**, and for a reader
