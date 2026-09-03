@@ -15,6 +15,11 @@ namespace ZeroZero.Config.Watch;
 /// <para><see cref="Examined"/> is raised after every examination and <see cref="Changed"/> only
 /// after one the classifier called substantive, so a consumer can tell a file that was looked at and
 /// dismissed from a file that was never looked at.</para>
+/// <para>A store that can read the file and still see nothing in it — a section the document spells
+/// in another case is the measured one — leaves both states equal for ever, so no examination is
+/// ever a change. That is honest and it is also useless on its own, so
+/// <see cref="SettingsWatcherOptions{T}.Obstruction"/> lets the store say what is in the way: it is
+/// carried on every result and announced once, through <see cref="Failed"/>, when it appears.</para>
 /// </remarks>
 /// <typeparam name="T">The settings shape.</typeparam>
 public sealed class SettingsWatcher<T> : IDisposable where T : class, new()
@@ -32,6 +37,10 @@ public sealed class SettingsWatcher<T> : IDisposable where T : class, new()
     private FileSystemWatcher? _watcher;
     private bool _disposed;
     private int _signals;
+
+    // The obstruction last announced, so one that stands across many examinations is said once.
+    // Guarded by _examining, which is the only lock an examination takes to reach it.
+    private string? _obstruction;
 
     /// <summary>Watches the file named by <paramref name="options"/> from this moment.</summary>
     public SettingsWatcher(SettingsWatcherOptions<T> options)
@@ -89,7 +98,10 @@ public sealed class SettingsWatcher<T> : IDisposable where T : class, new()
     /// <summary>Raised after an examination the classifier called substantive.</summary>
     public event EventHandler<SettingsChangeEventArgs<T>>? Changed;
 
-    /// <summary>Raised when something the watcher does on its own thread does not work.</summary>
+    /// <summary>Raised when something the watcher does on its own thread does not work, and when the
+    /// store first names something standing between it and the file — a
+    /// <see cref="SettingsWatchObstructedException"/>, which is the one member of this event that is
+    /// not a failure.</summary>
     public event EventHandler<SettingsWatchFailedEventArgs>? Failed;
 
     /// <summary>Every notification the operating system delivered for this file, before the quiet
@@ -191,6 +203,7 @@ public sealed class SettingsWatcher<T> : IDisposable where T : class, new()
     private void Examine()
     {
         SettingsChangeEventArgs<T> result;
+        string? announce;
 
         try
         {
@@ -207,8 +220,23 @@ public sealed class SettingsWatcher<T> : IDisposable where T : class, new()
                 _options.Reload();
                 var after = _options.Read();
 
+                // Asked after the re-read, so it describes the file as it now stands.
+                var obstruction = _options.Obstruction?.Invoke();
+
                 result = new SettingsChangeEventArgs<T>(
-                    _options.Classifier.Question, before, after, _options.Classifier.IsSubstantive(before, after));
+                    _options.Classifier.Question,
+                    before,
+                    after,
+                    _options.Classifier.IsSubstantive(before, after),
+                    obstruction);
+
+                // An obstruction stands until it is repaired, so every examination while it stands
+                // would say the same thing. Announced when it appears and when it changes, never
+                // again in between; clearing it is not announced, because the next real edit is.
+                announce = string.Equals(obstruction, _obstruction, StringComparison.Ordinal)
+                    ? null
+                    : obstruction;
+                _obstruction = obstruction;
             }
         }
         catch (Exception ex)
@@ -218,6 +246,10 @@ public sealed class SettingsWatcher<T> : IDisposable where T : class, new()
             Report(ex);
             return;
         }
+
+        // Before the examination is announced, because it is the reason that examination found
+        // nothing and reading them the other way round makes it look like an afterthought.
+        if (announce is not null) Notify(() => Report(new SettingsWatchObstructedException(FilePath, announce)));
 
         Notify(() => Examined?.Invoke(this, result));
         if (result.IsSubstantive) Notify(() => Changed?.Invoke(this, result));

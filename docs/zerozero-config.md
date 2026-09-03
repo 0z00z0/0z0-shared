@@ -325,6 +325,26 @@ than by sleeping for it.
 - `NotificationContext` posts both events to a captured context, for a consumer that touches a user
   interface.
 
+### When the store can read the file and still see nothing in it
+
+A section store has a state a whole-file store does not: the document spells the section's name in a
+case the addressing type does not, so the section reads as its type's defaults for ever and every
+write to it is refused. **Measured on the built code**: the re-read does not throw and does not
+fail — it succeeds and moves nothing, so both states either side of it are equal and the examination
+is honestly not a change, however the file is edited. Left there, a person correcting a value by hand
+watches nothing happen and is told nothing.
+
+`SettingsWatcherOptions<T>.Obstruction` closes that. It is the store's own sentence saying what is in
+the way, or null when nothing is, asked once per examination after the re-read. What it returns is
+carried on every `SettingsChangeEventArgs<T>.Obstruction`, and announced through `Failed` as a
+`SettingsWatchObstructedException` when it first appears and again if it changes — once, not on every
+examination, because an obstruction stands until the file is repaired. Clearing it is not announced:
+the edit that clears it reports itself as a change.
+
+For a section the reason comes from `SettingsSection<T>.ConflictingKey`, which names the spelling the
+document holds. A whole-file store names none, leaves the delegate unset, and nothing about it
+changes.
+
 ## Take the reference
 
 Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Config.Sections` for a

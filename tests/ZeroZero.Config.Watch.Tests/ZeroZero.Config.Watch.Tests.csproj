@@ -10,6 +10,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ZeroZero.Config.Watch\ZeroZero.Config.Watch.csproj" />
+    <!-- Test-only: the seam between the watcher and a section of a shared document. The shipped
+         watcher references the plain assembly alone, and this reference does not change that. -->
+    <ProjectReference Include="..\..\src\ZeroZero.Config.Sections\ZeroZero.Config.Sections.csproj" />
   </ItemGroup>
 
   <ItemGroup>
