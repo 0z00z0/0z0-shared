@@ -228,9 +228,9 @@ of their own side by side.
 
 ### A tinted fill over a brand ground is a solid colour, not an opacity
 
-Both brand backgrounds sit near black, so **any brand colour laid over one at reduced opacity lands
-near black too** — measured, every one of them below the 3:1 floor a non-text element needs, and the
-best of them barely above 1.7:1. White over a ground reaches 2.17:1 and is no better. Use the solid
+Both brand backgrounds sit near black, so **any brand colour laid over one at a low opacity lands
+near black too** — measured at 24 %, every one of them below the 3:1 floor a non-text element needs,
+and the best of them barely above 1.7:1. White over a ground reaches 2.17:1 and is no better. Use the solid
 brush the palette already carries for the colour wanted; the dictionary holds no tint key, because a
 tint does not work over these grounds.
 
