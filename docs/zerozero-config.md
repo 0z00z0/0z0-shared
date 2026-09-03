@@ -1,14 +1,16 @@
 # The config foundation assemblies
 
-Settings on disk, in two assemblies. `ZeroZero.Config` is one JSON file holding one type: an atomic
+Settings on disk, in three assemblies. `ZeroZero.Config` is one JSON file holding one type: an atomic
 write, typed snapshot reads, mutation under one lock, change notification and quarantine of a file
 that cannot be parsed. `ZeroZero.Config.Sections` is one document whose top-level keys are sections
 owned by different components, addressed one section at a time, plus the migration from an older
-file to a new one. Both are plain `net10.0`, with no package references and no domain vocabulary —
-which is what makes them **foundation** rather than a component: any component may take them, and
-the MQTT module does, for its settings file and its discovery ledger.
+file to a new one. `ZeroZero.Config.Watch` picks up an edit made outside the application without a
+restart: one file watcher, a quiet window so a single save arrives once, and a classifier that says
+whether what changed was worth reacting to. All three are plain `net10.0`, with no package references
+and no domain vocabulary — which is what makes them **foundation** rather than a component: any
+component may take them, and the MQTT module does, for its settings file and its discovery ledger.
 
-Both are versioned as `ConfigVersion` in `Versions.props` and released under `config-v<x.y.z>` tags,
+All three are versioned as `ConfigVersion` in `Versions.props` and released under `config-v<x.y.z>` tags,
 with notes under `docs/release-notes/config/`; [`releasing.md`](releasing.md) has the procedure. A
 component that references either can only release once the version it references is on the feed, so
 a change here releases first.
@@ -27,7 +29,9 @@ a change here releases first.
 | One type, and this application owns the whole file | `ZeroZero.Config`, and `SettingsFile<T>` |
 | Several unrelated sections, or a section another component owns | `ZeroZero.Config.Sections` |
 
-The sections assembly references the plain one, so taking it brings both.
+The sections assembly references the plain one, so taking it brings both. `ZeroZero.Config.Watch` is
+separate from that choice: it watches either, and is taken only by an application that wants a hand
+edit to take effect without a restart.
 
 ## `ZeroZero.Config` — one file, one type
 
@@ -247,15 +251,92 @@ whose name the old file already uses as a top-level key, or a move whose section
 one the old file carries only in case. A move naming a key the old file does not carry at all is
 ordinary and is simply absent from the result.
 
+## `ZeroZero.Config.Watch` — an edit that takes effect without a restart
+
+A settings file that can be opened in a text editor is only half a promise if the application has to
+be restarted before it notices. `SettingsWatcher<T>` closes that: it watches the file, waits for the
+save to finish, has the store read the file again, and raises `Changed` when what moved was worth
+moving.
+
+```csharp
+var classifier = new SettingsChangeClassifier<AppSettings>(
+    "must the connection be rebuilt?",
+    ["WindowWidth", "WindowHeight", "Window/Left", "Window/Top"]);
+
+var watcher = SettingsWatcher<AppSettings>.For(store, classifier);
+watcher.Changed += (_, e) => Reconnect(e.After);
+```
+
+`For` wires a `SettingsFile<T>`. Anything else — a single section of a sectioned document, or a store
+of the application's own — is wired through `SettingsWatcherOptions<T>`, which asks for the path, a
+way to read what the store holds and a way to tell it to read the file again. The watcher never
+parses the file, so it needs no knowledge of the document's shape.
+
+### The classifier, and which way its default falls
+
+The classifier serialises both states, removes the values a list names, and compares what is left.
+**Everything the list does not name counts.** A property added a year later is weighed from the
+moment it exists, and a value is only ever skipped because somebody wrote its name down. The
+opposite arrangement — a list of what to watch — makes every new property invisible until somebody
+remembers to add it, which is a reload that quietly stops firing and a defect nobody sees.
+
+- A name on its own is a property of the settings shape; `window/left` names one value inside a
+  nested object, and `window` on its own skips the whole object. Matching ignores case.
+- A name whose first segment matches nothing is refused when the classifier is built, because a skip
+  that has quietly stopped applying is invisible until somebody wonders why the application reacts
+  to a window being moved.
+- **The mechanism is general; the question is not.** The classifier carries the question it answers,
+  because "did anything change?" and "must the connection be rebuilt?" have different answers over
+  the same file, and one file may be watched by two classifiers asking different things.
+
+### The application's own writes
+
+A store writes its file constantly, and a watcher that reports those writes turns one save into an
+endless loop. This one reports nothing, and does it without pausing around writes or remembering
+what it last wrote: an examination compares **what the store held before re-reading against what it
+holds after**. A write the store made leaves the file agreeing with what the store already holds, so
+the re-read moves nothing and the two states are equal. An edit made by hand leaves them different.
+Nothing here depends on a notification arriving inside a particular window, so a busy machine cannot
+get it wrong.
+
+### The quiet window
+
+One save does not arrive as one notification. Measured on Windows, an in-place save arrives as two
+change notifications, and the atomic write this library performs arrives as a delete followed by a
+rename **with no change notification on the target at all** — so a watcher taking only the change
+notification sleeps through every write the library makes, and one taking only the delete sleeps
+through the first save an application ever makes, which arrives as a rename alone.
+
+Every notification restarts a quiet window, 500 ms by default, and the file is examined once it
+closes. The window is measured on a `TimeProvider`, so a test crosses it by moving a clock rather
+than by sleeping for it.
+
+### What else it reports
+
+- `Examined` is raised after every examination, `Changed` only after one the classifier called
+  substantive. A consumer can therefore tell a file that was looked at and dismissed from a file that
+  was never looked at.
+- `Failed` carries anything that went wrong on the watcher's own thread — a store that threw, or the
+  operating system dropping notifications faster than they could be taken. Nothing is allowed to
+  escape: the examination runs on a timer thread, where a throw bypasses the application's
+  unhandled-exception handler and takes the process with it. After a dropped-notification failure
+  the watcher rebuilds itself and forces an examination, so a missed edit costs a moment rather than
+  a reload that never happens.
+- `NotificationContext` posts both events to a captured context, for a consumer that touches a user
+  interface.
+
 ## Take the reference
 
 Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Config.Sections` for a
 sectioned document, or `ZeroZero.Config` alone for a file holding one type; there is nothing beneath
-them. An application taking a component that already references the plain assembly — the MQTT module
-does — has it transitively and adds nothing.
+them. An application that also wants hand edits picked up adds `ZeroZero.Config.Watch`, which sits
+beside them and references the plain assembly. An application taking a component that already
+references the plain assembly — the MQTT module does — has it transitively and adds nothing.
 
-The tests are in `tests/ZeroZero.Config.Tests` and `tests/ZeroZero.Config.Sections.Tests`, plain
-`net10.0`, and run on any machine with the SDK: no desktop, no broker, no network.
+The tests are in `tests/ZeroZero.Config.Tests`, `tests/ZeroZero.Config.Sections.Tests` and
+`tests/ZeroZero.Config.Watch.Tests`, plain `net10.0`, and run on any machine with the SDK: no
+desktop, no broker, no network. The watcher's tests change real files on a real disk and read what
+the watcher reports; only the clock is substituted.
 
 The migration is proven against two fixtures, and the difference between them is the point:
 

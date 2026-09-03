@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Config.Watch</RootNamespace>
+    <Version>$(ConfigVersion)</Version>
+
+    <AssemblyTitle>ZeroZero.Config.Watch</AssemblyTitle>
+    <Product>ZeroZero.Config.Watch</Product>
+    <Description>Picks up a hand edit to a settings file without a restart: one file watcher, a trailing debounce so a single save arrives once, and a classifier that decides whether the change was substantive or only cosmetic.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The debounce is mechanism, not surface: a general debouncer published from a settings
+         package would be misfiled the way the coalescing gate was misfiled in the MQTT package.
+         The tests drive it directly so its collapsing can be shown to fail. -->
+    <InternalsVisibleTo Include="ZeroZero.Config.Watch.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroZero.Config\ZeroZero.Config.csproj" />
+  </ItemGroup>
+
+</Project>

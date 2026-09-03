@@ -53,6 +53,11 @@
     <ZeroZeroFamilyPin Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <ZeroZeroFamilyPin Include="xunit" Version="2.9.3" />
     <ZeroZeroFamilyPin Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <!-- Microsoft's controllable TimeProvider, for the one thing a test cannot honestly wait for: a
+         debounce window. A test that sleeps the window measures how loaded the machine is, so it
+         passes here and fails on a runner with fewer cores. Test-only, and referenced only by the
+         suites that move a clock. -->
+    <ZeroZeroFamilyPin Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.9.0" />
   </ItemGroup>
 
   <ItemGroup>
