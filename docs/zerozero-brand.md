@@ -243,7 +243,8 @@ and a sample line in the brand face, every one resolved through `ThemeResource` 
 resolves them; `--probe <path>` beside it writes the colour and face that reached each element.
 `--rows`, `--titlebar` and `--prompt` open the controls foundation assembly's surfaces
 ([`zerozero-controls.md`](zerozero-controls.md)), `--settings` the settings window shell
-([`zerozero-settingsshell.md`](zerozero-settingsshell.md)), and `--native` the Win32 layer's
+([`zerozero-settingsshell.md`](zerozero-settingsshell.md)), `--tray` the tray icon with its
+tooltip and menu ([`zerozero-tray.md`](zerozero-tray.md)), and `--native` the Win32 layer's
 dialogs. One component per run, so unrelated windows never land on top of each other.
 
 Two scripts under `scripts/` drive the About scenarios:
