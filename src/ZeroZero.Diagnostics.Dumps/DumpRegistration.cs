@@ -8,8 +8,9 @@ namespace ZeroZero.Diagnostics.Dumps;
 /// empty, because the root's mere existence turns dump collection on for every process under it.</summary>
 /// <remarks>The hive is the application's. Windows Error Reporting documents the local machine hive
 /// alone, and a registration under the current user's hive produces no dump (measured), so an
-/// application that is not elevated has no dump to arm; it can still disarm and sweep what an
-/// elevated run left. Nothing here reaches for a settings store — the armed flag arrives as a
+/// application that is not elevated has no dump to arm. Disarming and sweeping write that hive too,
+/// so an unelevated process cannot do those either — removing what an elevated run left is itself a
+/// machine-hive write. Nothing here reaches for a settings store — the armed flag arrives as a
 /// parameter, so a whole-file settings save cannot clobber it. A registry refusal is thrown, not
 /// hidden: an unelevated process told to write the machine hive should hear about it.</remarks>
 public sealed class DumpRegistration
