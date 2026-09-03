@@ -64,6 +64,15 @@ The document is one JSON object. Its first key is `version`, a whole number; eve
 an object, and each of those is a **section** belonging to whichever component asked for it. A store
 addresses one section. It never addresses the document.
 
+**One document is not all of an application's configuration.** A component may own a file of its own
+instead of a section, and a component with a section here may still keep the bulk of its
+configuration elsewhere — the MQTT module keeps its broker settings and its discovery ledger in two
+files of its own through `SettingsFile<T>`, and an application's settings document may hold an `mqtt`
+section that is nothing but a last-good endpoint memory. Nothing here assumes otherwise:
+`SectionedSettingsFile` is one file, several may exist side by side, and `SettingsSection<T>` states
+that what sits behind it is not its caller's business. **A migration moves keys within one document**;
+a key belonging in another component's own file is carried where it stands, not relocated.
+
 - **`SectionedSettingsFile`** — the document. `Section<T>(name)` hands out a store over one named
   section; several may address one document. `Reload()` re-reads it, `Keys` lists what it carries
   whether or not this build has a type for any of it, `DocumentVersion` and `IsFromNewerVersion`
@@ -95,15 +104,45 @@ construction:
   document does not yet carry is inserted.
 - **Hand edits survive.** Comments, trailing commas, the file's own indent, its line ending and its
   byte-order mark are read off the file and kept. An unknown member inside a section this build does
-  own survives too.
+  own survives too, and so does a comment that is the only thing inside a section.
 - **A member is matched the way the reader matches it.** With a case-insensitive serialiser, a write
   finds the file's own spelling and replaces its value rather than adding the declared spelling
-  beside it — two keys differing only in case leave the last one governing the read and the first one
-  dead.
+  beside it.
 
 What a write does change: the values of the members the section's type declares, whenever they differ
 from what the file says. A number the type holds as `0.75` is written as `0.75` even where the file
 said `0.750`. Nothing outside the section moves.
+
+### Comments: tolerated on read, never written
+
+**A comment in the file costs nothing to read, and the store never writes one.** The asymmetry is
+deliberate and it is a property of the store rather than advice. A reader that leaves comment
+handling at disallow — which is what a consuming application uses — does not degrade on a comment, it
+fails the whole file, and the person sees a settings file that has stopped working. So no path
+through a write composes one: the bytes are the serialiser's output plus punctuation and indent, and
+a value or a key that happens to spell `//` is written quoted like any other text.
+
+A comment the file already carried and the write did not touch stays where it is. That is
+preservation — its bytes were copied across, not authored — and it is why a document that arrives
+with comments still has them afterwards. A consumer whose own reader disallows comments should treat
+such a document as one to repair, not one the store has damaged.
+
+### Two keys that differ only in case
+
+A reader takes the last of two keys of the same name, so a build that writes its own spelling beside
+the file's leaves the person's value in the file with nothing reading it. **Every write that would
+create such a pair is refused**, with `SettingsKeyCaseConflictException` naming both spellings and the
+file left exactly as it was — whether the pair would be two sections, two members inside one section,
+or two version keys. `SaveFailed` announces it like any other refused write.
+
+On the read side, `SettingsSection<T>.ConflictingKey` names the spelling the file holds when it
+differs from the section's own name only in case. Without it a host would show an empty page and have
+nothing to say about why.
+
+**The limit is worth stating: this catches a difference of case, not a difference of word.**
+`GraphLineColouring` and `GraphLineColoring` are two spellings of the same idea and nothing can tell
+that one was meant for the other, so a type declaring the second reads nothing from a file holding the
+first and a write adds it alongside. Match the file's own spelling, letter for letter.
 
 ### The version key
 
@@ -160,6 +199,15 @@ never deleted, not even on success. Retiring it is the application's decision, t
 its own load from the new file succeed — so a migration that goes wrong costs nothing, because the
 file it came from is still exactly where it was.
 
+**What it is for, stated narrowly.** Grouping a flat file into sections is for an installation older
+than the application's own move to sections, and for an application whose file is still flat. It is
+not what a current installation of either application necessarily needs: one of them was measured,
+and its installed file is already section-addressed and version-stamped, so the flat shape the
+grouping exists for is one that installation has already left behind. For a document that is already
+sectioned the migration does something narrower and still worth having — it carries every key into a
+new file and stamps the version this build asks for, which is the one thing a section store
+deliberately refuses to do, and it does it without touching the file it read. Pass no moves for that.
+
 ```csharp
 var result = SettingsMigration.Run(new SettingsMigrationRequest(oldPath, newPath)
 {
@@ -177,21 +225,27 @@ var result = SettingsMigration.Run(new SettingsMigrationRequest(oldPath, newPath
   section this build has no type for survives the move.
 - **A migration groups keys; it never renames them.** The member name inside the new section is the
   old key's own name, carried as the file's own bytes, so a key holding an escape sequence is written
-  back exactly as it was. The section type has to bind to that name — casing aside, which the
-  serialiser handles.
+  back exactly as it was. The section type has to bind to that name — casing aside, and only where the
+  serialiser is the case-insensitive one.
 - Values are carried as the bytes the old file held, never re-serialised through any type.
-- Comments are carried with the key they sit above; a comment written inside a value travels inside
-  that value.
+- **No comment is written.** One outside a value is named in `CommentsNotCarried` and left behind in
+  the old file, which is never touched; one inside a value travels with that value's bytes and is
+  named in `CommentsInsideValues`, so an application whose reader disallows comments knows before it
+  reads. The reason is the store's own rule: a comment does not degrade such a reader, it fails the
+  file.
 - The old file's byte-order mark, line ending and indent are the new file's.
 - **Before it reports success the new file is read back off the disk** and checked against the old
-  one, walked again from scratch: every key present, every value the same value, every comment
-  arrived, the version as requested. If any of that fails the new file is removed and the outcome is
-  `NotProven` with `Missing` naming what did not arrive.
+  one, walked again from scratch: every key present, every value the same value, the version as
+  requested, and exactly the comments a carried value brought with it and no others. If any of that
+  fails the new file is removed and the outcome is `NotProven` with `Missing` naming what did not
+  arrive.
 
 `SettingsMigrationOutcome` carries the rest: `TargetAlreadyExists` (nothing read, nothing written),
 `SourceMissing`, `SourceUnreadable`, `SourceNotADocument`, `WriteFailed`, and `RequestRefused` for a
-request that contradicts itself — the same path twice, one key claimed by two sections, or a section
-whose name the old file already uses as a top-level key.
+request that contradicts itself — the same path twice, one key claimed by two sections, a section
+whose name the old file already uses as a top-level key, or a move whose section or key differs from
+one the old file carries only in case. A move naming a key the old file does not carry at all is
+ordinary and is simply absent from the result.
 
 ## Take the reference
 
@@ -201,6 +255,18 @@ them. An application taking a component that already references the plain assemb
 does — has it transitively and adds nothing.
 
 The tests are in `tests/ZeroZero.Config.Tests` and `tests/ZeroZero.Config.Sections.Tests`, plain
-`net10.0`, and run on any machine with the SDK: no desktop, no broker, no network. The migration's
-own proof runs against `tests/ZeroZero.Config.Sections.Tests/Fixtures/awkward-settings.json`, a
-settings file carrying every awkward property an installed one has.
+`net10.0`, and run on any machine with the SDK: no desktop, no broker, no network.
+
+The migration is proven against two fixtures, and the difference between them is the point:
+
+- `Fixtures/installed-settings.json` is the shape an installed file has — already sectioned and
+  version-stamped, lower-case section keys with underscores, upper camel case members, no byte-order
+  mark, no comments, no trailing commas. It carries the three member spellings that defeat a binder,
+  and the proof is that the migration leaves every one of them alone. The shape was measured by a
+  consuming application's own session and reported; no installed file is read here, and the member
+  names other than those three are the fixture's own.
+- `Fixtures/awkward-settings.json` is a hand-edited worst case, not an installed shape: a byte-order
+  mark, comments, indentation that changes halfway down, a duplicated key, a section from a build
+  that no longer exists, a trailing comma. **A real file does not look like this**, and for a reader
+  that disallows comments a file that does is one it cannot open at all. It is kept because reading
+  such a file without losing anything is what the design claims and has to be shown.
