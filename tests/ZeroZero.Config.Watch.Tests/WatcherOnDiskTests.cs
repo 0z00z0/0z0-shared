@@ -259,7 +259,8 @@ public sealed class WatcherOnDiskTests : WatcherTestBase
     [Fact]
     public void A_file_created_after_the_watcher_armed_is_reported()
     {
-        // No file at all when the store opens, so the folder does not exist either.
+        // The folder is there and the file is not, which is what a first run looks like once the
+        // application has created its own data directory.
         var store = Store();
         using var harness = Watch(store);
 

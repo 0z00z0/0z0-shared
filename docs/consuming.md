@@ -10,6 +10,12 @@ An application takes only the components it uses, and takes each through **one r
 component's entry point** — the project named in the component's guide. The entry point carries the
 component's other projects transitively, so nothing else of this repository is referenced directly.
 
+**One assembly is an exception, and it is an exception by design.** `ZeroZero.Config.Watch` is not
+carried by the config component's entry point, because picking up an edit made outside the
+application is a choice rather than a consequence of storing settings. A consumer that wants it adds
+it as a second direct reference of the same component; a consumer that does not never sees it. It
+releases under the same `config` tag as the rest, so the reference costs no extra version to track.
+
 **Two routes, and both are supported.** A `PackageReference` on the studio's GitHub Packages feed, or
 a `ProjectReference` on a sibling checkout of this repository. Neither replaces the other.
 

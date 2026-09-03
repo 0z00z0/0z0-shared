@@ -12,8 +12,8 @@ component may take them, and the MQTT module does, for its settings file and its
 
 All three are versioned as `ConfigVersion` in `Versions.props` and released under `config-v<x.y.z>` tags,
 with notes under `docs/release-notes/config/`; [`releasing.md`](releasing.md) has the procedure. A
-component that references either can only release once the version it references is on the feed, so
-a change here releases first.
+component that references any of the three can only release once the version it references is on the
+feed, so a change here releases first.
 
 ## Requirements
 
@@ -269,8 +269,9 @@ watcher.Changed += (_, e) => Reconnect(e.After);
 
 `For` wires a `SettingsFile<T>`. Anything else — a single section of a sectioned document, or a store
 of the application's own — is wired through `SettingsWatcherOptions<T>`, which asks for the path, a
-way to read what the store holds and a way to tell it to read the file again. The watcher never
-parses the file, so it needs no knowledge of the document's shape.
+way to read what the store holds, a way to tell it to read the file again, and the classifier. A
+fifth, `Obstruction`, is optional and is [below](#when-the-store-can-read-the-file-and-still-see-nothing-in-it).
+The watcher never parses the file, so it needs no knowledge of the document's shape.
 
 ### The classifier, and which way its default falls
 
@@ -355,8 +356,11 @@ references the plain assembly — the MQTT module does — has it transitively a
 
 The tests are in `tests/ZeroZero.Config.Tests`, `tests/ZeroZero.Config.Sections.Tests` and
 `tests/ZeroZero.Config.Watch.Tests`, plain `net10.0`, and run on any machine with the SDK: no
-desktop, no broker, no network. The watcher's tests change real files on a real disk and read what
-the watcher reports; only the clock is substituted.
+desktop, no broker, no network — with one exception: the watcher's tests change real files on a real
+disk and read what the watcher reports, only the clock being substituted, and two of them assert how
+many notifications one save delivers and in what shape. That is a property of the Windows
+directory-change API rather than of the assembly, so `tests/ZeroZero.Config.Watch.Tests` runs on
+Windows. The assembly itself is plain `net10.0` and carries nothing Windows-specific.
 
 The migration is proven against two fixtures, and the difference between them is the point:
 

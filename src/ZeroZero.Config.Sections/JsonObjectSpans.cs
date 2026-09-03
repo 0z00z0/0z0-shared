@@ -60,8 +60,12 @@ internal sealed class JsonObjectSpan
 /// type in this build could accept is still walked past, and its bytes are still known. Reading into
 /// the object and skipping only nested containers is load-bearing — <c>Skip</c> called while
 /// positioned on the object itself consumes the whole of it and leaves nothing to walk (measured).</para>
-/// <para>Comments and whitespace lie between members, never inside a value's span, so replacing a
-/// value's bytes cannot disturb a hand-written comment.</para>
+/// <para>A member's span runs from the first byte of its value to the last, so a comment beside a
+/// member lies outside every span and a comment written <i>inside</i> a container value lies within
+/// that value's own. Replacing a scalar's bytes therefore cannot disturb a comment; replacing a
+/// whole object would, which is why a section that holds an object has its members rewritten one at
+/// a time and a new member inserted rather than the braces refilled. The migration classifies a
+/// comment the same way, by whether it falls inside a carried value's span.</para>
 /// </remarks>
 internal static class JsonObjectSpans
 {

@@ -6,9 +6,9 @@ namespace ZeroZero.ReleaseVerification.Tests;
 /// <summary>The packaged readme against the projects that are packed.</summary>
 /// <remarks>
 /// <para><c>PACKAGE.md</c> is what a consumer reads on the feed, and <c>Directory.Build.props</c>
-/// packs it into every package — so a package added without a row in it ships nineteen times over
-/// describing a family it is not in. Three branches added two packages between them and none of
-/// them touched the file, which is why this is a test rather than a habit.</para>
+/// packs it into every package — so a package added without a row in it ships inside every one of
+/// them describing a family it is not in. Three branches added two packages between them and none
+/// of them touched the file, which is why this is a test rather than a habit.</para>
 /// <para>Both directions are checked. A packed project with no row is the case that happened; a row
 /// naming a package that no longer exists is the one that happens next, when a project is renamed
 /// and the table is left describing the old name.</para>

@@ -186,7 +186,7 @@ store is constructed — held open by another process, or access denied — read
 defaults in memory, and every `Update` and `File.Save()` is refused until `File.Reload()` has read
 it once: the result carries an `InvalidOperationException` and `File.SaveFailed` is raised. The
 rule and its edges are the store's own, stated in
-[`zerozero-config.md`](zerozero-config.md#what-it-contains). The same holds for
+[`zerozero-config.md`](zerozero-config.md#the-write-latch-and-what-is-preserved). The same holds for
 `DiscoveryLedgerFile`.
 
 #### Carrying an existing broker block across
