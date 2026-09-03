@@ -151,7 +151,7 @@ to everything the application did not write is where they part.
 | A sibling section, or one whose component is gone | Untouched | — |
 | A hand-written comment, the key order, the indent, the byte-order mark | Kept | Discarded at the next write |
 | A property the type does not declare | Kept | Discarded at the next write |
-| A file that cannot be parsed | Copied aside and left where it is | Copied aside and **overwritten with defaults**, at construction and at every reload that finds it broken |
+| A file that cannot be parsed | Copied aside and left where it is — until the next write of any section, which lays down a whole new document and takes the rest of the broken file with it | Copied aside and **overwritten with defaults**, at construction and at every reload that finds it broken |
 | An enum member no type answers to | Costs that section | Costs the whole file |
 
 Neither store's tolerance of comments is a property of JSON, so a comment in a document another
