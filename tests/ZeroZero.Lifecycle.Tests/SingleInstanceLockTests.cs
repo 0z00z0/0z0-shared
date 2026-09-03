@@ -74,22 +74,18 @@ public class SingleInstanceLockTests
     }
 
     [Fact]
-    public async Task TheProcessHoldsOneLockForItsLifetime()
+    public void TheProcessHoldsOneLockForItsLifetime()
     {
         string name = DisposableName();
 
         Assert.True(SingleInstanceLock.TryAcquire(name, TimeSpan.Zero));
         Assert.True(SingleInstanceLock.IsHeld);
 
-        // Another instance, on another thread, finds the name taken with no wait at all.
-        bool free = await Task.Run(() =>
-        {
-            using var probe = new Mutex(initiallyOwned: false, name);
-            bool got = probe.WaitOne(0);
-            if (got) probe.ReleaseMutex();
-            return got;
-        });
-        Assert.False(free);
+        // Another instance, played by a thread of its own, finds the name taken with no wait at all.
+        // Not a pool thread: ownership belongs to the thread that took the lock, and an awaited
+        // Task.Run can land on that very thread once the test yields it, where a second wait succeeds.
+        using (var other = new MutexHolder(name))
+            Assert.False(other.Acquired);
 
         // The same name again is the lock already held; another name is a second product.
         Assert.True(SingleInstanceLock.TryAcquire(name, TimeSpan.Zero));

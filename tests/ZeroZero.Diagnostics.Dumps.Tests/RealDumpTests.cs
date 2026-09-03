@@ -38,7 +38,7 @@ public class RealDumpTests : IDisposable
             var deadline = DateTime.UtcNow + DumpWait;
             while (!File.Exists(expected) && DateTime.UtcNow < deadline) Thread.Sleep(250);
 
-            Assert.True(File.Exists(expected), $"no dump at {expected} within {DumpWait}; files present: {string.Join(", ", Directory.GetFiles(_scratch.Directory).Select(Path.GetFileName))}");
+            Assert.True(File.Exists(expected), $"no dump at {expected} within {DumpWait}; files present: {string.Join(", ", Directory.GetFiles(_scratch.Directory).Select(Path.GetFileName))}; victim said: {result.StandardError.Trim()}");
             Assert.True(new FileInfo(expected).Length > 0);
         }
         finally

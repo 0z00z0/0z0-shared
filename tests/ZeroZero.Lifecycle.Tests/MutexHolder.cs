@@ -25,7 +25,9 @@ internal sealed class MutexHolder : IDisposable
             _letGo.Wait();
             if (!_abandon)
             {
-                _mutex.ReleaseMutex();
+                // Nothing to release where the wait failed; releasing anyway throws on this thread
+                // and takes the process down with it.
+                if (Acquired) _mutex.ReleaseMutex();
                 _mutex.Dispose();
             }
         })
