@@ -63,6 +63,16 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// part of its signature filled (<c>--links</c> renders the buttons as command links), then a
 /// message box naming the button pressed, and exits.
 /// </para>
+/// <para>
+/// <c>--tray</c> opens no window either: it puts the tray host's icon in the notification area
+/// from the rig's own drawing, tooltip and menu, and stays until Exit is chosen from the menu.
+/// <c>--file</c> hands the host a file the rig wrote once instead of frames per render;
+/// <c>--menu</c> opens the menu by the tray after two seconds, so a capture needs no click;
+/// <c>--promote</c> puts the icon in the taskbar proper rather than the overflow, through the
+/// shell's own per-icon setting, undone on exit; <c>--probe &lt;path&gt;</c> writes what the
+/// host created to that path, logs every click beside it, and exits once a <c>.stop</c> file
+/// appears beside the probe.
+/// </para>
 /// </summary>
 public partial class App : Application
 {
@@ -94,6 +104,15 @@ public partial class App : Application
         // Read from the process command line, because an unpackaged WinUI launch carries no
         // arguments on the activation event.
         var commandLine = Environment.GetCommandLineArgs();
+        if (commandLine.Any(a => a.Equals("--tray", StringComparison.Ordinal)))
+        {
+            ShowTray(ValueAfter(commandLine, "--probe"),
+                     commandLine.Any(a => a.Equals("--file", StringComparison.Ordinal)),
+                     commandLine.Any(a => a.Equals("--menu", StringComparison.Ordinal)),
+                     commandLine.Any(a => a.Equals("--promote", StringComparison.Ordinal)));
+            return;
+        }
+
         if (commandLine.Any(a => a.Equals("--native", StringComparison.Ordinal)))
         {
             ShowNativeDialogs(commandLine.Any(a => a.Equals("--links", StringComparison.Ordinal)));
@@ -196,6 +215,19 @@ public partial class App : Application
         };
         _hostedControlWindow = new HostedControlWindow(hostedInfo);
         _hostedControlWindow.Activate();
+    }
+
+    private TrayScenario? _tray;
+
+    /// <summary>
+    /// The tray host on screen: the icon in the notification area from the rig's own drawing, the
+    /// tooltip and the menu, with no window at all. With a probe path the rig records what the host
+    /// created and stays until a stop file appears; otherwise it stays until Exit is chosen.
+    /// </summary>
+    private void ShowTray(string? probePath, bool ownFile, bool openMenu, bool promote)
+    {
+        _tray = new TrayScenario(probePath, ownFile, openMenu, promote, Exit);
+        _tray.Start();
     }
 
     /// <summary>

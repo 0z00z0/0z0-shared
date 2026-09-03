@@ -276,9 +276,10 @@ not yet taken the kit:
 | `Microsoft.WindowsAppSDK` | `2.2.0` | A **floor**. |
 | `Microsoft.Windows.SDK.BuildTools` | `10.0.28000.2270` | A **floor**. |
 | `CommunityToolkit.WinUI.Controls.SettingsControls` | `8.2.251219` | A **ceiling**. |
+| `H.NotifyIcon.WinUI` | `2.4.1` | A **ceiling**, for the same reason: the tray host's notify-icon library, which a consuming application references directly as well. No type of it reaches a public signature. |
 | `MQTTnet` | `5.2.0.1603` | Transitive only, and no type of it reaches a public signature. |
 | `TaskScheduler` | `2.12.2` | Transitive only, through `ZeroZero.Startup`; no type of it reaches a public signature. |
-| `Microsoft.Win32.SystemEvents` | `10.0.11` | Transitive only, through `ZeroZero.Lifecycle`; no type of it reaches a public signature. The runtime's own assembly, pinned at the .NET 10 servicing release the family builds on and raised with it. |
+| `Microsoft.Win32.SystemEvents` | `10.0.11` | Transitive only, through `ZeroZero.Lifecycle` and `ZeroZero.Tray.WinUI`; no type of it reaches a public signature. The runtime's own assembly, pinned at the .NET 10 servicing release the family builds on and raised with it. |
 | `Microsoft.NET.Test.Sdk` | `18.8.1` | The test trio, for a consumer's own test projects. |
 | `xunit` | `2.9.3` | |
 | `xunit.runner.visualstudio` | `3.1.5` | |
@@ -292,6 +293,8 @@ raising the pin in the kit.
 **The Community Toolkit pin is a ceiling and behaves the opposite way.** A consuming app holding a
 direct reference *below* this version fails to restore with **NU1605**, an error rather than a
 warning, because a direct reference below a transitive one is a downgrade. Raise both or neither.
+The notify-icon library's pin is a ceiling for the same reason: an application that adopts the
+tray host and keeps a direct reference of its own resolves the kit's version or fails to restore.
 
 **MQTTnet reaches a consumer transitively, through `ZeroZero.Mqtt`, and nothing requires the
 consumer to reference it.** The module's own `MqttQos`, `MqttMessage`, `MqttConnackCode` and

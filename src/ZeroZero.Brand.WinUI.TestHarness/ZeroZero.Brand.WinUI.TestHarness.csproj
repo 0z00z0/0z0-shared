@@ -35,6 +35,9 @@
     <!-- Direct, not only through the About window: the rig sizes its own windows through the
          monitor metrics and shows the native dialogs on screen. -->
     <ProjectReference Include="..\ZeroZero.Win32\ZeroZero.Win32.csproj" />
+    <!-- The tray host, driven from a rendered icon, a tooltip and a menu of the rig's own; the
+         process-state test starts the rig in this mode and measures the process from outside. -->
+    <ProjectReference Include="..\ZeroZero.Tray.WinUI\ZeroZero.Tray.WinUI.csproj" />
   </ItemGroup>
 
 </Project>

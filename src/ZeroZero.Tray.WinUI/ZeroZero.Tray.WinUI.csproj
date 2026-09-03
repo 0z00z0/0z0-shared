@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>ZeroZero.Tray.WinUI</RootNamespace>
+    <!-- The WinUI half of the tray component: same key, same version, same tag as ZeroZero.Tray. -->
+    <Version>$(TrayVersion)</Version>
+
+    <!-- WinUI 3 / Windows App SDK, unpackaged (no MSIX) — a class library consumed by unpackaged
+         apps, so it must not pull in packaging tooling itself. -->
+    <UseWinUI>true</UseWinUI>
+    <WinUISDKReferences>false</WinUISDKReferences>
+    <!-- The double-click time is one user32 import, source-generated. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <AssemblyTitle>ZeroZero.Tray.WinUI</AssemblyTitle>
+    <Product>ZeroZero.Tray.WinUI</Product>
+    <Description>The tray icon host for a WinUI 3 application: the icon's lifecycle with efficiency mode refused, the theme, display and shell-restart listeners, the rendered-file cache, tooltip discipline, click classification and the menu refresh protocol. Drawing and notifications stay with the application.</Description>
+  </PropertyGroup>
+
+  <!--
+    The notify-icon library is the family's first shared third-party UI package; its version is a
+    ceiling for every consumer and is pinned in the build kit's ZeroZero.Packages.props, nowhere
+    else. No type of it reaches a public signature here: the application hands over PNG frames or a
+    file path, tooltip lines, menu items and actions, and never names the library. SystemEvents
+    carries the theme and display changes, as it carries the session end in the lifecycle component.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
+    <PackageReference Include="H.NotifyIcon.WinUI" />
+    <PackageReference Include="Microsoft.Win32.SystemEvents" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The plain half: the icon file the rendered frames are written into, the slot size at the
+         taskbar's scale and the taskbar's theme. Nothing else of the library is taken. -->
+    <ProjectReference Include="..\ZeroZero.Tray\ZeroZero.Tray.csproj" />
+  </ItemGroup>
+
+</Project>
