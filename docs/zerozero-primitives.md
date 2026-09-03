@@ -6,8 +6,9 @@ About box shows, the coalescing gate, and the source-revision stamp as build pro
 Plain `net10.0`, no package references, no project references, and no domain vocabulary — which is
 what makes it **foundation** rather than a component: any component may take it. The MQTT module
 does, for its log sink and for the gate under every retained channel; the diagnostics component
-does, for the sink and for the version reader beneath its startup line; and the lifecycle and
-startup components do, for the sink.
+does, for the sink and for the version reader beneath its startup line; the update component does,
+for the sink and for the version reader behind the running version; and the lifecycle and startup
+components do, for the sink.
 
 The assembly is versioned as `PrimitivesVersion` in `Versions.props` and released under
 `primitives-v<x.y.z>` tags, with notes under `docs/release-notes/primitives/`;

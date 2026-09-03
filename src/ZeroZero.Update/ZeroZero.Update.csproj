@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0, as the other headless assemblies: the flow has no window of its own, and a
+         console tool can check, download and verify with it. The assembly declares itself
+         Windows-only through SupportedOSPlatform instead: the signature check is WinVerifyTrust. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ZeroZero.Update</RootNamespace>
+    <Version>$(UpdateVersion)</Version>
+    <!-- The LibraryImport source generator emits unsafe marshalling code. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <AssemblyTitle>ZeroZero.Update</AssemblyTitle>
+    <Product>ZeroZero.Update</Product>
+    <Description>The update flow without its dialogs: release discovery against the GitHub releases API, version comparison, download into a fresh private directory, verification of the downloaded installer — its Authenticode signature and publisher against the expected signer, and its SHA-256 against the hash the release publishes — the launch-or-refuse policy, stale-download sweeping and the check scheduler. The entry point of the update component is ZeroZero.Update.Win32.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroZero.Primitives\ZeroZero.Primitives.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ZeroZero.Update.Tests" />
+  </ItemGroup>
+
+</Project>

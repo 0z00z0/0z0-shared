@@ -15,6 +15,8 @@
     <Project Path="src/ZeroZero.Primitives/ZeroZero.Primitives.csproj" />
     <Project Path="src/ZeroZero.Startup/ZeroZero.Startup.csproj" />
     <Project Path="src/ZeroZero.Tray/ZeroZero.Tray.csproj" />
+    <Project Path="src/ZeroZero.Update/ZeroZero.Update.csproj" />
+    <Project Path="src/ZeroZero.Update.Win32/ZeroZero.Update.Win32.csproj" />
     <Project Path="src/ZeroZero.Win32/ZeroZero.Win32.csproj" />
   </Folder>
   <Folder Name="/tests/">
@@ -30,6 +32,8 @@
     <Project Path="tests/ZeroZero.ReleaseVerification.Tests/ZeroZero.ReleaseVerification.Tests.csproj" />
     <Project Path="tests/ZeroZero.Startup.Tests/ZeroZero.Startup.Tests.csproj" />
     <Project Path="tests/ZeroZero.Tray.Tests/ZeroZero.Tray.Tests.csproj" />
+    <Project Path="tests/ZeroZero.Update.Tests/ZeroZero.Update.Tests.csproj" />
+    <Project Path="tests/ZeroZero.Update.Win32.Tests/ZeroZero.Update.Win32.Tests.csproj" />
     <Project Path="tests/ZeroZero.Win32.Tests/ZeroZero.Win32.Tests.csproj" />
   </Folder>
 </Solution>
