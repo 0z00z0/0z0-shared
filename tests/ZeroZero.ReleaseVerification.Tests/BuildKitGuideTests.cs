@@ -10,9 +10,9 @@ namespace ZeroZero.ReleaseVerification.Tests;
 /// what each one means. A code the kit raises and the table omits leaves a build failing with an
 /// error nothing explains; a row for a code the kit no longer raises is worse, because it is
 /// specific and wrong.</para>
-/// <para>Three of the guards fire only under the WinUI application block, and the table said so of
-/// none of them. A library project cannot meet those codes at all, so a row that reads
-/// unconditionally sends its reader looking in the wrong place.</para>
+/// <para>Four of the guards fire only under the WinUI application block, and the table said so of
+/// one. A library project cannot meet those codes at all, so a row that reads unconditionally
+/// sends its reader looking in the wrong place.</para>
 /// </remarks>
 public sealed class BuildKitGuideTests
 {
