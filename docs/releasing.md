@@ -68,6 +68,12 @@ The failure leaves a tag on the remote that no run has ever seen, and re-pushing
 updates no ref and so triggers nothing. Recovering means deleting the remote tag and pushing it
 again — the commit is unchanged, so nothing is rewritten.
 
+**That recovery is for a tag no run ever saw, and for nothing else.** A run that started and went
+red is re-run from the failed job; the tag is correct and deleting it buys nothing. Read the failing
+step before choosing: a red unit-test step naming a known flaky test is the run, not the release,
+and the whole suite runs on every tag, so a flake anywhere in the repository reddens a release of a
+component it has no connection to.
+
 The workflow then runs, in this order, and stops at the first failure:
 
 | Step | Refuses when |
