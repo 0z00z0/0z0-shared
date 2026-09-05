@@ -14,7 +14,7 @@ and how a pin works, and everything below assumes it.
 |---|---|---|---|
 | Brand | The studio mark, the About box, the typeface, and the palette as brushes XAML can merge | `ZeroZero.Brand.WinUI`; a console tool takes `ZeroZero.Brand.Core` alone | [brand](zerozero-brand.md) |
 | Diagnostics | One place every unhandled exception lands, a crash line that never throws, the version line at startup, and crash dumps | `ZeroZero.Diagnostics`; the dump registration alone is `ZeroZero.Diagnostics.Dumps` | [diagnostics](zerozero-diagnostics.md) |
-| Lifecycle | One instance at a time, relaunch under a limit after a clean exit nobody asked for, and the per-user data folder | `ZeroZero.Lifecycle` | [lifecycle](zerozero-lifecycle.md) |
+| Lifecycle | One instance at a time, relaunch under a limit after a clean exit nobody asked for — never after a crash — and the per-user data folder | `ZeroZero.Lifecycle` | [lifecycle](zerozero-lifecycle.md) |
 | MQTT | The application on a broker and into Home Assistant as one device with entities, and the settings panel | `ZeroZero.Mqtt.WinUI`; headless, `ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` | [mqtt](zerozero-mqtt.md) |
 | Settings shell | The settings window, with every page left to the application | `ZeroZero.SettingsShell.WinUI` | [settings shell](zerozero-settingsshell.md) |
 | Startup | The run-at-logon task, and the repair of one an older build left | `ZeroZero.Startup` | [startup](zerozero-startup.md) |
@@ -226,6 +226,20 @@ application creates with the library's default arms it for everything**, the sha
 
 The host needs no window, but it does need the XAML runtime and a dispatcher on the thread that
 starts it.
+
+### The lifecycle replaces two pieces of an application, and not the third
+
+Taking it **retires the application's own single-instance lock and its own relaunch limiter**: both
+are the same job done twice, and running two limiters means two budgets and twice the relaunches.
+
+It **does not retire the crash watchdog**, and reading the table above as though it did is the
+mistake to avoid. The component hooks process exit, and **the runtime raises no exit event for an
+unhandled exception**, so a crash never reaches it. What it covers is the clean exit nobody asked
+for — a message loop that ended, an exit path taken by mistake. Bringing back a process that died is
+the watchdog task's, and the crash itself belongs to the diagnostics component.
+
+So after adoption an application keeps three things it already had: the watchdog task, whatever
+registers it, and its own judgement of what counts as a deliberate exit.
 
 ### The single-instance lock belongs to the thread that takes it
 
