@@ -35,13 +35,16 @@ checkout, never a mixture: a mixture resolves a foundation assembly twice, once 
 as the sibling's project, and two assemblies of one identity from two sources is a conflict the build
 may only warn about.
 
-**The two adopters do not start from the same place, and this document is not a version bump for
-either of them.** One consumes released packages. The other references the shared code by source
-through a sibling working directory and declares no package reference and no package configuration
-anywhere in its repository, so taking a component there is a project reference and an import, with no
-version to move and no pin to write. Putting that repository onto packages is a change of mechanism
-rather than a step inside adopting a component: it is its own piece of work, planned on its own, and
-nothing below asks for it.
+**Neither adopter consumes packages, and this document is not a version bump for either of them.**
+Both reference the shared code by source through a sibling working directory, so taking a component
+is a project reference and an import rather than a version to move. One of the two pins that sibling
+checkout to a revision its workflows detach onto, and adopting there also bumps the pin; the other
+has never pinned and declares no package reference and no package configuration anywhere in its
+repository, so its automated builds take this default branch as it stands. Putting either repository
+onto packages is a change of mechanism rather than a step inside adopting a component: it is its own
+piece of work, planned on its own, and nothing below asks for it. Which application is which, and
+the revision each was measured at, is recorded once with the family's coordination rules outside this
+repository, so it is not repeated here and cannot go stale inside a released tag.
 
 **Three things an entry point does not bring, by design.**
 
