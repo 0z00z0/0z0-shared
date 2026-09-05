@@ -126,6 +126,14 @@ The one gap worth knowing: restating a pin at the version it already carries pas
 nothing and it will drift, so do not write one. Which pins are a floor and which a ceiling is in
 [`consuming.md`](consuming.md#third-party-pins).
 
+### A process-wide self-contained property fails every library in the graph
+
+An application publishing self-contained with `WindowsAppSDKSelfContained` set as a global property
+fails the build of every library it references, including libraries that reference the Windows App
+SDK nowhere. The refusal is Microsoft's and nothing here can remove it; the two fixes, both the
+consuming application's, are in
+[`consume-build-kit.md`](consume-build-kit.md#a-process-wide-self-contained-property-fails-every-library-in-the-graph).
+
 ### The settings store is silent about a name it does not recognise
 
 This is the sharpest edge in the set.
