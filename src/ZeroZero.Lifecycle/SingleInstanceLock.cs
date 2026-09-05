@@ -11,6 +11,7 @@ public static class SingleInstanceLock
     // Rooted for the life of the process. A mutex the collector finalises is a mutex released.
     private static Mutex? _held;
     private static string? _heldName;
+    private static SingleInstanceOutcome _heldOutcome;
 
     public static bool IsHeld
     {
@@ -19,12 +20,12 @@ public static class SingleInstanceLock
 
     /// <summary>Takes the named mutex, waiting up to <paramref name="wait"/> for a previous instance
     /// to let go — zero for a fresh launch, longer for a relaunch racing the exit of the process that
-    /// spawned it. A mutex its holder abandoned counts as taken: the holder is dead, which is the
-    /// case relaunch exists for. True when this process now holds the lock; false when another
-    /// instance still holds it after the wait.</summary>
+    /// spawned it. Reports which of the four outcomes happened, so an application can say in its log
+    /// whether it took a free name or one a dead instance left behind. A second call under the same
+    /// name reports the outcome the first one had.</summary>
     /// <exception cref="InvalidOperationException">The process already holds a lock under another
     /// name. A process is one instance of one product.</exception>
-    public static bool TryAcquire(string mutexName, TimeSpan wait)
+    public static SingleInstanceOutcome Acquire(string mutexName, TimeSpan wait)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(mutexName);
 
@@ -32,38 +33,72 @@ public static class SingleInstanceLock
         {
             if (_held is not null)
             {
-                if (string.Equals(_heldName, mutexName, StringComparison.Ordinal)) return true;
+                if (string.Equals(_heldName, mutexName, StringComparison.Ordinal)) return _heldOutcome;
                 throw new InvalidOperationException($"This process already holds the lock '{_heldName}' and cannot also hold '{mutexName}'.");
             }
 
-            Mutex? mutex = Open(mutexName, wait);
-            if (mutex is null) return false;
+            SingleInstanceOutcome outcome = Open(mutexName, wait, out Mutex? mutex);
+            if (mutex is null) return outcome;
 
             _held = mutex;
             _heldName = mutexName;
-            return true;
+            _heldOutcome = outcome;
+            return outcome;
         }
     }
 
+    /// <summary>The same acquisition, as the answer most callers act on. True when this process now
+    /// holds the lock; false when another instance holds it or the name is not this process's to
+    /// take. <see cref="Acquire"/> says which.</summary>
+    /// <exception cref="InvalidOperationException">The process already holds a lock under another
+    /// name.</exception>
+    public static bool TryAcquire(string mutexName, TimeSpan wait) => Acquire(mutexName, wait).IsTaken();
+
     /// <summary>The acquisition alone, handing back the owned mutex or null. Ownership belongs to
     /// the calling thread.</summary>
-    internal static Mutex? Open(string mutexName, TimeSpan wait)
+    internal static SingleInstanceOutcome Open(string mutexName, TimeSpan wait, out Mutex? mutex)
     {
-        var mutex = new Mutex(initiallyOwned: false, mutexName);
+        mutex = null;
+
+        Mutex candidate;
+        try
+        {
+            candidate = new Mutex(initiallyOwned: false, mutexName);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // The name exists under rights this token does not have — another session's instance, or
+            // one running elevated. That is a refusal: the alternative is a second instance.
+            return SingleInstanceOutcome.RefusedDenied;
+        }
+
+        bool abandoned = false;
         bool acquired;
         try
         {
-            acquired = mutex.WaitOne(wait);
+            acquired = candidate.WaitOne(wait);
         }
         catch (AbandonedMutexException)
         {
             // The previous holder died without releasing. The wait has granted ownership all the same.
             acquired = true;
+            abandoned = true;
+        }
+        catch
+        {
+            // A name this process cannot wait on at all is the application's own error, not a second
+            // instance, and it must be seen rather than read as an ordinary refusal.
+            candidate.Dispose();
+            throw;
         }
 
-        if (acquired) return mutex;
+        if (!acquired)
+        {
+            candidate.Dispose();
+            return SingleInstanceOutcome.RefusedHeld;
+        }
 
-        mutex.Dispose();
-        return null;
+        mutex = candidate;
+        return abandoned ? SingleInstanceOutcome.TakenAbandoned : SingleInstanceOutcome.TakenFree;
     }
 }

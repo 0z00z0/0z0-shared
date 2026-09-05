@@ -18,6 +18,7 @@ public sealed class ProcessLifecycleProcessTests : IDisposable
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "ZeroZero.Lifecycle.Tests." + Guid.NewGuid().ToString("N"));
 
     private string Marker => Path.Combine(_dir, Program.RelaunchMarker);
+    private string OutcomeFile => Path.Combine(_dir, Program.OutcomeFile);
     private string LimiterFile => Path.Combine(_dir, RelaunchLimiter.FileName);
     private string Log => File.Exists(Path.Combine(_dir, Program.LogFile)) ? File.ReadAllText(Path.Combine(_dir, Program.LogFile)) : "";
 
@@ -67,7 +68,37 @@ public sealed class ProcessLifecycleProcessTests : IDisposable
         Assert.False(File.Exists(Marker), "The executable was relaunched past the budget: " + Log);
     }
 
-    private async Task<int> RunChild(string scenario)
+    [Fact]
+    public async Task AnInstanceRefusedTheLockArmsNothingAndIsNotRelaunched()
+    {
+        // The child wires itself the way the guide prescribes: the lock first, the hook only once the
+        // lock is taken. Nothing is armed on the refusal path, so nothing has to be marked either.
+        string name = @"Local\ZeroZero.Lifecycle.Tests." + Guid.NewGuid().ToString("N");
+        using var other = new MutexHolder(name);
+        Assert.True(other.Acquired);
+
+        Assert.Equal(0, await RunChild(Program.RefusedScenario, name));
+
+        Assert.Equal(nameof(SingleInstanceOutcome.RefusedHeld), File.ReadAllText(OutcomeFile).Trim());
+        await Task.Delay(Silence);
+        Assert.False(File.Exists(Marker), "The refused instance was relaunched, so its exit reached a hook.");
+        Assert.False(File.Exists(LimiterFile), "The refused instance reached the limiter, so its exit reached a hook.");
+    }
+
+    [Fact]
+    public async Task ACrashNeverReachesTheHook()
+    {
+        // The hook is armed and the process then dies of an unhandled exception. Measured rather than
+        // assumed: this is what makes the arm-after-the-lock order cost nothing for a crash, since a
+        // crash was never relaunched under the arm-first order either.
+        Assert.NotEqual(0, await RunChild(Program.CrashScenario));
+
+        await Task.Delay(Silence);
+        Assert.False(File.Exists(Marker), "A crash was relaunched: " + Log);
+        Assert.False(File.Exists(LimiterFile), "A crash reached the limiter: " + Log);
+    }
+
+    private async Task<int> RunChild(string scenario, string? lockName = null)
     {
         Assert.True(File.Exists(Executable), "The test executable is not beside the test assembly: " + Executable);
 
@@ -75,6 +106,7 @@ public sealed class ProcessLifecycleProcessTests : IDisposable
         start.Environment[Program.ScenarioVariable] = scenario;
         start.Environment[Program.DataVariable] = _dir;
         start.Environment.Remove(Program.GenerationVariable);
+        if (lockName is not null) start.Environment[Program.LockVariable] = lockName;
 
         using Process child = Process.Start(start) ?? throw new InvalidOperationException("The child did not start.");
         await child.WaitForExitAsync().WaitAsync(Patience);
