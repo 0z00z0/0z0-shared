@@ -150,6 +150,9 @@ reusable workflow the applications call, with a signing gate and a manifest rewr
 | [`docs/zerozero-build.md`](docs/zerozero-build.md) | The build kit: the shared property blocks, the WinUI application block, the manifest template, signing, the pin rule and its guards, and how a repository takes it on either route. |
 | [`docs/consume-brand-about-control.md`](docs/consume-brand-about-control.md) | `BrandAboutControl`, as an adoption checklist. |
 | [`docs/consume-mqtt-settings-panel.md`](docs/consume-mqtt-settings-panel.md) | The panel alone, as an adoption checklist. |
+| [`docs/consume-win32-foundation.md`](docs/consume-win32-foundation.md) | Replacing an application's own native helper: what the Win32 assembly does not cover, and why it and the build kit are one piece of work. |
+| [`docs/consume-lifecycle.md`](docs/consume-lifecycle.md) | Replacing an application's own instance lock and relaunch limiter, and what the crash watchdog keeps. |
+| [`docs/consume-build-kit.md`](docs/consume-build-kit.md) | Replacing an application's own signing call and manifest: what the kit takes over, what stays, and the self-contained property that fails every library. |
 | [`docs/releasing.md`](docs/releasing.md) | Cutting a component release, what the workflow guards, and how to run the guards locally. |
 | [`docs/release-notes/`](docs/release-notes) | One file per tag, under the component's folder from `0.7.0` and at the folder root for the earlier tags that released everything together. What a release contains and what it breaks. |
 | [`docs/TODO-HANDLING.md`](docs/TODO-HANDLING.md) | The studio-wide work-tracking convention every 0z0 repo follows: GitHub Issues are the source of truth, and a git-ignored local `TODO.md` mirrors them. |
