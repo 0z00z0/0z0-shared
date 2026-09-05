@@ -32,6 +32,15 @@ public class MqttPanelTextTests
     public void RelativeChoosesSingularAndPluralInCode(int secondsAgo, string expected) =>
         Assert.Equal(expected, Text.Relative(Now.AddSeconds(-secondsAgo), Now, "never"));
 
+    /// <summary>The last second each unit still owns. A coarser unit reached one second early renders
+    /// a count of zero — "0 hours ago" for an age of fifty-nine minutes — which reads as a broken value
+    /// rather than as an age, and the value at the boundary itself cannot see it.</summary>
+    [Theory]
+    [InlineData(3599, "59 min ago")]
+    [InlineData(86399, "23 hours ago")]
+    public void RelativeKeepsAUnitUntilTheNextOneIsWhole(int secondsAgo, string expected) =>
+        Assert.Equal(expected, Text.Relative(Now.AddSeconds(-secondsAgo), Now, "never"));
+
     [Fact]
     public void RelativeUsesSeparateKeysForTheSingularAndThePlural()
     {

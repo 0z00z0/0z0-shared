@@ -64,6 +64,19 @@ public class MqttEndpointTests
         Assert.Equal(65535, port);
     }
 
+    /// <summary>The other end of the same clamp. A settings file with the port field missing reaches
+    /// this as zero, and a hand edit can leave it negative; both are below the protocol's range and
+    /// must land on the first port there is rather than be passed to a socket as they stand.</summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Reachability_ClampsAPortBelowTheProtocolsRange(int typed)
+    {
+        var (_, port) = MqttEndpoint.Reachability("broker.invalid", typed, MqttTransport.Tcp, false);
+
+        Assert.Equal(1, port);
+    }
+
     [Fact]
     public void Resolve_GivesTcpTheHostAndPortAsTyped()
     {
