@@ -8,9 +8,12 @@ Tag           The tag is <component>-v<x.y.z> and Versions.props declares that c
 Notes         docs/release-notes/<key>/v<x.y.z>.md exists.
 Versions      <Key>Version in Versions.props and the evaluated Version of every packable project of
               that key equal the tag's version, and at least one such project exists.
-Dependencies  Every project reference from the released set to another component names a version
-              whose tag <other>-v<version> exists on the remote — packing turns that reference into
-              a package dependency, so the version has to be on the feed already.
+Dependencies  Every direct project reference from the released set to another component names a
+              version whose tag <other>-v<version> exists on the remote — packing turns that
+              reference into a package dependency, so the version has to be on the feed already.
+              One hop, not the closure: a component reached only through another is not asked
+              about, because what packing writes is a dependency on the direct reference and the
+              package on the feed pins its own dependencies. See docs/releasing.md.
 
 Every check fails closed: a check that cannot be made is a failed check, never a skipped one.
 Run from any directory; paths are resolved from the script's own location.
