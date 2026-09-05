@@ -13,9 +13,9 @@ namespace ZeroZero.Mqtt.WinUI;
 /// <para>Several maps are tried rather than one, because the shape differs by how the consumer
 /// builds. A merged application index files the application's own strings under the bare
 /// <c>Resources</c> map and the library's under the assembly's name; the library's own <c>.pri</c>
-/// beside the executable holds them under the bare name. This class only opens the indexes and lists
-/// the places to ask, host-owned first; <see cref="MqttResourceMaps"/> owns both the order and the
-/// walk, in a plain <c>net10.0</c> assembly a test can run.</para>
+/// beside the executable holds them under the bare name. This class does nothing but open what it is
+/// named and read what it is asked; <see cref="MqttResourceMaps"/> owns which indexes, which maps
+/// under them, both orders and the walk, in a plain <c>net10.0</c> assembly a test can run.</para>
 /// <para>A consumer localises by adding a language folder alongside <c>en-GB</c>, or by supplying an
 /// <see cref="IMqttStringSource"/> of its own on the panel's setup object. Nothing here is forked and
 /// no package is added.</para>
@@ -37,18 +37,19 @@ public sealed class MqttResourceStrings : IMqttStringSource
 
     private MqttResourceStrings()
     {
-        // The application's own index first: a host that translates these strings itself expects its
-        // map to win over the copy shipped beside the library.
-        Collect(() => new ResourceManager());
-        Collect(() => new ResourceManager($"{Library}.pri"));
+        foreach (string index in MqttResourceMaps.Indexes(Library)) Collect(index);
     }
 
-    private void Collect(Func<ResourceManager> open)
+    private void Collect(string index)
     {
         ResourceMap root;
         try
         {
-            root = open().MainResourceMap;
+            // An empty name is the index the application already has, which opens by asking for no
+            // file at all; any other name is a file beside the executable.
+            ResourceManager manager =
+                index == MqttResourceMaps.ApplicationIndex ? new ResourceManager() : new ResourceManager(index);
+            root = manager.MainResourceMap;
         }
         catch (Exception)
         {
