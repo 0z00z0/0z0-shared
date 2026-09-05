@@ -27,8 +27,11 @@ and how a pin works, and everything below assumes it.
 | Build kit | The shared build rules, the WinUI application block, the manifest, signing, and every third-party version | Not a reference at all — imports, below | [build](zerozero-build.md) |
 
 Config, Controls, Primitives and Win32 are foundation: anything may take them, and most arrive on
-their own — the MQTT reference alone brings all four. Take a foundation reference directly only where
-nothing else brought it, or where a rule below says to.
+their own — the MQTT reference alone brings the controls, the primitives, the Win32 numbers and the
+settings store for a file of one type. Take a foundation reference directly only where nothing else
+brought it, or where a rule below says to. Two foundation assemblies arrive with nothing, whatever
+else is adopted, and are always direct references: `ZeroZero.Config.Sections`, which brings the
+file-of-one-type store with it, and `ZeroZero.Config.Watch`.
 
 **One reference per component, and one route for the whole repository.** Packages or a sibling
 checkout, never a mixture: a mixture resolves a foundation assembly twice, once as a package and once
