@@ -15,11 +15,29 @@ internal static class Repository
 
     private static readonly string SourceDirectory = Path.Combine(Scripts.RepoRoot, "src");
 
+    /// <summary>What <c>$(ZeroZeroBuildDir)</c> evaluates to: the build kit's own folder.</summary>
+    private static readonly string BuildKitDirectory = Path.Combine(SourceDirectory, "ZeroZero.Build");
+
+    private static readonly List<string> Unresolvable = [];
+
     /// <summary>Every component, by the lowercase name its tags and its notes folder use.</summary>
     public static IReadOnlyDictionary<string, Component> Components { get; } = ReadComponents();
 
     /// <summary>Every project under <c>src/</c>, by assembly name.</summary>
     public static IReadOnlyDictionary<string, SourceProject> Projects { get; } = ReadProjects();
+
+    /// <summary>
+    /// Imports a project declares that resolve to no file here. Anything read through imports fails
+    /// closed on one: a property set in a file that could not be found is a property read as unset.
+    /// </summary>
+    public static IReadOnlyList<string> UnresolvableImports
+    {
+        get
+        {
+            _ = Projects;
+            return Unresolvable;
+        }
+    }
 
     /// <summary>
     /// Every assembly a reference to <paramref name="project"/> resolves, the project itself apart.
@@ -93,6 +111,7 @@ internal static class Repository
                 Name: name,
                 File: file,
                 VersionProperty: VersionPropertyOf(document),
+                OutputType: OutputTypeOf(file, document, []),
                 Packable: Flag(document, "IsPackable") ?? true,
                 PacksAnAssembly: Flag(document, "IncludeBuildOutput") ?? true,
                 PackageReferences: References(document, "PackageReference"),
@@ -140,6 +159,57 @@ internal static class Repository
             : null;
     }
 
+    /// <summary>
+    /// The output kind a project builds, following the files it imports. The kit's WinUI application
+    /// block is where an application in this repository gets <c>WinExe</c> from, so a project's own
+    /// file says nothing about whether it is a library and the import has to be followed to find out.
+    /// Null is the SDK default, which is a library.
+    /// </summary>
+    private static string? OutputTypeOf(string file, XDocument document, HashSet<string> seen)
+    {
+        if (!seen.Add(file)) return null;
+
+        string? declared = document.Descendants()
+            .FirstOrDefault(static node => node.Name.LocalName == "OutputType")
+            ?.Value.Trim();
+
+        if (!string.IsNullOrEmpty(declared)) return declared;
+
+        foreach (var import in document.Descendants().Where(static node => node.Name.LocalName == "Import"))
+        {
+            string? include = import.Attribute("Project")?.Value;
+            if (string.IsNullOrWhiteSpace(include)) continue;
+
+            string? imported = ResolveImport(file, include);
+            if (imported is null)
+            {
+                Unresolvable.Add($"{Path.GetFileNameWithoutExtension(file)} imports {include}");
+                continue;
+            }
+
+            string? inherited = OutputTypeOf(imported, XDocument.Load(imported), seen);
+            if (inherited is not null) return inherited;
+        }
+
+        return null;
+    }
+
+    /// <summary>An import's path, with the two properties this repository writes them with expanded.</summary>
+    private static string? ResolveImport(string importingFile, string include)
+    {
+        string directory = Path.GetDirectoryName(importingFile)!;
+
+        string path = include
+            .Replace("$(ZeroZeroBuildDir)", BuildKitDirectory + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            .Replace("$(MSBuildThisFileDirectory)", directory + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            .Replace('\\', Path.DirectorySeparatorChar);
+
+        if (path.Contains("$(", StringComparison.Ordinal)) return null;
+
+        string full = Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(directory, path));
+        return File.Exists(full) ? full : null;
+    }
+
     private static bool? Flag(XDocument document, string name)
     {
         string? value = document.Descendants().FirstOrDefault(node => node.Name.LocalName == name)?.Value.Trim();
@@ -162,6 +232,7 @@ internal sealed record SourceProject(
     string Name,
     string File,
     string? VersionProperty,
+    string? OutputType,
     bool Packable,
     bool PacksAnAssembly,
     IReadOnlyList<string> PackageReferences,
@@ -172,4 +243,13 @@ internal sealed record SourceProject(
         VersionProperty is not null && VersionProperty.EndsWith("Version", StringComparison.Ordinal)
             ? VersionProperty[..^"Version".Length].ToLowerInvariant()
             : null;
+
+    /// <summary>Whether the project builds a library, which is the SDK default and anything but an
+    /// executable.</summary>
+    public bool IsLibrary =>
+        OutputType is null || OutputType.Equals("Library", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Whether the project takes a NuGet package, by the id NuGet matches it on.</summary>
+    public bool Takes(string package) =>
+        PackageReferences.Contains(package, StringComparer.OrdinalIgnoreCase);
 }
