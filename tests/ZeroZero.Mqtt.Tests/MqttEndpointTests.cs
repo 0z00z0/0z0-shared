@@ -64,9 +64,11 @@ public class MqttEndpointTests
         Assert.Equal(65535, port);
     }
 
-    /// <summary>The other end of the same clamp. A settings file with the port field missing reaches
-    /// this as zero, and a hand edit can leave it negative; both are below the protocol's range and
-    /// must land on the first port there is rather than be passed to a socket as they stand.</summary>
+    /// <summary>The other end of the same clamp. A missing port field never arrives here at all: the
+    /// setting is nullable and null means unpinned, so <see cref="MqttEndpointPlan.Sweep"/> offers the
+    /// known ports instead. What arrives is a value somebody wrote — a zero or a negative left in the
+    /// settings file by hand — and both are below the protocol's range, so they must land on the first
+    /// port there is rather than be passed to a socket as they stand.</summary>
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
