@@ -105,8 +105,9 @@ it elsewhere without editing the `.csproj`:
 ```
 
 `UndefineProperties` is required whenever the consuming app publishes self-contained with
-`WindowsAppSDKSelfContained` set as a global property: MSBuild propagates a global property into
-every project reference, and the Windows App SDK targets reject it on a class library.
+`WindowsAppSDKSelfContained` set as a global property. The refusal, why a library that references
+the Windows App SDK nowhere still meets it, and the one alternative to this metadata are in
+[`consume-build-kit.md`](consume-build-kit.md#a-process-wide-self-contained-property-fails-every-library-in-the-graph).
 
 **A consuming app that ships its own language-folder resources declares `DefaultLanguage` itself.**
 The panel declares `en-GB` for its own `.resw`, so nothing in the module warns any more. An app that

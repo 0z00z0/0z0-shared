@@ -71,8 +71,10 @@ kit's application block, shows the dialog under `--native`.
 ## Take the reference
 
 Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Win32` itself; there is
-nothing beneath it. An application taking the brand component, the controls assembly, the settings
-shell or the tray component has it transitively and adds nothing.
+nothing beneath it. An application taking the brand component, the controls assembly, the tray
+component, the update component's Win32 entry point, the MQTT settings panel or the settings shell
+already has it and adds nothing. Which of those take it directly is in
+[`consume-win32-foundation.md`](consume-win32-foundation.md).
 
 The tests are in `tests/ZeroZero.Win32.Tests`, plain `net10.0`, and run on Windows only: they call
 user32 and shcore against the real desktop, create a hidden framed window to measure, and read the
