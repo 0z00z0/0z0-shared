@@ -64,6 +64,21 @@ public class MqttEndpointTests
         Assert.Equal(65535, port);
     }
 
+    /// <summary>The other end of the same clamp. A missing port field never arrives here at all: the
+    /// setting is nullable and null means unpinned, so <see cref="MqttEndpointPlan.Sweep"/> offers the
+    /// known ports instead. What arrives is a value somebody wrote — a zero or a negative left in the
+    /// settings file by hand — and both are below the protocol's range, so they must land on the first
+    /// port there is rather than be passed to a socket as they stand.</summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Reachability_ClampsAPortBelowTheProtocolsRange(int typed)
+    {
+        var (_, port) = MqttEndpoint.Reachability("broker.invalid", typed, MqttTransport.Tcp, false);
+
+        Assert.Equal(1, port);
+    }
+
     [Fact]
     public void Resolve_GivesTcpTheHostAndPortAsTyped()
     {

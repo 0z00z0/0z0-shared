@@ -6,6 +6,11 @@ namespace ZeroZero.Mqtt.Tests;
 /// nothing at all. The two failures are told apart here: a refusal comes back at once and costs
 /// nothing, while a dropped packet says nothing and would otherwise spend a whole connect budget per
 /// candidate before the one that works is reached.</summary>
+/// <remarks>Two kinds of assertion sit side by side below, and the subject decides which is right.
+/// Where the subject is which budget applies, the budget is named: the fact under test is the choice,
+/// and it holds however the durations are retuned. Where the subject is a duration itself, a literal
+/// stands in its place, because a threshold asserted against the source's own value moves with it and
+/// pins nothing.</remarks>
 public class MqttSocketBudgetTests
 {
     [Fact]
@@ -15,9 +20,17 @@ public class MqttSocketBudgetTests
         Assert.True(MqttProbe.SweepTimeout < MqttProbe.Timeout);
     }
 
+    /// <summary>Which budget applies, not how long it is — hence the named constant.</summary>
     [Fact]
     public void SocketBudget_IsShortWhereThereIsAnotherCandidateToMoveOnTo() =>
         Assert.Equal(MqttProbe.SilentTimeout, MqttProbe.SocketBudget(candidates: 14, escalated: false));
+
+    /// <summary>Two candidates is the smallest sweep with somewhere to move on to, so it is the first
+    /// count that takes the short budget. The one place the short budget's own duration is pinned —
+    /// hence the literal.</summary>
+    [Fact]
+    public void SocketBudget_IsAlreadyShortForTheSmallestSweepWithSomewhereToMoveOnTo() =>
+        Assert.Equal(TimeSpan.FromSeconds(3), MqttProbe.SocketBudget(candidates: 2, escalated: false));
 
     /// <summary>A pinned port, transport and encryption sweep exactly one candidate. There is nothing
     /// to move on to, so cutting it short would turn a slow broker into no broker rather than into a

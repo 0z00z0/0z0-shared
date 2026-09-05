@@ -108,13 +108,10 @@ else without editing the `.csproj`:
 </ItemGroup>
 ```
 
-`UndefineProperties="WindowsAppSDKSelfContained"` is required whenever the consuming app publishes
-self-contained with that property set globally (on the command line, for instance): MSBuild
-propagates a global property into every project reference, and the Windows App SDK targets reject
-it on a class library — *"should not be applied to a class library"*. Stripping it for this
-reference only lets the app aggregate the self-contained runtime while the library builds
-framework-dependent. An app that instead declares `WindowsAppSDKSelfContained` as a project-level
-property never propagates it and does not need the metadata.
+`UndefineProperties="WindowsAppSDKSelfContained"` is what keeps a globally set self-contained
+property from reaching the library and failing its build. The refusal, why a library that references
+the Windows App SDK nowhere still meets it, and the one alternative to this metadata are in
+[`consume-build-kit.md`](consume-build-kit.md#a-process-wide-self-contained-property-fails-every-library-in-the-graph).
 
 The disk layout under `src/` is flat and stays flat: every project is `src/<Name>/<Name>.csproj`, so
 the path above holds for any project in the repository.

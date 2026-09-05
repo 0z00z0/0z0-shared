@@ -27,8 +27,11 @@ and how a pin works, and everything below assumes it.
 | Build kit | The shared build rules, the WinUI application block, the manifest, signing, and every third-party version | Not a reference at all — imports, below | [build](zerozero-build.md) |
 
 Config, Controls, Primitives and Win32 are foundation: anything may take them, and most arrive on
-their own — the MQTT reference alone brings all four. Take a foundation reference directly only where
-nothing else brought it, or where a rule below says to.
+their own — the MQTT reference alone brings the controls, the primitives, the Win32 numbers and the
+settings store for a file of one type. Take a foundation reference directly only where nothing else
+brought it, or where a rule below says to. Two foundation assemblies arrive with nothing, whatever
+else is adopted, and are always direct references: `ZeroZero.Config.Sections`, which brings the
+file-of-one-type store with it, and `ZeroZero.Config.Watch`.
 
 **One reference per component, and one route for the whole repository.** Packages or a sibling
 checkout, never a mixture: a mixture resolves a foundation assembly twice, once as a package and once
@@ -125,6 +128,14 @@ the whole family resolves, and the only way to move one is to move it there.
 The one gap worth knowing: restating a pin at the version it already carries passes silently. It buys
 nothing and it will drift, so do not write one. Which pins are a floor and which a ceiling is in
 [`consuming.md`](consuming.md#third-party-pins).
+
+### A process-wide self-contained property fails every library in the graph
+
+An application publishing self-contained with `WindowsAppSDKSelfContained` set as a global property
+fails the build of every library it references, including libraries that reference the Windows App
+SDK nowhere. The refusal is Microsoft's and nothing here can remove it; the two fixes, both the
+consuming application's, are in
+[`consume-build-kit.md`](consume-build-kit.md#a-process-wide-self-contained-property-fails-every-library-in-the-graph).
 
 ### The settings store is silent about a name it does not recognise
 
