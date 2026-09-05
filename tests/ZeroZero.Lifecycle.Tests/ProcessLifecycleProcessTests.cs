@@ -20,7 +20,7 @@ public sealed class ProcessLifecycleProcessTests : IDisposable
     private string Marker => Path.Combine(_dir, Program.RelaunchMarker);
     private string OutcomeFile => Path.Combine(_dir, Program.OutcomeFile);
     private string LimiterFile => Path.Combine(_dir, RelaunchLimiter.FileName);
-    private string Log => File.Exists(Path.Combine(_dir, Program.LogFile)) ? File.ReadAllText(Path.Combine(_dir, Program.LogFile)) : "";
+    private string Log => ReadWhileWritten(Path.Combine(_dir, Program.LogFile));
 
     public ProcessLifecycleProcessTests() => Directory.CreateDirectory(_dir);
 
@@ -37,7 +37,7 @@ public sealed class ProcessLifecycleProcessTests : IDisposable
         Assert.Equal(0, await RunChild(Program.UnmarkedScenario));
 
         Assert.True(WaitFor(() => File.Exists(Marker), Patience), "The executable was not relaunched: " + Log);
-        Assert.Equal(Relaunch.Argument, File.ReadAllText(Marker).Trim());
+        Assert.Equal(Relaunch.Argument, ReadWhileWritten(Marker).Trim());
         Assert.Contains("relaunched as process", Log, StringComparison.Ordinal);
         Assert.Single(File.ReadAllLines(LimiterFile));
         // The relaunched process exited deliberately, so the chain ended with it.
@@ -111,6 +111,19 @@ public sealed class ProcessLifecycleProcessTests : IDisposable
         using Process child = Process.Start(start) ?? throw new InvalidOperationException("The child did not start.");
         await child.WaitForExitAsync().WaitAsync(Patience);
         return child.ExitCode;
+    }
+
+    /// <summary>Reads a file the relaunched process may have open. Its writer holds the file with
+    /// <see cref="FileShare.ReadWrite"/>, so a reader must allow writing too; <c>File.ReadAllText</c>
+    /// asks for <see cref="FileShare.Read"/>, which denies writing and fails the open outright
+    /// against a live writer. Only the log and the marker have one — the outcome and limiter files
+    /// are written by a process the test has already waited for.</summary>
+    private static string ReadWhileWritten(string path)
+    {
+        if (!File.Exists(path)) return "";
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
     }
 
     private static bool WaitFor(Func<bool> condition, TimeSpan patience)
