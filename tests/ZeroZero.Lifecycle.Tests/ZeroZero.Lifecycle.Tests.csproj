@@ -12,6 +12,9 @@
     <GenerateProgramFile>false</GenerateProgramFile>
     <!-- The test SDK builds no native launcher; the child process needs one. -->
     <UseAppHost>true</UseAppHost>
+    <!-- The generated LibraryImport marshalling is unsafe: the tests reach the platform directly for
+         a mutex nobody may open and for the fault dialogue the crash scenario must not raise. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
