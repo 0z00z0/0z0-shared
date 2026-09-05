@@ -19,6 +19,13 @@ public class MqttSocketBudgetTests
     public void SocketBudget_IsShortWhereThereIsAnotherCandidateToMoveOnTo() =>
         Assert.Equal(MqttProbe.SilentTimeout, MqttProbe.SocketBudget(candidates: 14, escalated: false));
 
+    /// <summary>Two candidates is the smallest sweep with somewhere to move on to, so it is the first
+    /// count that takes the short budget. The literal is deliberate: a threshold asserted against the
+    /// source's own value moves with it and pins nothing.</summary>
+    [Fact]
+    public void SocketBudget_IsAlreadyShortForTheSmallestSweepWithSomewhereToMoveOnTo() =>
+        Assert.Equal(TimeSpan.FromSeconds(3), MqttProbe.SocketBudget(candidates: 2, escalated: false));
+
     /// <summary>A pinned port, transport and encryption sweep exactly one candidate. There is nothing
     /// to move on to, so cutting it short would turn a slow broker into no broker rather than into a
     /// later candidate.</summary>

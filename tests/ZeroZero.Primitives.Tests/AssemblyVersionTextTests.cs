@@ -96,6 +96,9 @@ public class AssemblyVersionTextTests
     [Theory]
     [InlineData("0.7.0+0123456789abcdef0123456789abcdef01234567", "0.7.0+0123456")]
     [InlineData("1.28.2-beta.1+0123456789ABCDEF0123456789ABCDEF01234567", "1.28.2-beta.1+0123456")]
+    // Eight is the shortest commit the cut has anything to do: one character shorter passes through,
+    // so a guard that let eight through as well would look right against every other row here.
+    [InlineData("0.7.0+fc0ad0b1", "0.7.0+fc0ad0b")]
     [InlineData("0.7.0+fc0ad0b", "0.7.0+fc0ad0b")]
     [InlineData("0.7.0+abc", "0.7.0+abc")]
     [InlineData("0.7.0", "0.7.0")]
