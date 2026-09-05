@@ -13,10 +13,9 @@ namespace ZeroZero.Mqtt.WinUI;
 /// <para>Several maps are tried rather than one, because the shape differs by how the consumer
 /// builds. A merged application index files the application's own strings under the bare
 /// <c>Resources</c> map and the library's under the assembly's name; the library's own <c>.pri</c>
-/// beside the executable holds them under the bare name. The maps are asked in the order
-/// <see cref="MqttResourceMaps"/> states, the host's before the library's copy, so the first map
-/// that answers a key is the host's when it has one; a key none of them answers falls back to the
-/// built-in text.</para>
+/// beside the executable holds them under the bare name. This class only opens the indexes and lists
+/// the places to ask, host-owned first; <see cref="MqttResourceMaps"/> owns both the order and the
+/// walk, in a plain <c>net10.0</c> assembly a test can run.</para>
 /// <para>A consumer localises by adding a language folder alongside <c>en-GB</c>, or by supplying an
 /// <see cref="IMqttStringSource"/> of its own on the panel's setup object. Nothing here is forked and
 /// no package is added.</para>
@@ -33,7 +32,8 @@ public sealed class MqttResourceStrings : IMqttStringSource
     /// <summary>The module's strings, or a source that answers nothing when no index can be opened.</summary>
     public static IMqttStringSource Instance { get; } = new MqttResourceStrings();
 
-    private readonly List<ResourceMap> _maps = [];
+    /// <summary>The places to ask, in precedence order.</summary>
+    private readonly List<Func<string, string?>> _probes = [];
 
     private MqttResourceStrings()
     {
@@ -58,10 +58,10 @@ public sealed class MqttResourceStrings : IMqttStringSource
         }
 
         foreach (string path in MqttResourceMaps.Subtrees(Library, Map))
-            if (Subtree(root, path) is { } map) _maps.Add(map);
+            if (Subtree(root, path) is { } map) _probes.Add(key => map.TryGetValue(key)?.ValueAsString);
 
         // The root itself, for an index whose items sit directly under it.
-        _maps.Add(root);
+        _probes.Add(key => root.TryGetValue(key)?.ValueAsString);
     }
 
     private static ResourceMap? Subtree(ResourceMap root, string path)
@@ -70,20 +70,5 @@ public sealed class MqttResourceStrings : IMqttStringSource
         catch (Exception) { return null; }
     }
 
-    public string? Find(string key)
-    {
-        foreach (var map in _maps)
-        {
-            try
-            {
-                if (map.TryGetValue(key)?.ValueAsString is { Length: > 0 } value) return value;
-            }
-            catch (Exception)
-            {
-                // A map that throws on a missing key rather than answering null is still a map that
-                // does not have it.
-            }
-        }
-        return null;
-    }
+    public string? Find(string key) => MqttResourceMaps.Find(key, _probes);
 }
