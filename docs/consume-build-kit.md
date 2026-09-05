@@ -88,3 +88,23 @@ Two fixes, and neither of them is this repository's to make:
 
 A third switch in the same package turns the check off, and is not a fix: the self-contained targets
 are still imported into the library, so only the message goes away.
+
+### A missing pin file hides behind a generic NuGet error first
+
+Deleting or misplacing `Directory.Packages.props` on a project whose `PackageReference` items carry
+no `Version` — the state every project importing the kit is in, since the kit's pin file is where the
+version is meant to come from — fails restore with NuGet's own **`NU1015`**, naming the packages with
+no version and nothing else. It says nothing about central package management or a missing file, and
+its ordinary fix, adding a `Version` to each reference, is the wrong one here: it papers over the
+missing pin file rather than restoring it.
+
+**That first message is not the kit's own guard — `ZZB002` never runs, because restore fails before
+any MSBuild target does.** Measured: adding a version to make restore succeed does not silently
+accept the change. The very next `dotnet build` reaches `ZeroZeroCheckKit` and fails on `ZZB002`,
+naming the actual cause — `Directory.Packages.props` not importing `ZeroZero.Packages.props` — which
+is the fix to make. A bare `dotnet restore` after adding the version does not reach it, since
+`ZZB002` runs before build, not before restore.
+
+So the path to the right fix costs one extra round trip when the pin file is missing and the
+references are not yet versioned, not a wrong turn that sticks: the first error looks like an
+ordinary NuGet complaint, and the second one is the kit's, and correct.
