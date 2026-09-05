@@ -35,8 +35,10 @@ kit means keeping or hand-writing that manifest. Take the kit first, then this.
 
 ## The checklist
 
-1. Reference `ZeroZero.Win32`, and only where nothing else already brought it: the brand component,
-   the controls assembly, the settings shell and the tray component each carry it transitively.
+1. Reference `ZeroZero.Win32`, and only where nothing else already brought it. The brand component,
+   the controls assembly and the tray component take it directly; the MQTT settings panel and the
+   settings shell take it through the controls assembly. An application already on any of those five
+   has it.
 2. Compare the helper's dark-chrome path against `DarkChrome.Apply(mode)` before deleting anything,
    and keep what the list above says is not covered. `Apply` answers false on a Windows before
    10.0.18362, where native chrome stays light and nothing else changes.
