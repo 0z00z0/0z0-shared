@@ -39,13 +39,27 @@ tag.
 So `primitives`, `config`, `win32` and `build` release in any order,
 `brand`, `controls` and `tray` release after `win32`, `diagnostics`, `lifecycle` and `startup`
 release after `primitives`, `update` releases after `primitives` and `win32`, `settingsshell`
-releases after `win32` and `controls`, and `mqtt` releases after `primitives`, `config`, `win32`
-and `controls`. No component references another component: the brand, diagnostics, lifecycle,
-MQTT, settings shell, startup, tray and update components are independent of each other, and
-the build kit references nothing and is referenced by nothing.
+releases after `controls`, and `mqtt` releases after `primitives`, `config` and `controls`. Those
+last two reach `win32` as well, but through `controls` rather than directly, and that distinction
+decides what the guard can catch — see below. No component references another component: the brand,
+diagnostics, lifecycle, MQTT, settings shell, startup, tray and update components are independent of
+each other, and the build kit references nothing and is referenced by nothing.
 Within a component the order does not matter: the projects release together. The build kit packs
 no assembly — its package is the MSBuild files, the manifest template and the signing script — and
 the pack step counts it like any other project of its key.
+
+**The dependency guard walks direct references only.** Releasing `mqtt` asks about `primitives`,
+`config` and `controls`, and never about `win32`: no MQTT project references `ZeroZero.Win32`, and it
+arrives inside `ZeroZero.Controls.WinUI`. `settingsshell` is the same case. A component two hops away
+is never asked about, so a green dependency check is a statement about the direct references and not
+about the closure behind them.
+
+That is the correct check rather than a gap. Packing writes a dependency on the `controls` package at
+its declared version, and that package on the feed pins the `win32` version it was itself packed
+against — never the one in the working tree — so unreleased `win32` changes cannot reach a consumer
+of `mqtt`. The closure holds by induction instead: every component's own release refuses an untagged
+direct reference, so anything already on the feed carries a released closure behind it. The tag that
+refuses while `win32` is untagged is `controls`, not `mqtt`.
 
 ## The procedure
 
@@ -81,7 +95,7 @@ The workflow then runs, in this order, and stops at the first failure:
 | Tag names a component | The tag is not `<key>-v<x.y.z>` with the key in lower case, or `Versions.props` declares no `<Key>Version`. A bare `v0.7.0` and a `Mqtt-v0.7.0` both fail here. |
 | Release notes present | `docs/release-notes/<key>/v<x.y.z>.md` is missing. |
 | Tag matches the declared version | `<Key>Version` or the evaluated `Version` of any packable project of the key differs from the tag, or no project has the key. |
-| Referenced components are released | A project reference to another component names a version whose tag `<other>-v<version>` is not on the remote. |
+| Referenced components are released | A **direct** project reference from the released component to another component names a version whose tag `<other>-v<version>` is not on the remote. A component reached only through another one is not asked about. |
 | Unit tests | Any test project fails — the whole suite runs, not the component's alone. |
 | Pack the component | The output folder does not end up holding exactly one `<Name>.<version>.nupkg` per selected project. Once it does, the script writes `release-artefacts.json` beside the packages — the tag, the commit and the SHA-256 of every package as packed — and the job keeps that record as a workflow artefact. |
 | Push to GitHub Packages | Any push fails, `409` for an already-published version included. |
