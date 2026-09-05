@@ -13,14 +13,14 @@
   <PropertyGroup>
     <BrandVersion>0.7.0</BrandVersion>
     <BuildVersion>0.7.0</BuildVersion>
-    <ConfigVersion>0.7.0</ConfigVersion>
+    <ConfigVersion>0.7.1</ConfigVersion>
     <ControlsVersion>0.7.0</ControlsVersion>
     <DiagnosticsVersion>0.7.0</DiagnosticsVersion>
     <LifecycleVersion>0.7.0</LifecycleVersion>
     <MqttVersion>0.7.0</MqttVersion>
     <PrimitivesVersion>0.7.0</PrimitivesVersion>
     <SettingsShellVersion>0.7.0</SettingsShellVersion>
-    <StartupVersion>0.7.0</StartupVersion>
+    <StartupVersion>0.7.1</StartupVersion>
     <TrayVersion>0.7.0</TrayVersion>
     <UpdateVersion>0.7.0</UpdateVersion>
     <Win32Version>0.7.0</Win32Version>
