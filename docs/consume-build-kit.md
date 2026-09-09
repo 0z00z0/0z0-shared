@@ -26,7 +26,7 @@ than as rules.
   so nothing here is SHA-1. An authority that answers only RFC 3161 therefore leaves the file signed
   and untimestamped, and that is refused rather than shipped: an untimestamped signature verifies
   until the certificate expires and then stops for everyone who already installed it. The read-back
-  asserts the countersignature on its own, so an application no longer has to check for one itself;
+  asserts the countersignature on its own, so an application need not check for one itself;
   `ZeroZeroSignNoTimestamp` is the only remaining way to produce an untimestamped signature, and an
   application obliged to ship RFC 3161 timestamps keeps its own signing tool.
 - **The certificate is a thumbprint in a personal store, or a PFX file.** The PFX password arrives
