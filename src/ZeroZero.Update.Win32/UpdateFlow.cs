@@ -87,8 +87,12 @@ public sealed class UpdateFlow
         bool manual = trigger == UpdateTrigger.Manual;
 
         UpdateCheckResult check = await _service.CheckAsync(cancellationToken);
+        // Only a release goes on from here. Every other outcome is named, and the default catches
+        // one added later: without it a new outcome would reach the install path with no release.
         switch (check.Outcome)
         {
+            case UpdateCheckOutcome.UpdateAvailable:
+                break;
             case UpdateCheckOutcome.UpToDate:
                 if (manual) _prompts.SayUpToDate(check.RunningVersion);
                 return UpdateFlowResult.UpToDate;
@@ -97,7 +101,10 @@ public sealed class UpdateFlow
                 return UpdateFlowResult.NothingReleased;
             case UpdateCheckOutcome.RateLimited:
             case UpdateCheckOutcome.Unreachable:
+            case UpdateCheckOutcome.TimedOut:
+            case UpdateCheckOutcome.RequestFailed:
             case UpdateCheckOutcome.InvalidResponse:
+            default:
                 if (manual) _prompts.SayCheckFailed(check);
                 return UpdateFlowResult.CheckFailed;
         }

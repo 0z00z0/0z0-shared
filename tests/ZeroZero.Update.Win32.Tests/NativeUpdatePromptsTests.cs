@@ -77,6 +77,26 @@ public class NativeUpdatePromptsTests
         Assert.Contains("rate limit", NativeUpdatePrompts.CheckFailedText(new UpdateCheckResult(UpdateCheckOutcome.RateLimited, running, RateLimitResetsAt: DateTimeOffset.UtcNow.AddMinutes(30))));
         Assert.Contains("could not be reached: no route", NativeUpdatePrompts.CheckFailedText(new UpdateCheckResult(UpdateCheckOutcome.Unreachable, running, Detail: "no route")));
         Assert.Contains("does not understand: the release tag", NativeUpdatePrompts.CheckFailedText(new UpdateCheckResult(UpdateCheckOutcome.InvalidResponse, running, Detail: "the release tag 'x' is not a version")));
+        Assert.Contains("did not answer in time: no answer", NativeUpdatePrompts.CheckFailedText(new UpdateCheckResult(UpdateCheckOutcome.TimedOut, running, Detail: "no answer within 10 s")));
+        Assert.Contains("answered with an error: api.example", NativeUpdatePrompts.CheckFailedText(new UpdateCheckResult(UpdateCheckOutcome.RequestFailed, running, Detail: "api.example answered HTTP 500 rather than a release")));
+    }
+
+    /// <summary>Each outcome that stops a check gets a sentence of its own, so two situations the
+    /// result now tells apart are not read back as one message.</summary>
+    [Fact]
+    public void CheckFailedText_SaysSomethingDifferentForEveryOutcomeThatStopsACheck()
+    {
+        Version running = new(1, 0, 0, 0);
+        UpdateCheckOutcome[] stopped =
+        [
+            UpdateCheckOutcome.RateLimited, UpdateCheckOutcome.Unreachable, UpdateCheckOutcome.TimedOut,
+            UpdateCheckOutcome.RequestFailed, UpdateCheckOutcome.InvalidResponse,
+        ];
+
+        string[] texts = [.. stopped.Select(outcome =>
+            NativeUpdatePrompts.CheckFailedText(new UpdateCheckResult(outcome, running, Detail: "why")))];
+
+        Assert.Equal(stopped.Length, texts.Distinct(StringComparer.Ordinal).Count());
     }
 
     [Theory]

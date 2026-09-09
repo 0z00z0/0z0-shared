@@ -100,6 +100,8 @@ public sealed class NativeUpdatePrompts : IUpdatePrompts
             UpdateCheckOutcome.RateLimited =>
                 $"The update check was refused by GitHub's rate limit. Try again after {result.RateLimitResetsAt?.ToLocalTime().ToString("t", CultureInfo.CurrentCulture) ?? "a while"}.",
             UpdateCheckOutcome.Unreachable => $"The update service could not be reached: {result.Detail}.",
+            UpdateCheckOutcome.TimedOut => $"The update service did not answer in time: {result.Detail}.",
+            UpdateCheckOutcome.RequestFailed => $"The update service answered with an error: {result.Detail}.",
             UpdateCheckOutcome.InvalidResponse => $"The update service answered with something this version does not understand: {result.Detail}.",
             _ => $"The update check did not complete: {result.Detail}.",
         };

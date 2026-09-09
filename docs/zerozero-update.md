@@ -42,6 +42,14 @@ The assemblies are versioned as `UpdateVersion` in `Versions.props` and released
   runs it; `Launch` verifies the prepared file again and starts it through the shell;
   `SweepStaleDownloads` removes download directories earlier runs left behind. One instance per
   application, owning its two HTTP clients for the life of the process.
+- **`UpdateCheckOutcome`** — what a check found, and the whole of what an application needs to
+  decide what to say. `UpdateAvailable` and `UpToDate` are the two answers a release gives;
+  `NoReleases` is the repository having published none; and five say the check did not get one:
+  `RateLimited`, `Unreachable` (nothing answered), `TimedOut` (something is there and did not answer
+  in time), `RequestFailed` (a failure status rather than a release) and `InvalidResponse` (an answer
+  that is not a release this version understands). Every one carries a `Detail` sentence for a person
+  to read; **none of them has to be read to tell the outcomes apart**, which is the point of there
+  being eight. A cancellation the caller asked for is no outcome at all: the check throws.
 - **`UpdateScheduler`** — runs a check after an initial delay and then at an interval, one at a
   time, counted from process start and never persisted: the component stores nothing.
 - **`InstallerVerifier`** — the two checks below, as one call with one verdict.
