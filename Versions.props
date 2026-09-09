@@ -12,7 +12,7 @@
        "released together" and 0.7.0 and above means "released on its own". -->
   <PropertyGroup>
     <BrandVersion>0.7.0</BrandVersion>
-    <BuildVersion>0.7.0</BuildVersion>
+    <BuildVersion>0.8.0</BuildVersion>
     <ConfigVersion>0.7.1</ConfigVersion>
     <ControlsVersion>0.7.0</ControlsVersion>
     <DiagnosticsVersion>0.7.0</DiagnosticsVersion>
@@ -23,7 +23,7 @@
     <StartupVersion>0.7.1</StartupVersion>
     <TrayVersion>0.7.0</TrayVersion>
     <UpdateVersion>0.7.0</UpdateVersion>
-    <Win32Version>0.7.0</Win32Version>
+    <Win32Version>0.8.0</Win32Version>
   </PropertyGroup>
 
 </Project>
