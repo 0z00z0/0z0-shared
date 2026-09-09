@@ -11,7 +11,7 @@ public sealed class SectionLatchTests : SectionedTestBase
     [Fact]
     public void A_document_held_open_at_construction_is_not_written_over()
     {
-        Given("""{ "version": 1, "general": { "Retries": 7 } }""");
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 7 } }""");
         var before = OnDiskBytes();
 
         using var seized = Seize();
@@ -30,7 +30,7 @@ public sealed class SectionLatchTests : SectionedTestBase
     [Fact]
     public void No_copy_is_taken_of_a_document_that_could_not_be_read()
     {
-        Given("""{ "version": 1, "general": { "Retries": 7 } }""");
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 7 } }""");
 
         using var seized = Seize();
         _ = Create();
@@ -41,7 +41,7 @@ public sealed class SectionLatchTests : SectionedTestBase
     [Fact]
     public void A_reload_that_succeeds_lifts_the_refusal()
     {
-        Given("""{ "version": 1, "general": { "Retries": 7 } }""");
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 7 } }""");
 
         var seized = Seize();
         var store = Create();
@@ -63,13 +63,13 @@ public sealed class SectionLatchTests : SectionedTestBase
         Assert.True(store.HasLoaded);
         Assert.True(store.Section<GeneralSection>("general").Update(g => g.Retries = 4).Saved);
         Assert.Contains("\"Retries\": 4", OnDisk(), StringComparison.Ordinal);
-        Assert.Contains("\"version\": 1", OnDisk(), StringComparison.Ordinal);
+        Assert.Contains("\"ConfigVersion\": 1", OnDisk(), StringComparison.Ordinal);
     }
 
     [Fact]
     public void A_document_broken_by_hand_is_written_over_once_a_read_has_succeeded()
     {
-        Given("""{ "version": 1, "general": { "Retries": 7 } }""");
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 7 } }""");
 
         var store = Create();
         Assert.True(store.HasLoaded);
@@ -85,7 +85,7 @@ public sealed class SectionLatchTests : SectionedTestBase
     [Fact]
     public void A_write_is_refused_while_the_document_is_held_open_even_after_a_good_read()
     {
-        Given("""{ "version": 1, "general": { "Retries": 7 } }""");
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 7 } }""");
 
         var store = Create();
         Assert.True(store.HasLoaded);
@@ -100,7 +100,7 @@ public sealed class SectionLatchTests : SectionedTestBase
     [Fact]
     public void A_refused_write_is_announced()
     {
-        Given("""{ "version": 1, "general": { "Retries": 7 } }""");
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 7 } }""");
 
         using var seized = Seize();
         var store = Create();

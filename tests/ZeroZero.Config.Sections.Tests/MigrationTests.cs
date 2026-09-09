@@ -60,14 +60,14 @@ public sealed class MigrationTests : SectionedTestBase
 
         var store = new SectionedSettingsFile(Options());
         Assert.Equal(3, store.DocumentVersion);
-        Assert.Equal("version", store.Keys[0]);
+        Assert.Equal("ConfigVersion", store.Keys[0]);
     }
 
     [Fact]
     public void An_existing_new_document_is_left_alone()
     {
         GivenSource("""{ "startMinimised": true }""");
-        Given("""{ "version": 1, "general": { "StartMinimised": false } }""");
+        Given("""{ "ConfigVersion": 1, "general": { "StartMinimised": false } }""");
         var before = OnDiskBytes();
 
         var result = SettingsMigration.Run(Request());
@@ -148,7 +148,7 @@ public sealed class MigrationTests : SectionedTestBase
     {
         GivenSource("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Retries": 7 },
               "graph": { "Span": "P7D" }
             }
@@ -172,14 +172,14 @@ public sealed class MigrationTests : SectionedTestBase
 
         // Present but wrong: the version is the one value a migration replaces, so a new file that
         // declares something else is not the file that was asked for.
-        File.WriteAllText(FilePath, """{ "version": 9, "general": { "startMinimised": true } }""");
+        File.WriteAllText(FilePath, """{ "ConfigVersion": 9, "general": { "startMinimised": true } }""");
 
         var result = SettingsMigration.ProveTarget(
             Request(new SettingsSectionMove("general", ["startMinimised"])) with { Version = 1 },
             source);
 
         Assert.Equal(SettingsMigrationOutcome.NotProven, result.Outcome);
-        Assert.Contains("version", result.Missing);
+        Assert.Contains("ConfigVersion", result.Missing);
         Assert.False(File.Exists(FilePath));
     }
 

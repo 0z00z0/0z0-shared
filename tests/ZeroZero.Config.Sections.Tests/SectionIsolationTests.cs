@@ -12,7 +12,7 @@ public sealed class SectionIsolationTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Mode": "Scorching", "Retries": 7 },
               "graph": { "Span": "P30D", "Points": 90 }
             }
@@ -31,7 +31,7 @@ public sealed class SectionIsolationTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Retries": 7 },
               "graph": { "Points": "not a number at all" }
             }
@@ -48,7 +48,7 @@ public sealed class SectionIsolationTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Retries": 7 },
               "graph": { "Points": "not a number at all" }
             }
@@ -65,7 +65,7 @@ public sealed class SectionIsolationTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Mode": "Scorching", "Retries": 7 },
               "graph": { "Span": "P30D", "Points": 90 }
             }
@@ -86,7 +86,7 @@ public sealed class SectionIsolationTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Mode": "Scorching" }
             }
             """);
@@ -105,7 +105,7 @@ public sealed class SectionIsolationTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Retries": 7 }
             }
             """);
@@ -124,7 +124,7 @@ public sealed class SectionIsolationTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": 42,
               "graph": { "Span": "P30D" }
             }

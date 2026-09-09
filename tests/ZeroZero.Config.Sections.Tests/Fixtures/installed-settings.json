@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "ConfigVersion": 1,
   "general": {
     "StartMinimised": true,
     "StartWithWindows": false,

@@ -378,7 +378,7 @@ public static class SettingsMigration
                 JsonObjectSpans.Text(written, version.ValueStart, version.ValueEnd)
                     != request.Version.ToString(CultureInfo.InvariantCulture))
             {
-                missing.Add("version");
+                missing.Add(SettingsDocument.VersionKey);
             }
 
             // Counted by occurrence, because a hand edit that left a key twice must land twice: the

@@ -21,8 +21,10 @@ public sealed record SectionedSettingsOptions(string Directory, string FileName)
     /// thread.</summary>
     public SynchronizationContext? NotificationContext { get; init; }
 
-    /// <summary>The document shape this build writes, stamped as the <c>version</c> key when the
-    /// document carries none. A document declaring a higher version is neither read nor written.</summary>
+    /// <summary>The document shape this build writes, stamped as the <c>ConfigVersion</c> key when
+    /// the document carries none. A document declaring a higher version is neither read nor written.
+    /// The key is the store's own and is not the application's product version: a document carrying
+    /// <c>Version</c> keeps it untouched, because top-level keys are matched case-sensitively.</summary>
     public int Version { get; init; } = 1;
 
     /// <summary>The order sections take, consulted only when adding a section the document does not

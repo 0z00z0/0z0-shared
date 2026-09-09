@@ -46,14 +46,19 @@ public sealed class SettingsKeyCaseConflictException : InvalidOperationException
 /// else — so a sibling section, a section from a build that no longer exists, a comment and the
 /// file's own key order all survive because they are never handled, not because a rule says they
 /// should be.</para>
-/// <para>The <c>version</c> key comes first and is written only when the document has none. Raising
-/// an existing version is refused here on purpose: sections belong to independently released
+/// <para>The <c>ConfigVersion</c> key comes first and is written only when the document has none.
+/// Raising an existing version is refused here on purpose: sections belong to independently released
 /// components, so declaring that the whole document has moved to a new shape is a decision above any
 /// one section, and it belongs to the migration.</para>
+/// <para>Top-level keys are matched letter for letter, case included, whatever the serialiser says:
+/// the serialiser's case-insensitive matching binds a section's members, and reaches no further. So
+/// a document carrying <c>Version</c> or <c>version</c> for its own purposes carries an ordinary
+/// key, and <c>ConfigVersion</c> is stamped beside it without either being renamed. A key differing
+/// from <c>ConfigVersion</c> only in case is the one shape that refuses the write.</para>
 /// </remarks>
 internal sealed class SettingsDocument
 {
-    internal const string VersionKey = "version";
+    internal const string VersionKey = "ConfigVersion";
 
     private readonly byte[] _content;
     private readonly JsonObjectSpan _root;
@@ -71,7 +76,7 @@ internal sealed class SettingsDocument
     internal JsonLayout Layout { get; }
 
     /// <summary>The declared document version, or null when the document carries no whole-number
-    /// <c>version</c> key — the older, flat shape.</summary>
+    /// <c>ConfigVersion</c> key — the older, flat shape.</summary>
     internal int? Version
     {
         get

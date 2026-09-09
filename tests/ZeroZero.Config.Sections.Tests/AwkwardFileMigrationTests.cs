@@ -224,7 +224,7 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
         // What an incomplete carry looks like on disk: everything but one of the old file's keys.
         File.WriteAllText(FilePath, """
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "startMinimised": true, "pollSeconds": 30, "label": "x", "keepAwakeWhileCharging": false },
               "graph": { "graphSpan": "P30D", "thresholdWarn": 0.750 },
               "window": { "windowWidth": 1280, "windowHeight": 860 },
@@ -283,8 +283,8 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
         // What a migration that copied a hand-written note forward would leave behind: a comment the
         // application's own reader would fail the whole file on.
         var damaged = OnDisk().Replace(
-            "\"version\": 1,",
-            "\"version\": 1,\r\n    // Hand-edited on the workshop machine after the December outage.",
+            "\"ConfigVersion\": 1,",
+            "\"ConfigVersion\": 1,\r\n    // Hand-edited on the workshop machine after the December outage.",
             StringComparison.Ordinal);
         File.WriteAllText(FilePath, damaged);
 

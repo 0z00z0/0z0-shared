@@ -47,7 +47,7 @@ public sealed class InstalledShapeMigrationTests : SectionedTestBase
         Assert.True(Parses(content, Strict));
 
         var root = JsonObjectSpans.TryReadDocument(content)!;
-        Assert.Equal(["version", .. Sections], root.Members.Select(static member => member.Name));
+        Assert.Equal(["ConfigVersion", .. Sections], root.Members.Select(static member => member.Name));
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public sealed class InstalledShapeMigrationTests : SectionedTestBase
         Assert.Equal(Sections, result.Carried);
 
         var root = JsonObjectSpans.TryReadDocument(OnDiskBytes())!;
-        Assert.Equal(["version", .. Sections], root.Members.Select(static member => member.Name));
+        Assert.Equal(["ConfigVersion", .. Sections], root.Members.Select(static member => member.Name));
         Assert.Equal(2, new SectionedSettingsFile(InstalledOptions(2)).DocumentVersion);
     }
 
@@ -73,7 +73,7 @@ public sealed class InstalledShapeMigrationTests : SectionedTestBase
         var from = JsonObjectSpans.TryReadDocument(source)!;
         var to = JsonObjectSpans.TryReadDocument(target)!;
 
-        foreach (var member in from.Members.Where(static member => member.Name != "version"))
+        foreach (var member in from.Members.Where(static member => member.Name != "ConfigVersion"))
         {
             var landed = to.Find(member.Name)!.Value;
             Assert.Equal(

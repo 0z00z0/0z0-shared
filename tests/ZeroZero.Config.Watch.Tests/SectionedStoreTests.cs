@@ -25,7 +25,7 @@ public sealed class SectionedStoreTests : WatcherTestBase
             FilePath,
             $$"""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "{{section}}": {
                 "Broker": "{{broker}}",
                 "Retries": 3
