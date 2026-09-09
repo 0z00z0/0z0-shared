@@ -10,7 +10,7 @@ public sealed class SectionVersionAndReloadTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 9,
+              "ConfigVersion": 9,
               "general": { "Retries": 7 }
             }
             """);
@@ -45,12 +45,12 @@ public sealed class SectionVersionAndReloadTests : SectionedTestBase
     [Fact]
     public void A_document_that_becomes_newer_between_the_read_and_the_write_is_not_written_over()
     {
-        Given("""{ "version": 1, "general": { "Retries": 7 } }""");
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 7 } }""");
 
         var store = Create(version: 1);
         Assert.False(store.IsFromNewerVersion);
 
-        File.WriteAllText(FilePath, """{ "version": 9, "general": { "Retries": 7 }, "future": { "New": true } }""");
+        File.WriteAllText(FilePath, """{ "ConfigVersion": 9, "general": { "Retries": 7 }, "future": { "New": true } }""");
         var before = OnDiskBytes();
 
         var result = store.Section<GeneralSection>("general").Update(g => g.Retries = 1);
@@ -65,7 +65,7 @@ public sealed class SectionVersionAndReloadTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Retries": 7 },
               "graph": { "Span": "P7D" }
             }
@@ -82,7 +82,7 @@ public sealed class SectionVersionAndReloadTests : SectionedTestBase
 
         File.WriteAllText(FilePath, """
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Retries": 11 },
               "graph": { "Span": "P7D" }
             }
@@ -97,7 +97,7 @@ public sealed class SectionVersionAndReloadTests : SectionedTestBase
     [Fact]
     public void A_reload_of_an_unchanged_document_announces_nothing()
     {
-        Given("""{ "version": 1, "general": { "Retries": 7 } }""");
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 7 } }""");
 
         var store = Create();
         var general = store.Section<GeneralSection>("general");
@@ -112,7 +112,7 @@ public sealed class SectionVersionAndReloadTests : SectionedTestBase
     [Fact]
     public void A_reload_that_cannot_read_the_document_leaves_the_held_state_standing()
     {
-        Given("""{ "version": 1, "general": { "Retries": 7 } }""");
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 7 } }""");
 
         var store = Create();
         using var seized = Seize();
@@ -124,7 +124,7 @@ public sealed class SectionVersionAndReloadTests : SectionedTestBase
     [Fact]
     public void A_write_announces_its_own_section()
     {
-        Given("""{ "version": 1, "general": { "Retries": 7 }, "graph": { "Span": "P7D" } }""");
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 7 }, "graph": { "Span": "P7D" } }""");
 
         var store = Create();
         var general = store.Section<GeneralSection>("general");
@@ -146,7 +146,7 @@ public sealed class SectionVersionAndReloadTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Retries": 7 }
             }
             """);
@@ -157,7 +157,7 @@ public sealed class SectionVersionAndReloadTests : SectionedTestBase
 
         File.WriteAllText(FilePath, """
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Retries": 7, "Label": "edited by hand" },
               "added_by_hand": { "Keep": true }
             }
@@ -174,7 +174,7 @@ public sealed class SectionVersionAndReloadTests : SectionedTestBase
     [Fact]
     public void A_notification_context_carries_the_announcement()
     {
-        Given("""{ "version": 1, "general": { "Retries": 7 } }""");
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 7 } }""");
 
         var context = new RecordingContext();
         var store = Create(notificationContext: context);

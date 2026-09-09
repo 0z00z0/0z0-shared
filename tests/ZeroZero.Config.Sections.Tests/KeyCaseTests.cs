@@ -27,7 +27,7 @@ public sealed class KeyCaseTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "General": { "StartMinimised": true, "Label": "kept" }
             }
             """);
@@ -44,7 +44,7 @@ public sealed class KeyCaseTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Label": "kept" }
             }
             """);
@@ -57,7 +57,7 @@ public sealed class KeyCaseTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "General": { "StartMinimised": true, "Label": "kept" }
             }
             """);
@@ -77,7 +77,7 @@ public sealed class KeyCaseTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "General": { "Label": "kept" }
             }
             """);
@@ -98,7 +98,7 @@ public sealed class KeyCaseTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "startminimised": true, "label": "kept" }
             }
             """);
@@ -122,7 +122,7 @@ public sealed class KeyCaseTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "startminimised": true, "label": "kept" }
             }
             """);
@@ -144,7 +144,7 @@ public sealed class KeyCaseTests : SectionedTestBase
     {
         Given("""
             {
-              "Version": 1,
+              "Configversion": 1,
               "general": { "Label": "kept" }
             }
             """);
@@ -154,8 +154,8 @@ public sealed class KeyCaseTests : SectionedTestBase
 
         Assert.False(result.Saved);
         var conflict = Assert.IsType<SettingsKeyCaseConflictException>(result.Error);
-        Assert.Equal("version", conflict.Wanted);
-        Assert.Equal("Version", conflict.Found);
+        Assert.Equal("ConfigVersion", conflict.Wanted);
+        Assert.Equal("Configversion", conflict.Found);
         Assert.Equal(before, OnDiskBytes());
     }
 

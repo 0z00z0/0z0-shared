@@ -9,7 +9,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
 {
     private const string Document = """
         {
-          "version": 1,
+          "ConfigVersion": 1,
           "general": {
             "StartMinimised": true,
             "Label": "desk",
@@ -76,7 +76,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
         Given("""
             {
               "graph": { "Span": "P7D", "Points": 48 },
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Retries": 3 }
             }
             """);
@@ -84,10 +84,10 @@ public sealed class SectionPreservationTests : SectionedTestBase
         var store = Create();
         store.Section<GeneralSection>("general").Update(g => g.Retries = 4);
 
-        Assert.Equal(["graph", "version", "general"], store.Keys);
+        Assert.Equal(["graph", "ConfigVersion", "general"], store.Keys);
         Assert.True(
             OnDisk().IndexOf("\"graph\"", StringComparison.Ordinal) <
-            OnDisk().IndexOf("\"version\"", StringComparison.Ordinal));
+            OnDisk().IndexOf("\"ConfigVersion\"", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
         Given("""
             {
               // the cabin machine wants this off
-              "version": 1,
+              "ConfigVersion": 1,
               "general": {
                 /* raised after the December outage */
                 "Retries": 7
@@ -118,7 +118,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": {
                 "Retries": 3,
                 "SomethingOnlyTheOtherBuildKnows": "keep me"
@@ -137,7 +137,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Retries": 3 },
             }
             """);
@@ -166,7 +166,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
     [InlineData("\r\n")]
     public void The_files_own_line_ending_is_the_one_added_content_uses(string newLine)
     {
-        Given(string.Join(newLine, "{", "    \"version\": 1,", "    \"general\": {", "        \"Retries\": 3", "    }", "}"));
+        Given(string.Join(newLine, "{", "    \"ConfigVersion\": 1,", "    \"general\": {", "        \"Retries\": 3", "    }", "}"));
 
         var store = Create();
         store.Section<GraphSection>("graph").Update(g => g.Points = 12);
@@ -183,7 +183,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
     [Fact]
     public void The_files_own_indent_is_the_one_added_content_uses()
     {
-        Given(string.Join("\n", "{", "    \"version\": 1,", "    \"general\": {", "        \"Retries\": 3", "    }", "}"));
+        Given(string.Join("\n", "{", "    \"ConfigVersion\": 1,", "    \"general\": {", "        \"Retries\": 3", "    }", "}"));
 
         var store = Create();
         store.Section<GraphSection>("graph").Update(g => g.Points = 12);
@@ -196,7 +196,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Retries": 3 },
               "window": { "Width": 640, "Height": 480 }
             }
@@ -205,7 +205,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
         var store = Create();
         store.Section<GraphSection>("graph").Update(g => g.Points = 12);
 
-        Assert.Equal(["version", "general", "graph", "window"], store.Keys);
+        Assert.Equal(["ConfigVersion", "general", "graph", "window"], store.Keys);
     }
 
     [Fact]
@@ -213,7 +213,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Retries": 3 }
             }
             """);
@@ -221,7 +221,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
         var store = Create();
         store.Section<WindowSection>("not_in_the_order").Update(w => w.Width = 1024);
 
-        Assert.Equal(["version", "general", "not_in_the_order"], store.Keys);
+        Assert.Equal(["ConfigVersion", "general", "not_in_the_order"], store.Keys);
     }
 
     [Fact]
@@ -229,7 +229,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": {
                 "Retries": 3
               }
@@ -251,7 +251,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Retries": 3 },
               "general": { "Retries": 11 }
             }
@@ -270,7 +270,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
     [Fact]
     public void A_member_a_hand_edit_left_twice_is_written_at_the_last_of_them()
     {
-        Given("""{ "version": 1, "general": { "Retries": 3, "Retries": 11 } }""");
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 3, "Retries": 11 } }""");
 
         var store = Create();
         var general = store.Section<CounterSection>("general");
@@ -283,7 +283,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
     [Fact]
     public void A_save_that_changes_nothing_does_not_write_at_all()
     {
-        Given("""{ "version": 1, "general": { "Retries": 3 } }""");
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 3 } }""");
         var store = Create();
         var general = store.Section<CounterSection>("general");
 
@@ -326,7 +326,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
         var store = Create();
         store.Section<GeneralSection>("general").Update(g => g.Retries = 4);
 
-        Assert.Equal(["version", "general"], store.Keys);
+        Assert.Equal(["ConfigVersion", "general"], store.Keys);
         Assert.Equal(1, store.DocumentVersion);
     }
 
@@ -335,7 +335,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": { "Retries": 3 }
             }
             """);
@@ -344,7 +344,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
         store.Section<GeneralSection>("general").Update(g => g.Retries = 4);
 
         Assert.Equal(1, store.DocumentVersion);
-        Assert.Contains("\"version\": 1", OnDisk(), StringComparison.Ordinal);
+        Assert.Contains("\"ConfigVersion\": 1", OnDisk(), StringComparison.Ordinal);
     }
 
     // The text from a key to the end of the line it sits on, which is enough to compare one section

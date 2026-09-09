@@ -62,8 +62,10 @@ public sealed record SettingsMigrationResult(SettingsMigrationOutcome Outcome)
     public bool Migrated => Outcome == SettingsMigrationOutcome.Migrated;
 
     /// <summary>Every top-level key of the old document that landed in the new one, in the old
-    /// document's order. The version key is not among them: it is the one value a migration
-    /// replaces.</summary>
+    /// document's order. <c>ConfigVersion</c> is not among them: it is the one value a migration
+    /// replaces. A key that is merely about a version — a document's own <c>Version</c>, or the
+    /// lower-case <c>version</c> an earlier build of this store wrote — is a different word and is
+    /// carried like any other, with <c>ConfigVersion</c> stamped ahead of it.</summary>
     public IReadOnlyList<string> Carried { get; init; } = [];
 
     /// <summary>Every comment the old document carried outside a value, in file order. None of them is
@@ -378,7 +380,7 @@ public static class SettingsMigration
                 JsonObjectSpans.Text(written, version.ValueStart, version.ValueEnd)
                     != request.Version.ToString(CultureInfo.InvariantCulture))
             {
-                missing.Add("version");
+                missing.Add(SettingsDocument.VersionKey);
             }
 
             // Counted by occurrence, because a hand edit that left a key twice must land twice: the

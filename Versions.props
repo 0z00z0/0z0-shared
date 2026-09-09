@@ -13,7 +13,7 @@
   <PropertyGroup>
     <BrandVersion>0.7.0</BrandVersion>
     <BuildVersion>0.8.1</BuildVersion>
-    <ConfigVersion>0.7.1</ConfigVersion>
+    <ConfigVersion>0.8.0</ConfigVersion>
     <ControlsVersion>0.7.0</ControlsVersion>
     <DiagnosticsVersion>0.7.0</DiagnosticsVersion>
     <LifecycleVersion>0.7.1</LifecycleVersion>

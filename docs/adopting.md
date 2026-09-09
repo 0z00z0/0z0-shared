@@ -144,10 +144,22 @@ This is the sharpest edge in the set.
 A section is found by its exact spelling, case included, and one the file spells in another case
 reads as **the type's declared defaults** — no exception, no event, nothing in a log, and nothing to
 tell it apart from a section that has never been written. A write then refuses to create the twin,
-so the file cannot end up holding both — and the same refusal guards the document's `version` key.
-Inside a section it is the serialiser that matches member names, and the family's default one ignores
-case, so a member's case is harmless under it; an application that supplies a case-sensitive
-serialiser gets the refusal there too.
+so the file cannot end up holding both — and the same refusal guards the store's own
+`ConfigVersion` key. Inside a section it is the serialiser that matches member names, and the
+family's default one ignores case, so a member's case is harmless under it; an application that
+supplies a case-sensitive serialiser gets the refusal there too.
+
+**A refused write is returned, not raised, so an application that reads neither the result nor
+`SaveFailed` loses the write with no sign of it.** A case clash does not clear itself either: every
+later write is refused the same way, the file stays byte for byte as it was, and the person keeps
+changing settings that never reach disk. Read what `Update` and `Write` return, or wire `SaveFailed`
+— on a store this is the difference between a settings page that works and one that quietly does
+nothing.
+
+The store's own key is `ConfigVersion`, and it is not the application's product version. A document
+declaring `Version` for its own purposes is untouched: the two keys stand side by side, because
+top-level keys are matched letter for letter. Only a key differing from `ConfigVersion` in case
+alone collides with it.
 
 That guard catches a difference of **case**. Nothing catches a difference of **word**, and an en-US
 spelling where the file holds the en-GB one is a different word — *color* against *colour* matches

@@ -21,6 +21,12 @@ namespace ZeroZero.Config.Sections.Tests;
 /// version this build asks for — the one thing the store deliberately refuses to do — while leaving
 /// the old file exactly where it was. These tests prove that, and prove the member spellings that
 /// defeat a binder survive it unchanged.</para>
+/// <para>The fixture's own version key is the lower-case <c>version</c> the shipped build wrote, and
+/// it is left at that spelling because the measurement was taken from a file that build produced.
+/// The store's key is now <c>ConfigVersion</c>, a different word rather than a different case, so a
+/// migration of such a file carries the old key across as an ordinary top-level key and stamps
+/// <c>ConfigVersion</c> ahead of it. Both keys are then in the new document, the store reads only
+/// its own, and the application's own reader keeps whatever it made of the old one.</para>
 /// </remarks>
 public sealed class InstalledShapeMigrationTests : SectionedTestBase
 {
@@ -56,10 +62,13 @@ public sealed class InstalledShapeMigrationTests : SectionedTestBase
         var result = Run(version: 2);
 
         Assert.True(result.Migrated);
-        Assert.Equal(Sections, result.Carried);
+
+        // The old file's own version key is carried like any other key it holds: only the store's
+        // own ConfigVersion is replaced, and this document has never had one.
+        Assert.Equal(["version", .. Sections], result.Carried);
 
         var root = JsonObjectSpans.TryReadDocument(OnDiskBytes())!;
-        Assert.Equal(["version", .. Sections], root.Members.Select(static member => member.Name));
+        Assert.Equal(["ConfigVersion", "version", .. Sections], root.Members.Select(static member => member.Name));
         Assert.Equal(2, new SectionedSettingsFile(InstalledOptions(2)).DocumentVersion);
     }
 
@@ -73,7 +82,8 @@ public sealed class InstalledShapeMigrationTests : SectionedTestBase
         var from = JsonObjectSpans.TryReadDocument(source)!;
         var to = JsonObjectSpans.TryReadDocument(target)!;
 
-        foreach (var member in from.Members.Where(static member => member.Name != "version"))
+        // Every member, the old version key included: nothing this document carries is replaced.
+        foreach (var member in from.Members)
         {
             var landed = to.Find(member.Name)!.Value;
             Assert.Equal(

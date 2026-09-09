@@ -21,7 +21,7 @@ public sealed class CommentEmissionTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "graph": { "Span": "P7D", "Points": 24 }
             }
             """);
@@ -54,7 +54,7 @@ public sealed class CommentEmissionTests : SectionedTestBase
         Given("""
             {
               // the one above
-              "version": 1,
+              "ConfigVersion": 1,
               "general": {
                 /* the one inside */
                 "Label": "before"
@@ -75,7 +75,7 @@ public sealed class CommentEmissionTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": {
                 /* the only thing in here */
               }
@@ -93,7 +93,7 @@ public sealed class CommentEmissionTests : SectionedTestBase
     {
         Given("""
             {
-              "version": 1,
+              "ConfigVersion": 1,
               "general": {}
             }
             """);

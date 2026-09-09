@@ -17,6 +17,15 @@ namespace ZeroZero.Config.Sections;
 /// <para>A document this build cannot read is copied aside from the bytes already in hand, never by
 /// reading the file a second time — the copy has to work for the file whose second read would fail
 /// too.</para>
+/// <para>A refused write is returned, never raised: <see cref="SettingsSaveResult"/> carries the
+/// reason and <see cref="SaveFailed"/> announces it. A caller that reads neither loses every write
+/// in silence, and a refusal that stands — a key differing only in case — refuses every later write
+/// the same way, so nothing the person changes ever reaches the file.</para>
+/// <para>Top-level keys are matched letter for letter. The serialiser's case-insensitive matching
+/// binds a section's members and reaches no further, so a section addressed under one spelling while
+/// the file carries another reads as its type's defaults, and the store's own
+/// <c>ConfigVersion</c> key stands beside a document's <c>Version</c> or <c>version</c> without
+/// either being renamed.</para>
 /// </remarks>
 public sealed class SectionedSettingsFile
 {

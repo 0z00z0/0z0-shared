@@ -75,11 +75,11 @@ save, which is why the result is worth reading. The sectioned store carries it a
 ## `ZeroZero.Config.Sections` — one document, many owners
 
 The document is one JSON object. A key holding an object is a **section**, belonging to whichever
-component asked for it, and `version` is the one key that is not: a whole number saying which shape
-of the document this is. A store addresses one section. It never addresses the document.
+component asked for it, and `ConfigVersion` is the one key that is not: a whole number saying which
+shape of the document this is. A store addresses one section. It never addresses the document.
 
 Neither of those is enforced, and a guide that said they were would be describing a document the
-store rejects and it does not. `version` is written first when the document carries none, and stays
+store rejects and it does not. `ConfigVersion` is written first when the document carries none, and stays
 wherever the file already has it otherwise — key order is the file's own, as
 [below](#what-a-write-touches-and-what-it-does-not). A document may carry no version key at all,
 which is the older flat shape, and `DocumentVersion` reads null for it. A top-level key holding
@@ -157,8 +157,15 @@ the file's leaves the person's value in the file with nothing reading it. **Ever
 create such a pair is refused**, with `SettingsKeyCaseConflictException` naming both spellings and the
 file left exactly as it was. `SaveFailed` announces it like any other refused write.
 
+**A refusal is returned, never raised.** `Update` and `Write` hand back a `SettingsSaveResult`
+carrying the reason and `SaveFailed` announces it; nothing is thrown out of the store. An application
+that reads neither sees a write that appears to have happened, and a case clash does not clear
+itself: every later write is refused the same way for as long as the key stands, so nothing the
+person changes ever reaches the file and no part of the application says so. Read the result, or wire
+`SaveFailed`.
+
 **The three places it can happen do not behave alike, and the difference is the whole of it.** A
-section key and the version key are matched letter for letter, always: the document walk compares
+section key and the `ConfigVersion` key are matched letter for letter, always: the document walk compares
 them ordinally, whatever the serialiser is set to, so `Mqtt` never finds `mqtt` and the write that
 would add the second one is refused. A member inside a section is matched the way the serialiser
 matches it — and the family's serialiser is case-insensitive, so the write finds the file's own
@@ -180,6 +187,12 @@ first and a write adds it alongside. Match the file's own spelling, letter for l
 
 ### The version key
 
+**The key is `ConfigVersion`.** It says which shape of the document this is, and it is never the
+application's own product version. The two do not meet: a document declaring `Version`, `version` or
+`VERSION` for its own purposes keeps that key and its value untouched and gains `ConfigVersion`
+beside it, because top-level keys are matched letter for letter. The one spelling that refuses the
+write is one differing from `ConfigVersion` in case alone.
+
 - Written as the first key **only when the document carries none**. An existing version is never
   raised: sections belong to independently released components, so declaring that the whole document
   has moved to a new shape is a decision above any one section, and it belongs to the migration.
@@ -188,7 +201,7 @@ first and a write adds it alongside. Match the file's own spelling, letter for l
   newer peer owns keys this build would not understand, and defaults written over them would be
   exactly the loss the design exists to prevent. The check runs again inside every write, so a
   document that becomes newer between the read and the write is still not written over.
-- A document with **no** version key is the older, flat shape and is read as it stands.
+- A document with **no** `ConfigVersion` key is the older, flat shape and is read as it stands.
 
 ### The write latch, and what is preserved
 
@@ -257,6 +270,11 @@ var result = SettingsMigration.Run(new SettingsMigrationRequest(oldPath, newPath
 - Every top-level key of the old file lands in the new one: inside the section it was mapped into, or
   at the top level where it already was. A key no move names is carried through, which is how a
   section this build has no type for survives the move.
+- **The one key it replaces is `ConfigVersion`.** A document written by an earlier build carries the
+  lower-case `version`, which is a different word rather than a different case, so it is carried like
+  any other key: the new file holds `ConfigVersion` stamped first and the old `version` after it, and
+  `Carried` names the old key. Retiring it is the application's own decision, as retiring the old file
+  is.
 - **A migration groups keys; it never renames them.** The member name inside the new section is the
   old key's own name, carried as the file's own bytes, so a key holding an escape sequence is written
   back exactly as it was. The section type has to bind to that name — casing aside, and only where the
