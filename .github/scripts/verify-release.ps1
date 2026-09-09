@@ -28,9 +28,12 @@ Signed    With -RequireSigned, the recorded outcome of a step in the caller's jo
           evidence that it did not. Given without -RequireSigned, a step that ran and did not
           complete still fails. Both forms may be given, and each must hold.
 Signer    With -Signer: every executable fetched carries an intact Authenticode signature whose
-          subject is the one expected. A subject is a string anyone can put on a self-signed
-          certificate, so -SignerThumbprint pins the certificate itself where the release signs
-          with one no runner's root store trusts.
+          subject is the one expected, and a timestamp. A subject is a string anyone can put on a
+          self-signed certificate, so -SignerThumbprint pins the certificate itself where the
+          release signs with one no runner's root store trusts. The timestamp is asserted on the
+          published file because an untimestamped signature verifies today and stops on the day the
+          signing certificate expires, and because a signing step that never ran leaves behind no
+          check of its own.
 
 Every assertion fails closed: a location that cannot be reached, a record naming another tag or
 commit, an empty record, a package without a nuspec — each is a failure, never a skip. The token
@@ -274,7 +277,15 @@ function Test-Signer([string]$Path, [string]$Name) {
         Fail "$Name's signature verifies as $($signature.Status): $($signature.StatusMessage)"
         return
     }
-    Write-Host "  signed by '$subject', thumbprint $thumbprint ($($signature.Status))."
+    # Asserted on the published file because a signing step that never ran leaves no check of its
+    # own behind, and an untimestamped signature verifies today and stops on the day the signing
+    # certificate expires — a date nobody chose. Either timestamp scheme answers here.
+    $timestamper = $signature.TimeStamperCertificate
+    if ($null -eq $timestamper) {
+        Fail "$Name is signed and carries no timestamp, so the signature stops verifying when the signing certificate expires. Nothing timestamped it: either no timestamp authority answered the signing run, or it was signed without one."
+        return
+    }
+    Write-Host "  signed by '$subject', thumbprint $thumbprint ($($signature.Status)), timestamped by '$($timestamper.Subject)'."
 }
 
 function Test-Contents($Fetched, $Entry) {

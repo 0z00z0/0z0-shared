@@ -19,7 +19,9 @@ than as rules.
   offers — appending a second signature, page hashes, naming a hardware-token provider on the
   command line — is out of reach.
 - **One timestamp server, named by a property.** No fallback list, and no retry when it cannot be
-  reached.
+  reached — the build fails instead. A signing run that reaches no authority produces a correctly
+  signed file with no timestamp, which verifies until the certificate expires and then stops for
+  everyone who already installed it, so it is refused rather than shipped.
 - **The certificate is a thumbprint in a personal store, or a PFX file.** The PFX password arrives
   only through an environment variable; nothing reads it from an argument and nothing prompts for it.
 

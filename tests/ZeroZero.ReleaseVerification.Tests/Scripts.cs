@@ -14,11 +14,16 @@ internal static class Scripts
     public static string Configuration { get; } =
         typeof(Scripts).Assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "Release";
 
-    public static ScriptResult Run(string script, IReadOnlyDictionary<string, string?>? environment, params string[] arguments)
+    public static ScriptResult Run(string script, IReadOnlyDictionary<string, string?>? environment, params string[] arguments) =>
+        RunPath(Path.Combine(Directory, script), environment, arguments);
+
+    /// <summary>Runs a script by full path, for the ones that ship to consumers rather than living
+    /// under .github/scripts.</summary>
+    public static ScriptResult RunPath(string path, IReadOnlyDictionary<string, string?>? environment, params string[] arguments)
     {
         var start = Start();
         start.ArgumentList.Add("-File");
-        start.ArgumentList.Add(Path.Combine(Directory, script));
+        start.ArgumentList.Add(path);
         foreach (var argument in arguments) start.ArgumentList.Add(argument);
         return Execute(start, environment);
     }
