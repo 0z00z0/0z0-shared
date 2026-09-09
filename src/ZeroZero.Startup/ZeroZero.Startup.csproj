@@ -9,7 +9,7 @@
 
     <AssemblyTitle>ZeroZero.Startup</AssemblyTitle>
     <Product>ZeroZero.Startup</Product>
-    <Description>The application's logon task in the Task Scheduler: the current task identity, the power-safe elevated task definition, registration, the direct enabled read, enable, disable, delete, demand-start verification and the repair state machine. The manifest, the installer and the watchdog policy stay with the application.</Description>
+    <Description>The application's logon task in the Task Scheduler: the current task identity, the power-safe elevated task definition, registration, the direct enabled read, enable, disable, delete, demand-start verification and the repair state machine. The manifest, the installer and any watchdog policy stay with the application.</Description>
   </PropertyGroup>
 
   <ItemGroup>

@@ -238,19 +238,20 @@ application creates with the library's default arms it for everything**, the sha
 The host needs no window, but it does need the XAML runtime and a dispatcher on the thread that
 starts it.
 
-### The lifecycle replaces two pieces of an application, and not the third
+### The lifecycle replaces two pieces of an application, not crash recovery
 
 Taking it **retires the application's own single-instance lock and its own relaunch limiter**: both
 are the same job done twice, and running two limiters means two budgets and twice the relaunches.
 
-It **does not retire the crash watchdog**, and reading the table above as though it did is the
-mistake to avoid. The component hooks process exit, and **the runtime raises no exit event for an
-unhandled exception**, so a crash never reaches it. What it covers is the clean exit nobody asked
-for — a message loop that ended, an exit path taken by mistake. Bringing back a process that died is
-the watchdog task's, and the crash itself belongs to the diagnostics component.
+**It does not retire crash recovery**, and reading the table above as though it did is the mistake
+to avoid. The component hooks process exit, and **the runtime raises no exit event for an unhandled
+exception**, so a crash never reaches it. What it covers is the clean exit nobody asked for — a
+message loop that ended, an exit path taken by mistake. Whether anything brings a crashed process
+back — a scheduled task, a service, or nothing — is the application's own question, and nothing here
+answers it or requires an answer. The crash itself belongs to the diagnostics component.
 
-So after adoption an application keeps three things it already had: the watchdog task, whatever
-registers it, and its own judgement of what counts as a deliberate exit.
+So after adoption an application keeps two things it already had: whatever recovers a crashed
+process, if anything does, and its own judgement of what counts as a deliberate exit.
 
 ### The single-instance lock belongs to the thread that takes it
 
