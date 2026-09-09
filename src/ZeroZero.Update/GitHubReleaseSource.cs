@@ -43,9 +43,11 @@ public sealed class GitHubReleaseSource : IReleaseSource
         {
             throw;
         }
+        // The caller's own cancellation is rethrown by the clause above, so the only token left to
+        // have fired here is the request budget: a cancellation at this point is a timeout.
         catch (OperationCanceledException ex)
         {
-            return Unreachable($"no answer from {Uri.Host} within {_timeout.TotalSeconds.ToString(CultureInfo.InvariantCulture)} s", ex);
+            return TimedOut(Budget(), ex);
         }
         catch (HttpRequestException ex)
         {
@@ -63,8 +65,11 @@ public sealed class GitHubReleaseSource : IReleaseSource
                 return new ReleaseLookup(ReleaseLookupOutcome.RateLimited, RateLimitResetsAt: resetsAt, Detail: "GitHub's rate limit refused the request");
             }
 
+            // A failure status is the service answering, not a release this version cannot read, so
+            // it is its own outcome and never InvalidResponse: the body is not looked at at all.
             if (!response.IsSuccessStatusCode)
-                return new ReleaseLookup(ReleaseLookupOutcome.InvalidResponse, Detail: $"HTTP {((int)response.StatusCode).ToString(CultureInfo.InvariantCulture)} from {Uri.Host}");
+                return new ReleaseLookup(ReleaseLookupOutcome.RequestFailed,
+                    Detail: $"{Uri.Host} answered HTTP {((int)response.StatusCode).ToString(CultureInfo.InvariantCulture)} rather than a release");
 
             string json;
             try
@@ -75,7 +80,11 @@ public sealed class GitHubReleaseSource : IReleaseSource
             {
                 throw;
             }
-            catch (Exception ex) when (ex is OperationCanceledException or HttpRequestException or IOException)
+            catch (OperationCanceledException ex)
+            {
+                return TimedOut(Budget(), ex);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or IOException)
             {
                 return Unreachable($"the answer from {Uri.Host} ended early: {ex.Message}", ex);
             }
@@ -84,8 +93,14 @@ public sealed class GitHubReleaseSource : IReleaseSource
         }
     }
 
+    private string Budget() =>
+        $"no answer from {Uri.Host} within {_timeout.TotalSeconds.ToString(CultureInfo.InvariantCulture)} s";
+
     private static ReleaseLookup Unreachable(string detail, Exception error) =>
         new(ReleaseLookupOutcome.Unreachable, Detail: detail, Error: error);
+
+    private static ReleaseLookup TimedOut(string detail, Exception error) =>
+        new(ReleaseLookupOutcome.TimedOut, Detail: detail, Error: error);
 
     /// <summary>GitHub answers 403 or 429 with <c>X-RateLimit-Remaining: 0</c> and the reset as
     /// Unix seconds, or with <c>Retry-After</c>. A 403 carrying neither is not the limit.</summary>

@@ -67,6 +67,8 @@ public class UpdateFlowTests
     [InlineData(UpdateCheckOutcome.RateLimited)]
     [InlineData(UpdateCheckOutcome.Unreachable)]
     [InlineData(UpdateCheckOutcome.InvalidResponse)]
+    [InlineData(UpdateCheckOutcome.TimedOut)]
+    [InlineData(UpdateCheckOutcome.RequestFailed)]
     public async Task ManualRun_ReportsACheckThatFailed(UpdateCheckOutcome outcome)
     {
         _service.CheckResult = new UpdateCheckResult(outcome, new Version(1, 0, 0, 0), Detail: "why");
@@ -83,6 +85,8 @@ public class UpdateFlowTests
     [InlineData(UpdateCheckOutcome.RateLimited)]
     [InlineData(UpdateCheckOutcome.Unreachable)]
     [InlineData(UpdateCheckOutcome.InvalidResponse)]
+    [InlineData(UpdateCheckOutcome.TimedOut)]
+    [InlineData(UpdateCheckOutcome.RequestFailed)]
     [InlineData(UpdateCheckOutcome.NoReleases)]
     public async Task ScheduledRun_KeepsACheckThatFailedToItself(UpdateCheckOutcome outcome)
     {

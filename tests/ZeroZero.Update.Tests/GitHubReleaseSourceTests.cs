@@ -169,17 +169,34 @@ public class GitHubReleaseSourceTests
         Assert.Contains(log.Infos, line => line.Contains("rate limit"));
     }
 
-    [Fact]
-    public async Task LookupLatest_ReportsAServerErrorAsInvalid()
+    [Theory]
+    [InlineData(500)]
+    [InlineData(401)]
+    public async Task LookupLatest_ReportsAFailureStatusAsARequestThatFailed(int status)
     {
         using var server = new LocalReleaseServer();
-        server.Map("/repos/studio/product/releases/latest", new LocalReleaseServer.Response(500, Encoding.UTF8.GetBytes("boom")));
+        server.Map("/repos/studio/product/releases/latest", new LocalReleaseServer.Response(status, Encoding.UTF8.GetBytes("boom")));
+        var source = new GitHubReleaseSource(Client(), Options(server.BaseUri));
+
+        ReleaseLookup lookup = await source.LookupLatestAsync();
+
+        Assert.Equal(ReleaseLookupOutcome.RequestFailed, lookup.Outcome);
+        Assert.Contains(status.ToString(System.Globalization.CultureInfo.InvariantCulture), lookup.Detail);
+    }
+
+    /// <summary>The neighbour of the test above: a body that arrived and cannot be read is its own
+    /// outcome, so a caller telling the two apart never reads the detail sentence.</summary>
+    [Fact]
+    public async Task LookupLatest_ReportsAnAnswerThatIsNotAReleaseAsInvalid()
+    {
+        using var server = new LocalReleaseServer();
+        server.MapJson("/repos/studio/product/releases/latest", """{ "tag_name": "nightly" }""");
         var source = new GitHubReleaseSource(Client(), Options(server.BaseUri));
 
         ReleaseLookup lookup = await source.LookupLatestAsync();
 
         Assert.Equal(ReleaseLookupOutcome.InvalidResponse, lookup.Outcome);
-        Assert.Contains("500", lookup.Detail);
+        Assert.Contains("nightly", lookup.Detail);
     }
 
     [Fact]
@@ -193,8 +210,10 @@ public class GitHubReleaseSourceTests
         Assert.IsType<HttpRequestException>(lookup.Error);
     }
 
+    /// <summary>A port with something behind it that never answers, against the closed port above:
+    /// the two arrive as different exception types and must stay different outcomes.</summary>
     [Fact]
-    public async Task LookupLatest_GivesUpOnAServerThatNeverAnswers()
+    public async Task LookupLatest_ReportsAServerThatNeverAnswersAsTimedOut()
     {
         using var server = new LocalReleaseServer();
         server.Map("/repos/studio/product/releases/latest", new LocalReleaseServer.Response(200, Encoding.UTF8.GetBytes("{}"), Delay: TimeSpan.FromSeconds(10)));
@@ -203,7 +222,27 @@ public class GitHubReleaseSourceTests
         var watch = System.Diagnostics.Stopwatch.StartNew();
         ReleaseLookup lookup = await source.LookupLatestAsync();
 
-        Assert.Equal(ReleaseLookupOutcome.Unreachable, lookup.Outcome);
+        Assert.Equal(ReleaseLookupOutcome.TimedOut, lookup.Outcome);
+        Assert.IsAssignableFrom<OperationCanceledException>(lookup.Error);
+        Assert.Contains("within", lookup.Detail);
+        Assert.InRange(watch.Elapsed, TimeSpan.Zero, TimeSpan.FromSeconds(5));
+    }
+
+    /// <summary>The budget covers the body as well as the headers: an answer whose headers arrive
+    /// and whose body never does is the same timeout, not an answer that ended early.</summary>
+    [Fact]
+    public async Task LookupLatest_ReportsABodyThatNeverArrivesAsTimedOut()
+    {
+        using var server = new LocalReleaseServer();
+        server.Map("/repos/studio/product/releases/latest", new LocalReleaseServer.Response(
+            200, Encoding.UTF8.GetBytes("{}"), BodyDelay: TimeSpan.FromSeconds(10)));
+        var source = new GitHubReleaseSource(Client(), Options(server.BaseUri, TimeSpan.FromMilliseconds(300)));
+
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        ReleaseLookup lookup = await source.LookupLatestAsync();
+
+        Assert.Equal(ReleaseLookupOutcome.TimedOut, lookup.Outcome);
+        Assert.IsAssignableFrom<OperationCanceledException>(lookup.Error);
         Assert.Contains("within", lookup.Detail);
         Assert.InRange(watch.Elapsed, TimeSpan.Zero, TimeSpan.FromSeconds(5));
     }

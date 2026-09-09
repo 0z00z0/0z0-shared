@@ -20,7 +20,7 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
     private readonly RecordingLogSink _log = new();
     private readonly RecordingLauncher _launcher = new();
 
-    private UpdateService Service(Version? running = null, ExpectedSigner? signer = null) => new(new UpdateOptions
+    private UpdateService Service(Version? running = null, ExpectedSigner? signer = null, TimeSpan? requestTimeout = null) => new(new UpdateOptions
     {
         RepositoryOwner = "studio",
         RepositoryName = "product",
@@ -31,7 +31,7 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
         InstallerFileName = "Product-Setup-{version}.exe",
         InstallerArguments = "/quiet",
         ApiBaseUri = _server.BaseUri,
-        RequestTimeout = TimeSpan.FromSeconds(10),
+        RequestTimeout = requestTimeout ?? TimeSpan.FromSeconds(10),
         DownloadTimeout = TimeSpan.FromSeconds(10),
         Log = _log,
     }, launcher: _launcher);
@@ -129,6 +129,59 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
 
         Assert.Equal(UpdateCheckOutcome.Unreachable, result.Outcome);
         Assert.NotNull(result.Error);
+    }
+
+    /// <summary>Against the test above: something is listening and never answers. The two used to
+    /// be one outcome, and a caller told them apart by the type of the exception carried with it.</summary>
+    [Fact]
+    public async Task Check_ReportsAServiceThatNeverAnswersAsTimedOut()
+    {
+        _server.Map(LatestPath, new LocalReleaseServer.Response(200, Encoding.UTF8.GetBytes("{}"), Delay: TimeSpan.FromSeconds(10)));
+        using UpdateService service = Service(requestTimeout: TimeSpan.FromMilliseconds(300));
+
+        UpdateCheckResult result = await service.CheckAsync();
+
+        Assert.Equal(UpdateCheckOutcome.TimedOut, result.Outcome);
+        Assert.IsAssignableFrom<OperationCanceledException>(result.Error);
+        Assert.NotEqual("", result.Detail);
+    }
+
+    /// <summary>A cancellation the caller asked for is the third case and never a timeout: it leaves
+    /// the check as an exception, so no outcome at all can be mistaken for it.</summary>
+    [Fact]
+    public async Task Check_ThrowsWhenTheCallerCancelsRatherThanReportingATimeout()
+    {
+        _server.Map(LatestPath, new LocalReleaseServer.Response(200, Encoding.UTF8.GetBytes("{}"), Delay: TimeSpan.FromSeconds(10)));
+        using UpdateService service = Service();
+        using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.CheckAsync(cancel.Token));
+    }
+
+    [Fact]
+    public async Task Check_ReportsAFailureStatusAsARequestThatFailed()
+    {
+        _server.Map(LatestPath, new LocalReleaseServer.Response(500, Encoding.UTF8.GetBytes("boom")));
+        using UpdateService service = Service();
+
+        UpdateCheckResult result = await service.CheckAsync();
+
+        Assert.Equal(UpdateCheckOutcome.RequestFailed, result.Outcome);
+        Assert.Contains("500", result.Detail);
+    }
+
+    /// <summary>Against the test above: a success status carrying something that is not a release.
+    /// The two used to be one outcome, and a caller told them apart by the detail's wording.</summary>
+    [Fact]
+    public async Task Check_ReportsAnAnswerThatIsNotAReleaseAsInvalid()
+    {
+        _server.MapJson(LatestPath, """{ "tag_name": "nightly" }""");
+        using UpdateService service = Service();
+
+        UpdateCheckResult result = await service.CheckAsync();
+
+        Assert.Equal(UpdateCheckOutcome.InvalidResponse, result.Outcome);
+        Assert.Contains("nightly", result.Detail);
     }
 
     [Fact]

@@ -12,12 +12,16 @@ namespace ZeroZero.Update.Tests;
 /// a download that ends early is a real socket closing early. Nothing here reaches the internet.</summary>
 internal sealed class LocalReleaseServer : IDisposable
 {
+    /// <summary><paramref name="Delay"/> holds the whole answer back; <paramref name="BodyDelay"/>
+    /// sends the headers and then holds the body, which is the only way to reach a caller that has
+    /// a response in hand and is still waiting for what is behind it.</summary>
     internal sealed record Response(
         int Status,
         byte[] Body,
         IReadOnlyDictionary<string, string>? Headers = null,
         long? DeclaredLength = null,
-        TimeSpan? Delay = null);
+        TimeSpan? Delay = null,
+        TimeSpan? BodyDelay = null);
 
     internal sealed record Request(string Path, IReadOnlyDictionary<string, string> Headers);
 
@@ -139,6 +143,8 @@ internal sealed class LocalReleaseServer : IDisposable
                 head.Append("\r\n");
 
                 await stream.WriteAsync(Encoding.ASCII.GetBytes(head.ToString()), _stop.Token);
+                await stream.FlushAsync(_stop.Token);
+                if (response.BodyDelay is { } bodyDelay) await Task.Delay(bodyDelay, _stop.Token);
                 await stream.WriteAsync(response.Body, _stop.Token);
                 await stream.FlushAsync(_stop.Token);
                 client.Client.Shutdown(SocketShutdown.Send);

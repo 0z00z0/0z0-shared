@@ -124,6 +124,13 @@ public sealed class UpdateService : IUpdateService, IDisposable
             case ReleaseLookupOutcome.Unreachable:
                 _log.Info($"Update check did not complete: {lookup.Detail}.");
                 return new UpdateCheckResult(UpdateCheckOutcome.Unreachable, RunningVersion, Detail: lookup.Detail, Error: lookup.Error);
+            case ReleaseLookupOutcome.TimedOut:
+                _log.Info($"Update check did not complete: {lookup.Detail}.");
+                return new UpdateCheckResult(UpdateCheckOutcome.TimedOut, RunningVersion, Detail: lookup.Detail, Error: lookup.Error);
+            case ReleaseLookupOutcome.RequestFailed:
+                _log.Info($"Update check was not answered with a release: {lookup.Detail}.");
+                return new UpdateCheckResult(UpdateCheckOutcome.RequestFailed, RunningVersion, Detail: lookup.Detail, Error: lookup.Error);
+            case ReleaseLookupOutcome.InvalidResponse:
             default:
                 _log.Info($"Update check answered with something unexpected: {lookup.Detail}.");
                 return new UpdateCheckResult(UpdateCheckOutcome.InvalidResponse, RunningVersion, Detail: lookup.Detail, Error: lookup.Error);

@@ -16,11 +16,28 @@ public enum UpdateCheckOutcome
     /// <summary>GitHub refused the request under its rate limit; <see cref="UpdateCheckResult.RateLimitResetsAt"/> says when it lifts.</summary>
     RateLimited,
 
-    /// <summary>The request could not be made or timed out.</summary>
+    /// <summary>Nothing answered: the name did not resolve, the connection was refused, there is no
+    /// route, or the answer stopped mid-way. <see cref="TimedOut"/> is the neighbouring case, where
+    /// something is at that address and did not answer in time.</summary>
     Unreachable,
 
-    /// <summary>The service answered, and the answer is not a release this version understands.</summary>
+    /// <summary>The service answered, and the answer is not a release this version understands: not
+    /// JSON, not a release object, no tag, or a tag that is not a version.</summary>
     InvalidResponse,
+
+    // The two below are appended rather than filed beside the outcomes they split from, so the
+    // members above keep the numbers they already had.
+
+    /// <summary>Something is at that address and it did not answer within
+    /// <see cref="UpdateOptions.RequestTimeout"/>. A cancellation the caller asked for is never
+    /// this: it leaves the check as an <see cref="OperationCanceledException"/> and no outcome.</summary>
+    TimedOut,
+
+    /// <summary>The service answered, and its answer is a failure status rather than a release. The
+    /// request reached the service, which is what separates this from <see cref="Unreachable"/> and
+    /// <see cref="TimedOut"/>; a refusal under the rate limit is <see cref="RateLimited"/> and never
+    /// this.</summary>
+    RequestFailed,
 }
 
 public sealed record UpdateCheckResult(
@@ -31,7 +48,8 @@ public sealed record UpdateCheckResult(
     string Detail = "",
     Exception? Error = null);
 
-/// <summary>What the source answered, before the version comparison.</summary>
+/// <summary>What the source answered, before the version comparison. One member per member of
+/// <see cref="UpdateCheckOutcome"/> that a lookup can produce, and mapped by name.</summary>
 public enum ReleaseLookupOutcome
 {
     Found,
@@ -39,6 +57,8 @@ public enum ReleaseLookupOutcome
     RateLimited,
     Unreachable,
     InvalidResponse,
+    TimedOut,
+    RequestFailed,
 }
 
 public sealed record ReleaseLookup(
