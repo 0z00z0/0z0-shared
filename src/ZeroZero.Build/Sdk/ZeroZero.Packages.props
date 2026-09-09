@@ -50,9 +50,18 @@
   </ItemGroup>
 
   <ItemGroup Label="Testing">
-    <ZeroZeroFamilyPin Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <!-- The version a consuming application's test project resolves, not the newest published:
+         18.10.0 exists and is deliberately not taken. The kit refuses a VersionOverride, so a
+         consumer whose own reference sits above the family's cannot import the kit at all — the
+         pin has to meet the applications where they are, and moves when they move. -->
+    <ZeroZeroFamilyPin Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <ZeroZeroFamilyPin Include="xunit" Version="2.9.3" />
-    <ZeroZeroFamilyPin Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <!-- Matched to the same application, and still a VSTest adapter rather than a Microsoft
+         Testing Platform one. That is the load-bearing part: `dotnet test` keeps printing the
+         per-assembly totals line, and `.github/scripts/run-tests.ps1` reads its counts out of that
+         line by pattern. A runner that moved to the new platform would leave every count parsed as
+         zero while the run still reported success, so the runner and that script move together. -->
+    <ZeroZeroFamilyPin Include="xunit.runner.visualstudio" Version="4.0.0" />
     <!-- Microsoft's controllable TimeProvider, for the one thing a test cannot honestly wait for: a
          debounce window. A test that sleeps the window measures how loaded the machine is, so it
          passes here and fails on a runner with fewer cores. Test-only, and referenced only by the
