@@ -85,3 +85,14 @@ The tests are in `tests/ZeroZero.Win32.Tests`, plain `net10.0`, and run on Windo
 user32 and shcore against the real desktop, create a hidden framed window to measure, and read the
 packed task-dialog configuration back through its pointers. No test shows the dialog or a message
 box — a modal dialog would block the run — so those are looked at through the harness instead.
+
+`MonitorMetricsTests.ForCursor_ReportsTheMonitorUnderTheCursorAndItsScale` fails without an
+interactive desktop — a locked screen, a service session, a headless run — because it reads the
+cursor twice: once through `MonitorMetrics.ForCursor`, once through the test's own independent
+`GetCursorPos` import, then compares the two. `GetCursorPos` only succeeds when the calling
+thread's current desktop is the input desktop; off an interactive session it returns false, and the
+test's own read throws before the comparison runs, failing the test with an exception rather than
+skipping it. `MonitorMetrics.ForCursor` itself never throws — the same failure there falls back to
+the primary monitor at 100% — so the fault sits in the test's own probe, not in the assembly it is
+testing. Expected in that state; no action needed beyond running the suite on an interactive
+desktop.
