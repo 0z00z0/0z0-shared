@@ -46,7 +46,7 @@
          the train. The pin is the current servicing release of the runtime the family builds on,
          and it moves with that runtime, never with what a package cache happens to hold. A floor
          for a consumer: a direct reference above it wins, one below it is NU1605. -->
-    <ZeroZeroFamilyPin Include="Microsoft.Win32.SystemEvents" Version="10.0.11" />
+    <ZeroZeroFamilyPin Include="Microsoft.Win32.SystemEvents" Version="10.0.12" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">

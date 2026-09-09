@@ -7,12 +7,14 @@
        property or with any project it selects. Pre-1.0 per component: the minor may break, the
        patch never does.
 
-       Every component starts at 0.7.0. The feed holds every package at 0.6.0 from the era of one
-       shared number, and a published number never moves backwards, so 0.6.0 and below means
-       "released together" and 0.7.0 and above means "released on its own". -->
+       Every component starts at 0.7.0. Up to and including 0.6.0 one number released every package
+       that existed then — six of the twenty-one on the feed today — so 0.6.0 and below means
+       "released together" and 0.7.0 and above means "released on its own". The other fifteen came
+       after that era and have no number below 0.7.0 at all, so a version range starting there
+       finds nothing. A published number never moves backwards. -->
   <PropertyGroup>
     <BrandVersion>0.7.0</BrandVersion>
-    <BuildVersion>0.8.1</BuildVersion>
+    <BuildVersion>0.8.2</BuildVersion>
     <ConfigVersion>0.8.0</ConfigVersion>
     <ControlsVersion>0.7.0</ControlsVersion>
     <DiagnosticsVersion>0.7.0</DiagnosticsVersion>

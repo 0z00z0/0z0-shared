@@ -285,7 +285,7 @@ difference matters to a consumer that has not yet taken the kit:
 | `H.NotifyIcon.WinUI` | `2.4.1` | A **ceiling**, for the same reason: the tray host's notify-icon library, which a consuming application references directly as well. No type of it reaches a public signature. |
 | `MQTTnet` | `5.2.0.1603` | Transitive only, and no type of it reaches a public signature. |
 | `TaskScheduler` | `2.12.2` | Transitive only, through `ZeroZero.Startup`; no type of it reaches a public signature. |
-| `Microsoft.Win32.SystemEvents` | `10.0.11` | Transitive only, through `ZeroZero.Lifecycle` and `ZeroZero.Tray.WinUI`; no type of it reaches a public signature. The runtime's own assembly, pinned at the .NET 10 servicing release the family builds on and raised with it. |
+| `Microsoft.Win32.SystemEvents` | `10.0.12` | Transitive only, through `ZeroZero.Lifecycle` and `ZeroZero.Tray.WinUI`; no type of it reaches a public signature. The runtime's own assembly, pinned at the .NET 10 servicing release the family builds on and raised with it. |
 | `Microsoft.NET.Test.Sdk` | `18.9.0` | The test trio, for a consumer's own test projects. |
 | `xunit` | `2.9.3` | |
 | `xunit.runner.visualstudio` | `4.0.0` | |
