@@ -14,15 +14,21 @@ Read this first. Whatever an existing helper does from this list stays with the 
   so menus already created drop their old theme. Nothing reads the system theme, nothing refreshes
   the immersive colour policy, and nothing themes an individual window. A helper doing any of those
   keeps that code and loses only the two calls.
-- **Monitor metrics answer for the cursor's monitor and the primary monitor.** There is no work area
-  for the monitor a given window sits on, and no enumeration of monitors. A helper that places a
-  window on the display another window occupies keeps that lookup.
+- **Monitor metrics answer for the cursor's monitor, the primary monitor, and any point given.**
+  There is no enumeration of monitors, and no lookup from a window handle. A helper that places a
+  window on the display *another window* occupies keeps that lookup; one placing a window at a
+  remembered position uses `ForPoint` on the centre of the remembered rectangle.
 - **The message boxes are four fixed shapes** — information, warning, error, and a yes-or-no
   question — each with an owner and a topmost option. No custom button wording, no choice of default
   button, no timeout.
-- **The task dialog carries caption, headline, body, an expandable detail, a stock icon and
-  buttons.** No progress bar, no verification checkbox, no radio buttons, no footer, no hyperlinks,
-  and no callback while it is on screen.
+- **The task dialog carries caption, headline, body, an expandable detail, a stock icon, buttons,
+  the system's own Cancel button and sizing to content.** No progress bar, no verification checkbox,
+  no radio buttons, no footer, no hyperlinks, and no callback while it is on screen.
+- **The task dialog has no fallback of its own.** On a machine where it cannot be shown, `Show`
+  throws. An application whose menu item must always lead somewhere keeps its own simpler prompt and
+  branches on `NativeTaskDialog.IsAvailable`: no message box can carry a row of custom buttons, so
+  any fallback chosen here would change which button ids a caller can get back, and the wording of
+  the simpler prompt is the application's.
 - **Which monitor a window goes on, and what any dialog says, stay with the caller.**
 
 ## This and the build kit are one piece of work
@@ -45,7 +51,8 @@ kit means keeping or hand-writing that manifest. Take the kit first, then this.
 3. Swap the metric calls one at a time, and read the answers back on a machine with two monitors at
    different scaling. Every failure path here yields a usable value — the primary monitor, 100 %, a
    1080p work area, zero chrome — rather than throwing, so a wrong monitor looks exactly like a
-   working call.
+   working call. On one monitor the point lookup and the primary-monitor fallback give the same
+   numbers, so a swap checked on a single screen proves nothing about the case it exists for.
 4. Swap the message boxes. A box that cannot be shown throws rather than returning as though it had
    appeared; a helper that answered with a value on failure changes behaviour at that point, and the
    throw is the reason to make the swap.

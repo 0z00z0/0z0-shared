@@ -142,6 +142,11 @@ the artefacts were published, fetches every recorded artefact from there, and as
   thumbprint is given — SHA-1 or SHA-256, separators and case ignored, the same pin the update
   component holds in the application, so one string serves both checks. A pin of any other shape
   fails rather than reading as no pin.
+- **Timestamp** (`-Signer`). Every executable fetched is timestamped. An untimestamped signature
+  verifies today and stops on the day the signing certificate expires, so it looks correct through
+  every other check here and fails later for everyone who already installed it. Either timestamp
+  scheme satisfies this. The signing step makes the same assertion, and this one holds for an
+  artefact that step never signed.
 
 Every assertion fails closed: a location that cannot be reached, a record naming another tag or
 commit, an empty record, a package without a nuspec — each is a failure, never a skip. The hash is

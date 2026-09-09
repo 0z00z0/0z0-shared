@@ -22,6 +22,8 @@ public class TaskDialogMarshallingTests
     private const uint TDF_ALLOW_DIALOG_CANCELLATION = 0x0008;
     private const uint TDF_USE_COMMAND_LINKS = 0x0010;
     private const uint TDF_POSITION_RELATIVE_TO_WINDOW = 0x1000;
+    private const uint TDF_SIZE_TO_CONTENT = 0x01000000;
+    private const uint TDCBF_CANCEL_BUTTON = 0x0008;
 
     [Fact]
     public void PackedSizes_MatchTheHeaderForThisArchitecture()
@@ -98,6 +100,37 @@ public class TaskDialogMarshallingTests
         using var marshalling = new TaskDialogMarshalling(IntPtr.Zero, Request with { AllowCancel = allowCancel, CommandLinks = commandLinks });
 
         Assert.Equal(expected, marshalling.Config.dwFlags);
+    }
+
+    [Fact]
+    public void StockCancelButton_IsACommonButtonRatherThanOneOfTheCustomOnes()
+    {
+        // The point of asking for it: the custom button array is untouched, so a consumer does not
+        // have to spell Cancel itself as a third button and lose the system's own wording.
+        using var without = new TaskDialogMarshalling(IntPtr.Zero, Request);
+        using var with = new TaskDialogMarshalling(IntPtr.Zero, Request with { StockCancelButton = true });
+
+        Assert.Equal(0u, without.Config.dwCommonButtons);
+        Assert.Equal(TDCBF_CANCEL_BUTTON, with.Config.dwCommonButtons);
+        Assert.Equal(2u, with.Config.cButtons);
+        Assert.Equal(100, ReadButton(with.Config.pButtons, 0).nButtonID);
+        Assert.Equal(101, ReadButton(with.Config.pButtons, 1).nButtonID);
+    }
+
+    [Fact]
+    public void SizeToContent_SetsItsFlagAndNothingElse()
+    {
+        using var marshalling = new TaskDialogMarshalling(IntPtr.Zero, Request with { AllowCancel = false, SizeToContent = true });
+
+        Assert.Equal(TDF_SIZE_TO_CONTENT, marshalling.Config.dwFlags);
+    }
+
+    [Fact]
+    public void SizeToContent_IsOffUnlessAskedFor()
+    {
+        using var marshalling = new TaskDialogMarshalling(IntPtr.Zero, Request);
+
+        Assert.Equal(0u, marshalling.Config.dwFlags & TDF_SIZE_TO_CONTENT);
     }
 
     [Fact]

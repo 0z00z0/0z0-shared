@@ -153,7 +153,7 @@ The publish output is signed when a certificate is named, and nothing happens wh
 | `ZeroZeroSignThumbprint` | A certificate in `Cert:\CurrentUser\My` or `Cert:\LocalMachine\My`. |
 | `ZeroZeroSignPfx` | A PFX file instead. Its password is `ZeroZeroSignPfxPassword`, which reaches the script as the environment variable `ZEROZERO_SIGN_PFX_PASSWORD` and never as an argument. |
 | `ZeroZeroSignFile` | What to sign; defaults to `<PublishDir><AssemblyName>.exe`. |
-| `ZeroZeroSignTimestampServer` | Another timestamp server than the script's default. `ZeroZeroSignNoTimestamp` true skips timestamping. |
+| `ZeroZeroSignTimestampServer` | Another timestamp server than the script's default. The script fails when that server does not answer, or answers only in the newer protocol, rather than shipping a file with no timestamp. `ZeroZeroSignNoTimestamp` true skips timestamping, and is then the only way a build produces an untimestamped signature. |
 | `ZeroZeroSignTrust` | Installs the certificate into the current user's Root and TrustedPublisher stores before signing, so a self-signed certificate verifies as Valid on a fresh runner. |
 
 ```powershell
@@ -162,9 +162,12 @@ dotnet publish App\App.csproj -c Release -r win-x64 -p:ZeroZeroSignPfx=signing.p
 ```
 
 The script signs SHA-256 with the full chain, reads the file back, and requires the signer to be
-the certificate asked for and the status to be Valid — or, without `-Trust`, the untrusted-root
-status a self-signed certificate yields on a machine that does not trust it, which it reports as
-such. Any other outcome exits non-zero and fails the publish. An installer build script calls the
+the certificate asked for, a timestamp to be present unless one was deliberately declined, and the
+status to be Valid — or, without `-Trust`, the untrusted-root status a self-signed certificate
+yields on a machine that does not trust it, which it reports as such. Any other outcome exits
+non-zero and fails the publish. A signature that failed to be timestamped is indistinguishable from
+one that never asked for a timestamp — same status, same signer, nothing in the file — so the
+countersignature is read back on its own. An installer build script calls the
 same file on the installer it produces, asking the project where the kit put it so the path holds
 on either route:
 
@@ -199,7 +202,7 @@ manifest; a library project never sees them.
 | `ZZB009` | The file to sign is not there after publish. |
 | `ZZB010` | The signing script does not exist. |
 | `ZZB011` | The kit is taken as a `PackageReference`. |
-| `ZZS001`–`ZZS012` | From the signing script: a malformed thumbprint, a certificate not found, a PFX missing, a password not set or wrong, a certificate that cannot sign or is not for code signing, a file that does not exist, a signature that fails to apply, and a signature that reads back absent, by another certificate, or with a status other than Valid or untrusted-root. |
+| `ZZS001`–`ZZS013` | From the signing script: a malformed thumbprint, a certificate not found, a PFX missing, a password not set or wrong, a certificate that cannot sign or is not for code signing, a file that does not exist, a signature that fails to apply, and a signature that reads back absent, by another certificate, with a status other than Valid or untrusted-root, or with no timestamp where one was asked for. |
 
 ## The source-revision stamp is not here
 

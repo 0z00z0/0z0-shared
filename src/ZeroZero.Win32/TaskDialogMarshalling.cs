@@ -22,6 +22,7 @@ internal sealed class TaskDialogMarshalling : IDisposable
         uint flags = 0;
         if (request.AllowCancel) flags |= NativeMethods.TDF_ALLOW_DIALOG_CANCELLATION;
         if (request.CommandLinks) flags |= NativeMethods.TDF_USE_COMMAND_LINKS;
+        if (request.SizeToContent) flags |= NativeMethods.TDF_SIZE_TO_CONTENT;
         // Centred on the owner rather than on the monitor, where there is one.
         if (owner != IntPtr.Zero) flags |= NativeMethods.TDF_POSITION_RELATIVE_TO_WINDOW;
 
@@ -30,6 +31,7 @@ internal sealed class TaskDialogMarshalling : IDisposable
             cbSize = (uint)Marshal.SizeOf<NativeMethods.TASKDIALOGCONFIG>(),
             hwndParent = owner,
             dwFlags = flags,
+            dwCommonButtons = request.StockCancelButton ? NativeMethods.TDCBF_CANCEL_BUTTON : 0,
             pszWindowTitle = Allocate(request.Caption),
             mainIcon = IconResource(request.Icon),
             pszMainInstruction = Allocate(request.Headline),

@@ -18,14 +18,25 @@ public static class MonitorMetrics
     /// </summary>
     public static (NativeRect WorkArea, double Scale) ForCursor()
     {
-        if (NativeMethods.GetCursorPos(out var cursor))
-        {
-            IntPtr monitor = NativeMethods.MonitorFromPoint(cursor, NativeMethods.MONITOR_DEFAULTTONEAREST);
-            var info = new NativeMethods.MONITORINFO { cbSize = Marshal.SizeOf<NativeMethods.MONITORINFO>() };
+        if (NativeMethods.GetCursorPos(out var cursor)) return ForPoint(cursor.X, cursor.Y);
 
-            if (NativeMethods.GetMonitorInfo(monitor, ref info))
-                return (info.rcWork.ToNativeRect(), ScaleForMonitor(monitor));
-        }
+        return (PrimaryWorkArea(), 1.0);
+    }
+
+    /// <summary>
+    /// Work area and scale of the monitor a point in physical pixels falls on. A point on no
+    /// monitor at all answers for the nearest one, so a window restoring a position saved on a
+    /// screen since unplugged — its monitor found from the centre of the saved rectangle, then
+    /// clamped with <see cref="NativeRect.ClampInto"/> — opens somewhere reachable rather than off
+    /// the desktop. The primary monitor at 100% when the point's monitor cannot be read.
+    /// </summary>
+    public static (NativeRect WorkArea, double Scale) ForPoint(int x, int y)
+    {
+        IntPtr monitor = NativeMethods.MonitorFromPoint(new NativeMethods.POINT { X = x, Y = y }, NativeMethods.MONITOR_DEFAULTTONEAREST);
+        var info = new NativeMethods.MONITORINFO { cbSize = Marshal.SizeOf<NativeMethods.MONITORINFO>() };
+
+        if (NativeMethods.GetMonitorInfo(monitor, ref info))
+            return (info.rcWork.ToNativeRect(), ScaleForMonitor(monitor));
 
         return (PrimaryWorkArea(), 1.0);
     }
