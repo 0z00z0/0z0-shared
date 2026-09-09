@@ -17,12 +17,12 @@
     <ControlsVersion>0.7.0</ControlsVersion>
     <DiagnosticsVersion>0.7.0</DiagnosticsVersion>
     <LifecycleVersion>0.7.1</LifecycleVersion>
-    <MqttVersion>0.7.1</MqttVersion>
+    <MqttVersion>0.7.2</MqttVersion>
     <PrimitivesVersion>0.7.0</PrimitivesVersion>
     <SettingsShellVersion>0.7.0</SettingsShellVersion>
     <StartupVersion>0.7.2</StartupVersion>
     <TrayVersion>0.7.0</TrayVersion>
-    <UpdateVersion>0.7.0</UpdateVersion>
+    <UpdateVersion>0.7.1</UpdateVersion>
     <Win32Version>0.8.0</Win32Version>
   </PropertyGroup>
 
