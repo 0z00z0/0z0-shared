@@ -70,13 +70,33 @@ all stay with the application; the kit carries none of them.
    `Directory.Build.props`. It ends MSBuild's worker nodes with the build instead of leaving them
    running, and it is a response file rather than a property because node reuse is settled before
    any project file is evaluated. Skipping it costs no correctness — builds are the same, and leave
-   a worker node and its console host behind for fifteen minutes each.
+   a worker node and its console host behind for fifteen minutes each. Whether it is working is
+   read off what is still running after a build, never off a worker count taken during one — the
+   trap below.
 
 **Verify by reading the shipped file back**, not the build log: the signature off the published
 executable, and the manifest out of the executable that was built, with the common-controls
 dependency and the DPI setting in it.
 
 ## Traps
+
+### A worker count taken during a build says the response file does nothing
+
+Node reuse changes whether the worker nodes end with the build, not how many the build uses, so
+the worker count across a rebuild is identical with `-nodeReuse:false` in place and with it
+overridden. A build with node reuse on also attaches to idle nodes an earlier build left behind
+and starts none of its own, so a count of newly started processes reads zero as well. Both
+readings look like a switch that is doing nothing.
+
+**Count what is still running once the build has exited**, and read the `-nodeReuse:` value off
+each worker's own command line rather than inferring it. With no response file on the path, a
+command-line build's workers carry `/nodeReuse:true` and outlive it; with the file, they carry
+`/nodeReuse:false` and end with it.
+
+The .NET CLI overrides one switch in this file and not that one. It passes its own `-maxcpucount`
+on the command line, which beats an `-m` written in the file; it passes no node-reuse switch, so
+the file decides node reuse. The override is switch by switch, so a switch that the CLI does not
+pass itself is not inert here.
 
 ### A process-wide self-contained property fails every library in the graph
 

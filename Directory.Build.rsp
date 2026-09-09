@@ -1,10 +1,11 @@
 # Switches MSBuild applies to every build started in this repository. MSBuild reads this file
 # before the command line, so a switch given on the command line wins over anything here.
 
-# End the worker nodes with the build rather than keeping them alive for the next one. A worker
-# node is launched with CREATE_NO_WINDOW, which allocates a console all the same, so every node
-# also holds a console host. Left to reuse them, one build of this solution leaves fifteen worker
-# nodes and fifteen console hosts behind for fifteen minutes, about 2 GB, and concurrent builds
-# stack them. Ending them with the build costs no measurable time: a clean solution build takes
-# the same either way.
+# End the worker nodes with the build rather than keeping them alive for the next one. Node reuse
+# is on unless a build turns it off, and the .NET CLI does not turn it off. A worker node is
+# launched with CREATE_NO_WINDOW, which allocates a console all the same, so every node also holds
+# a console host. Left to reuse them, one build of this solution leaves fifteen worker nodes and
+# fifteen console hosts behind for fifteen minutes, about 2 GB, and concurrent builds stack them.
+# Ending them with the build costs no measurable time: a clean solution build takes the same
+# either way.
 -nodeReuse:false

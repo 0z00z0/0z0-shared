@@ -32,9 +32,26 @@ imports — so a file that breaks breaks the solution build before it reaches a 
 | `Sdk/ZeroZero.WinUIApp.props` | The unpackaged WinUI application block, imported by an application project at the top of its own file: `OutputType` WinExe, the Windows target framework and minimum platform, `UseWinUI`, `WindowsPackageType` None, `EnableMsixTooling` false, `WinUISDKReferences` false, a `RuntimeIdentifier` from the process architecture, `DefaultLanguage` en-GB, and the manifest wiring below. |
 | `Sdk/ZeroZero.Build.targets` | The guards, the manifest writer and the signing step. |
 | `templates/app.manifest` | The application manifest with two tokens: `{AssemblyName}` and `{ExecutionLevel}`. It declares Windows 10 and 11 support, per-monitor-v2 DPI awareness and the common-controls-6 dependency the task dialog in `ZeroZero.Win32` needs. |
-| `templates/Directory.Build.rsp` | The family's MSBuild switches, to copy to a consuming repository's root. It carries `-nodeReuse:false`, which ends the worker nodes with the build rather than leaving each one and its console host running for the next fifteen minutes. Node reuse is the one setting here that cannot be a property: MSBuild settles it before any project file is evaluated, so a response file is the only shape it has. A switch on the command line still wins over it. |
+| `templates/Directory.Build.rsp` | The family's MSBuild switches, to copy to a consuming repository's root. It carries `-nodeReuse:false`, which ends the worker nodes with the build rather than leaving each one and its console host running for the next fifteen minutes. Node reuse is the one setting here that cannot be a property: MSBuild settles it before any project file is evaluated, so a response file is the only shape it has. What the file decides and what it cannot is [below](#what-the-response-file-governs-and-what-it-does-not). |
 | `scripts/Sign-Executable.ps1` | Signs one or more files with a code-signing certificate and verifies what it signed. |
 | `build/ZeroZero.Build.targets` | One target that fails the build of a project taking the kit as a `PackageReference`, because that route delivers nothing else of it. |
+
+### What the response file governs and what it does not
+
+Node reuse is on unless a build turns it off, and the .NET CLI does not turn it off: without this
+file a command-line build leaves its worker nodes running.
+
+A switch on the command line beats the same switch in the response file, and the .NET CLI puts
+switches of its own on that command line. The override is switch by switch, not file-wide:
+
+| Switch in the file | Effect on a command-line build |
+|---|---|
+| `-nodeReuse:false` | Decides node reuse. The CLI passes no node-reuse switch of its own, so nothing overrides it. |
+| `-m` | Nothing. The CLI passes its own `-maxcpucount`, which wins. A worker cap has to go on the command line. |
+
+Whether the file is doing its work is read off what is still running once a build has exited, and
+off the `-nodeReuse:` value on each worker's own command line. It cannot be read off a worker count
+taken while the build runs: node reuse changes when the workers end, not how many the build uses.
 
 ## The rule: one pin per package, across the family
 
