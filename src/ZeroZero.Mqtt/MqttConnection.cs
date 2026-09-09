@@ -155,6 +155,10 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     /// <summary>The awaitable form, for a caller that needs the reconcile to have happened.</summary>
     public async Task ApplyAsync(MqttConnectParameters parameters)
     {
+        // A torn-down connection reconciles to nothing. The client is already disposed, so a maintain
+        // loop started from here would fail every round for the rest of the process.
+        if (Volatile.Read(ref _disposed) != 0) return;
+
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -1123,7 +1127,9 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         _client.Dispose();
         _cts?.Dispose();
         _workerStop.Dispose();
-        _gate.Dispose();
+        // The gate is left undisposed on purpose. Nothing here takes its wait handle, so it holds
+        // nothing to release, while disposing it would turn a reconcile that is already past the
+        // check above into a throw out of its own release.
         // stopCts is left undisposed: its token can outlive this call, and the process is exiting.
     }
 }

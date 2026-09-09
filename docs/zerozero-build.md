@@ -154,7 +154,7 @@ The publish output is signed when a certificate is named, and nothing happens wh
 | `ZeroZeroSignThumbprint` | A certificate in `Cert:\CurrentUser\My` or `Cert:\LocalMachine\My`. |
 | `ZeroZeroSignPfx` | A PFX file instead. Its password is `ZeroZeroSignPfxPassword`, which reaches the script as the environment variable `ZEROZERO_SIGN_PFX_PASSWORD` and never as an argument. |
 | `ZeroZeroSignFile` | What to sign; defaults to `<PublishDir><AssemblyName>.exe`. |
-| `ZeroZeroSignTimestampServer` | Another timestamp server than the script's default. The script fails when that server does not answer, or answers only in the newer protocol, rather than shipping a file with no timestamp. `ZeroZeroSignNoTimestamp` true skips timestamping, and is then the only way a build produces an untimestamped signature. |
+| `ZeroZeroSignTimestampServer` | Another timestamp server than the script's default. It must answer the old Authenticode timestamp protocol, which is what the signing call speaks: an authority that does not answer, or serves only RFC 3161, leaves the file signed and untimestamped, and the script then fails with `ZZS013` naming it rather than shipping that file. `ZeroZeroSignNoTimestamp` true skips timestamping, and is then the only way a build produces an untimestamped signature. |
 | `ZeroZeroSignTrust` | Installs the certificate into the current user's Root and TrustedPublisher stores before signing, so a self-signed certificate verifies as Valid on a fresh runner. |
 
 ```powershell

@@ -98,6 +98,25 @@ public sealed class ProcessLifecycleProcessTests : IDisposable
         Assert.False(File.Exists(LimiterFile), "A crash reached the limiter: " + Log);
     }
 
+    /// <summary>The hook runs after <c>Main</c> has returned, so a logger the application let go on
+    /// its way out is already gone by the time the hook writes. Nothing about this component causes
+    /// that ordering and nothing can avoid it: it holds for anything that writes at process exit.
+    /// The child closes its sink as the last statement in <c>Main</c>, and the sink answers where
+    /// each entry landed — the file it was using, or the one it switches to after the close.</summary>
+    [Fact]
+    public async Task TheExitHookWritesAfterTheApplicationHasLetItsLoggerGo()
+    {
+        Assert.Equal(0, await RunChild(Program.LoggerClosedScenario));
+
+        string afterClose = Path.Combine(_dir, Program.AfterCloseLogFile);
+        Assert.True(WaitFor(() => File.Exists(afterClose), Patience), "The exit hook wrote nothing: " + Log);
+
+        // The sink was working right up to the close, so what follows is ordering and not a dead sink.
+        Assert.Contains("CLOSED", Log, StringComparison.Ordinal);
+        Assert.DoesNotContain("Exit was deliberate", Log, StringComparison.Ordinal);
+        Assert.Contains("Exit was deliberate", ReadWhileWritten(afterClose), StringComparison.Ordinal);
+    }
+
     private async Task<int> RunChild(string scenario, string? lockName = null)
     {
         Assert.True(File.Exists(Executable), "The test executable is not beside the test assembly: " + Executable);

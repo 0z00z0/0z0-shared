@@ -63,9 +63,10 @@ releases after `primitives` is on the feed at the version it references.
 
 **A crash never reaches the hook.** The runtime raises no exit event for an unhandled exception,
 so relaunch covers the clean exit nobody asked for — a message loop that ended, an exit path taken
-by mistake — and not the crash. The crash is the diagnostics component's to record
-([`zerozero-diagnostics.md`](zerozero-diagnostics.md)) and the application's own watchdog task's
-to recover from.
+by mistake — and not the crash. Recording the crash is the diagnostics component's
+([`zerozero-diagnostics.md`](zerozero-diagnostics.md)). Whether anything brings a crashed process
+back — a scheduled task, a service, or nothing — is the application's own question, and nothing
+here answers it or requires an answer.
 
 **The relaunched process inherits the token.** An elevated application comes back elevated with no
 prompt, and nothing here asks for an elevation the parent did not have.
@@ -80,7 +81,7 @@ string data = ProductDataPath.Root("Product");
 bool relaunched = Relaunch.WasRelaunched(args);
 
 SingleInstanceOutcome outcome = SingleInstanceLock.Acquire(
-    @"Global\Product.SingleInstance",
+    ProductInstanceName,   // the application's own name, character for character
     relaunched ? Relaunch.SettleDelay : TimeSpan.Zero);
 
 if (!outcome.IsTaken()) return;   // another instance holds it, or it is not this process's to take
@@ -97,6 +98,12 @@ log.Info(outcome == SingleInstanceOutcome.TakenAbandoned
 
 Then, everywhere the application exits on purpose — the tray menu's exit, before an update
 installer runs, when the installer asks it to close — `MarkDeliberateExit()` first.
+
+**The name is the application's, and the example names no string on purpose.** The lock takes what
+it is handed, adds no `Global\` prefix and refuses only a blank, so a prefixed name and a bare one
+are both simply names. An application swapping to this component therefore puts its existing name
+there unchanged; a literal copied out of a guide would be a change of name, and a change of name
+lets an old build and a new one run side by side through an upgrade.
 
 **Nothing constructed is needed to reach the lock.** `ProductDataPath` and `Relaunch` are static and
 depend on nothing, and the lock takes no log sink, so the whole of the order above runs before the
@@ -125,13 +132,16 @@ relaunched, which is what it should do.
 - **What counts as deliberate.** The component marks nothing on its own.
 - **The wait per launch kind.** Zero for a launch by a person or the scheduler; `SettleDelay` for a
   relaunch; anything else the application decides.
-- **The mutex name.** It is the application's public identity to its installer — the name an Inno
-  Setup `AppMutex` directive checks — so it is chosen there, prefix included.
+- **The mutex name**, whole and as written, prefix included. An application swapping to this
+  component carries its existing name across unchanged, because a new name lets an old build and a
+  new one run side by side through an upgrade. An installer that checks for a running instance —
+  an Inno Setup `AppMutex` directive, say — names the same string, where one does that at all.
 - **The product name** the data folder takes.
 - **What to say about the acquisition.** The component answers which of the four outcomes happened
   and writes nothing: the log it would write to does not exist yet at that point.
-- **The watchdog task** that brings a crashed application back. The crash itself — the handlers,
-  the crash line and the dump registration — is the diagnostics component's.
+- **Recovery from a crash**, if anything does it at all. Nothing here covers a crash and nothing
+  here asks an application to. The crash itself — the handlers, the crash line and the dump
+  registration — is the diagnostics component's.
 
 ## Traps
 
@@ -143,6 +153,17 @@ relaunched, which is what it should do.
 - **The lock belongs to the thread that took it.** Take it on the thread that lives as long as the
   process. A thread that ends while owning the mutex abandons it, and the next instance takes an
   abandoned mutex as its own.
+- **The exit hook writes after the application has let its logger go.** `ProcessExit` runs once
+  `Main` has returned, so whatever `Main` disposed on its way out — a logger factory, a provider, a
+  buffered writer — is already gone when the hook writes the line saying what it decided. Nothing
+  about this component causes that and nothing can avoid it: it is true of anything that writes at
+  process exit. Measured rather than assumed: a child process lets its sink go as the last statement
+  in `Main`, and the hook's line lands in the file the sink switches to afterwards, never in the one
+  it had been using (`tests/ZeroZero.Lifecycle.Tests/ProcessLifecycleProcessTests.cs:107`). So give
+  `ProcessLifecycleOptions.Log` a sink that owns nothing the application tears down — one that opens
+  its own handle per entry and answers rather than throws, which is what `CrashLineAppender` is
+  ([`zerozero-diagnostics.md`](zerozero-diagnostics.md)) — or accept that the deliberate-exit, the
+  session-ending and the relaunch lines are written into nothing.
 - **A refused acquisition is not always a second instance.** `RefusedDenied` says the name exists
   and this process may not open it, which on a machine with one user is usually a name clash with
   something else rather than another copy of the application. An application that reports both

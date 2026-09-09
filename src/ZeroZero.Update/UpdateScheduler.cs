@@ -15,6 +15,11 @@ public sealed class UpdateScheduler : IDisposable
     private Task? _loop;
     private int _runs;
 
+    // Starting is idempotent, so stopping has to be: a host that tears down explicitly and then
+    // disposes on the way out would otherwise cancel an already-disposed source and throw from the
+    // exit path.
+    private int _disposed;
+
     public UpdateScheduler(TimeSpan initialDelay, TimeSpan interval, Func<CancellationToken, Task> check, ILogSink? log = null)
     {
         if (initialDelay < TimeSpan.Zero)
@@ -73,6 +78,8 @@ public sealed class UpdateScheduler : IDisposable
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
         _stop.Cancel();
         _stop.Dispose();
     }

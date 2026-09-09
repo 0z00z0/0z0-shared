@@ -106,6 +106,21 @@ public class UpdateSchedulerTests
         Assert.Equal(0, Volatile.Read(ref overlaps));
     }
 
+    /// <summary>A host that stops the schedule explicitly and then disposes on the way out calls this
+    /// twice, and the second call must cost nothing. Cancelling an already-disposed source throws,
+    /// and a throw from an exit path is a crash where the work was already done.</summary>
+    [Fact]
+    public async Task Dispose_IsRepeatable()
+    {
+        var scheduler = new UpdateScheduler(TimeSpan.Zero, TimeSpan.FromMilliseconds(20), _ => Task.CompletedTask);
+        scheduler.Start();
+        await Task.Delay(60);
+
+        scheduler.Dispose();
+
+        Assert.Null(Record.Exception(scheduler.Dispose));
+    }
+
     [Fact]
     public void Construction_RefusesANegativeDelayOrAnEmptyInterval()
     {
