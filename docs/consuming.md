@@ -286,9 +286,9 @@ difference matters to a consumer that has not yet taken the kit:
 | `MQTTnet` | `5.2.0.1603` | Transitive only, and no type of it reaches a public signature. |
 | `TaskScheduler` | `2.12.2` | Transitive only, through `ZeroZero.Startup`; no type of it reaches a public signature. |
 | `Microsoft.Win32.SystemEvents` | `10.0.11` | Transitive only, through `ZeroZero.Lifecycle` and `ZeroZero.Tray.WinUI`; no type of it reaches a public signature. The runtime's own assembly, pinned at the .NET 10 servicing release the family builds on and raised with it. |
-| `Microsoft.NET.Test.Sdk` | `18.8.1` | The test trio, for a consumer's own test projects. |
+| `Microsoft.NET.Test.Sdk` | `18.9.0` | The test trio, for a consumer's own test projects. |
 | `xunit` | `2.9.3` | |
-| `xunit.runner.visualstudio` | `3.1.5` | |
+| `xunit.runner.visualstudio` | `4.0.0` | |
 | `Microsoft.Extensions.TimeProvider.Testing` | `10.9.0` | Test-only, and taken only by a suite that moves a clock rather than waiting on one. Nothing under `src/` references it, so it reaches no consumer that does not ask for it. |
 
 **The two Windows App SDK pins are a floor, not a lock.** A consuming app that pins on its own may
