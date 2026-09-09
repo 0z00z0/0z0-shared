@@ -127,10 +127,11 @@ tenth of a second.
 
 There is no early return while the task runs, and the wait's length is the only thing that separates
 a resident program from a finished one. **The scheduler holds a finished run in the running state
-for seconds after the program is gone** — measured 4.0 to 8.1 s on an idle machine, a median of
-6.1 s and a worst case of 48 s with every core loaded — and during that window the state, the
-instance count and the result code all read exactly as they do for a program that is genuinely up.
-`StartupTask.VerificationWait` is 15 s, about twice the worst idle measurement: a run that fails
+for seconds after the program is gone** — measured 4.0 to 8.1 s over ten runs under no added load,
+and a median of 6.1 s with a worst case of 48 s over twenty runs with every core loaded — and during
+that window the state, the instance count and the result code all read exactly as they do for a
+program that is genuinely up.
+`StartupTask.VerificationWait` is 15 s, about twice the worst of the unloaded runs: a run that fails
 inside the wait and is reaped before it ends is reported as the failure it is, and one the scheduler
 has not yet reaped is reported as a start.
 

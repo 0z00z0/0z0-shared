@@ -26,9 +26,10 @@ public sealed class StartupTask : IDisposable
     /// where the started program stays resident, because such a run never ends, so it is paid on
     /// the start-up path of the application being repaired. It is not free to shorten: the
     /// scheduler holds a finished run in the running state for seconds after the program is gone —
-    /// measured 4.0 to 8.1 s on an idle machine and a median of 6.1 s with every core loaded — and
-    /// a run still reading as running when the wait ends counts as a start. Fifteen seconds is
-    /// about twice the worst idle measurement.</summary>
+    /// measured 4.0 to 8.1 s over ten runs under no added load, and a median of 6.1 s with a worst
+    /// case of 48 s over twenty runs with every core loaded — and a run still reading as running
+    /// when the wait ends counts as a start. Fifteen seconds is about twice the worst of the
+    /// unloaded runs.</summary>
     public static readonly TimeSpan VerificationWait = TimeSpan.FromSeconds(15);
 
     /// <summary>How long a demand start holds a result of zero before believing it. The scheduler

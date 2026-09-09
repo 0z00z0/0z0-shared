@@ -59,7 +59,7 @@ public class DemandStartDecisionTests
         Assert.False(new StartupTaskRunResult(false, null, 0, false).Succeeded);
 
     /// <summary>The wait has to outlast the scheduler's own reporting. A finished run keeps reading
-    /// as running for seconds after the program is gone — measured 4.0 to 8.1 s on an idle machine —
+    /// as running for seconds after the program is gone — measured 4.0 to 8.1 s under no added load —
     /// and a run still reading as running when the wait ends counts as a start, so a wait shorter
     /// than that reports a program which started and failed as one that started and stayed up.
     /// </summary>
