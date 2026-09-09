@@ -19,8 +19,11 @@ reference routes are in [`consuming.md`](consuming.md); neither is repeated here
 - **Nothing hands out the relaunch decision.** The component writes a line saying what it decided
   and keeps the answer to itself, so an application that showed the reason somewhere reads its log
   instead.
-- **The data folder is the roaming application-data folder under the product name, and only that.**
-  A helper that kept its files in the local folder either moves them or keeps its own path.
+- **The path helper composes the roaming application-data folder under the product name, and only
+  that.** The limiter does not: its directory is whatever reaches
+  `ProcessLifecycleOptions.DataDirectory`, and `relaunches.txt` goes under that
+  (`src/ZeroZero.Lifecycle/RelaunchLimiter.cs:28`). A helper that kept its files in the local folder
+  either moves them, keeps its own path, or hands that path in.
 - **The lock is never released, and there is no call that releases it.** A helper that dropped its
   mutex on the way out loses that: the handle is rooted for the life of the process on purpose,
   because a release while the process runs is the state the lock exists to prevent.
@@ -30,9 +33,12 @@ reference routes are in [`consuming.md`](consuming.md); neither is repeated here
 ## The checklist
 
 1. Reference `ZeroZero.Lifecycle`. It brings `ZeroZero.Primitives` with it.
-2. **Keep the existing mutex name, character for character.** The installer's `AppMutex` directive
-   matches that string, and a new name lets an old build and a new one run side by side through an
-   upgrade.
+2. **Keep the existing mutex name, character for character.** A new name lets an old build and a new
+   one run side by side through an upgrade, each holding a name the other never looks at. The name
+   in the guide's wiring example stands for the application's own and is not a form to adopt: the
+   lock takes what it is given, adds no `Global\` prefix and refuses only a blank
+   (`src/ZeroZero.Lifecycle/SingleInstanceLock.cs:66`). Where the example and this instruction seem
+   to disagree, this one is right.
 3. Put the acquisition and the exit hook in the order the guide's wiring shows, and delete the
    helper's own ordering rather than adapting it. The lock takes no log sink, so the whole order runs
    before the application has a logger.

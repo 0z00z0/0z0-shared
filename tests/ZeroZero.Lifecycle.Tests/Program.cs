@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
 using ZeroZero.Lifecycle;
+using ZeroZero.Primitives;
 
 namespace ZeroZero.Lifecycle.Tests;
 
@@ -19,10 +20,12 @@ public static partial class Program
     public const string DeliberateScenario = "deliberate";
     public const string RefusedScenario = "refused";
     public const string CrashScenario = "crash";
+    public const string LoggerClosedScenario = "loggerclosed";
 
     public const string RelaunchMarker = "relaunched.txt";
     public const string OutcomeFile = "outcome.txt";
     public const string LogFile = "log.txt";
+    public const string AfterCloseLogFile = "after-close.txt";
 
     /// <summary>Fail critical errors, and no fault dialogue. The crash scenario would otherwise wait
     /// on a window nobody is there to close.</summary>
@@ -49,7 +52,10 @@ public static partial class Program
             return outcome.IsTaken() ? 4 : 0;
         }
 
-        var log = new FileLogSink(Path.Combine(data, LogFile));
+        var closing = scenario == LoggerClosedScenario
+            ? new ClosingLogSink(Path.Combine(data, LogFile), Path.Combine(data, AfterCloseLogFile))
+            : null;
+        ILogSink log = closing ?? (ILogSink)new FileLogSink(Path.Combine(data, LogFile));
         var lifecycle = new ProcessLifecycle(new ProcessLifecycleOptions { DataDirectory = data, Log = log }, args);
         lifecycle.Arm();
 
@@ -66,6 +72,12 @@ public static partial class Program
                 return 0;
             case DeliberateScenario:
                 lifecycle.MarkDeliberateExit();
+                return 0;
+            case LoggerClosedScenario:
+                // The shape a host has on the way out: the exit is deliberate, and the logger is let
+                // go as the last statement before Main returns.
+                lifecycle.MarkDeliberateExit();
+                closing!.Close();
                 return 0;
             case CrashScenario:
                 SetErrorMode(QuietFaults);
