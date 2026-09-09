@@ -74,6 +74,14 @@ all stay with the application; the kit carries none of them.
    read off what is still running after a build, never off a worker count taken during one — the
    trap below.
 
+**Package sources need nothing from the consumer.** This repository carries its own `NuGet.config`
+naming a single source, so every project under `src\` and `tests\` restores from nuget.org whichever
+repository the build is started from. NuGet resolves restore settings per project, from the
+configuration nearest that project on disk, so a consuming repository's own sources — and, on the
+package route, its own mapping — govern its own projects and reach nothing here. Without that file
+the combination of central package management here and a machine declaring several sources with no
+package source mapping is `NU1507`, raised once per referenced project inside the consuming build.
+
 **Verify by reading the shipped file back**, not the build log: the signature off the published
 executable, and the manifest out of the executable that was built, with the common-controls
 dependency and the DPI setting in it.
