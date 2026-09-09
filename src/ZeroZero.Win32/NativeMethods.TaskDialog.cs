@@ -7,6 +7,9 @@ internal static partial class NativeMethods
     internal const uint TDF_ALLOW_DIALOG_CANCELLATION = 0x0008;
     internal const uint TDF_USE_COMMAND_LINKS = 0x0010;
     internal const uint TDF_POSITION_RELATIVE_TO_WINDOW = 0x1000;
+    internal const uint TDF_SIZE_TO_CONTENT = 0x01000000;
+
+    internal const uint TDCBF_CANCEL_BUTTON = 0x0008;
 
     // MAKEINTRESOURCEW of -1 to -4: the stock icons, as the low word of a pointer.
     internal const int TD_WARNING_ICON = 0xFFFF;

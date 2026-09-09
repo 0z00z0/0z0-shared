@@ -20,10 +20,14 @@ public static class NativeTaskDialog
 
     /// <param name="owner">The window the dialog is modal to and centred on, or zero for none.</param>
     /// <returns>The id of the button pressed, or <see cref="TaskDialogButton.CancelId"/> when the
-    /// dialog was closed with its title-bar cross or Escape.</returns>
+    /// dialog was closed with its title-bar cross, with Escape, or with the stock Cancel button.</returns>
     /// <exception cref="InvalidOperationException">The process has no common controls version 6;
     /// the message names the manifest dependency to add.</exception>
     /// <exception cref="COMException">The dialog refused the configuration.</exception>
+    /// <remarks>There is no fallback here. A dialogue that must lead somewhere on a machine where
+    /// the dialog cannot appear branches on <see cref="IsAvailable"/> and shows its own simpler
+    /// prompt, because no message box can carry a row of custom buttons and the wording of the
+    /// simpler prompt is the application's.</remarks>
     public static int Show(IntPtr owner, TaskDialogRequest request)
     {
         using var marshalling = new TaskDialogMarshalling(owner, request);

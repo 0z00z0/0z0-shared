@@ -5,11 +5,16 @@ Signs one or more files with a code-signing certificate and verifies what it sig
 .DESCRIPTION
 The certificate comes from the current user's or the machine's personal store by thumbprint, or
 from a PFX file whose password is read from the environment variable ZEROZERO_SIGN_PFX_PASSWORD,
-so the password is never on a command line. The signature is SHA-256 with the full chain, and
-timestamped unless -NoTimestamp is given.
+so the password is never on a command line. The signature is SHA-256 with the full chain.
+
+Unless -NoTimestamp is given, the file must come out timestamped. An authority that cannot be
+reached, or that answers only a scheme this signer cannot use, leaves the signature intact and the
+file untimestamped, and an untimestamped signature stops verifying the day the certificate expires.
+That outcome fails here rather than shipping.
 
 After signing, each file is read back and must carry a signature by the certificate that was
-asked for. The status must be Valid — or, without -Trust, the untrusted-root status that a
+asked for, and a timestamp unless -NoTimestamp was given. The status must be Valid — or, without
+-Trust, the untrusted-root status that a
 self-signed certificate yields on a machine that has not been told to trust it, which is the
 studio certificate on a fresh runner. -Trust installs the certificate into the current user's
 Root and TrustedPublisher stores first, so the signature reads Valid; a certificate already there
@@ -134,13 +139,21 @@ foreach ($file in $Path) {
     if ($signature.SignerCertificate.Thumbprint -ne $certificate.Thumbprint) {
         Fail "ZZS011" "'$file' is signed by $($signature.SignerCertificate.Thumbprint), not by the requested $($certificate.Thumbprint)."
     }
+    # A timestamp that never arrived leaves a signature indistinguishable from one asked to go
+    # without: same status, same signer, an empty unsigned-attribute set. The countersignature is
+    # the only thing that says the file will still verify once the certificate has expired.
+    $timestamper = $signature.TimeStamperCertificate
+    if (-not $NoTimestamp -and $null -eq $timestamper) {
+        Fail "ZZS013" "'$file' is signed but carries no timestamp: $TimestampServer did not answer, or answered only in a scheme this signer cannot use. An untimestamped signature stops verifying when the certificate expires. Pass -NoTimestamp to sign without one deliberately."
+    }
 
+    $stamp = if ($null -eq $timestamper) { "no timestamp was asked for" } else { "timestamped by $($timestamper.Subject)" }
     $untrustedRoot = $signature.Status -eq "UnknownError" -and $signature.StatusMessage -match "not trusted"
     if ($signature.Status -eq "Valid") {
-        Write-Host "Signed '$file' with $($certificate.Subject) ($($certificate.Thumbprint)): Valid."
+        Write-Host "Signed '$file' with $($certificate.Subject) ($($certificate.Thumbprint)): Valid, $stamp."
     }
     elseif ($untrustedRoot -and -not $Trust) {
-        Write-Host "Signed '$file' with $($certificate.Subject) ($($certificate.Thumbprint)): the chain ends in a root this machine does not trust, which a self-signed certificate does until -Trust installs it. The signature itself is intact."
+        Write-Host "Signed '$file' with $($certificate.Subject) ($($certificate.Thumbprint)): $stamp, and the chain ends in a root this machine does not trust, which a self-signed certificate does until -Trust installs it. The signature itself is intact."
     }
     else {
         Fail "ZZS012" "'$file' verifies as $($signature.Status) after signing: $($signature.StatusMessage)"

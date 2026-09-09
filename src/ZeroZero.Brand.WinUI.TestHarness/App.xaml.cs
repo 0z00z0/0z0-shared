@@ -70,7 +70,8 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// </para>
 /// <para>
 /// <c>--native</c> opens no XAML window at all: it shows the Win32 layer's task dialog with every
-/// part of its signature filled (<c>--links</c> renders the buttons as command links), then a
+/// part of its signature filled (<c>--links</c> renders the buttons as command links,
+/// <c>--stock</c> adds the system's Cancel button and sizes the dialog to its content), then a
 /// message box naming the button pressed, and exits.
 /// </para>
 /// <para>
@@ -126,7 +127,8 @@ public partial class App : Application
 
         if (commandLine.Any(a => a.Equals("--native", StringComparison.Ordinal)))
         {
-            ShowNativeDialogs(commandLine.Any(a => a.Equals("--links", StringComparison.Ordinal)));
+            ShowNativeDialogs(commandLine.Any(a => a.Equals("--links", StringComparison.Ordinal)),
+                              commandLine.Any(a => a.Equals("--stock", StringComparison.Ordinal)));
             return;
         }
 
@@ -251,8 +253,10 @@ public partial class App : Application
     /// The headless Win32 layer on screen: dark chrome applied, the task dialog with caption,
     /// headline, body, detail, icon and two buttons, then a message box reporting the id the dialog
     /// returned. The wording is the rig's own — the layer carries text, it owns none.
+    /// <c>--stock</c> repeats the same request with the system's own Cancel button and sizing to
+    /// content, so one capture beside the other says what each of those does to the dialog.
     /// </summary>
-    private void ShowNativeDialogs(bool commandLinks)
+    private void ShowNativeDialogs(bool commandLinks, bool stock)
     {
         DarkChrome.Apply(DarkChromeMode.AllowDark);
 
@@ -270,6 +274,8 @@ public partial class App : Application
                 new TaskDialogButton(101, commandLinks ? "Second choice\nAnother note" : "Second choice"),
             ],
             CommandLinks = commandLinks,
+            StockCancelButton = stock,
+            SizeToContent = stock,
         });
 
         NativeMessageBox.Information(IntPtr.Zero, "Native Dialog Demo", $"The dialog returned {pressed}.");

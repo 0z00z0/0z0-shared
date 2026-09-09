@@ -39,6 +39,31 @@ public class MonitorMetricsTests
     }
 
     [Fact]
+    public void ForPoint_ReportsTheMonitorThePointFallsOnAndItsScale()
+    {
+        // The centre of the primary work area is on the primary monitor by construction, whatever
+        // else is plugged in, and the independent read says which monitor that is.
+        var primary = MonitorMetrics.PrimaryWorkArea();
+        int x = (primary.Left + primary.Right) / 2;
+        int y = (primary.Top + primary.Bottom) / 2;
+
+        Assert.Equal(CursorMonitor.ReadAt(x, y), MonitorMetrics.ForPoint(x, y));
+    }
+
+    [Fact]
+    public void ForPoint_AnswersForTheNearestMonitorWhenThePointIsOnNone()
+    {
+        // The case the lookup exists for: a window's saved position on a screen since unplugged.
+        // The answer is a real monitor's work area, never an empty rectangle or a zero scale.
+        var (area, scale) = MonitorMetrics.ForPoint(-1_000_000, -1_000_000);
+
+        Assert.Equal(CursorMonitor.ReadAt(-1_000_000, -1_000_000), (area, scale));
+        Assert.True(area.Width > 0, $"width {area.Width}");
+        Assert.True(area.Height > 0, $"height {area.Height}");
+        Assert.True(scale >= 1.0, $"scale {scale}");
+    }
+
+    [Fact]
     public void ScaleForWindow_IsOneForAHandleThatIsNotAWindow()
     {
         Assert.Equal(1.0, MonitorMetrics.ScaleForWindow(IntPtr.Zero));
