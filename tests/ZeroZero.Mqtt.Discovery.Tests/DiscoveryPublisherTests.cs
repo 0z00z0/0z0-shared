@@ -717,6 +717,58 @@ public class DiscoveryPublisherTests
         Assert.Equal(1, broker.CountOn(Sample.ConfigTopic));
     }
 
+    /// <summary>A connect that lands after the publisher has been torn down announces nothing. The
+    /// connection holds the publisher as its listener and both are disposed on exit, so a reconnect
+    /// in flight at that moment reaches a publisher that is already gone.</summary>
+    [Fact]
+    public async Task AConnectAfterDisposalAnnouncesNothing()
+    {
+        var harness = new Harness(new MqttEntitySet([Sample.Sensor(), Sample.Switch()]));
+        harness.Dispose();
+
+        await harness.ConnectAsync();
+
+        Assert.Equal(0, harness.Broker.RoundTrips);
+        Assert.Equal(0, harness.Ledger.Writes);
+    }
+
+    /// <summary>The race the check above cannot close: the teardown lands after a pass has passed it
+    /// and is inside the gate, so the release runs against a gate the teardown has already been
+    /// through. The channel hand-over is the hook because it is called inside the gate.</summary>
+    [Fact]
+    public async Task DisposingFromInsideAPassLeavesTheReleaseWithSomethingToReleaseInto()
+    {
+        DiscoveryPublisher? publisher = null;
+        var broker = new RecordingPublisher();
+        publisher = new DiscoveryPublisher(new DiscoveryPublisherSetup
+        {
+            IsConnected = () => true,
+            TopicRoot = Sample.TopicRoot,
+            Device = Sample.Device,
+            Origin = Sample.Origin,
+            Entities = new MqttEntitySet([Sample.Sensor()]),
+            Ledger = new RecordingLedgerStore(),
+            Groups = null,
+            SetChannelsAsync = (_, _) => { publisher!.Dispose(); return Task.CompletedTask; },
+            SetCommandTargets = DiscoveryWiring.NoCommandHandover,
+        });
+
+        Assert.Null(await Record.ExceptionAsync(() =>
+            ((IMqttConnectionListener)publisher).OnConnectedAsync(
+                broker, Sample.Identity, CancellationToken.None)));
+    }
+
+    /// <summary>A second disposal is what a host that tears down explicitly and then disposes on the
+    /// way out does, and it must cost nothing.</summary>
+    [Fact]
+    public void DisposingTwiceIsHarmless()
+    {
+        var harness = new Harness(new MqttEntitySet([Sample.Sensor()]));
+        harness.Dispose();
+
+        Assert.Null(Record.Exception(harness.Dispose));
+    }
+
     private static async Task WaitForAsync(Func<bool> condition)
     {
         for (int i = 0; i < 200 && !condition(); i++) await Task.Delay(10);

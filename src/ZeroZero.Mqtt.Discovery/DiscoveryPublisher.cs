@@ -116,6 +116,10 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
     private readonly SemaphoreSlim _pass = new(1, 1);
     private readonly Lock _gate = new();
 
+    // A torn-down publisher announces nothing. The group signal arrives on whatever thread the host
+    // toggles from, so a teardown can land between a pass being asked for and the pass starting.
+    private int _disposed;
+
     private MqttEntitySet _entities;
     private IMqttPublisher? _publisher;
     private MqttDeviceIdentity _identity = new("", MqttSettings.DefaultDiscoveryPrefix, "");
@@ -213,14 +217,20 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
         if (_setup.Groups is { } groups) groups.Changed -= OnGroupsChanged;
-        _pass.Dispose();
+        // The pass gate is left undisposed on purpose. Nothing here takes its wait handle, so it
+        // holds nothing to release, while disposing it would turn a pass already past the check into
+        // a throw out of its own release.
     }
 
     /// <summary>One announcement pass: the projection to the connection, then the eviction, the
     /// document and the sweep, then the record of what landed.</summary>
     private async Task AnnounceAsync(bool force, CancellationToken ct)
     {
+        if (Volatile.Read(ref _disposed) != 0) return;
+
         await _pass.WaitAsync(ct).ConfigureAwait(false);
         try
         {
@@ -273,6 +283,7 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
         IMqttPublisher publisher, MqttDeviceIdentity identity, CancellationToken ct)
     {
         if (identity.DeviceId.Length == 0) return;
+        if (Volatile.Read(ref _disposed) != 0) return;
 
         await _pass.WaitAsync(ct).ConfigureAwait(false);
         try
