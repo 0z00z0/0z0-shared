@@ -13,8 +13,20 @@ public sealed class StartupTask : IDisposable
     /// <summary>The result code the scheduler reports for a task that has never run.</summary>
     public const int NeverRunResult = 0x00041303;
 
+    /// <summary>The result code the scheduler reports while a run is in flight.</summary>
+    public const int RunningResult = 0x00041301;
+
     /// <summary>How long a repair's verification waits for the demand-started run to end.</summary>
     public static readonly TimeSpan VerificationWait = TimeSpan.FromSeconds(30);
+
+    /// <summary>How long a demand start holds a result of zero before believing it. The scheduler
+    /// writes zero on its way from the running marker to the program's exit code, so a zero read as
+    /// a run ends is either. Measured worst case between the state settling and the result settling
+    /// is 72 ms, so this is roughly seven times it, and it is paid only where the result is zero.
+    /// </summary>
+    public static readonly TimeSpan ResultSettle = TimeSpan.FromMilliseconds(500);
+
+    private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(100);
 
     private readonly StartupTaskOptions _options;
     private readonly ILogSink _log;
@@ -124,7 +136,10 @@ public sealed class StartupTask : IDisposable
     }
 
     /// <summary>Starts the task now and waits for the scheduler to report the run. This is the only
-    /// read that proves the task can start the executable; existence and the enabled flag do not.</summary>
+    /// read that proves the task can start the executable; existence and the enabled flag do not.
+    /// The result code is read at every poll rather than once at the end, because the scheduler
+    /// settles a run's state before its result and a code read at the moment the state settles can
+    /// still be the launch's zero rather than the program's.</summary>
     /// <exception cref="InvalidOperationException">No task of the name is registered.</exception>
     public StartupTaskRunResult DemandStart(TimeSpan wait)
     {
@@ -134,18 +149,55 @@ public sealed class StartupTask : IDisposable
         task.Run();
 
         DateTime deadline = DateTime.UtcNow + wait;
+        DateTime? zeroSince = null;
+        DateTime? lastRun = null;
+        int? settled = null;
+
         while (DateTime.UtcNow < deadline)
         {
-            if (task.LastRunTime != before && task.State != TaskState.Running) break;
-            Thread.Sleep(100);
+            DateTime run = task.LastRunTime;
+            TaskState state = task.State;
+            int result = task.LastTaskResult;
+
+            // Ready alone means the run is over. A queued run has already moved the run time on
+            // while the result still holds the previous run's, so anything short of Ready is a
+            // reading of a run that has not finished.
+            bool ended = run != before
+                         && state == TaskState.Ready
+                         && result != RunningResult
+                         && result != NeverRunResult;
+            if (!ended)
+            {
+                zeroSince = null;
+                Thread.Sleep(PollInterval);
+                continue;
+            }
+
+            if (result != 0)
+            {
+                lastRun = run;
+                settled = result;
+                break;
+            }
+
+            // Zero is what the scheduler writes between the running marker and the program's exit
+            // code, so it counts only once it has held for the settle.
+            zeroSince ??= DateTime.UtcNow;
+            if (DateTime.UtcNow - zeroSince >= ResultSettle)
+            {
+                lastRun = run;
+                settled = 0;
+                break;
+            }
+
+            Thread.Sleep(PollInterval);
         }
 
-        bool ran = task.LastRunTime != before && task.State != TaskState.Running;
-        var result = new StartupTaskRunResult(ran, ran ? task.LastRunTime : null, ran ? task.LastTaskResult : null);
-        _log.Info(ran
-            ? $"Startup task '{TaskName}' demand-started; result 0x{task.LastTaskResult:X}."
+        var outcome = new StartupTaskRunResult(settled is not null, lastRun, settled);
+        _log.Info(settled is int code
+            ? $"Startup task '{TaskName}' demand-started; result 0x{code:X}."
             : $"Startup task '{TaskName}' demand-started but the run had not ended after {wait.TotalSeconds:0} s.");
-        return result;
+        return outcome;
     }
 
     public void Dispose() => _service.Dispose();

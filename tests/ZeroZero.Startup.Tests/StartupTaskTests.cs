@@ -88,6 +88,27 @@ public class StartupTaskTests
         Assert.Equal(7, disposable.ReadIndependently(task => task!.LastTaskResult));
     }
 
+    /// <summary>The repair verifies itself through the demand start, so a stale success code there
+    /// makes a task whose executable failed verify as repaired. The elevated sibling drives this
+    /// through <see cref="StartupTask.Repair"/> itself; a standard token cannot register the
+    /// highest-run-level task a rewrite writes, so here the same composition is built by hand over
+    /// a real task whose executable fails.</summary>
+    [Fact]
+    public void TheVerificationARepairRunsRefusesATaskWhoseExecutableFails()
+    {
+        using var disposable = new DisposableTask(exitCode: 7);
+        disposable.Register();
+
+        StartupTaskRepairResult result = StartupTaskRepair.Run(
+            exists: () => true,
+            deviations: () => ["something differs, so the repair reaches its verification"],
+            rewrite: () => { },
+            verify: () => disposable.Task.DemandStart(RunWait).Succeeded,
+            disposable.Log);
+
+        Assert.Equal(StartupTaskRepairOutcome.VerificationFailed, result.Outcome);
+    }
+
     [Fact]
     public void DeleteRemovesTheTaskAndSaysWhetherThereWasOne()
     {
