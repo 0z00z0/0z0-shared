@@ -54,11 +54,13 @@ releases after `primitives` is on the feed at the version it references.
   `Disable()` write through, and throw `InvalidOperationException` when no task is registered: the
   user asked, and a silent no-op would leave the menu showing a change that did not happen.
   `Delete()` removes the task and says whether there was one. `Repair()` is the repair below.
-  `DemandStart(wait)` starts the task now and waits for the scheduler to report the run.
+  `DemandStart(wait)` starts the task now and waits for the scheduler to report the run; what it
+  waits for is [below](#what-a-demand-start-waits-for).
 - **`StartupTaskState`** — `Exists`, `Enabled`, `LastRun`, `LastResult` and **`HasEverRun`**. The
   last is the one that matters: a task can exist and be enabled and never once have started the
   executable, and the first two facts say nothing about the third. The scheduler reports
-  `0x41303` as the last result of a task that has never run; `StartupTask.NeverRunResult` names it.
+  `0x41303` as the last result of a task that has never run; `StartupTask.NeverRunResult` names it,
+  and `StartupTask.RunningResult` names the `0x41301` it reports while a run is in flight.
 - **`StartupTaskRunResult`** — what a demand start came to: whether the run ended within the wait,
   when, and with what exit code; `Succeeded` is a run that ended with zero.
 - **`StartupTaskRepair`** — the repair decision over delegates, so the decision is testable
@@ -89,6 +91,26 @@ application:
 
 Whether the task is enabled is not part of the definition: `Register()` enables it, and `Repair()`
 keeps whatever the user set.
+
+### What a demand start waits for
+
+The scheduler settles a run's state before it settles the run's result, and between the two it
+writes the code that means the launch succeeded — zero. A reader that stops as soon as the state
+is no longer "running" and reads the result at that instant can therefore be handed the launch's
+zero instead of the executable's exit code, and a run counts as succeeded when its code is zero.
+The same gap is open wider while a run is merely queued: the last run time has already moved on
+while the result still holds the previous run's.
+
+So the wait takes all three readings at every poll, and:
+
+- a run is over only at state `Ready`; queued is not over;
+- `0x41301` and `0x41303` are never a run's result;
+- any other non-zero code is the executable's, and is final at once;
+- a zero is held for `StartupTask.ResultSettle`, 500 ms, and believed only if it survives. The
+  measured worst case between the state settling and the result settling is 72 ms.
+
+The settle is paid only where the result is zero, and the wait the caller gave stays a hard bound:
+a run that ends with zero inside its last 500 ms is reported as not ended rather than as succeeded.
 
 ### The repair
 
