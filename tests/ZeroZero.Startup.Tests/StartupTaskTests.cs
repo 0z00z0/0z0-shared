@@ -11,6 +11,11 @@ public class StartupTaskTests
 {
     private static readonly TimeSpan RunWait = TimeSpan.FromSeconds(60);
 
+    /// <summary>Enough for the scheduler to have started the program — measured at 36 to 409 ms —
+    /// and short enough that a test which only needs the wait to end while the program is up does
+    /// not pay the whole verification wait.</summary>
+    private static readonly TimeSpan ResidentWait = TimeSpan.FromSeconds(3);
+
     static StartupTaskTests() => DisposableTask.Sweep();
 
     [Fact]
@@ -88,6 +93,61 @@ public class StartupTaskTests
         Assert.Equal(7, disposable.ReadIndependently(task => task!.LastTaskResult));
     }
 
+    /// <summary>A program that stays resident never exits, so nothing settles inside the wait and
+    /// the reading taken at the end of it is the whole answer.</summary>
+    [Fact]
+    public void ADemandStartCountsAProgramThatStaysResidentAsAStart()
+    {
+        using var disposable = new DisposableTask(arguments: DisposableTask.ResidentArguments);
+        disposable.Register();
+
+        StartupTaskRunResult result = disposable.Task.DemandStart(ResidentWait);
+
+        Assert.False(result.Ran, "A resident program's run does not end, so nothing settles inside the wait.");
+        Assert.True(result.StillRunning);
+        Assert.True(result.Succeeded);
+        Assert.Equal(StartupTask.RunningResult, result.LastResult);
+        Assert.NotNull(result.LastRun);
+        Assert.Equal(TaskState.Running, disposable.ReadIndependently(task => task!.State));
+    }
+
+    /// <summary>The multiple-instance policy is ignore-new, so a demand start of a task whose
+    /// program is already up starts nothing and the scheduler records the refusal. That is a task
+    /// which can run, and it is what a resident application's repair of its own logon task meets.
+    /// </summary>
+    [Fact]
+    public void ADemandStartCountsARefusedStartAsAStartWhenAnInstanceIsAlreadyRunning()
+    {
+        using var disposable = new DisposableTask(arguments: DisposableTask.ResidentArguments);
+        disposable.Register();
+        disposable.Task.DemandStart(ResidentWait);
+
+        StartupTaskRunResult result = disposable.Task.DemandStart(ResidentWait);
+
+        Assert.True(result.StillRunning);
+        Assert.True(result.Succeeded);
+        Assert.Equal(StartupTask.AlreadyRunningResult, result.LastResult);
+        Assert.Equal(StartupTask.AlreadyRunningResult, disposable.ReadIndependently(task => task!.LastTaskResult));
+    }
+
+    /// <summary>A task that cannot start what it points at never reaches the running state: the
+    /// scheduler returns it to ready carrying the error, in under a tenth of a second. Accepting a
+    /// running task at the end of the wait therefore does not let a task that starts nothing
+    /// through.</summary>
+    [Fact]
+    public void ADemandStartOfATaskWhoseExecutableIsMissingIsARunThatHappenedAndFailed()
+    {
+        using var disposable = new DisposableTask(executablePath: DisposableTask.MissingExecutable, arguments: "");
+        disposable.Register();
+
+        StartupTaskRunResult result = disposable.Task.DemandStart(RunWait);
+
+        Assert.True(result.Ran, "The scheduler reports a missing executable as a run that ended.");
+        Assert.False(result.StillRunning);
+        Assert.False(result.Succeeded);
+        Assert.NotEqual(0, result.LastResult);
+    }
+
     /// <summary>The repair verifies itself through the demand start, so a stale success code there
     /// makes a task whose executable failed verify as repaired. The elevated sibling drives this
     /// through <see cref="StartupTask.Repair"/> itself; a standard token cannot register the
@@ -107,6 +167,25 @@ public class StartupTaskTests
             disposable.Log);
 
         Assert.Equal(StartupTaskRepairOutcome.VerificationFailed, result.Outcome);
+    }
+
+    /// <summary>The same composition over a task whose program stays resident, which is what both
+    /// consuming applications are. Before the deadline reading this was the case that always
+    /// reported a failed verification.</summary>
+    [Fact]
+    public void TheVerificationARepairRunsAcceptsATaskWhoseProgramStaysResident()
+    {
+        using var disposable = new DisposableTask(arguments: DisposableTask.ResidentArguments);
+        disposable.Register();
+
+        StartupTaskRepairResult result = StartupTaskRepair.Run(
+            exists: () => true,
+            deviations: () => ["something differs, so the repair reaches its verification"],
+            rewrite: () => { },
+            verify: () => disposable.Task.DemandStart(ResidentWait).Succeeded,
+            disposable.Log);
+
+        Assert.Equal(StartupTaskRepairOutcome.Repaired, result.Outcome);
     }
 
     [Fact]
