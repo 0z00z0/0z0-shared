@@ -103,7 +103,7 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
         var target = OnDisk();
 
         Assert.Equal(4, result.CommentsNotCarried.Count);
-        Assert.Empty(result.CommentsNotCarried.Where(comment => target.Contains(comment, StringComparison.Ordinal)));
+        Assert.DoesNotContain(result.CommentsNotCarried, comment => target.Contains(comment, StringComparison.Ordinal));
         Assert.Contains("// Hand-edited on the workshop machine after the December outage.", result.CommentsNotCarried);
         Assert.Contains("// Vinterstua — målepunkt øst, satt opp for hånd.", result.CommentsNotCarried);
         Assert.Contains("// Left off deliberately on the workshop machine.", result.CommentsNotCarried);

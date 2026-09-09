@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Xunit;
 using ZeroZero.SettingsShell.WinUI;
 using ZeroZero.Win32;
@@ -9,6 +10,9 @@ namespace ZeroZero.SettingsShell.Tests;
 /// or moved back onto a monitor; nothing saved centred on the cursor's monitor at its scale; a
 /// maximised or minimised rectangle refused.
 /// </summary>
+// Windows-only for the same reason the arithmetic is: the rectangle type comes from ZeroZero.Win32,
+// which declares itself so. Compile-time only — every test here still runs with the rest.
+[SupportedOSPlatform("windows")]
 public class WindowPlacementTests
 {
     /// <summary>A 1920×1080 work area starting at (100, 50), the way a secondary monitor to the

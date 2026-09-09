@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using ZeroZero.Win32;
 
 namespace ZeroZero.SettingsShell.WinUI;
@@ -7,6 +8,9 @@ namespace ZeroZero.SettingsShell.WinUI;
 /// numbers so both rules can be pinned without a window. The monitor lookups are the caller's:
 /// which monitor a rectangle is nearest is a platform question, and it arrives as a function.
 /// </summary>
+// Windows-only because the rectangle it clamps with is: ZeroZero.Win32 declares its whole assembly
+// so. Stated here for the platform-neutral assemblies that take this file as linked source.
+[SupportedOSPlatform("windows")]
 internal static class WindowPlacement
 {
     /// <summary>
