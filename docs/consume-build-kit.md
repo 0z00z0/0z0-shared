@@ -18,8 +18,18 @@ than as rules.
 - **It signs through PowerShell's own Authenticode call, not `signtool`.** Anything only that tool
   offers — appending a second signature, page hashes, naming a hardware-token provider on the
   command line — is out of reach.
-- **One timestamp server, named by a property.** No fallback list, and no retry when it cannot be
-  reached.
+- **One timestamp server, named by a property, and the old timestamp scheme.** No fallback list,
+  and no retry when it cannot be reached. Measured on a file signed exactly as the kit signs one:
+  the timestamp arrives as the PKCS#9 counter-signature Authenticode has always used, never as an
+  RFC 3161 token, because that is what PowerShell's signing call asks for. The counter-signature's
+  own digest is SHA-256, so nothing here is SHA-1 — but a timestamp authority that answers only
+  RFC 3161 cannot be used, and an application obliged to ship RFC 3161 timestamps keeps its own
+  signing tool.
+- **A timestamp that does not arrive is not an error.** Measured, both against an RFC 3161-only
+  authority and against an unreachable address: the file is signed, carries no timestamp at all,
+  and the signing step reports success and exits zero. The read-back proves the signer, never the
+  timestamp, and nothing later in a release checks one either. An application that must not ship an
+  untimestamped build reads the countersignature back itself.
 - **The certificate is a thumbprint in a personal store, or a PFX file.** The PFX password arrives
   only through an environment variable; nothing reads it from an argument and nothing prompts for it.
 

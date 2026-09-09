@@ -154,6 +154,16 @@ certificate is self-signed and no runner trusts its root, so `-Signer` proves th
 and only `-SignerThumbprint` proves the certificate; and the build itself — the tests, the version
 guards and the dependency guard run before packing and are not repeated after it.
 
+**The timestamp is checked nowhere, and an untimestamped release is a real outcome rather than a
+theoretical one.** Nothing in verification reads the countersignature, so a build carrying none
+passes every assertion above. Measured on a file signed exactly as the build kit signs one: a
+timestamp authority that refuses the request — one answering only RFC 3161, or one that cannot be
+reached — leaves the file signed, untimestamped, and the signing step reporting success. What the
+kit does produce, when the authority answers, is the PKCS#9 counter-signature Authenticode has
+always used rather than an RFC 3161 token; its digest is SHA-256. A release that must carry a
+timestamp is checked by reading the shipped file back and looking for the countersignature, which
+is a step a releaser takes rather than one the guards take.
+
 ## Verifying an application's release
 
 The same check runs for an application from the reusable workflow, pinned at any component tag,

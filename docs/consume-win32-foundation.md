@@ -10,10 +10,16 @@ The surface is in [`zerozero-win32.md`](zerozero-win32.md) and the reference rou
 
 Read this first. Whatever an existing helper does from this list stays with the application.
 
-- **Dark chrome is two calls and nothing more:** the process-wide preferred app mode, then a flush
-  so menus already created drop their old theme. Nothing reads the system theme, nothing refreshes
-  the immersive colour policy, and nothing themes an individual window. A helper doing any of those
-  keeps that code and loses only the two calls.
+- **Dark chrome is two undocumented uxtheme calls, and the second one is a choice.** The first sets
+  the process-wide preferred app mode. The second flushes menu themes, so a menu built before the
+  call drops its cached light theme and redraws dark. A helper that makes the preferred-app-mode
+  call and then refreshes the immersive colour policy is making a *different* second call, not an
+  extra one — neither is a superset of the other, and swapping loses whatever the one being
+  replaced did. Compare the second call against the surface the application actually shows: a menu
+  already on the screen is what the flush answers, and for a tray application the context menu is
+  most of the native chrome there is.
+- **Nothing reads the system theme, and nothing themes an individual window.** A helper doing
+  either keeps that code.
 - **Monitor metrics answer for the cursor's monitor and the primary monitor.** There is no work area
   for the monitor a given window sits on, and no enumeration of monitors. A helper that places a
   window on the display another window occupies keeps that lookup.
@@ -25,13 +31,19 @@ Read this first. Whatever an existing helper does from this list stays with the 
   and no callback while it is on screen.
 - **Which monitor a window goes on, and what any dialog says, stay with the caller.**
 
-## This and the build kit are one piece of work
+## This needs a manifest, which is not the same as needing the build kit
 
 The task dialog exists in common controls version 6 only, and the monitor numbers agree with the
 scale a window is drawn at only under per-monitor-v2 awareness. Both are declared in the
-executable's own manifest, which no library can write on its behalf, and the build kit's template
-declares both — see [`consume-build-kit.md`](consume-build-kit.md). Taking this assembly without the
-kit means keeping or hand-writing that manifest. Take the kit first, then this.
+executable's own manifest, which no library can write on its behalf.
+
+**Read the application's existing manifest before deciding.** The build kit's template carries four
+things and nothing beyond them — the common-controls-6 dependency, per-monitor-v2 awareness, the
+supported Windows versions, and the requested execution level (see
+[`consume-build-kit.md`](consume-build-kit.md)). A hand-written manifest already declaring the
+first two is complete for this assembly: the dialogs and the metrics can be swapped on their own,
+and the kit is then a separate decision on its own merits. Where either declaration is missing, the
+two are one piece of work — take the kit first and then this, or hand-write what is missing.
 
 ## The checklist
 
