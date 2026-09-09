@@ -59,6 +59,11 @@ all stay with the application; the kit carries none of them.
    release workflow's hash publication where it is.
 7. Sign the installer through the same script, asking the project where the kit put it so the path
    holds on either route.
+8. Copy `templates/Directory.Build.rsp` to the root of the repository, beside
+   `Directory.Build.props`. It ends MSBuild's worker nodes with the build instead of leaving them
+   running, and it is a response file rather than a property because node reuse is settled before
+   any project file is evaluated. Skipping it costs no correctness — builds are the same, and leave
+   a worker node and its console host behind for fifteen minutes each.
 
 **Verify by reading the shipped file back**, not the build log: the signature off the published
 executable, and the manifest out of the executable that was built, with the common-controls
