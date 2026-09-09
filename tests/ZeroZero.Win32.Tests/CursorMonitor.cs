@@ -3,9 +3,9 @@ using System.Runtime.InteropServices;
 namespace ZeroZero.Win32.Tests;
 
 /// <summary>
-/// An independent reading of the monitor under the cursor — its own imports, its own structures —
-/// so a test can say the assembly under test reports that monitor's work area and scale rather
-/// than merely something non-empty.
+/// An independent reading of the monitor under the cursor, or under any point — its own imports,
+/// its own structures — so a test can say the assembly under test reports that monitor's work area
+/// and scale rather than merely something non-empty.
 /// </summary>
 internal static partial class CursorMonitor
 {
@@ -35,7 +35,12 @@ internal static partial class CursorMonitor
     public static (NativeRect WorkArea, double Scale) Read()
     {
         if (!GetCursorPos(out Point cursor)) throw new InvalidOperationException("The cursor position is unavailable.");
-        IntPtr monitor = MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST);
+        return ReadAt(cursor.X, cursor.Y);
+    }
+
+    public static (NativeRect WorkArea, double Scale) ReadAt(int x, int y)
+    {
+        IntPtr monitor = MonitorFromPoint(new Point { X = x, Y = y }, MONITOR_DEFAULTTONEAREST);
         var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
         if (!GetMonitorInfo(monitor, ref info)) throw new InvalidOperationException("The monitor is unreadable.");
         if (GetDpiForMonitor(monitor, 0, out uint dpi, out _) != 0) throw new InvalidOperationException("The monitor DPI is unreadable.");

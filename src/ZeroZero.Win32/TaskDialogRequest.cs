@@ -30,4 +30,15 @@ public sealed record TaskDialogRequest
 
     /// <summary>Let the title-bar cross and Escape close the dialog, reporting <see cref="TaskDialogButton.CancelId"/>.</summary>
     public bool AllowCancel { get; init; } = true;
+
+    /// <summary>Add the system's own Cancel button, which reports <see cref="TaskDialogButton.CancelId"/>
+    /// like the cross and Escape do. It carries the system's wording in the user's display language
+    /// and sits where a Cancel button belongs, which a custom button of the same name does neither
+    /// of. It appears after the buttons in <see cref="Buttons"/>, and as an ordinary push button
+    /// under a row of command links.</summary>
+    public bool StockCancelButton { get; init; }
+
+    /// <summary>Widen the dialog to fit its longest line instead of wrapping at the standard width.
+    /// A long <see cref="Detail"/> behind the toggle is the usual reason.</summary>
+    public bool SizeToContent { get; init; }
 }

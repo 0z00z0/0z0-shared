@@ -23,8 +23,10 @@ the feed, so a change here releases first.
 
 ## What it contains
 
-- **`MonitorMetrics`** — the work area and scale of the monitor under the cursor (`ForCursor`), the
-  primary monitor's work area (`PrimaryWorkArea`), the scale a window is drawn at
+- **`MonitorMetrics`** — the work area and scale of the monitor under the cursor (`ForCursor`), of
+  the monitor any given point falls on (`ForPoint`, answering for the nearest monitor when the point
+  is on none, which is how a window remembered on a screen since unplugged still opens somewhere
+  reachable), the primary monitor's work area (`PrimaryWorkArea`), the scale a window is drawn at
   (`ScaleForWindow`), the scale of the display the taskbar sits on (`ScaleForTaskbar`) — under
   per-monitor awareness the process's own scale follows its last window, which is not where a
   notification icon is drawn — and the pixels a frame adds around the client area
@@ -35,9 +37,12 @@ the feed, so a change here releases first.
 - **`NativeRect`** — a rectangle in physical pixels, with `ClampInto` for keeping a window inside a
   work area.
 - **`NativeTaskDialog`** — `Show(owner, TaskDialogRequest)`: caption, headline, body, an expandable
-  detail, a stock icon and the buttons — that general, and no more specific. Returns the id of the
-  button pressed, or `TaskDialogButton.CancelId` when the dialog was closed. The wording is the
-  caller's.
+  detail, a stock icon and the buttons — that general, and no more specific. `StockCancelButton`
+  adds the system's own Cancel in the user's display language, rather than a custom button spelling
+  it; `SizeToContent` widens the dialog to fit its longest line instead of wrapping at the standard
+  width. Returns the id of the button pressed, or `TaskDialogButton.CancelId` when the dialog was
+  closed. The wording is the caller's, and so is any fallback: `Show` throws where the dialog cannot
+  appear, and `IsAvailable` is the branch to take before building the request.
 - **`NativeMessageBox`** — `Information`, `Warning`, `Error` and a yes-or-no `Question`, each modal
   to an owner or to nothing, each with a `topmost` option for a tray application that has no window
   to bring the box forward. A box that cannot be shown throws rather than returning as if it had.
