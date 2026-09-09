@@ -16,8 +16,20 @@ public sealed class StartupTask : IDisposable
     /// <summary>The result code the scheduler reports while a run is in flight.</summary>
     public const int RunningResult = 0x00041301;
 
-    /// <summary>How long a repair's verification waits for the demand-started run to end.</summary>
-    public static readonly TimeSpan VerificationWait = TimeSpan.FromSeconds(30);
+    /// <summary>The result code the scheduler reports when it refuses to start a task because an
+    /// instance of it is already running, which is what the ignore-new multiple-instance policy of
+    /// this definition asks for. A demand start of a resident application's own logon task reports
+    /// this rather than starting a second copy.</summary>
+    public const int AlreadyRunningResult = unchecked((int)0x800710E0);
+
+    /// <summary>How long a repair's verification waits before it decides. The whole wait is spent
+    /// where the started program stays resident, because such a run never ends, so it is paid on
+    /// the start-up path of the application being repaired. It is not free to shorten: the
+    /// scheduler holds a finished run in the running state for seconds after the program is gone —
+    /// measured 4.0 to 8.1 s on an idle machine and a median of 6.1 s with every core loaded — and
+    /// a run still reading as running when the wait ends counts as a start. Fifteen seconds is
+    /// about twice the worst idle measurement.</summary>
+    public static readonly TimeSpan VerificationWait = TimeSpan.FromSeconds(15);
 
     /// <summary>How long a demand start holds a result of zero before believing it. The scheduler
     /// writes zero on its way from the running marker to the program's exit code, so a zero read as
@@ -139,7 +151,9 @@ public sealed class StartupTask : IDisposable
     /// read that proves the task can start the executable; existence and the enabled flag do not.
     /// The result code is read at every poll rather than once at the end, because the scheduler
     /// settles a run's state before its result and a code read at the moment the state settles can
-    /// still be the launch's zero rather than the program's.</summary>
+    /// still be the launch's zero rather than the program's. A program that stays resident never
+    /// ends its run, so the reading taken once the wait is over decides that case: a task still
+    /// running then, whose run time has moved, started what it points at.</summary>
     /// <exception cref="InvalidOperationException">No task of the name is registered.</exception>
     public StartupTaskRunResult DemandStart(TimeSpan wait)
     {
@@ -193,12 +207,40 @@ public sealed class StartupTask : IDisposable
             Thread.Sleep(PollInterval);
         }
 
-        var outcome = new StartupTaskRunResult(settled is not null, lastRun, settled);
-        _log.Info(settled is int code
-            ? $"Startup task '{TaskName}' demand-started; result 0x{code:X}."
-            : $"Startup task '{TaskName}' demand-started but the run had not ended after {wait.TotalSeconds:0} s.");
+        bool stillRunning = false;
+        int? reported = settled;
+
+        // Nothing settled inside the wait. One further reading decides, taken now rather than kept
+        // from the last poll, so a run that ended with zero inside the final settle still reports as
+        // a run that had not ended. There is no early return while the task runs: a program that ran
+        // six seconds and then exited with a failure reads exactly like one that was about to exit
+        // with zero, and only the end of the wait tells the two apart.
+        if (settled is null)
+        {
+            DateTime run = task.LastRunTime;
+            if (StartedAndStillRunning(task.State, run, before))
+            {
+                stillRunning = true;
+                lastRun = run;
+                reported = task.LastTaskResult;
+            }
+        }
+
+        var outcome = new StartupTaskRunResult(settled is not null, lastRun, reported, stillRunning);
+        _log.Info(DescribeRun(outcome, wait));
         return outcome;
     }
+
+    /// <summary>Whether the reading taken when the wait ended is a program that started and is still
+    /// up. The scheduler reports the task as running both where it launched the program and where it
+    /// refused the start because an instance was already alive, and either says the task can run.
+    /// Queued is not running: a run waiting to start has moved the run time on without starting
+    /// anything, and a task that cannot start its program never reaches running at all — it goes
+    /// straight back to ready carrying the error. The run time is read as well; on its own it proves
+    /// nothing, because a refused start moves it without launching anything, but unmoved it says the
+    /// scheduler recorded no attempt at all.</summary>
+    internal static bool StartedAndStillRunning(TaskState state, DateTime lastRun, DateTime before) =>
+        state == TaskState.Running && lastRun != before;
 
     public void Dispose() => _service.Dispose();
 
@@ -236,6 +278,17 @@ public sealed class StartupTask : IDisposable
         int result = task.LastTaskResult;
         bool ran = result != NeverRunResult;
         return new StartupTaskState(true, task.Enabled, ran ? task.LastRunTime : null, result, ran);
+    }
+
+    private string DescribeRun(StartupTaskRunResult outcome, TimeSpan wait)
+    {
+        if (outcome.Ran)
+            return $"Startup task '{TaskName}' demand-started; result 0x{outcome.LastResult:X}.";
+        if (!outcome.StillRunning)
+            return $"Startup task '{TaskName}' demand-started but the run had not ended after {wait.TotalSeconds:0} s.";
+        return outcome.LastResult == AlreadyRunningResult
+            ? $"Startup task '{TaskName}' demand-started; an instance was already running, so the scheduler refused the start and the task counts as started."
+            : $"Startup task '{TaskName}' demand-started; still running after {wait.TotalSeconds:0} s, so the task started what it points at and it stays resident.";
     }
 
     private string Describe(StartupTaskState state) =>

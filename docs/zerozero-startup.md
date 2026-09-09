@@ -60,9 +60,13 @@ releases after `primitives` is on the feed at the version it references.
   last is the one that matters: a task can exist and be enabled and never once have started the
   executable, and the first two facts say nothing about the third. The scheduler reports
   `0x41303` as the last result of a task that has never run; `StartupTask.NeverRunResult` names it,
-  and `StartupTask.RunningResult` names the `0x41301` it reports while a run is in flight.
+  `StartupTask.RunningResult` names the `0x41301` it reports while a run is in flight, and
+  `StartupTask.AlreadyRunningResult` names the `0x800710E0` it records when it refuses a start
+  because an instance is already alive.
 - **`StartupTaskRunResult`** — what a demand start came to: whether the run ended within the wait,
-  when, and with what exit code; `Succeeded` is a run that ended with zero.
+  when, with what code, and whether the task was still running when the wait ended. `Succeeded` is
+  either a run that ended with zero or a task still running, because a program that stays resident
+  never exits and waiting for an exit code would fail every task that starts one.
 - **`StartupTaskRepair`** — the repair decision over delegates, so the decision is testable
   without a scheduler, and the outcomes: `NotRegistered`, `AlreadyCorrect`, `Repaired`,
   `RepairFailed` and `VerificationFailed`. No failure in a delegate escapes it — a scheduler that
@@ -112,6 +116,24 @@ So the wait takes all three readings at every poll, and:
 The settle is paid only where the result is zero, and the wait the caller gave stays a hard bound:
 a run that ends with zero inside its last 500 ms is reported as not ended rather than as succeeded.
 
+Nothing settles at all where the started program stays resident, because such a run never ends. So
+one further reading is taken once the wait is over, and a task still running then, whose run time
+has moved past the reading taken before the start, counts as a program that started. The scheduler
+reports the task as running in two shapes and both count: `0x41301`, where it launched the program,
+and `0x800710E0`, where it refused the start because an instance was already alive. Queued is not
+running, so a run that never started is still not a successful one, and a task that cannot start
+what it points at never reaches running at all — it returns to ready carrying the error, in under a
+tenth of a second.
+
+There is no early return while the task runs, and the wait's length is the only thing that separates
+a resident program from a finished one. **The scheduler holds a finished run in the running state
+for seconds after the program is gone** — measured 4.0 to 8.1 s on an idle machine, a median of
+6.1 s and a worst case of 48 s with every core loaded — and during that window the state, the
+instance count and the result code all read exactly as they do for a program that is genuinely up.
+`StartupTask.VerificationWait` is 15 s, about twice the worst idle measurement: a run that fails
+inside the wait and is reaped before it ends is reported as the failure it is, and one the scheduler
+has not yet reaped is reported as a start.
+
 ### The repair
 
 At every start, the application asks `Repair()` to bring a task an older build registered up to
@@ -119,9 +141,17 @@ the definition above. It reads the task, lists every way it differs — a settin
 would have defaulted, a run level or logon type, a missing logon trigger, an executable or
 arguments other than the current ones — and rewrites the whole definition when anything does,
 keeping the enabled flag as it found it. With `VerifyByDemandStart`, a rewritten task is then
-started on demand and the outcome is `Repaired` only if the run ended with zero. The state of the
-task is logged afterwards either way, with the last run and its result, so a log never says
-"registered and enabled" about a task that has never run.
+started on demand and the outcome is `Repaired` only if that start succeeded — the run ended with
+zero, or the task is still running when the wait ends. The state of the task is logged afterwards
+either way, with the last run and its result, so a log never says "registered and enabled" about a
+task that has never run.
+
+Verification costs the whole wait wherever the started program stays resident, and that is the
+common case: it is paid once, on the start after an upgrade that changed the definition, since a
+task that already matches is never rewritten and never verified. The verification stops nothing it
+started. Where the scheduler refused the start, there is nothing to stop; where it launched the
+program, the copy it started is a legitimate one, and the two readings are the same, so stopping on
+that reading would risk killing a running application.
 
 ## Wiring
 
@@ -142,9 +172,12 @@ the click, catching `InvalidOperationException` as "not installed with a startup
 installer registers the task under the same name, with the same settings, and removes it at
 uninstall; that script cannot call this assembly, so the two definitions are kept in step by hand.
 
-`VerifyByDemandStart` is for a task that starts something other than the application itself: a
-demand start of the application's own logon task starts a second instance, which the
-single-instance lock turns away with the exit code the application gives that case.
+`VerifyByDemandStart` works on the application's own logon task. A demand start of it from the
+running application is refused by the scheduler, because the definition's multiple-instance policy
+is ignore-new and the application is the instance, and that refusal counts as a start. The one case
+it still gets wrong is an application started outside its task while the task itself has no running
+instance: the scheduler then launches a second copy, the single-instance lock turns it away, and the
+exit code the application gives that case is reported as a failed verification.
 
 ## Take the reference
 
@@ -153,10 +186,16 @@ Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Start
 
 The tests are in `tests/ZeroZero.Startup.Tests`, plain `net10.0`, and run on Windows only,
 against the real scheduler: tasks named `ZeroZero.Startup.Tests.<guid>` in the root folder, each
-starting the command interpreter with an exit code of the test's choosing, deleted when the test
-ends and swept at the start of a run. From a standard token the disposable task is registered at
-the standard run level, and the tests prove the read, enable, disable, delete, the demand start
-with exit codes zero and seven, repair's refusal as an outcome, and that the highest level is
-refused. Four tests need an elevated process — registration at the highest level, repair
-rewriting an older build's settings while keeping the task disabled, and verification by demand
-start both ways — and are skipped, and reported as skipped, from a standard token.
+starting the command interpreter with an exit code, a program that stays up, or a path no file
+occupies, deleted when the test ends and swept at the start of a run. From a standard token the
+disposable task is registered at the standard run level, and the tests prove the read, enable,
+disable, delete, the demand start with exit codes zero and seven, a program that stays resident, a
+start the scheduler refuses because an instance is alive, an executable that does not exist,
+repair's refusal as an outcome, and that the highest level is refused. Four tests need an elevated
+process — registration at the highest level, repair rewriting an older build's settings while
+keeping the task disabled, and verification by demand start both ways — and are skipped, and
+reported as skipped, from a standard token.
+
+`DemandStartDecisionTests` covers the same decisions with no scheduler, which is the only way to
+reach the queued state on demand: the scheduler passes through it too briefly to be caught, and it
+is the state that must not count as a start.

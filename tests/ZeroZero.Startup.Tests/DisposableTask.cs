@@ -14,19 +14,28 @@ internal sealed class DisposableTask : IDisposable
     public const string Prefix = "ZeroZero.Startup.Tests.";
     public static readonly string CommandInterpreter = Path.Combine(Environment.SystemDirectory, "cmd.exe");
 
+    /// <summary>A path no file occupies, for a task that cannot start what it points at.</summary>
+    public static readonly string MissingExecutable = Path.Combine(Environment.SystemDirectory, "zerozero-startup-tests-no-such-executable.exe");
+
+    /// <summary>Arguments that keep the started program up for about twenty seconds — long enough
+    /// to outlast any wait a test uses, short enough that the program is gone soon after. It has to
+    /// end by itself: the definition forbids hard termination, so stopping the task returns the
+    /// task to ready and leaves the program running.</summary>
+    public const string ResidentArguments = "/c ping -n 20 127.0.0.1 >nul";
+
     public string Name { get; } = Prefix + Guid.NewGuid().ToString("N");
     public RecordingLogSink Log { get; } = new();
     public StartupTaskOptions Options { get; }
     public StartupTask Task { get; }
 
-    public DisposableTask(int exitCode = 0, bool verify = false)
+    public DisposableTask(int exitCode = 0, bool verify = false, string? executablePath = null, string? arguments = null)
     {
         Options = new StartupTaskOptions
         {
             TaskName = Name,
             Description = "Disposable test task. Delete freely.",
-            ExecutablePath = CommandInterpreter,
-            Arguments = $"/c exit {exitCode}",
+            ExecutablePath = executablePath ?? CommandInterpreter,
+            Arguments = arguments ?? $"/c exit {exitCode}",
             VerifyByDemandStart = verify,
             Log = Log,
         };
@@ -37,7 +46,7 @@ internal sealed class DisposableTask : IDisposable
     {
         using var service = new TaskService();
         TaskIdentity identity = TaskIdentity.Current();
-        using TaskDefinition definition = StartupTaskDefinition.Build(service, Options, identity, CommandInterpreter, enabled: true);
+        using TaskDefinition definition = StartupTaskDefinition.Build(service, Options, identity, Options.ExecutablePath!, enabled: true);
         if (!Elevation.IsElevated) definition.Principal.RunLevel = TaskRunLevel.LUA;
         service.RootFolder.RegisterTaskDefinition(Name, definition, TaskCreation.CreateOrUpdate, identity.Sid, null, TaskLogonType.InteractiveToken);
     }
