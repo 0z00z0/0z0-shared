@@ -136,6 +136,14 @@ What a write does change: the values of the members the section's type declares,
 from what the file says. A number the type holds as `0.75` is written as `0.75` even where the file
 said `0.750`. Nothing outside the section moves.
 
+**A write that changes nothing writes nothing.** The comparison is member by member, against the
+file's own bytes in the file's own formatting: a member whose serialised value already matches is
+left alone, and a section where every member matches gets no edit at all — nothing reaches disk, and
+the section's `Changed` event does not fire. `Update` and `Write` still report success:
+`SettingsSaveResult.Saved` is true whenever the stored state is on disk, including when it was
+already there. A consumer does not need to compare a section's content against what is stored before
+calling `Update` or `Write`; the store already does that.
+
 ### Comments: tolerated on read, never written
 
 **A comment in the file costs nothing to read, and the store never writes one.** The asymmetry is

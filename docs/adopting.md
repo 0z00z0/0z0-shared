@@ -203,6 +203,16 @@ A settings class must be a class with a public parameterless constructor, and it
 settable rather than init-only wherever the application changes them through the store. A positional
 record does not qualify.
 
+### A section write already skips what has not changed
+
+Comparing new content against what a store already holds, to avoid a pointless write, is redundant
+for the sectioned store. `SectionedSettingsFile` compares each section member's serialised bytes
+against the file's own — matched to the file's own formatting — before writing, and a member whose
+bytes already agree is left alone. A section where nothing changed gets no edit at all: no bytes
+reach disk, and the section's `Changed` event does not fire. `Update` and `Write` still report
+success, because `SettingsSaveResult.Saved` is true whenever the stored state is on disk, changed or
+not. An adopter needs no such comparison of its own before calling `Update` or `Write`.
+
 ### The migration writes a new file and never touches the old one
 
 It exists to group a flat file into sections, for installations that predate them. The source is

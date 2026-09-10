@@ -82,10 +82,12 @@ included; the consuming build merges that index into its own:
 </ItemGroup>
 ```
 
-The feed is `https://nuget.pkg.github.com/0z00z0/index.json` and **it authenticates every read even
-though the packages are public** — an anonymous request returns `401` — so every machine and every
-runner that restores needs a token with `read:packages`. The consuming repository also needs a
-`nuget.config` naming the feed *and* mapping `ZeroZero.*` to it, so that nothing on nuget.org can
+The feed is `https://nuget.pkg.github.com/0z00z0/index.json` and **it authenticates every read, and
+every package on it is private** — an anonymous request returns `401`, and a token succeeds only
+once its repository is granted read access to the package — so every machine and every runner that
+restores needs a token with `read:packages` from a repository holding that grant. The consuming
+repository also needs a `nuget.config` naming the feed *and* mapping `ZeroZero.*` to it, so that
+nothing on nuget.org can
 answer for one of these names. [`consuming.md`](consuming.md#the-package-route) carries both files
 and the credential rules.
 

@@ -78,8 +78,9 @@ writer are exercised by every build here. The capture and demo scripts that driv
 ## Consuming
 
 Two routes, both supported: a `PackageReference` on the studio's GitHub Packages feed at
-`https://nuget.pkg.github.com/0z00z0/index.json` — **which authenticates every read even though the
-packages are public**, so a restore needs a token with `read:packages` — or a `ProjectReference` on
+`https://nuget.pkg.github.com/0z00z0/index.json` — **which authenticates every read; every package on
+it is private**, readable only by a repository granted access to it, so a restore needs a token with
+`read:packages` from a repository holding that grant — or a `ProjectReference` on
 a sibling checkout, which needs no credential at all. One reference per adopted component, one route
 per consuming repository. [`docs/consuming.md`](docs/consuming.md) carries both routes, the CI
 shapes, pinning and the traps; each component's guide adds its own wiring on top.

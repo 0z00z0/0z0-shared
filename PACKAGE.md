@@ -45,8 +45,10 @@ component moves on its own.
 
 These packages are published to GitHub Packages at
 `https://nuget.pkg.github.com/0z00z0/index.json` and nowhere else. **GitHub authenticates every
-read, including of a public package** — an anonymous request returns 401 — so a restore needs a
-token carrying `read:packages`, on a developer's machine and on a CI runner alike.
+read, and every package here is private** — an anonymous request returns 401, and a token succeeds
+only once its repository is granted read access to the package — so a restore needs a
+token carrying `read:packages`, from a repository holding that grant, on a developer's machine and
+on a CI runner alike.
 
 A consumer also needs package source mapping, so that no other feed can answer for a `ZeroZero.*`
 name. The recipe, both halves of it, is in

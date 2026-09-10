@@ -48,10 +48,12 @@ source locally and in CI. A sibling pin governs CI alone, so every local build, 
 locally built installer silently compiles whatever the sibling working tree currently holds, pin
 file notwithstanding.
 
-**What it costs: GitHub Packages authenticates every read, including of a public package.** An
-anonymous request to the feed returns `401`. So the package route needs a token carrying
-`read:packages` wherever a restore happens — on a developer's machine and on a CI runner alike —
-where the sibling-checkout route clones a public repository with no credential at all. A consumer's
+**What it costs: GitHub Packages authenticates every read.** An anonymous request to the feed
+returns `401`, and every package is private: a token succeeds only for a repository that has been
+granted read access to that package, so a consuming repository's token is refused until the grant
+exists. So the package route needs a token carrying `read:packages`, from a repository holding that
+grant, wherever a restore happens — on a developer's machine and on a CI runner alike — where the
+sibling-checkout route clones a public repository with no credential at all. A consumer's
 own workflow therefore gains a secret it did not previously need.
 
 The consuming repository carries a `nuget.config` naming the feed and mapping which source may
