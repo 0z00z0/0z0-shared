@@ -27,6 +27,9 @@ public sealed class TrayHostProcessTests : IDisposable
 
     private string Probe => Path.Combine(_dir, "tray-probe.txt");
 
+    /// <summary>The harness's completion marker, written once the probe is whole and in place.</summary>
+    private string Written => Probe + ".done";
+
     public TrayHostProcessTests() => Directory.CreateDirectory(_dir);
 
     public void Dispose() => Directory.Delete(_dir, recursive: true);
@@ -105,7 +108,11 @@ public sealed class TrayHostProcessTests : IDisposable
     private Dictionary<string, string> AwaitProbe(Process child)
     {
         var deadline = DateTime.UtcNow + Patience;
-        while (!File.Exists(Probe))
+
+        // The marker rather than the probe: the probe path is bound while the harness's move into
+        // place is still in flight, and an open in that window fails with a sharing violation, so
+        // the probe existing does not mean it can be read.
+        while (!File.Exists(Written))
         {
             // The exit code is readable only once the process has exited, so it is read after
             // the check and never in the message of the check itself.

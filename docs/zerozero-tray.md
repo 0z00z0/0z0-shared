@@ -189,4 +189,7 @@ seconds.
 own drawing, tooltip and menu and stays until Exit is chosen; `--file` hands the host a file
 instead of frames, `--menu` opens the menu by the tray after two seconds, `--promote` asks the
 shell to show the icon in the taskbar proper, and `--probe <path>` writes what the host created
-and logs every click beside it until a `.stop` file appears.
+and logs every click beside it until a `.stop` file appears. The probe is written to a temporary
+name and moved into place, and an empty `.done` file beside it marks the move complete. That
+marker is what a reader waits for: the probe path is bound while the move is still in flight, and
+an open in that window fails with a sharing violation.

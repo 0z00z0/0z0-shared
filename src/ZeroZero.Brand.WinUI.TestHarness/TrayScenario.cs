@@ -183,7 +183,9 @@ internal sealed class TrayScenario : IDisposable
     private static extern bool GetWindowRect(IntPtr window, out RECT rect);
 
     /// <summary>What the host created, as tab-separated pairs, written whole and then moved into
-    /// place so a reader never sees half a file.</summary>
+    /// place so a reader never sees half a file, with an empty marker beside it once that is done.
+    /// The marker is the completion signal, because the probe path is bound while the move is
+    /// still in flight and an open in that window fails with a sharing violation.</summary>
     private void WriteProbe()
     {
         var request = _host.CurrentRequest!;
@@ -200,6 +202,7 @@ internal sealed class TrayScenario : IDisposable
         string staging = _probePath + ".tmp";
         File.WriteAllLines(staging, lines);
         File.Move(staging, _probePath!, overwrite: true);
+        File.WriteAllText(_probePath + ".done", "");
     }
 
     private void Note(string kind)

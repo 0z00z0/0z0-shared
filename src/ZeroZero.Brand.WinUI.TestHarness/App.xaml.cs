@@ -81,8 +81,8 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// <c>--menu</c> opens the menu by the tray after two seconds, so a capture needs no click;
 /// <c>--promote</c> puts the icon in the taskbar proper rather than the overflow, through the
 /// shell's own per-icon setting, undone on exit; <c>--probe &lt;path&gt;</c> writes what the
-/// host created to that path, logs every click beside it, and exits once a <c>.stop</c> file
-/// appears beside the probe.
+/// host created to that path, marks it complete with an empty <c>.done</c> file beside it, logs
+/// every click beside it, and exits once a <c>.stop</c> file appears beside the probe.
 /// </para>
 /// </summary>
 public partial class App : Application
