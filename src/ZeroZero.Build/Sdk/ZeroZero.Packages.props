@@ -18,7 +18,7 @@
        ZeroZero.Build.targets holds the declared list to compare a project's resolved pins against.
        A pin moves here, and nowhere else. -->
   <ItemGroup Label="Windows App SDK">
-    <ZeroZeroFamilyPin Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
+    <ZeroZeroFamilyPin Include="Microsoft.WindowsAppSDK" Version="2.4.0" />
     <ZeroZeroFamilyPin Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2270" />
   </ItemGroup>
 

@@ -281,7 +281,7 @@ difference matters to a consumer that has not yet taken the kit:
 
 | Package | Version | What the pin is |
 |---|---|---|
-| `Microsoft.WindowsAppSDK` | `2.2.0` | A **floor**. |
+| `Microsoft.WindowsAppSDK` | `2.4.0` | A **floor**. |
 | `Microsoft.Windows.SDK.BuildTools` | `10.0.28000.2270` | A **floor**. |
 | `CommunityToolkit.WinUI.Controls.SettingsControls` | `8.2.251219` | A **ceiling**. |
 | `H.NotifyIcon.WinUI` | `2.4.1` | A **ceiling**, for the same reason: the tray host's notify-icon library, which a consuming application references directly as well. No type of it reaches a public signature. |

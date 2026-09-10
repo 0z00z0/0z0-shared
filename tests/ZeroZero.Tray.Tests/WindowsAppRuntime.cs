@@ -9,8 +9,9 @@ internal static partial class WindowsAppRuntime
     /// <summary>The 2.x runtime's family; the family the build kit's Windows App SDK pin resolves to.</summary>
     public const string Family = "Microsoft.WindowsAppRuntime.2_8wekyb3d8bbwe";
 
-    /// <summary>The runtime version the kit's pin, 2.2.0, asks for at least.</summary>
-    public static readonly Version Minimum = new(2, 2, 0, 0);
+    /// <summary>The runtime version the kit's pin, 2.4.0, asks for at least. The 2.x framework
+    /// package carries the SDK's own number, so this moves with the pin.</summary>
+    public static readonly Version Minimum = new(2, 4, 0, 0);
 
     /// <summary>The architecture the harness is built for: the process architecture of the build.</summary>
     public static string Architecture => RuntimeInformation.ProcessArchitecture switch
