@@ -1,3 +1,5 @@
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Automation.Provider;
@@ -24,8 +26,12 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// a plain window with ordinary chrome and no update button, simulating a full windowed app's
 /// in-navigation About page.</item>
 /// </list>
-/// Both windows open at launch; the app exits once the last of the two is closed (default
-/// <see cref="Application.DispatcherShutdownMode"/> is OnLastWindowClose).
+/// One surface per run: the popup opens at launch, <c>--hosted</c> opens the hosted-control demo
+/// instead. Two windows in one run would leave the popup closing itself the moment the second took
+/// focus. <c>--opener</c> replaces the launch-time window with a button that opens the popup, which
+/// is the only way a double-click on what opens it can be reproduced; <c>--anchor</c> adds a small
+/// pure-white window a capture can be checked against. The app exits once its last window is closed
+/// (default <see cref="Application.DispatcherShutdownMode"/> is OnLastWindowClose).
 /// <para>
 /// <c>--mqtt</c> switches to the MQTT settings panel instead, in one of five shapes:
 /// bare (eight windows, the screenshot set), <c>--brand</c> (an extreme studio palette declared
@@ -191,11 +197,68 @@ public partial class App : Application
             return;
         }
 
-        var libraries = new ExternalLibrary[]
+        ShowAbout(commandLine);
+    }
+
+    private static readonly ExternalLibrary[] Libraries =
+    [
+        new("Microsoft.WindowsAppSDK", "Microsoft", "WinUI 3 / Windows App SDK runtime", "MIT", "https://github.com/microsoft/WindowsAppSDK"),
+        new("H.NotifyIcon.WinUI", "HavenDV", "The notify-icon library behind the tray host, a dependency of this harness through ZeroZero.Tray.WinUI", "MIT", "https://github.com/HavenDV/H.NotifyIcon"),
+    ];
+
+    /// <summary>
+    /// One About surface per run. The popup dismisses itself the moment it loses focus, so a second
+    /// window opened beside it would take the focus and close it before anyone saw it —
+    /// <c>--hosted</c> opens the hosted-control demo instead, and the capture script runs the rig
+    /// twice. <c>--theme Light|Dark</c> pins the theme, <c>--expand</c> opens the libraries list and
+    /// <c>--news</c> the release notes once the window has settled, <c>--notes &lt;url&gt;</c>
+    /// points the notes at another address (an unreachable one is how the failure path is seen),
+    /// and <c>--probe &lt;path&gt;</c> writes the window's own sizing numbers beside the capture.
+    /// </summary>
+    private void ShowAbout(string[] commandLine)
+    {
+        // Opened first, so the About window is the one that ends up with focus: the popup dismisses
+        // itself the moment it loses focus, and a window activated after it would take it away.
+        if (commandLine.Any(a => a.Equals("--anchor", StringComparison.Ordinal))) ShowAnchor();
+
+        // The opener owns the run: the About popup is opened by a click on its button, not at
+        // launch, which is the only way the double-click gesture can be reproduced.
+        if (commandLine.Any(a => a.Equals("--opener", StringComparison.Ordinal)))
         {
-            new("Microsoft.WindowsAppSDK", "Microsoft", "WinUI 3 / Windows App SDK runtime", "MIT", "https://github.com/microsoft/WindowsAppSDK"),
-            new("H.NotifyIcon.WinUI", "HavenDV", "The notify-icon library behind the tray host, a dependency of this harness through ZeroZero.Tray.WinUI", "MIT", "https://github.com/HavenDV/H.NotifyIcon"),
+            ShowOpener(commandLine);
+            return;
+        }
+
+        string? notesUrl = ValueAfter(commandLine, "--notes")
+            ?? $"{CoreBrand.OrgUrl}/0z0-shared/releases/latest/download/whats-new.txt";
+        string? probePath = ValueAfter(commandLine, "--probe");
+        var theme = ValueAfter(commandLine, "--theme") switch
+        {
+            "Light" => ElementTheme.Light,
+            "Dark" => ElementTheme.Dark,
+            _ => ElementTheme.Default,
         };
+
+        if (commandLine.Any(a => a.Equals("--hosted", StringComparison.Ordinal)))
+        {
+            var hostedInfo = new AboutInfo
+            {
+                AppName     = "Brand Test Harness (hosted control)",
+                Version     = "0.0.0-dev",
+                Description = DescriptionFrom(commandLine)
+                              ?? "Same BrandAboutControl content as the popup, hosted directly inside a plain " +
+                                 "window with ordinary chrome and no update button — simulating an " +
+                                 "in-navigation About page, which has no popup or update/exit concept.",
+                RepoUrl     = $"{CoreBrand.OrgUrl}/0z0-shared",
+                ReleaseNotesUrl = notesUrl,
+                ExternalLibraries = Libraries,
+            };
+            _hostedControlWindow = new HostedControlWindow(hostedInfo);
+            ApplyTheme(_hostedControlWindow, theme);
+            _hostedControlWindow.Activate();
+            ScriptAbout(_hostedControlWindow, commandLine, probePath);
+            return;
+        }
 
         var options = new BrandAboutOptions
         {
@@ -203,11 +266,13 @@ public partial class App : Application
             {
                 AppName     = "Brand Test Harness",
                 Version     = "0.0.0-dev",
-                Description = "Interactive launch-test rig for the shared BrandAboutWindow component — " +
-                              "renders the About box from this repo's own sample data, independently " +
-                              "of any consuming app.",
+                Description = DescriptionFrom(commandLine)
+                              ?? "Interactive launch-test rig for the shared BrandAboutWindow component — " +
+                                 "renders the About box from this repo's own sample data, independently " +
+                                 "of any consuming app.",
                 RepoUrl     = $"{CoreBrand.OrgUrl}/0z0-shared",
-                ExternalLibraries = libraries,
+                ReleaseNotesUrl = notesUrl,
+                ExternalLibraries = Libraries,
             },
             // Present so the "Check for Updates" button is visible and clickable for the test —
             // omit this to verify the button hides itself instead (see BrandAboutWindow.xaml.cs).
@@ -217,24 +282,234 @@ public partial class App : Application
         };
 
         _aboutWindow = new BrandAboutWindow(options);
-        // Distinct, recognizable titles so the capture script can tell the two windows apart even
-        // though BrandAboutWindow hides its own title bar (the AppWindow title is still set).
+        // A recognizable title so the capture script finds the window even though BrandAboutWindow
+        // hides its own title bar (the AppWindow title is still set).
         _aboutWindow.Title = "Window Mode";
+        ApplyTheme(_aboutWindow, theme);
         _aboutWindow.Activate();
-
-        var hostedInfo = new AboutInfo
-        {
-            AppName     = "Brand Test Harness (hosted control)",
-            Version     = "0.0.0-dev",
-            Description = "Same BrandAboutControl content as the popup, hosted directly inside a plain " +
-                          "window with ordinary chrome and no update button — simulating M365Migrator's " +
-                          "in-navigation About page, which has no popup or update/exit concept.",
-            RepoUrl     = $"{CoreBrand.OrgUrl}/0z0-shared",
-            ExternalLibraries = libraries,
-        };
-        _hostedControlWindow = new HostedControlWindow(hostedInfo);
-        _hostedControlWindow.Activate();
+        ScriptAbout(_aboutWindow, commandLine, probePath);
     }
+
+    private Window? _openerWindow;
+
+    /// <summary>
+    /// A window with one button that opens the About popup, which is what a tray menu item or an
+    /// application's own About command amounts to. It exists so the dismissal can be driven rather
+    /// than reasoned about: a fast double-click on that button is the gesture that opened the window
+    /// and closed it again in one go before the window learned to ignore a deactivation arriving
+    /// ahead of its first activation.
+    /// </summary>
+    private void ShowOpener(string[] commandLine)
+    {
+        var (workArea, scale) = MonitorMetrics.ForCursor();
+
+        var button = new Button
+        {
+            Name = "OpenAboutBtn",
+            Content = "About",
+            Margin = new Thickness(24),
+            Padding = new Thickness(24, 12, 24, 12),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        _openerWindow = new Window
+        {
+            Title = "About Opener",
+            Content = new Grid { Children = { button } },
+        };
+
+        button.Click += (_, _) =>
+        {
+            var options = new BrandAboutOptions
+            {
+                Info = new AboutInfo
+                {
+                    AppName = "Brand Test Harness",
+                    Version = "0.0.0-dev",
+                    Description = "Opened from a button, so the dismissal can be driven the way a " +
+                                  "consuming application opens it.",
+                    RepoUrl = $"{CoreBrand.OrgUrl}/0z0-shared",
+                    ReleaseNotesUrl = ValueAfter(commandLine, "--notes")
+                        ?? $"{CoreBrand.OrgUrl}/0z0-shared/releases/latest/download/whats-new.txt",
+                    ExternalLibraries = Libraries,
+                },
+            };
+            // Every activation change against the milliseconds since the button was pressed. The
+            // order of "took focus" and "lost focus" around a double-click is the whole question,
+            // and it is not something reading the handler can answer.
+            string? log = ValueAfter(commandLine, "--probe");
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            var about = new BrandAboutWindow(options) { Title = "Window Mode" };
+            if (log is { Length: > 0 })
+            {
+                about.Activated += (_, e) =>
+                {
+                    try { File.AppendAllText(log, $"{clock.ElapsedMilliseconds}	{e.WindowActivationState}" + Environment.NewLine); }
+                    catch (IOException) { /* a run that writes nothing is still a run */ }
+                };
+                about.Closed += (_, _) =>
+                {
+                    try { File.AppendAllText(log, $"{clock.ElapsedMilliseconds}	Closed" + Environment.NewLine); }
+                    catch (IOException) { }
+                };
+                try { File.AppendAllText(log, $"{clock.ElapsedMilliseconds}	Constructed" + Environment.NewLine); } catch (IOException) { }
+            }
+            about.Activate();
+        };
+
+        _openerWindow.AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(
+            workArea.Left + 120, workArea.Top + 120, (int)(320 * scale), (int)(200 * scale)));
+        _openerWindow.Activate();
+    }
+
+    private Window? _anchorWindow;
+
+    /// <summary>
+    /// A small patch of pure white in a fixed corner of the work area. A capture that finds anything
+    /// but white there was taken of a dimmed, locked or faded screen, and is thrown away rather than
+    /// read. It also keeps the process alive after the About popup dismisses itself, so a scripted
+    /// run can still write what it measured.
+    /// </summary>
+    private void ShowAnchor()
+    {
+        var (workArea, _) = MonitorMetrics.ForCursor();
+
+        _anchorWindow = new Window
+        {
+            Title = "White Anchor",
+            Content = new Grid { Background = new SolidColorBrush(Colors.White) },
+        };
+
+        var presenter = OverlappedPresenter.Create();
+        presenter.SetBorderAndTitleBar(hasBorder: false, hasTitleBar: false);
+        presenter.IsResizable = false;
+        presenter.IsAlwaysOnTop = true;
+        _anchorWindow.AppWindow.SetPresenter(presenter);
+        _anchorWindow.AppWindow.IsShownInSwitchers = false;
+        _anchorWindow.AppWindow.MoveAndResize(
+            new Windows.Graphics.RectInt32(workArea.Left + 8, workArea.Top + 8, 160, 80));
+        _anchorWindow.Activate();
+    }
+
+    /// <summary>The description a run asked for: a word on the command line, or a file where the
+    /// text has spaces in it and a command line would break it into tokens.</summary>
+    private static string? DescriptionFrom(string[] commandLine)
+    {
+        if (ValueAfter(commandLine, "--description-file") is { Length: > 0 } path && File.Exists(path))
+            return File.ReadAllText(path);
+
+        return ValueAfter(commandLine, "--description");
+    }
+
+    private static void ApplyTheme(Window window, ElementTheme theme)
+    {
+        if (theme != ElementTheme.Default && window.Content is FrameworkElement content)
+            content.RequestedTheme = theme;
+    }
+
+    /// <summary>
+    /// Presses what the run asked for once the window has settled, then writes the probe. The two
+    /// share one timer: a press changes the height the probe is there to record, so the probe has to
+    /// come after it.
+    /// </summary>
+    private void ScriptAbout(Window window, string[] commandLine, string? probePath)
+    {
+        bool expand = commandLine.Any(a => a.Equals("--expand", StringComparison.Ordinal));
+        bool news = commandLine.Any(a => a.Equals("--news", StringComparison.Ordinal));
+        if (!expand && !news && probePath is not { Length: > 0 }) return;
+
+        // The window's size when it first appears, before anything has been pressed: the sizing runs
+        // twice, and the difference between the two passes is only visible this early.
+        if (probePath is { Length: > 0 })
+        {
+            _earlyTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+            _earlyTimer.Interval = TimeSpan.FromMilliseconds(250);
+            _earlyTimer.IsRepeating = false;
+            _earlyTimer.Tick += (_, _) =>
+            {
+                try
+                {
+                    File.WriteAllText(probePath + ".early.txt", "");
+                    AboutProbe.Dump(probePath + ".early.txt", "early", window);
+                }
+                catch (Exception ex) { File.WriteAllText(probePath + ".early.error.txt", ex.ToString()); }
+            };
+            _earlyTimer.Start();
+        }
+
+        _settledTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+        _settledTimer.Interval = TimeSpan.FromSeconds(1.0);
+        _settledTimer.IsRepeating = false;
+        _settledTimer.Tick += (_, _) =>
+        {
+            var root = (FrameworkElement)window.Content;
+            if (news && AboutProbe.Find<Button>(root, "NewsBtn") is { } newsButton)
+            {
+                if (probePath is { Length: > 0 }) WatchNotes(root, probePath + ".timing.txt");
+                Press(newsButton);
+            }
+            if (expand && AboutProbe.Find<Button>(root, "LibrariesToggleBtn") is { } toggle) Press(toggle);
+
+            if (probePath is not { Length: > 0 }) return;
+
+            // After the presses, and after whatever they set off has had time to answer: the notes
+            // fetch gives up after three seconds, so the numbers are read once that is settled too.
+            _probeTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+            _probeTimer.Interval = TimeSpan.FromSeconds(news ? 4.0 : 0.5);
+            _probeTimer.IsRepeating = false;
+            _probeTimer.Tick += (_, _) =>
+            {
+                try
+                {
+                    File.WriteAllText(probePath, "");
+                    AboutProbe.Dump(probePath, window.Title, window);
+                }
+                catch (Exception ex)
+                {
+                    File.WriteAllText(probePath + ".error.txt", ex.ToString());
+                }
+            };
+            _probeTimer.Start();
+        };
+        _settledTimer.Start();
+    }
+
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _notesTimer;
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _earlyTimer;
+
+    /// <summary>
+    /// Records every change to the notes text against the milliseconds since the button was pressed,
+    /// which is the only honest answer to how long a reader waits and what they see while waiting.
+    /// Polled rather than hooked: the control raises no event for its own text, and a poll measures
+    /// what is on screen rather than what the code intended to put there.
+    /// </summary>
+    private void WatchNotes(FrameworkElement root, string path)
+    {
+        var started = System.Diagnostics.Stopwatch.StartNew();
+        string last = "";
+        File.WriteAllText(path, "");
+
+        _notesTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+        _notesTimer.Interval = TimeSpan.FromMilliseconds(50);
+        _notesTimer.IsRepeating = true;
+        _notesTimer.Tick += (timer, _) =>
+        {
+            string now = AboutProbe.Find<TextBlock>(root, "NewsText")?.Text ?? "";
+            if (now != last)
+            {
+                last = now;
+                File.AppendAllText(path, $"{started.ElapsedMilliseconds}\t{now.Replace('\n', ' ').Replace('\r', ' ')}\n");
+            }
+            if (started.Elapsed > TimeSpan.FromSeconds(15)) timer.Stop();
+        };
+        _notesTimer.Start();
+    }
+
+    /// <summary>Presses a button through its automation peer, so the control's own click path runs
+    /// rather than a handler being called behind its back.</summary>
+    private static void Press(Button button) =>
+        ((IInvokeProvider)new ButtonAutomationPeer(button).GetPattern(PatternInterface.Invoke)).Invoke();
 
     private TrayScenario? _tray;
 

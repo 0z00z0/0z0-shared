@@ -12,20 +12,53 @@ namespace ZeroZero.Brand.WinUI;
 
 /// <summary>
 /// The shared About *content* for ZeroZero Software apps — brand header, description, three
-/// co-equal link buttons (repository / website / donate) and an external-libraries credit list.
-/// Deliberately owns no window chrome, sizing, or update/exit flow: those are tray-app-only
-/// concerns that <see cref="BrandAboutWindow"/> layers on top when hosting this control in a
-/// popup. A full windowed app with its own in-navigation About page (no popup, no update button)
-/// hosts this control directly instead.
+/// co-equal link buttons (what's new / website / donate), the release notes themselves, and an
+/// external-libraries credit list. Deliberately owns no window chrome, sizing, or update/exit
+/// flow: those are tray-app-only concerns that <see cref="BrandAboutWindow"/> layers on top when
+/// hosting this control in a popup. A full windowed app with its own in-navigation About page
+/// (no popup, no update button) hosts this control directly instead.
 /// </summary>
 public sealed partial class BrandAboutControl : UserControl
 {
-    private AboutInfo? _info;
+    /// <summary>
+    /// How long the notes fetch is given before it is abandoned. Short on purpose: the reader
+    /// pressed a button on a small window and is waiting for it, so a request that has not
+    /// answered by now has failed as far as they are concerned.
+    /// </summary>
+    private static readonly TimeSpan FetchTimeout = TimeSpan.FromSeconds(3);
 
     /// <summary>
-    /// Raised after the external-libraries expander toggles, since that changes this control's
-    /// desired height. A hosting <see cref="BrandAboutWindow"/> uses this to re-measure and resize
-    /// itself to fit; a page host inside a scrollable layout can ignore it.
+    /// How much of the notes is read. The panel is a few lines in a small window, not a document
+    /// viewer, and a bounded read also caps what an address under someone else's control can make
+    /// this control download.
+    /// </summary>
+    private const int MaxNotesCharacters = 4000;
+
+    /// <summary>What is shown while the fetch is in flight, and what replaces it when it fails —
+    /// one plain sentence, no error code, no retry offered.</summary>
+    private const string Fetching = "Fetching the notes…";
+    private const string FetchFailed = "The release notes could not be fetched.";
+
+    // Static so an application that opens About repeatedly reuses one set of connections. The
+    // client's own timeout matches the per-request one, so neither route can outlive the other.
+    private static readonly HttpClient Http = new() { Timeout = FetchTimeout };
+
+    private AboutInfo? _info;
+
+    /// <summary>The fetch in flight, if any. One at a time: a second press while it runs is
+    /// ignored rather than starting a parallel request.</summary>
+    private CancellationTokenSource? _fetch;
+
+    /// <summary>Set once the host is going away, so a reply landing after that touches nothing.</summary>
+    private bool _dismissed;
+
+    /// <summary>The notes as fetched, so reopening the panel costs no second request.</summary>
+    private string? _notes;
+
+    /// <summary>
+    /// Raised after the external-libraries list or the release-notes panel toggles, since either
+    /// changes this control's desired height. A hosting <see cref="BrandAboutWindow"/> uses this to
+    /// re-measure and resize itself to fit; a page host inside a scrollable layout can ignore it.
     /// </summary>
     public event EventHandler? ContentResized;
 
@@ -35,11 +68,27 @@ public sealed partial class BrandAboutControl : UserControl
 
         // Wired once at construction, never from SetInfo: a consumer with a cached in-navigation
         // About page calls SetInfo on every navigation, and wiring there would stack one more
-        // handler per call — the third visit would open each link three times. The repository
-        // handler therefore reads the current _info rather than capturing a SetInfo argument.
-        RepoBtn.Click   += (_, _) => { if (_info is { } info) Open(info.RepoUrl); };
+        // handler per call — the third visit would open each link three times. The notes handler
+        // therefore reads the current _info rather than capturing a SetInfo argument.
+        NewsBtn.Click   += (_, _) => _ = ToggleNotesAsync();
         SiteBtn.Click   += (_, _) => Open(CoreBrand.WebsiteUrl);
         DonateBtn.Click += (_, _) => Open(CoreBrand.BuyMeACoffeeUrl);
+
+        // A page host navigating away is the same event as a window closing: whatever is in flight
+        // must not land on a control that is no longer on screen.
+        Unloaded += (_, _) => CancelPendingFetch();
+    }
+
+    /// <summary>
+    /// Abandons any notes fetch in flight and stops its reply reaching this control. A host closing
+    /// its window calls this before it closes; the control also calls it for itself when it is
+    /// unloaded.
+    /// </summary>
+    public void CancelPendingFetch()
+    {
+        _dismissed = true;
+        try { _fetch?.Cancel(); }
+        catch (ObjectDisposedException) { /* the fetch already finished and disposed its source */ }
     }
 
     /// <summary>
@@ -65,7 +114,107 @@ public sealed partial class BrandAboutControl : UserControl
         // Year is computed, not a literal, so this doesn't go stale like a hard-coded one would.
         FooterText.Text      = $"Copyright © {DateTime.UtcNow.Year} {CoreBrand.StudioName} · MIT Licence";
 
+        // A repopulate is a different application's data, so notes fetched for the previous one are
+        // not shown against it. An address that changed also drops whatever is on screen.
+        _notes = null;
+        NewsText.Text = "";
+        NewsPanel.Visibility = Visibility.Collapsed;
+
+        // No address to point at, no button: the same rule the update button follows, rather than a
+        // dead row that answers with a failure sentence every time it is pressed.
+        NewsBtn.Visibility = info.ReleaseNotesUrl is { Length: > 0 } ? Visibility.Visible : Visibility.Collapsed;
+
         PopulateExternalLibraries(info.ExternalLibraries);
+    }
+
+    /// <summary>
+    /// Shows or hides the notes panel, fetching the notes the first time it is opened. Nothing is
+    /// fetched until the reader asks for it, and nothing blocks: the button returns immediately and
+    /// the panel fills in, or says it could not.
+    /// </summary>
+    private async Task ToggleNotesAsync()
+    {
+        if (NewsPanel.Visibility == Visibility.Visible)
+        {
+            NewsPanel.Visibility = Visibility.Collapsed;
+            ContentResized?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        if (_info?.ReleaseNotesUrl is not { Length: > 0 } url) return;
+
+        NewsPanel.Visibility = Visibility.Visible;
+
+        if (_notes is { } already)
+        {
+            NewsText.Text = already;
+            ContentResized?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        // One request at a time. A second press while the first is in flight reopens the panel and
+        // waits with it rather than queueing another.
+        if (_fetch is not null)
+        {
+            ContentResized?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        NewsText.Text = Fetching;
+        ContentResized?.Invoke(this, EventArgs.Empty);
+
+        var fetch = new CancellationTokenSource(FetchTimeout);
+        _fetch = fetch;
+        try
+        {
+            string text = await FetchNotesAsync(url, fetch.Token);
+            if (_dismissed) return;
+            _notes = text;
+            NewsText.Text = text;
+        }
+        catch (Exception ex)
+        {
+            // Every failure reads the same to the reader — unreachable, refused, timed out, not
+            // found. Nothing is retried: the sentence stays until the panel is closed and reopened,
+            // which is the reader's decision rather than this control's.
+            if (_dismissed) return;
+            Debug.WriteLine($"BrandAboutControl: release notes fetch failed: {ex}");
+            NewsText.Text = FetchFailed;
+        }
+        finally
+        {
+            _fetch = null;
+            fetch.Dispose();
+            // The panel's height settled either way, so the host resizes to what is now in it.
+            if (!_dismissed)
+            {
+                try { ContentResized?.Invoke(this, EventArgs.Empty); }
+                catch (Exception ex) { Debug.WriteLine($"BrandAboutControl: resize after fetch: {ex}"); }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The notes as text, bounded in both time and size by the caller's token and
+    /// <see cref="MaxNotesCharacters"/>. Reads the body as it arrives rather than whole, so a large
+    /// document costs the first few thousand characters and no more.
+    /// </summary>
+    private static async Task<string> FetchNotesAsync(string url, CancellationToken token)
+    {
+        using var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, token);
+        response.EnsureSuccessStatusCode();
+
+        await using var body = await response.Content.ReadAsStreamAsync(token);
+        using var reader = new StreamReader(body);
+
+        var buffer = new char[MaxNotesCharacters];
+        int read = await reader.ReadBlockAsync(buffer, token);
+        string text = new string(buffer, 0, read).TrimEnd();
+
+        if (text.Length == 0) return "There is nothing to show for this release.";
+
+        // A full buffer means the body had more; say so rather than ending mid-sentence in silence.
+        return read == buffer.Length ? text + "…" : text;
     }
 
     private void PopulateExternalLibraries(IReadOnlyList<ExternalLibrary> libraries)
