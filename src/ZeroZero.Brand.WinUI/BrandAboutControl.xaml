@@ -8,9 +8,11 @@
          have no FontFamily to inherit from, so it's applied via an implicit TextBlock style
          (covers every TextBlock, including the credit rows added in code-behind) plus an explicit
          BrandFont on each Button's label. Per 0z0-design: Cascadia Mono is the studio's UI/body
-         face; Cascadia Code is only for genuine code/terminal surfaces, not this control. -->
+         face; Cascadia Code is only for genuine code/terminal surfaces, not this control.
+         The URI is scoped to this assembly's folder, the one place the font exists on both
+         reference routes; the output root holds it only under a project reference. -->
     <UserControl.Resources>
-        <FontFamily x:Key="BrandFont">ms-appx:///Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
+        <FontFamily x:Key="BrandFont">ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
         <Style TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource BrandFont}"/>
         </Style>
@@ -116,16 +118,18 @@
                 FontSize="11" TextWrapping="Wrap"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
-            <!-- Repository | Website | Donate — three co-equal links (no "Check for Updates" here;
-                 that's a window-only concern layered on by BrandAboutWindow). -->
+            <!-- What's new | Website | Donate — three co-equal links (no "Check for Updates" here;
+                 that's a window-only concern layered on by BrandAboutWindow). "What's new" shows
+                 the notes in the panel below rather than handing the reader to a browser; the
+                 repository address stays on AboutInfo, where the console banner still prints it. -->
             <Grid ColumnSpacing="8" Margin="0,2,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Button x:Name="RepoBtn" Grid.Column="0"
-                        Content="GitHub"
+                <Button x:Name="NewsBtn" Grid.Column="0"
+                        Content="What's new"
                         FontSize="11" FontFamily="{StaticResource BrandFont}"
                         HorizontalAlignment="Stretch"/>
                 <Button x:Name="SiteBtn" Grid.Column="1"
@@ -137,6 +141,23 @@
                         FontSize="11" FontFamily="{StaticResource BrandFont}"
                         HorizontalAlignment="Stretch"/>
             </Grid>
+
+            <!-- The notes themselves, in the About surface rather than a browser. Collapsed until
+                 asked for, so a reader who never presses the button pays no fetch and no height.
+                 Capped and scrolled inside: the host is a small window, and notes of any length
+                 must not turn it into a document viewer. -->
+            <Border x:Name="NewsPanel" Visibility="Collapsed"
+                    Padding="10,8,10,8" CornerRadius="4"
+                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                    BorderThickness="1"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <TextBlock x:Name="NewsText"
+                               FontSize="10" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </ScrollViewer>
+            </Border>
 
             <!-- External libraries (collapsed by default; hidden entirely if empty).
                  A plain text toggle rather than a full Expander control — the built-in

@@ -13,7 +13,7 @@
        after that era and have no number below 0.7.0 at all, so a version range starting there
        finds nothing. A published number never moves backwards. -->
   <PropertyGroup>
-    <BrandVersion>0.7.0</BrandVersion>
+    <BrandVersion>0.8.0</BrandVersion>
     <BuildVersion>0.9.0</BuildVersion>
     <ConfigVersion>0.8.0</ConfigVersion>
     <ControlsVersion>0.7.0</ControlsVersion>

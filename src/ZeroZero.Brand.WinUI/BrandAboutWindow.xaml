@@ -16,8 +16,10 @@
     <Grid x:Name="Root">
         <Grid.Resources>
             <!-- Own copy of the brand font resource: it doesn't cascade out of the hosted
-                 UserControl's resource scope into this window's chrome elements (close/update). -->
-            <FontFamily x:Key="BrandFont">ms-appx:///Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
+                 UserControl's resource scope into this window's chrome elements (close/update).
+                 Assembly-scoped URI, as in BrandAboutControl: the output root holds the font only
+                 under a project reference. -->
+            <FontFamily x:Key="BrandFont">ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
         </Grid.Resources>
 
         <StackPanel>

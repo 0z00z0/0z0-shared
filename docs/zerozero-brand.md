@@ -33,7 +33,8 @@ takes `ZeroZero.Brand.Core` alone.
 - **`ExternalLibrary`** — a small record describing a third-party dependency to credit (name, author,
   purpose, licence, optional URL).
 - **`AboutInfo`** — the per-app data an About surface needs: app name, version, description, repo
-  URL, and its list of `ExternalLibrary` credits.
+  URL, the address its release notes are fetched from, and its list of `ExternalLibrary` credits.
+  `ReleaseNotesUrl` is optional: leave it unset and the "What's new" button does not appear.
 - **`ConsoleBanner`** — prints a plain-ASCII "about" banner to the console for non-UI (CLI) tools,
   built from an `AboutInfo`.
 
@@ -43,15 +44,17 @@ References `ZeroZero.Brand.Core` and `ZeroZero.Win32`.
 
 - **`BrandAboutControl`** — a `UserControl` holding the actual About *content*: the `[Ø]` studio mark
   and brand header band, the company name and tagline as plain non-interactive text, app description,
-  three co-equal link buttons (repository / website / donate), an expandable external-libraries credit
-  list, and a copyright footer. Owns no window chrome, sizing, or update/exit flow — hosts either
+  three co-equal link buttons (what's new / website / donate), the release notes in a panel of their
+  own, an expandable external-libraries credit list, and a copyright footer. Owns no window chrome, sizing, or update/exit flow — hosts either
   inside `BrandAboutWindow` or directly inside a host app's own in-navigation page. Call
   `SetInfo(AboutInfo)` after construction to populate it (a method, not a settable property — the
   WinUI XAML compiler needs a parameterless constructor for any type exposed as a public property on
   a XAML class, which `AboutInfo`'s `required` members deliberately do not have).
 - **`BrandAboutWindow`** — the shared, parameterised About popup (320 px wide, Mica backdrop, centred
   on the monitor under the cursor, no title bar, always-on-top). A thin shell hosting
-  `BrandAboutControl` plus the tray-app-only "Check for Updates" button. Takes its monitor and DPI
+  `BrandAboutControl` plus the tray-app-only "Check for Updates" button. **It closes as soon as it
+  loses focus**, whatever is on screen at the time; Escape and the close button take the same path.
+  Its height comes from its own layout and never exceeds the monitor's work area. Takes its monitor and DPI
   metrics from the `ZeroZero.Win32` foundation assembly, so it has no dependency on a consuming
   app's own `NativeMethods` class.
 - **`BrandAboutOptions`** — the parameters: an `AboutInfo`, an optional `OnCheckForUpdates` callback
@@ -59,10 +62,22 @@ References `ZeroZero.Brand.Core` and `ZeroZero.Win32`.
   an update channel does not pass one), and an optional `OnBeforeExit` hook for apps that need to
   self-exit cleanly before an installer-triggered relaunch.
 - **The brand typeface**, Cascadia Mono, with its OFL licence. Shipped as content so it travels with
-  the library into every consuming app's output under `Assets\Fonts\`, where `BrandAboutWindow`
-  references it by relative path; inside the package it sits beside the assembly under
+  the library into every consuming app's output, and the markup asks for it at
+  `ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf`. **That folder is the only one both
+  reference routes produce.** Where the font lands differs between them:
+
+  | Route | `Assets\Fonts\` at the output root | `ZeroZero.Brand.WinUI\Assets\Fonts\` |
+  |---|---|---|
+  | Project reference | Yes | Yes |
+  | Package reference | No | Yes |
+
+  Inside the package the font sits beside the assembly under
   `lib\<tfm>\ZeroZero.Brand.WinUI\Assets\Fonts\`, the folder a consuming WinUI build resolves a
-  referenced library's assets from.
+  referenced library's assets from, and that is what fills the second column. **Nothing reports a
+  font URI that resolves to no file** — the face falls back to the family name, which on a machine
+  with Cascadia Mono installed is indistinguishable from success, so neither a screenshot nor a text
+  measurement tells the two apart. `BrandFontPathTests` holds the URIs in the markup to the paths the
+  package carries instead.
 - **The brand resource dictionary**, `Themes/BrandResources.xaml` — the palette and the typeface in
   the form XAML consumes. Nine colour keys, `BrandBackgroundColour`, `BrandBackgroundAltColour`,
   `BrandTealColour`, `BrandBlueColour`, `BrandPurpleColour`, `BrandIndigoColour`,
@@ -173,6 +188,7 @@ var options = new BrandAboutOptions
         Version           = "1.2.3",
         Description       = "What the app does.",
         RepoUrl           = "https://github.com/0z00z0/ExampleApp",
+        ReleaseNotesUrl   = "https://github.com/0z00z0/ExampleApp/releases/latest/download/whats-new.txt",
         ExternalLibraries = [ new ExternalLibrary("SomeLib", "Some Author", "What it's for", "MIT", "https://...") ],
     },
     OnCheckForUpdates = async () => await ExampleApp.Services.UpdateCheckService.CheckNowAsync(...),
@@ -181,6 +197,16 @@ var options = new BrandAboutOptions
 
 new BrandAboutWindow(options).Activate();
 ```
+
+**The window closes when it loses focus.** There is no setting and no exception — the release-notes
+panel being open does not hold it open, Escape does the same thing, and a fetch in flight is
+abandoned before the window goes. Two guards keep that rule safe to state so plainly: a deactivation
+arriving before the window has ever been activated is ignored, which is what stops a fast
+double-click on whatever opens the window from opening and closing it in one gesture — a second
+click landing after the window has already taken focus is an ordinary click away from it, and closes
+it; and a dismissal already under way cannot start a second one, since closing deactivates the
+window. An About surface that has to stay put is a
+case for hosting `BrandAboutControl` in a page instead.
 
 **The update-check contract** — both callbacks are optional:
 
@@ -229,6 +255,7 @@ public AboutPage()
         Version           = AppBrandInfo.Version,
         Description       = AppBrandInfo.Description,
         RepoUrl           = AppBrandInfo.RepositoryUrl,
+        ReleaseNotesUrl   = AppBrandInfo.ReleaseNotesUrl,
         ExternalLibraries = AppBrandInfo.ExternalLibraries
             .Select(l => new ExternalLibrary(l.Name, l.Author, l.Purpose, l.License))
             .ToList(),
@@ -254,10 +281,16 @@ only its *rendering* moves to the shared control, not its data.
   layer. An app that does need an update check on its About surface is a case for
   `BrandAboutWindow` instead.
 - The control supplies the `[Ø]` studio mark, the company name and the tagline itself, from `Brand`'s
-  studio-wide constants. Of the three link buttons — **Repository / Website / Donate** — only
-  `RepoUrl` comes from the `AboutInfo`; Website and Donate always point at the studio's own
-  `Brand.WebsiteUrl` / `Brand.BuyMeACoffeeUrl` rather than anything per-app. None of those five are
-  supplied by the consumer.
+  studio-wide constants. Of the three link buttons — **What's new / Website / Donate** — only the
+  first comes from the `AboutInfo`, through `ReleaseNotesUrl`; Website and Donate always point at the
+  studio's own `Brand.WebsiteUrl` / `Brand.BuyMeACoffeeUrl` rather than anything per-app. None of
+  those five are supplied by the consumer.
+- **The notes open in the About surface, not a browser.** Plain text, fetched only when the button is
+  pressed, three seconds to answer, one attempt: while it runs the panel says it is fetching, and a
+  fetch that does not answer leaves one sentence saying so. Roughly the first four thousand
+  characters are read and the panel scrolls inside a fixed height. A page host closing or navigating
+  away abandons a fetch in flight; a window host calls `CancelPendingFetch()` for the same reason.
+  `RepoUrl` is still required and still feeds the console banner — it just no longer has a button.
 
 ## Screenshots
 
@@ -282,9 +315,16 @@ or running a consuming application:
 dotnet run --project src/ZeroZero.Brand.WinUI.TestHarness
 ```
 
-It opens two windows: the `BrandAboutWindow` popup ("Window Mode") and a plain window hosting
-`BrandAboutControl` directly with ordinary title-bar chrome and no update button ("Hosted Control
-Demo"). With `--mqtt` it opens the MQTT panel scenario instead, and with `--palette` the brand
+It opens the `BrandAboutWindow` popup ("Window Mode") alone; `--hosted` opens the plain window
+hosting `BrandAboutControl` directly, with ordinary title-bar chrome and no update button ("Hosted
+Control Demo"). One surface per run, because the popup closes as soon as it loses focus and a second
+window opened beside it would take that focus. `--theme Light|Dark` pins the theme, `--expand` opens
+the libraries list and `--news` the release notes once the window has settled, `--notes <url>` and
+`--description <text>` / `--description-file <path>` replace the rig's sample data, `--anchor` opens
+a small pure-white window a capture can be checked against, `--opener` replaces the launch-time
+window with a button that opens it — the only way to reproduce the double-click gesture — and
+`--probe <path>` writes the window's own sizing numbers and every named row's position beside the
+capture. With `--mqtt` it opens the MQTT panel scenario instead, and with `--palette` the brand
 resource dictionary — one window per theme, a swatch per brush key, a strip putting black and white
 text on three accents and a 24 % tint of each on the brand ground, the wordmark on two colour keys and a
 sample line in the brand face, every one resolved through `ThemeResource` the way a consumer
@@ -299,8 +339,11 @@ Two scripts under `scripts/` drive the About scenarios:
 
 - **`Show live 'About' dialogue.ps1`** — builds the harness if its exe is missing, then launches it,
   so both windows can be inspected on screen.
-- **`Capture 'About' screenshot.ps1`** — launches the harness and writes window-only PNGs of both
-  scenarios into `docs/screenshots/`: `about-window.png` (the popup) and `about-hosted-control.png`
-  (the hosted control), the two images this guide embeds. Capture goes through `PrintWindow` with
-  `PW_RENDERFULLCONTENT`, so the translucent Mica backdrop resolves cleanly and no desktop content
-  bleeds through; the two windows are told apart by their `AppWindow` title, not creation order.
+- **`Capture 'About' screenshot.ps1`** — runs the harness twice, once per surface, and writes
+  window-only PNGs into `docs/screenshots/`: `about-window.png` (the popup) and
+  `about-hosted-control.png` (the hosted control), the two images this guide embeds. Capture goes
+  through `PrintWindow` with `PW_RENDERFULLCONTENT`, so the translucent Mica backdrop resolves
+  cleanly and no desktop content bleeds through. Each capture is anchored against a pure-white patch
+  parked beside the window and read off the screen device context, so a dimmed or locked screen is
+  refused rather than filed, and each is retried: the popup closes if anything takes focus while it
+  settles, which is the window behaving correctly.
