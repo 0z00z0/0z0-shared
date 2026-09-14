@@ -54,15 +54,17 @@
 
                 <!-- The palette's teal, blue, amber and orange measure between 1.5:1 and 2.7:1 on a
                      light window, so light takes a darker shade of each, same hue and saturation,
-                     measuring 4.99:1 or more on the window and 5.35:1 or more on a card. -->
+                     measuring 5.86:1 or more on the window, 6.28:1 or more on a card, and 4.65:1 or
+                     more on the About popup's Mica Alt backdrop (light theme, ~#DADADA) — the
+                     darkest of the three light grounds the button appears on. -->
                 <ResourceDictionary x:Key="Light">
                     <LinearGradientBrush x:Key="BracketRestBrush" StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#117568" Offset="0"/>
-                        <GradientStop Color="#0B718F" Offset="1"/>
+                        <GradientStop Color="#0F695E" Offset="0"/>
+                        <GradientStop Color="#0A6681" Offset="1"/>
                     </LinearGradientBrush>
-                    <SolidColorBrush x:Key="BracketTealBrush" Color="#117568"/>
-                    <SolidColorBrush x:Key="BracketAmberBrush" Color="#896120"/>
-                    <SolidColorBrush x:Key="BracketOrangeBrush" Color="#985916"/>
+                    <SolidColorBrush x:Key="BracketTealBrush" Color="#0F695E"/>
+                    <SolidColorBrush x:Key="BracketAmberBrush" Color="#7B571D"/>
+                    <SolidColorBrush x:Key="BracketOrangeBrush" Color="#895014"/>
                 </ResourceDictionary>
 
                 <!-- System colours only, as in BrandResources.xaml: the user's choice outranks the

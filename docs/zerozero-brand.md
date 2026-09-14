@@ -367,21 +367,23 @@ the brackets stay put, the caret shows steady, and the spinner is a still ellips
 read at every change of state, pointer or focus, and on every spinner and caret tick.
 
 **Colour and contrast.** The button has no fill in any state, so its text sits on the surface under
-it, and every figure is taken against WinUI's base window background and its default card fill over
-that: `#202020` and `#2b2b2b` in dark, `#f3f3f3` and `#fbfbfb` in light. Dark takes the palette as it
-is; light takes a darker shade of each colour, same hue and saturation:
+it: WinUI's base window background and its default card fill over that, `#202020` and `#2b2b2b` in
+dark, `#f3f3f3` and `#fbfbfb` in light — and, where the button sits in `BrandAboutWindow`, the About
+popup's own Mica Alt backdrop, which in light theme renders as `#dadada`, the darkest of the three
+light grounds. Dark takes the palette as it is; light takes a darker shade of each colour, same hue
+and saturation, so every figure clears 4.6:1 on all three light surfaces:
 
-| Used for | Dark | Window / card | Light | Window / card |
+| Used for | Dark | Window / card | Light | Window / card / Mica Alt |
 |---|---|---:|---|---:|
-| Chevron | `#e0872a` | 5.95 / 5.17 | `#985916` | 5.01 / 5.37 |
-| Spinner, caret, `Success` label and brackets | `#27e0c8` | 9.76 / 8.48 | `#117568` | 5.02 / 5.39 |
-| Slashed zero, `Attention` label, brackets and caret | `#d8a657` | 7.38 / 6.41 | `#896120` | 4.99 / 5.35 |
-| Bracket gradient, lower stop | `#11a9d6` | 5.95 / 5.17 | `#0b718f` | 5.02 / 5.38 |
+| Chevron | `#e0872a` | 5.95 / 5.17 | `#895014` | 5.88 / 6.30 / 4.66 |
+| Spinner, caret, `Success` label and brackets | `#27e0c8` | 9.76 / 8.48 | `#0f695e` | 5.91 / 6.34 / 4.69 |
+| Slashed zero, `Attention` label, brackets and caret | `#d8a657` | 7.38 / 6.41 | `#7b571d` | 5.87 / 6.30 / 4.66 |
+| Bracket gradient, lower stop | `#11a9d6` | 5.95 / 5.17 | `#0a6681` | 5.86 / 6.28 / 4.65 |
 
 The label at rest takes `TextFillColorPrimaryBrush`. High contrast replaces every brand colour with
 the system highlight colour, as `BrandResources.xaml` does.
 
-Status (2026-09-14): compiles clean in 0.9.0; not yet rendered in the harness or captured.
+Status (2026-09-14): compiles clean in 0.9.1; not yet rendered in the harness or captured.
 
 ## Screenshots
 
