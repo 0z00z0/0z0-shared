@@ -34,4 +34,5 @@ public static class Brand
     // consumer is not reading someone else's meaning into it.
     public const string ColorSteelBlue = "#7fa8b8";
     public const string ColorTerracotta = "#c9926b";
+    public const string ColorOrange = "#e0872a";
 }

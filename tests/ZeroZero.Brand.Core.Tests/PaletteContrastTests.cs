@@ -50,6 +50,7 @@ public class PaletteContrastTests
         ("Amber", Brand.ColorAmber),
         ("SteelBlue", Brand.ColorSteelBlue),
         ("Terracotta", Brand.ColorTerracotta),
+        ("Orange", Brand.ColorOrange),
     ];
 
     /// <summary>
@@ -67,6 +68,7 @@ public class PaletteContrastTests
         { "Amber",       8.70,   8.24,   9.51,  2.21 },
         { "SteelBlue",   7.49,   7.10,   8.20,  2.56 },
         { "Terracotta",  7.14,   6.76,   7.81,  2.69 },
+        { "Orange",      7.01,   6.64,   7.67,  2.74 },
     };
 
     [Theory]
@@ -193,7 +195,7 @@ public class PaletteContrastTests
     /// <summary>
     /// Indigo is the palette's tightest accent on both counts, which is why steel blue joining below
     /// it would have needed an exception of its own and does not: Indigo composites to the dimmest
-    /// tint of the seven, and it is the only accent that clears the non-text floor without clearing
+    /// tint of the eight, and it is the only accent that clears the non-text floor without clearing
     /// the body-text one. Both grounds sit near black, so the tint order is a property of the accent.
     /// </summary>
     [Fact]

@@ -70,6 +70,16 @@
     </Content>
   </ItemGroup>
 
+  <!--
+    The copy above reaches a consuming build but not a consuming publish, so the package also carries
+    a targets file that adds both files to the publish set at the same path. Packed only: this
+    repository's own builds never import it.
+  -->
+  <ItemGroup>
+    <None Remove="buildTransitive\**" />
+    <None Include="buildTransitive\ZeroZero.Brand.WinUI.targets" Pack="true" PackagePath="buildTransitive\" />
+  </ItemGroup>
+
   <Target Name="PackagePathMatchesTargetFramework" BeforeTargets="GenerateNuspec">
     <Error Condition="'$(TargetFramework)' != 'net10.0-windows10.0.26100.0'"
            Text="BrandAssetPackagePath names lib\net10.0-windows10.0.26100, which was NuGet's short form of net10.0-windows10.0.26100.0. TargetFramework is now $(TargetFramework), so the fonts would pack to a folder no consumer looks in and every consuming build would fail with MSB3030. Update both." />

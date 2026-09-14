@@ -1,12 +1,12 @@
 # The brand component
 
 The studio's visual identity and About plumbing: the brand constants, one parameterised About
-component with a popup window to host it, the brand typeface, and the palette as a resource
-dictionary XAML can merge. `ZeroZero.Brand.Core` holds the constants and the data contracts;
-`ZeroZero.Brand.WinUI` holds the control, the window and the dictionary. A control with no studio
-identity is not here: the settings-row info bubble is the controls foundation assembly's
-([`zerozero-controls.md`](zerozero-controls.md)), so a component that wants a bubble takes no font
-pack with it.
+component with a popup window to host it, a bracket action button, the brand typeface, and the
+palette as a resource dictionary XAML can merge. `ZeroZero.Brand.Core` holds the constants and the
+data contracts; `ZeroZero.Brand.WinUI` holds the About control, the window, the bracket button and
+the dictionary. A control with no studio identity is not here: the settings-row info bubble is the
+controls foundation assembly's ([`zerozero-controls.md`](zerozero-controls.md)), so a component that
+wants a bubble takes no font pack with it.
 
 The component is versioned as `BrandVersion` in `Versions.props` and released under `brand-v<x.y.z>`
 tags, with notes under `docs/release-notes/brand/`; [`releasing.md`](releasing.md) has the procedure.
@@ -27,14 +27,17 @@ takes `ZeroZero.Brand.Core` alone.
 
 - **`Brand`** — studio-wide constants: name, tagline, website, Buy Me a Coffee URL, GitHub org URL,
   and the brand palette as hex strings (teal / blue / purple / indigo / amber / steel blue /
-  terracotta, plus the two background tones). Each accent is named for the colour itself rather than
-  for a job it does in one application, so a second application can take it without inheriting the
-  first one's meaning.
+  terracotta / orange, plus the two background tones). Each accent is named for the colour itself
+  rather than for a job it does in one application, so a second application can take it without
+  inheriting the first one's meaning.
 - **`ExternalLibrary`** — a small record describing a third-party dependency to credit (name, author,
   purpose, licence, optional URL).
+- **`AboutButton`** — a button of the application's own for the About row: a label, which is also
+  its accessible name, and an `Action` run on every press.
 - **`AboutInfo`** — the per-app data an About surface needs: app name, version, description, repo
-  URL, the address its release notes are fetched from, and its list of `ExternalLibrary` credits.
-  `ReleaseNotesUrl` is optional: leave it unset and the "What's new" button does not appear.
+  URL, the address its release notes are fetched from, its list of `ExternalLibrary` credits, and
+  its own row buttons as a list of `AboutButton` in `Buttons`. `ReleaseNotesUrl` is optional: leave
+  it unset and the built-in "What's new" button does not appear. `Buttons` is empty by default.
 - **`ConsoleBanner`** — prints a plain-ASCII "about" banner to the console for non-UI (CLI) tools,
   built from an `AboutInfo`.
 
@@ -44,12 +47,15 @@ References `ZeroZero.Brand.Core` and `ZeroZero.Win32`.
 
 - **`BrandAboutControl`** — a `UserControl` holding the actual About *content*: the `[Ø]` studio mark
   and brand header band, the company name and tagline as plain non-interactive text, app description,
-  three co-equal link buttons (what's new / website / donate), the release notes in a panel of their
-  own, an expandable external-libraries credit list, and a copyright footer. Owns no window chrome, sizing, or update/exit flow — hosts either
-  inside `BrandAboutWindow` or directly inside a host app's own in-navigation page. Call
-  `SetInfo(AboutInfo)` after construction to populate it (a method, not a settable property — the
-  WinUI XAML compiler needs a parameterless constructor for any type exposed as a public property on
-  a XAML class, which `AboutInfo`'s `required` members deliberately do not have).
+  a row of buttons, the release notes in a panel of their own, an expandable external-libraries
+  credit list, and a copyright footer. The row reads Website, Donate, the built-in What's new, then
+  the application's own buttons from `AboutInfo.Buttons`, each at its natural width in the row's own
+  style; it wraps onto another line at narrow widths, and a hidden button takes neither width nor a
+  gap. Owns no window chrome, sizing, or update/exit flow — hosts either inside `BrandAboutWindow` or
+  directly inside a host app's own in-navigation page. Call `SetInfo(AboutInfo)` after construction
+  to populate it (a method, not a settable property — the WinUI XAML compiler needs a parameterless
+  constructor for any type exposed as a public property on a XAML class, which `AboutInfo`'s
+  `required` members deliberately do not have).
 - **`BrandAboutWindow`** — the shared, parameterised About popup (320 px wide, Mica backdrop, centred
   on the monitor under the cursor, no title bar, always-on-top). A thin shell hosting
   `BrandAboutControl` plus the tray-app-only "Check for Updates" button. **It closes as soon as it
@@ -61,6 +67,9 @@ References `ZeroZero.Brand.Core` and `ZeroZero.Win32`.
   (omit it to hide the "Check for Updates" button entirely — a console-only tool or a build without
   an update channel does not pass one), and an optional `OnBeforeExit` hook for apps that need to
   self-exit cleanly before an installer-triggered relaunch.
+- **`BrandBracketButton`** — a borderless action button in the brand's own shape, placed by a host on
+  its own, with `BrandBracketButtonState` naming what it shows. See
+  [the bracket action button](#the-bracket-action-button).
 - **The brand typeface**, Cascadia Mono, with its OFL licence. Shipped as content so it travels with
   the library into every consuming app's output, and the markup asks for it at
   `ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf`. **That folder is the only one both
@@ -78,14 +87,23 @@ References `ZeroZero.Brand.Core` and `ZeroZero.Win32`.
   with Cascadia Mono installed is indistinguishable from success, so neither a screenshot nor a text
   measurement tells the two apart. `BrandFontPathTests` holds the URIs in the markup to the paths the
   package carries instead.
+
+  **A publish carries the files too.** The Windows App SDK tooling copies the files a referenced
+  library's `.pri` lists into a build output only, so on the package route a publish would hold
+  neither file. The package therefore carries `buildTransitive\ZeroZero.Brand.WinUI.targets`, which
+  adds both to the publish set at `ZeroZero.Brand.WinUI\Assets\Fonts\`, skips any path the publish
+  already holds, and fails the publish with an error naming the files if the package stops carrying
+  them. Measured with a scratch application on the package route, self-contained for `win-x64`: the
+  build output and the publish output each hold both files, with no warning. A publish on the
+  project-reference route is not measured.
 - **The brand resource dictionary**, `Themes/BrandResources.xaml` — the palette and the typeface in
-  the form XAML consumes. Nine colour keys, `BrandBackgroundColour`, `BrandBackgroundAltColour`,
+  the form XAML consumes. Ten colour keys, `BrandBackgroundColour`, `BrandBackgroundAltColour`,
   `BrandTealColour`, `BrandBlueColour`, `BrandPurpleColour`, `BrandIndigoColour`,
-  `BrandAmberColour`, `BrandSteelBlueColour` and `BrandTerracottaColour`; a brush per colour,
-  `BrandTealBrush` and so on; and `BrandFontFamily`, the brand face. Light and dark carry the
-  palette unchanged, because identity does not follow the theme; high contrast resolves every key to
-  the system's own window and highlight colours, because that mode exists so the user's choice
-  outranks the studio's. A test holds every colour to the constant in `Brand`, so the two
+  `BrandAmberColour`, `BrandSteelBlueColour`, `BrandTerracottaColour` and `BrandOrangeColour`; a
+  brush per colour, `BrandTealBrush` and so on; and `BrandFontFamily`, the brand face. Light and dark
+  carry the palette unchanged, because identity does not follow the theme; high contrast resolves
+  every key to the system's own window and highlight colours, because that mode exists so the user's
+  choice outranks the studio's. A test holds every colour to the constant in `Brand`, so the two
   declarations cannot drift.
 
 ### The palette from XAML
@@ -129,6 +147,7 @@ floor unnoticed.
 | Amber | 8.70 | 9.51 | 2.21 |
 | Steel blue | 7.49 | 8.20 | 2.56 |
 | Terracotta | 7.14 | 7.81 | 2.69 |
+| Orange | 7.01 | 7.67 | 2.74 |
 
 Two rules follow, and both are properties of the palette rather than advice.
 
@@ -143,11 +162,15 @@ a low-opacity result is ground whatever is laid over it. At 24 % nothing in the 
 a distinguishable tint there. Use the solid colour where a fill has to be seen. This is a property of
 the ground, not of any one colour — every accent falls short, and so does white.
 
-Indigo is the tightest of the seven accents on both counts: the dimmest tint on either ground, and
+Indigo is the tightest of the eight accents on both counts: the dimmest tint on either ground, and
 the only accent that clears the 3:1 non-text floor without clearing 4.5:1 for body text. So the floor
 the palette as a whole is held to is the 3:1 non-text figure, not 4.5:1 — Indigo sits at 3.46 on the
-brand background. Steel blue and terracotta both clear 4.5:1 on both brand grounds, so neither joined
-below Indigo.
+brand background. Steel blue, terracotta and orange all clear 4.5:1 on both brand grounds, so none of
+them joined below Indigo.
+
+**Every figure in that table is on a dark ground.** On a light window the palette's teal, amber and
+orange measure between 1.5:1 and 2.7:1, so text or a glyph in one of them on a light surface needs a
+darker shade; `BrandBracketButton` carries its own, listed below.
 
 Deliberately **not** shared: each app's own update-check networking and dialogue plumbing. Only the
 window chrome and layout are unified — `OnCheckForUpdates` is a plain `Func<Task<bool>>` the consumer
@@ -160,9 +183,9 @@ Either route in [`consuming.md`](consuming.md) — a `PackageReference` on the s
 `ProjectReference` on a sibling checkout carrying
 `<UndefineProperties>WindowsAppSDKSelfContained</UndefineProperties>`. The reference is
 `ZeroZero.Brand.WinUI`; it pulls in `ZeroZero.Brand.Core` and `ZeroZero.Win32` transitively and
-ships the typeface as content, so a consumer gets the correct brand face with no extra setup. The consuming app's
-`app.manifest` declares `PerMonitorV2` DPI awareness so the window renders sharp on high-DPI
-displays.
+ships the typeface as content, so a consumer gets the correct brand face with no extra setup, in a
+build and in a publish alike. The consuming app's `app.manifest` declares `PerMonitorV2` DPI
+awareness so the window renders sharp on high-DPI displays.
 
 ## Pick the hosting style
 
@@ -173,7 +196,8 @@ About *window* or an About *page*:
 |---|---|---|
 | Component | `BrandAboutWindow` | `BrandAboutControl` |
 | Surface | Standalone popup (Mica, no title bar, always-on-top) | Hosted inside the app's own `Page` or window |
-| "Check for Updates" | Yes, via `BrandAboutOptions` | No — not this layer's concern |
+| "Check for Updates" | Yes, via `BrandAboutOptions` | Not in the control; the page places a `BrandBracketButton` of its own |
+| The application's own row buttons | `AboutInfo.Buttons`, through `BrandAboutOptions.Info` | `AboutInfo.Buttons`, through `SetInfo` |
 
 ### The tray-app popup
 
@@ -223,8 +247,8 @@ plumbing and wires it in through these two callbacks.
 
 ### Hosted in the application's own page
 
-A full windowed app whose About is an in-navigation `Page` (not a separate popup, and with no
-"check for updates" concept) skips `BrandAboutWindow` entirely and hosts the content control itself.
+A full windowed app whose About is an in-navigation `Page` (not a separate popup) skips
+`BrandAboutWindow` entirely and hosts the content control itself.
 [`consume-brand-about-control.md`](consume-brand-about-control.md) is the same as a checklist.
 
 **1. Add the control to the app's existing About page XAML**, in place of the bespoke layout:
@@ -259,6 +283,7 @@ public AboutPage()
         ExternalLibraries = AppBrandInfo.ExternalLibraries
             .Select(l => new ExternalLibrary(l.Name, l.Author, l.Purpose, l.License))
             .ToList(),
+        Buttons           = [ new AboutButton("What's new", () => new WhatsNewWindow().Activate()) ],
     });
 }
 ```
@@ -266,8 +291,9 @@ public AboutPage()
 `SetInfo` is a method rather than a settable property — call it from the hosting page's constructor
 or its `Loaded` handler, after `InitializeComponent`. **Calling it again is safe and is the expected
 case**: a cached in-navigation page calls it on every visit, and the control is written for that —
-the link handlers are wired once at construction and read the current info, and the credit list is
-cleared before every repopulate. Neither the buttons nor the credits accumulate.
+the built-in link handlers are wired once at construction and read the current info, the
+application's own buttons are rebuilt from the info on every call, and the credit list is cleared
+before every repopulate. Neither the buttons nor the credits accumulate.
 
 **3. Delete the bespoke About view-model and layout** once the control renders correctly; keeping
 both is what lets them drift. The app's own brand-facts class stays as the single source of truth —
@@ -277,20 +303,85 @@ only its *rendering* moves to the shared control, not its data.
 
 - The control inherits the host page's theme (everything but the fixed-colour brand header band
   uses `ThemeResource` brushes), so no extra theming work is needed.
-- Never shows an update button — there is no `BrandAboutOptions` and no update-flow concept at this
-  layer. An app that does need an update check on its About surface is a case for
-  `BrandAboutWindow` instead.
+- Never shows an update button of its own — there is no `BrandAboutOptions` and no update-flow
+  concept at this layer. A page that wants a check for updates places a `BrandBracketButton` beside
+  or under the control and drives it from its own update flow.
 - The control supplies the `[Ø]` studio mark, the company name and the tagline itself, from `Brand`'s
-  studio-wide constants. Of the three link buttons — **What's new / Website / Donate** — only the
-  first comes from the `AboutInfo`, through `ReleaseNotesUrl`; Website and Donate always point at the
-  studio's own `Brand.WebsiteUrl` / `Brand.BuyMeACoffeeUrl` rather than anything per-app. None of
-  those five are supplied by the consumer.
+  studio-wide constants. The row reads **Website / Donate / What's new**, then the application's own
+  buttons: Website and Donate always point at the studio's own `Brand.WebsiteUrl` /
+  `Brand.BuyMeACoffeeUrl`, What's new appears only with `ReleaseNotesUrl`, and everything after it
+  comes from `AboutInfo.Buttons`. An application with its own What's new window leaves
+  `ReleaseNotesUrl` unset and supplies an `AboutButton` instead, so the row holds one What's new.
 - **The notes open in the About surface, not a browser.** Plain text, fetched only when the button is
   pressed, three seconds to answer, one attempt: while it runs the panel says it is fetching, and a
   fetch that does not answer leaves one sentence saying so. Roughly the first four thousand
   characters are read and the panel scrolls inside a fixed height. A page host closing or navigating
   away abandons a fetch in flight; a window host calls `CancelPendingFetch()` for the same reason.
   `RepoUrl` is still required and still feeds the console banner — it just no longer has a button.
+
+## The bracket action button
+
+`BrandBracketButton` is a borderless button in the brand's own shape, placed by a host wherever it
+wants one — a "Check for updates" under the About card on a settings page, say. The logo's square
+brackets stand at either end in the logo's teal-to-blue gradient, a `>` chevron in the brand orange
+leads, and the label follows in the brand face. It carries its own colours and face, so it needs no
+merged dictionary.
+
+```xml
+<brand:BrandBracketButton x:Name="UpdateButton" Label="Check for updates" Click="OnCheckForUpdates"/>
+```
+
+```csharp
+UpdateButton.Label = "Checking…";
+UpdateButton.State = BrandBracketButtonState.Busy;
+
+bool available = await CheckForUpdatesAsync();
+
+UpdateButton.Label = available ? "Update to 1.58.0" : "Up to date";
+UpdateButton.State = available ? BrandBracketButtonState.Attention : BrandBracketButtonState.Success;
+```
+
+The host owns three members: **`Label`**, the text after the chevron and the accessible name;
+**`State`**, a `BrandBracketButtonState`; and **`Click`**, raised by a pointer press, Enter or Space
+in every state. Both properties are dependency properties, so either can be bound.
+
+| State | Shows |
+|---|---|
+| `Rest` | The orange chevron and the label. |
+| `Busy` | A text spinner cycling `\| / - \` in place of the chevron; the brackets breathe; no caret. |
+| `Success` | The brand slashed zero in place of the chevron, teal brackets and label; no caret. Returns to `Rest` four seconds later by itself. |
+| `Attention` | Amber brackets, label and caret; the caret shows dimmed at rest. Held until the host sets another state. |
+
+**`Success` ends by itself, and the label does not.** The button returns to `Rest` after four
+seconds with whatever label the host last set. A host that changes the label for `Success` watches
+the state — `RegisterPropertyChangedCallback(BrandBracketButton.StateProperty, …)` — and sets its
+resting label back when `Rest` arrives.
+
+**Pointer and keyboard.** Hover spreads the brackets 3 px apart and a press closes them 2 px. Hover
+and keyboard focus show a block caret after the label, blinking, in `Rest` and `Attention`; a press
+holds it dimmed. Underneath is an ordinary `Button`, so Tab, Enter, Space and the system focus
+rectangle are the platform's own.
+
+**Reduced motion.** With the system's animation effects turned off, nothing blinks, spins or moves:
+the brackets stay put, the caret shows steady, and the spinner is a still ellipsis. The setting is
+read at every change of state, pointer or focus, and on every spinner and caret tick.
+
+**Colour and contrast.** The button has no fill in any state, so its text sits on the surface under
+it, and every figure is taken against WinUI's base window background and its default card fill over
+that: `#202020` and `#2b2b2b` in dark, `#f3f3f3` and `#fbfbfb` in light. Dark takes the palette as it
+is; light takes a darker shade of each colour, same hue and saturation:
+
+| Used for | Dark | Window / card | Light | Window / card |
+|---|---|---:|---|---:|
+| Chevron | `#e0872a` | 5.95 / 5.17 | `#985916` | 5.01 / 5.37 |
+| Spinner, caret, `Success` label and brackets | `#27e0c8` | 9.76 / 8.48 | `#117568` | 5.02 / 5.39 |
+| Slashed zero, `Attention` label, brackets and caret | `#d8a657` | 7.38 / 6.41 | `#896120` | 4.99 / 5.35 |
+| Bracket gradient, lower stop | `#11a9d6` | 5.95 / 5.17 | `#0b718f` | 5.02 / 5.38 |
+
+The label at rest takes `TextFillColorPrimaryBrush`. High contrast replaces every brand colour with
+the system highlight colour, as `BrandResources.xaml` does.
+
+Status (2026-09-14): compiles clean in 0.9.0; not yet rendered in the harness or captured.
 
 ## Screenshots
 
@@ -304,6 +395,9 @@ only its *rendering* moves to the shared control, not its data.
 
 Both images are the capture script's output, so they show the surfaces as they actually render
 rather than what the XAML claims.
+
+Status (2026-09-14): captured before 0.9.0, so both show the row as three equal columns with What's
+new first; the row now reads Website, Donate, What's new at natural widths.
 
 ## The harness
 
@@ -333,7 +427,8 @@ resolves them; `--probe <path>` beside it writes the colour and face that reache
 ([`zerozero-controls.md`](zerozero-controls.md)), `--settings` the settings window shell
 ([`zerozero-settingsshell.md`](zerozero-settingsshell.md)), `--tray` the tray icon with its
 tooltip and menu ([`zerozero-tray.md`](zerozero-tray.md)), and `--native` the Win32 layer's
-dialogs. One component per run, so unrelated windows never land on top of each other.
+dialogs. One component per run, so unrelated windows never land on top of each other. No scenario
+opens `BrandBracketButton` yet.
 
 Two scripts under `scripts/` drive the About scenarios:
 

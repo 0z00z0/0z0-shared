@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="ZeroZero.Brand.WinUI.BrandBracketButton"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    IsTabStop="False">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <!-- Brand typeface, scoped to this assembly's folder as in BrandAboutControl. -->
+            <FontFamily x:Key="BracketFont">ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
+
+            <!-- Hover and press move the brackets from wherever they are; code sets From and To. -->
+            <Storyboard x:Key="MoveBrackets">
+                <DoubleAnimation Storyboard.TargetName="LeftShift" Storyboard.TargetProperty="X" Duration="0:0:0.14">
+                    <DoubleAnimation.EasingFunction>
+                        <CubicEase EasingMode="EaseOut"/>
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+                <DoubleAnimation Storyboard.TargetName="RightShift" Storyboard.TargetProperty="X" Duration="0:0:0.14">
+                    <DoubleAnimation.EasingFunction>
+                        <CubicEase EasingMode="EaseOut"/>
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+            </Storyboard>
+
+            <!-- Busy: the brackets close in by 3 px and open again, for as long as the work runs. -->
+            <Storyboard x:Key="BreatheBrackets" RepeatBehavior="Forever" AutoReverse="True">
+                <DoubleAnimation Storyboard.TargetName="LeftShift" Storyboard.TargetProperty="X" From="0" To="3" Duration="0:0:1.1">
+                    <DoubleAnimation.EasingFunction>
+                        <SineEase EasingMode="EaseInOut"/>
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+                <DoubleAnimation Storyboard.TargetName="RightShift" Storyboard.TargetProperty="X" From="0" To="-3" Duration="0:0:1.1">
+                    <DoubleAnimation.EasingFunction>
+                        <SineEase EasingMode="EaseInOut"/>
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+            </Storyboard>
+
+            <ResourceDictionary.ThemeDictionaries>
+
+                <!-- "Default" is the dark theme's dictionary: the palette as it is, and the logo's
+                     own teal-to-blue bracket gradient. -->
+                <ResourceDictionary x:Key="Default">
+                    <LinearGradientBrush x:Key="BracketRestBrush" StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#27E0C8" Offset="0"/>
+                        <GradientStop Color="#11A9D6" Offset="1"/>
+                    </LinearGradientBrush>
+                    <SolidColorBrush x:Key="BracketTealBrush" Color="#27E0C8"/>
+                    <SolidColorBrush x:Key="BracketAmberBrush" Color="#D8A657"/>
+                    <SolidColorBrush x:Key="BracketOrangeBrush" Color="#E0872A"/>
+                </ResourceDictionary>
+
+                <!-- The palette's teal, blue, amber and orange measure between 1.5:1 and 2.7:1 on a
+                     light window, so light takes a darker shade of each, same hue and saturation,
+                     measuring 4.99:1 or more on the window and 5.35:1 or more on a card. -->
+                <ResourceDictionary x:Key="Light">
+                    <LinearGradientBrush x:Key="BracketRestBrush" StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#117568" Offset="0"/>
+                        <GradientStop Color="#0B718F" Offset="1"/>
+                    </LinearGradientBrush>
+                    <SolidColorBrush x:Key="BracketTealBrush" Color="#117568"/>
+                    <SolidColorBrush x:Key="BracketAmberBrush" Color="#896120"/>
+                    <SolidColorBrush x:Key="BracketOrangeBrush" Color="#985916"/>
+                </ResourceDictionary>
+
+                <!-- System colours only, as in BrandResources.xaml: the user's choice outranks the
+                     palette. -->
+                <ResourceDictionary x:Key="HighContrast">
+                    <SolidColorBrush x:Key="BracketRestBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
+                    <SolidColorBrush x:Key="BracketTealBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
+                    <SolidColorBrush x:Key="BracketAmberBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
+                    <SolidColorBrush x:Key="BracketOrangeBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
+                </ResourceDictionary>
+
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid x:Name="Root">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="StateGroup">
+                <VisualState x:Name="Rest"/>
+                <VisualState x:Name="Busy">
+                    <VisualState.Setters>
+                        <Setter Target="Chevron.Visibility" Value="Collapsed"/>
+                        <Setter Target="Spinner.Visibility" Value="Visible"/>
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Success">
+                    <VisualState.Setters>
+                        <Setter Target="Chevron.Visibility" Value="Collapsed"/>
+                        <Setter Target="Zero.Visibility" Value="Visible"/>
+                        <Setter Target="LeftBracket.BorderBrush" Value="{ThemeResource BracketTealBrush}"/>
+                        <Setter Target="RightBracket.BorderBrush" Value="{ThemeResource BracketTealBrush}"/>
+                        <Setter Target="LabelText.Foreground" Value="{ThemeResource BracketTealBrush}"/>
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Attention">
+                    <VisualState.Setters>
+                        <Setter Target="LeftBracket.BorderBrush" Value="{ThemeResource BracketAmberBrush}"/>
+                        <Setter Target="RightBracket.BorderBrush" Value="{ThemeResource BracketAmberBrush}"/>
+                        <Setter Target="LabelText.Foreground" Value="{ThemeResource BracketAmberBrush}"/>
+                        <Setter Target="Caret.Background" Value="{ThemeResource BracketAmberBrush}"/>
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
+        <!-- A real Button underneath, so Enter, Space, focus and the automation peer are the
+             platform's own. Its template is only the content: no border, no fill. -->
+        <Button x:Name="Surface"
+                Height="32" Padding="0" MinWidth="0" MinHeight="0"
+                Background="Transparent" BorderThickness="0">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <ContentPresenter Content="{TemplateBinding Content}"
+                                      Background="{TemplateBinding Background}"
+                                      CornerRadius="{TemplateBinding CornerRadius}"
+                                      HorizontalContentAlignment="Stretch"
+                                      VerticalContentAlignment="Stretch"
+                                      AutomationProperties.AccessibilityView="Raw"/>
+                </ControlTemplate>
+            </Button.Template>
+
+            <Grid>
+                <!-- The logo's brackets, one at each end. -->
+                <Border x:Name="LeftBracket" Width="6" Margin="5,6,0,6" HorizontalAlignment="Left"
+                        BorderThickness="2,2,0,2" BorderBrush="{ThemeResource BracketRestBrush}"
+                        AutomationProperties.AccessibilityView="Raw">
+                    <Border.RenderTransform>
+                        <TranslateTransform x:Name="LeftShift"/>
+                    </Border.RenderTransform>
+                </Border>
+                <Border x:Name="RightBracket" Width="6" Margin="0,6,5,6" HorizontalAlignment="Right"
+                        BorderThickness="0,2,2,2" BorderBrush="{ThemeResource BracketRestBrush}"
+                        AutomationProperties.AccessibilityView="Raw">
+                    <Border.RenderTransform>
+                        <TranslateTransform x:Name="RightShift"/>
+                    </Border.RenderTransform>
+                </Border>
+
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="18,0,18,0"
+                            HorizontalAlignment="Center" VerticalAlignment="Center">
+
+                    <!-- One marker at a time: chevron at rest, spinner while busy, zero on success. -->
+                    <Grid Width="14" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw">
+                        <TextBlock x:Name="Chevron" Text="&gt;"
+                                   FontFamily="{StaticResource BracketFont}" FontSize="14" FontWeight="Bold"
+                                   Foreground="{ThemeResource BracketOrangeBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="Spinner" Text="|" Visibility="Collapsed"
+                                   FontFamily="{StaticResource BracketFont}" FontSize="14" FontWeight="Bold"
+                                   Foreground="{ThemeResource BracketTealBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Viewbox x:Name="Zero" Height="14" Visibility="Collapsed"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <!-- The Ø of the studio mark, as drawn in BrandAboutControl's header. -->
+                            <Canvas Width="52" Height="96">
+                                <Rectangle Canvas.Left="10" Canvas.Top="8" Width="32" Height="80"
+                                           RadiusX="12" RadiusY="12" StrokeThickness="11"
+                                           Stroke="{ThemeResource BracketAmberBrush}" Fill="Transparent"/>
+                                <Line X1="46" Y1="12" X2="6" Y2="84" StrokeThickness="8"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                      Stroke="{ThemeResource BracketAmberBrush}"/>
+                            </Canvas>
+                        </Viewbox>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock x:Name="LabelText"
+                                   FontFamily="{StaticResource BracketFont}" FontSize="12"
+                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <!-- The block caret. Opacity rather than Visibility, so the button keeps its
+                             width whether the caret shows or not. -->
+                        <Border x:Name="Caret" Width="7" Height="14" Opacity="0"
+                                Background="{ThemeResource BracketTealBrush}"
+                                VerticalAlignment="Center"
+                                AutomationProperties.AccessibilityView="Raw"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Button>
+    </Grid>
+</UserControl>

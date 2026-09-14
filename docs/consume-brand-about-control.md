@@ -13,8 +13,11 @@ routes and the CI shapes are in [`consuming.md`](consuming.md).
    of its own, since the shell puts one over every page.
 3. Call `SetInfo(AboutInfo)` once from the page's constructor or `Loaded` handler.
 4. Supply only app facts: name, version, description, repo URL, the address the release notes are
-   fetched from, external-library credits. The control provides the studio mark, company name,
-   tagline, website link and donate link itself. Leave `ReleaseNotesUrl` unset and the "What's new"
-   button does not appear; the notes open in the control, not a browser.
+   fetched from, external-library credits, and any buttons of the application's own. The control
+   provides the studio mark, company name, tagline, website link and donate link itself. Leave
+   `ReleaseNotesUrl` unset and the built-in "What's new" button does not appear; the notes open in
+   the control, not a browser. A button of the application's own — its own "What's new" window,
+   say — goes in `AboutInfo.Buttons` as an `AboutButton` with a label and a click action, and lands
+   in the row after Donate in the row's own style.
 5. Delete the bespoke About layout once the control renders; keep the app's own brand-facts class
    as the single source of truth for the data.
