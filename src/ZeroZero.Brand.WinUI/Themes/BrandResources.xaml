@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
-    The studio palette and typeface in the form XAML consumes. Brand.cs carries the same nine
+    The studio palette and typeface in the form XAML consumes. Brand.cs carries the same ten
     colours as hex strings so a console tool can read them; a resource dictionary cannot read a C#
     constant, so they are declared again here and a test pins the two lists to each other.
 
@@ -46,6 +46,7 @@
             <Color x:Key="BrandAmberColour">#d8a657</Color>
             <Color x:Key="BrandSteelBlueColour">#7fa8b8</Color>
             <Color x:Key="BrandTerracottaColour">#c9926b</Color>
+            <Color x:Key="BrandOrangeColour">#e0872a</Color>
             <SolidColorBrush x:Key="BrandBackgroundBrush"    Color="{StaticResource BrandBackgroundColour}"/>
             <SolidColorBrush x:Key="BrandBackgroundAltBrush" Color="{StaticResource BrandBackgroundAltColour}"/>
             <SolidColorBrush x:Key="BrandTealBrush"          Color="{StaticResource BrandTealColour}"/>
@@ -55,6 +56,7 @@
             <SolidColorBrush x:Key="BrandAmberBrush"         Color="{StaticResource BrandAmberColour}"/>
             <SolidColorBrush x:Key="BrandSteelBlueBrush"     Color="{StaticResource BrandSteelBlueColour}"/>
             <SolidColorBrush x:Key="BrandTerracottaBrush"    Color="{StaticResource BrandTerracottaColour}"/>
+            <SolidColorBrush x:Key="BrandOrangeBrush"        Color="{StaticResource BrandOrangeColour}"/>
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Light">
@@ -67,6 +69,7 @@
             <Color x:Key="BrandAmberColour">#d8a657</Color>
             <Color x:Key="BrandSteelBlueColour">#7fa8b8</Color>
             <Color x:Key="BrandTerracottaColour">#c9926b</Color>
+            <Color x:Key="BrandOrangeColour">#e0872a</Color>
             <SolidColorBrush x:Key="BrandBackgroundBrush"    Color="{StaticResource BrandBackgroundColour}"/>
             <SolidColorBrush x:Key="BrandBackgroundAltBrush" Color="{StaticResource BrandBackgroundAltColour}"/>
             <SolidColorBrush x:Key="BrandTealBrush"          Color="{StaticResource BrandTealColour}"/>
@@ -76,9 +79,10 @@
             <SolidColorBrush x:Key="BrandAmberBrush"         Color="{StaticResource BrandAmberColour}"/>
             <SolidColorBrush x:Key="BrandSteelBlueBrush"     Color="{StaticResource BrandSteelBlueColour}"/>
             <SolidColorBrush x:Key="BrandTerracottaBrush"    Color="{StaticResource BrandTerracottaColour}"/>
+            <SolidColorBrush x:Key="BrandOrangeBrush"        Color="{StaticResource BrandOrangeColour}"/>
         </ResourceDictionary>
 
-        <!-- The two grounds become the system window colour and the seven accents its highlight
+        <!-- The two grounds become the system window colour and the eight accents its highlight
              colour, so a consumer's markup keeps resolving and the palette itself never reaches a
              high-contrast screen. -->
         <ResourceDictionary x:Key="HighContrast">
@@ -91,6 +95,7 @@
             <Color x:Key="BrandAmberColour">{ThemeResource SystemColorHighlightColor}</Color>
             <Color x:Key="BrandSteelBlueColour">{ThemeResource SystemColorHighlightColor}</Color>
             <Color x:Key="BrandTerracottaColour">{ThemeResource SystemColorHighlightColor}</Color>
+            <Color x:Key="BrandOrangeColour">{ThemeResource SystemColorHighlightColor}</Color>
             <SolidColorBrush x:Key="BrandBackgroundBrush"    Color="{ThemeResource SystemColorWindowColor}"/>
             <SolidColorBrush x:Key="BrandBackgroundAltBrush" Color="{ThemeResource SystemColorWindowColor}"/>
             <SolidColorBrush x:Key="BrandTealBrush"          Color="{ThemeResource SystemColorHighlightColor}"/>
@@ -100,6 +105,7 @@
             <SolidColorBrush x:Key="BrandAmberBrush"         Color="{ThemeResource SystemColorHighlightColor}"/>
             <SolidColorBrush x:Key="BrandSteelBlueBrush"     Color="{ThemeResource SystemColorHighlightColor}"/>
             <SolidColorBrush x:Key="BrandTerracottaBrush"    Color="{ThemeResource SystemColorHighlightColor}"/>
+            <SolidColorBrush x:Key="BrandOrangeBrush"        Color="{ThemeResource SystemColorHighlightColor}"/>
         </ResourceDictionary>
 
     </ResourceDictionary.ThemeDictionaries>

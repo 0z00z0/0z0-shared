@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Documents;
+using Microsoft.UI.Xaml.Media;
 using ZeroZero.Brand.Core;
 // This project's own namespace (ZeroZero.Brand.WinUI) nests inside ZeroZero.Brand, so an
 // unqualified "Brand" would resolve to that enclosing namespace segment rather than the
@@ -11,12 +12,13 @@ using CoreBrand = ZeroZero.Brand.Core.Brand;
 namespace ZeroZero.Brand.WinUI;
 
 /// <summary>
-/// The shared About *content* for ZeroZero Software apps — brand header, description, three
-/// co-equal link buttons (what's new / website / donate), the release notes themselves, and an
-/// external-libraries credit list. Deliberately owns no window chrome, sizing, or update/exit
-/// flow: those are tray-app-only concerns that <see cref="BrandAboutWindow"/> layers on top when
-/// hosting this control in a popup. A full windowed app with its own in-navigation About page
-/// (no popup, no update button) hosts this control directly instead.
+/// The shared About *content* for ZeroZero Software apps — brand header, description, a row of
+/// buttons (website / donate / what's new, then any the host supplies through
+/// <see cref="AboutInfo.Buttons"/>), the release notes themselves, and an external-libraries credit
+/// list. Deliberately owns no window chrome, sizing, or update/exit flow: those are tray-app-only
+/// concerns that <see cref="BrandAboutWindow"/> layers on top when hosting this control in a popup. A
+/// full windowed app with its own in-navigation About page (no popup, no update button) hosts this
+/// control directly instead.
 /// </summary>
 public sealed partial class BrandAboutControl : UserControl
 {
@@ -39,6 +41,9 @@ public sealed partial class BrandAboutControl : UserControl
     private const string Fetching = "Fetching the notes…";
     private const string FetchFailed = "The release notes could not be fetched.";
 
+    /// <summary>Gap between neighbouring row buttons, and between wrapped lines of them.</summary>
+    private const double RowSpacing = 8;
+
     // Static so an application that opens About repeatedly reuses one set of connections. The
     // client's own timeout matches the per-request one, so neither route can outlive the other.
     private static readonly HttpClient Http = new() { Timeout = FetchTimeout };
@@ -55,6 +60,14 @@ public sealed partial class BrandAboutControl : UserControl
     /// <summary>The notes as fetched, so reopening the panel costs no second request.</summary>
     private string? _notes;
 
+    /// <summary>The row. Its first <see cref="_builtInButtons"/> children are the control's own;
+    /// everything after them came from the host.</summary>
+    private readonly ButtonRowPanel _buttonRow = new() { Spacing = RowSpacing };
+
+    private readonly int _builtInButtons;
+
+    private readonly Button _newsButton;
+
     /// <summary>
     /// Raised after the external-libraries list or the release-notes panel toggles, since either
     /// changes this control's desired height. A hosting <see cref="BrandAboutWindow"/> uses this to
@@ -66,13 +79,23 @@ public sealed partial class BrandAboutControl : UserControl
     {
         InitializeComponent();
 
+        // Named as the markup named them, so a probe that finds a row button by name still does.
+        var siteButton   = CreateRowButton("Website", "SiteBtn");
+        var donateButton = CreateRowButton("☕ Donate", "DonateBtn");
+        _newsButton      = CreateRowButton("What's new", "NewsBtn");
+        _buttonRow.Children.Add(siteButton);
+        _buttonRow.Children.Add(donateButton);
+        _buttonRow.Children.Add(_newsButton);
+        _builtInButtons = _buttonRow.Children.Count;
+        ButtonRowSlot.Child = _buttonRow;
+
         // Wired once at construction, never from SetInfo: a consumer with a cached in-navigation
         // About page calls SetInfo on every navigation, and wiring there would stack one more
         // handler per call — the third visit would open each link three times. The notes handler
         // therefore reads the current _info rather than capturing a SetInfo argument.
-        NewsBtn.Click   += (_, _) => _ = ToggleNotesAsync();
-        SiteBtn.Click   += (_, _) => Open(CoreBrand.WebsiteUrl);
-        DonateBtn.Click += (_, _) => Open(CoreBrand.BuyMeACoffeeUrl);
+        _newsButton.Click  += (_, _) => _ = ToggleNotesAsync();
+        siteButton.Click   += (_, _) => Open(CoreBrand.WebsiteUrl);
+        donateButton.Click += (_, _) => Open(CoreBrand.BuyMeACoffeeUrl);
 
         // A page host navigating away is the same event as a window closing: whatever is in flight
         // must not land on a control that is no longer on screen.
@@ -121,10 +144,46 @@ public sealed partial class BrandAboutControl : UserControl
         NewsPanel.Visibility = Visibility.Collapsed;
 
         // No address to point at, no button: the same rule the update button follows, rather than a
-        // dead row that answers with a failure sentence every time it is pressed.
-        NewsBtn.Visibility = info.ReleaseNotesUrl is { Length: > 0 } ? Visibility.Visible : Visibility.Collapsed;
+        // dead row that answers with a failure sentence every time it is pressed. The row panel
+        // gives a collapsed button neither width nor spacing.
+        _newsButton.Visibility = info.ReleaseNotesUrl is { Length: > 0 } ? Visibility.Visible : Visibility.Collapsed;
 
+        PopulateHostButtons(info.Buttons);
         PopulateExternalLibraries(info.ExternalLibraries);
+    }
+
+    /// <summary>
+    /// Replaces the host's buttons at the end of the row. Rebuilt on every call for the same reason
+    /// the credit list is cleared: a cached page calls SetInfo on every visit, and a new button per
+    /// call carries exactly one handler.
+    /// </summary>
+    private void PopulateHostButtons(IReadOnlyList<AboutButton> buttons)
+    {
+        while (_buttonRow.Children.Count > _builtInButtons)
+        {
+            _buttonRow.Children.RemoveAt(_buttonRow.Children.Count - 1);
+        }
+
+        foreach (var button in buttons)
+        {
+            var rowButton = CreateRowButton(button.Label, name: null);
+            var onClick = button.OnClick;
+            rowButton.Click += (_, _) => onClick();
+            _buttonRow.Children.Add(rowButton);
+        }
+    }
+
+    /// <summary>A button in the row's own style: the brand face at the row's size, natural width.</summary>
+    private Button CreateRowButton(string label, string? name)
+    {
+        var button = new Button
+        {
+            Content    = label,
+            FontSize   = 11,
+            FontFamily = (FontFamily)Resources["BrandFont"],
+        };
+        if (name is not null) button.Name = name;
+        return button;
     }
 
     /// <summary>

@@ -118,29 +118,11 @@
                 FontSize="11" TextWrapping="Wrap"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
-            <!-- What's new | Website | Donate — three co-equal links (no "Check for Updates" here;
-                 that's a window-only concern layered on by BrandAboutWindow). "What's new" shows
-                 the notes in the panel below rather than handing the reader to a browser; the
-                 repository address stays on AboutInfo, where the console banner still prints it. -->
-            <Grid ColumnSpacing="8" Margin="0,2,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Button x:Name="NewsBtn" Grid.Column="0"
-                        Content="What's new"
-                        FontSize="11" FontFamily="{StaticResource BrandFont}"
-                        HorizontalAlignment="Stretch"/>
-                <Button x:Name="SiteBtn" Grid.Column="1"
-                        Content="Website"
-                        FontSize="11" FontFamily="{StaticResource BrandFont}"
-                        HorizontalAlignment="Stretch"/>
-                <Button x:Name="DonateBtn" Grid.Column="2"
-                        Content="☕ Donate"
-                        FontSize="11" FontFamily="{StaticResource BrandFont}"
-                        HorizontalAlignment="Stretch"/>
-            </Grid>
+            <!-- Website | Donate | What's new | the host's own buttons, built in code-behind on a
+                 panel that wraps at narrow widths and gives a collapsed button no room at all. No
+                 "Check for Updates" here; that is BrandAboutWindow's. "What's new" shows the notes in
+                 the panel below rather than handing the reader to a browser. -->
+            <Border x:Name="ButtonRowSlot" Margin="0,2,0,0"/>
 
             <!-- The notes themselves, in the About surface rather than a browser. Collapsed until
                  asked for, so a reader who never presses the button pays no fetch and no height.

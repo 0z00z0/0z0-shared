@@ -17,5 +17,11 @@ public sealed record AboutInfo
     /// </summary>
     public string? ReleaseNotesUrl { get; init; }
 
+    /// <summary>
+    /// The application's own buttons, in the About row after Website, Donate and the built-in
+    /// "What's new". Empty by default. The console banner has no row and ignores them.
+    /// </summary>
+    public IReadOnlyList<AboutButton> Buttons { get; init; } = [];
+
     public IReadOnlyList<ExternalLibrary> ExternalLibraries { get; init; } = [];
 }

@@ -67,6 +67,11 @@
                     <Border Width="140" Height="28" CornerRadius="4" Background="{ThemeResource BrandTerracottaBrush}"/>
                     <TextBlock Grid.Column="1" Text="BrandTerracottaBrush" VerticalAlignment="Center"/>
                 </Grid>
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Border Width="140" Height="28" CornerRadius="4" Background="{ThemeResource BrandOrangeBrush}"/>
+                    <TextBlock Grid.Column="1" Text="BrandOrangeBrush" VerticalAlignment="Center"/>
+                </Grid>
             </StackPanel>
 
             <!-- The palette's two measured rules, on screen rather than only in the test that pins
