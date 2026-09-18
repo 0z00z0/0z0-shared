@@ -59,6 +59,15 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     // Honoured on the maintain-loop thread, so the forced socket drop cannot race its own connect.
     private volatile bool _reconnectRequested;
 
+    // What the log was last told about why there is no link — the outage marker or a refusal's text —
+    // so a retry that finds the same thing says nothing. Cleared on every connect.
+    private string? _reported;
+    private const string OutageReported = "outage";
+
+    // Set just before this connection ends its own session, so the disconnect it raises is not
+    // reported as a lost link. Taken by the disconnect event, cleared on connect.
+    private int _ownDrop;
+
     // Whether the socket stage takes the full budget because a whole round went by with nothing
     // answering anywhere. Written under _gate on an apply and on the maintain-loop thread on a
     // connect, read there once per round.
@@ -222,7 +231,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             else
             {
                 // Options changed while running — bounce the socket so the loop reconnects with them.
-                try { await _client.DisconnectAsync().ConfigureAwait(false); }
+                try { await DropOwnSessionAsync().ConfigureAwait(false); }
                 catch { /* the loop retries */ }
             }
         }
@@ -293,7 +302,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             }
 
             // A half-open session from a refused CONNACK would make the next attempt look connected.
-            try { if (_client.IsConnected) await _client.DisconnectAsync().ConfigureAwait(false); }
+            try { if (_client.IsConnected) await DropOwnSessionAsync().ConfigureAwait(false); }
             catch { /* the socket is going away either way */ }
             attempts.Add(new(candidate, result));
         }
@@ -302,13 +311,50 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         // opens its sockets under the full one.
         if (ShouldEscalateSocketBudget(attempts)) _socketBudgetEscalated = true;
 
-        // One line per failed round, naming every candidate tried — the log's whole account of why
-        // nothing is publishing. The details are OS or broker text, never a staged credential.
-        _log.Error("MqttConnection.Connect: no endpoint connected — " +
-            string.Join("; ", attempts.Select(a =>
-                $"{MqttStatusText.Name(a.Candidate.Transport)}:{a.Candidate.Port}: {a.Result.Detail}")),
-            null);
+        ReportFailedRound(attempts);
         return new(false, attempts);
+    }
+
+    /// <summary>Tells the log what a failed round found, once rather than on every retry. A refusal is
+    /// an error, because retrying cannot change it; anything else is the link being down, which is one
+    /// line per outage. The details are OS or broker text, never a staged credential.</summary>
+    private void ReportFailedRound(IReadOnlyList<MqttEndpointAttempt> attempts)
+    {
+        var refused = attempts.Where(a => RefusalText(a.Outcome) is not null).ToList();
+        if (refused.Count > 0)
+        {
+            string reason = string.Join("; ", refused.Select(a =>
+                $"{Where(a)}: {RefusalText(a.Outcome)} ({a.Result.Detail})"));
+            if (Interlocked.Exchange(ref _reported, reason) != reason)
+                _log.Error($"MqttConnection.Connect: the connection was refused — {reason}", null);
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _reported, OutageReported) != OutageReported)
+            _log.Info("MQTT: the broker could not be reached — " +
+                string.Join("; ", attempts.Select(a => $"{Where(a)}: {a.Result.Detail}")) +
+                ". Sending resumes when the connection returns.");
+    }
+
+    // What waiting cannot fix: the broker answered no, or its certificate is not one this connection
+    // trusts. Null for every outcome that is only the link being down.
+    private static string? RefusalText(MqttProbeOutcome outcome) => outcome switch
+    {
+        MqttProbeOutcome.AuthRejected => "the broker refused the login",
+        MqttProbeOutcome.Rejected => "the broker refused the connection",
+        MqttProbeOutcome.TlsUntrusted => "the broker's certificate is not trusted",
+        _ => null,
+    };
+
+    private static string Where(MqttEndpointAttempt attempt) =>
+        $"{MqttStatusText.Name(attempt.Candidate.Transport)}:{attempt.Candidate.Port}";
+
+    /// <summary>Ends the current session on this connection's own account, so the disconnect it raises
+    /// is not reported as a lost link.</summary>
+    private Task DropOwnSessionAsync()
+    {
+        Volatile.Write(ref _ownDrop, 1);
+        return _client.DisconnectAsync();
     }
 
     /// <summary>Whether the next round's socket stage should take the full budget: this one tried
@@ -391,6 +437,9 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     {
         var backoff = new MqttReconnectBackoff();
 
+        // Publishing switched back on starts a fresh account, so its first failure is reported again.
+        Volatile.Write(ref _reported, null);
+
         while (!ct.IsCancellationRequested && _enabled)
         {
             // Modern standby suspends the NIC, so after a resume the socket is often half-dead while
@@ -398,7 +447,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             if (_reconnectRequested)
             {
                 _reconnectRequested = false;
-                try { if (_client.IsConnected) await _client.DisconnectAsync().ConfigureAwait(false); }
+                try { if (_client.IsConnected) await DropOwnSessionAsync().ConfigureAwait(false); }
                 catch { /* about to reconnect anyway */ }
                 backoff.Resume();
             }
@@ -448,11 +497,13 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             catch (OperationCanceledException) { break; }
             catch (Exception ex)
             {
-                _log.Error("MqttConnection.Connect", Sanitise(ex));
+                // A sequence that failed because the link dropped under it was reported as the loss.
+                if (_client.IsConnected)
+                    _log.Error($"MqttConnection.Connect: the connect sequence failed — {MqttProbe.Describe(ex)}", null);
                 // The connect sequence can throw with the socket up, leaving neither branch reachable
                 // next pass — a healthy-looking connection that never gets its announcement,
                 // availability or subscription. Drop it so the next pass retries.
-                try { if (_client.IsConnected) await _client.DisconnectAsync().ConfigureAwait(false); }
+                try { if (_client.IsConnected) await DropOwnSessionAsync().ConfigureAwait(false); }
                 catch { /* the next pass reconnects */ }
                 backoff.Failed();
                 SetState(MqttConnectionState.Retrying);
@@ -532,6 +583,12 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         {
             SetState(MqttConnectionState.Retrying);
             _drop.TrySetResult();
+
+            // One line per outage; a session this connection ended itself is not one.
+            if (Interlocked.Exchange(ref _ownDrop, 0) == 0
+                && Interlocked.Exchange(ref _reported, OutageReported) != OutageReported)
+                _log.Info($"MQTT: the connection to the broker was lost — {MqttClientWiring.DisconnectReason(e)}. " +
+                          "Sending resumes when the connection returns.");
         }
         return Task.CompletedTask;
     }
@@ -550,6 +607,11 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
 
     private async Task OnConnectedAsync(CancellationToken ct)
     {
+        // A new session: nothing reported about the last outage or refusal holds any more, and a drop
+        // flagged but never raised belonged to a session that has gone.
+        Volatile.Write(ref _reported, null);
+        Volatile.Write(ref _ownDrop, 0);
+
         // The encryption is named because Automatic can fall back to plain with nobody choosing it,
         // and a downgrade that leaves no trace is one nobody can notice afterwards.
         _log.Info(RememberedEndpoint is { } found
@@ -586,7 +648,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
                 .Build();
             await _client.UnsubscribeAsync(options, ct).ConfigureAwait(false);
         }
-        catch (Exception ex) { _log.Error("MqttConnection.Unsubscribe", Sanitise(ex)); }
+        catch (Exception ex) { _log.Error($"MqttConnection.Unsubscribe: {MqttProbe.Describe(ex)}", null); }
     }
 
     /// <summary>One wildcard covers every command entity; the router resolves by entity id. Anything
@@ -651,7 +713,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
                         await SendChannelAsync(channel, message, CancellationToken.None).ConfigureAwait(false);
                 }
             }
-            catch (Exception ex) { _log.Error("MqttConnection.Publish", Sanitise(ex)); }
+            catch (Exception ex) { _log.Error($"MqttConnection.Publish: {MqttProbe.Describe(ex)}", null); }
             await Task.Yield();   // never hold the pool thread across the repeat check
         }
         while (_channels.ShouldRepeat(channelKey));
@@ -676,7 +738,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error("MqttConnection.PublishNow", Sanitise(ex));
+            _log.Error($"MqttConnection.PublishNow: {MqttProbe.Describe(ex)}", null);
             return false;
         }
     }
@@ -886,11 +948,14 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     }
 
     /// <summary>False when the message did not reach the broker. Only a caller the user is watching
-    /// needs to know — everything else publishes into the background, where the log is the trace.</summary>
+    /// needs to know — everything else publishes into the background, where the log is the trace.
+    /// With no link there is nothing to send and nothing logged per message: the loss has its own
+    /// line, and the next connect resends every channel.</summary>
     public async Task<bool> PublishAsync(
         string topic, string payload, bool retain,
         MqttQos qos = MqttQos.AtLeastOnce, CancellationToken ct = default)
     {
+        if (!_client.IsConnected) return false;
         try
         {
             var message = new MqttApplicationMessageBuilder()
@@ -914,7 +979,13 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             Activity.RecordPublish();
             return true;
         }
-        catch (Exception ex) { _log.Error("MqttConnection.Publish", Sanitise(ex)); return false; }
+        catch (Exception ex)
+        {
+            // A link that dropped between the check and the send is the loss, reported once.
+            if (_client.IsConnected)
+                _log.Error($"MqttConnection.Publish: '{topic}' could not be sent — {MqttProbe.Describe(ex)}", null);
+            return false;
+        }
     }
 
     /// <summary>Publishes a batch with several sends in flight at once, so a pass over every topic

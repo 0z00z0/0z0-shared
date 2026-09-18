@@ -111,6 +111,16 @@ internal static class MqttClientWiring
     internal static MqttConnackCode ConnackCode(MqttClientConnectResult? result) =>
         (MqttConnackCode)(int)(result?.ResultCode ?? MqttClientConnectResultCode.UnspecifiedError);
 
+    /// <summary>Why a session ended, in words: the client's own account of the failure, or the
+    /// broker's reason when it sent one. Type and message only, never a stack.</summary>
+    /// <remarks>A socket closed or reset from the far end arrives with no exception and the normal
+    /// reason code, which named as it is would read as a deliberate goodbye.</remarks>
+    internal static string DisconnectReason(MqttClientDisconnectedEventArgs e) =>
+        e.Exception is { } ex ? MqttProbe.Describe(ex)
+        : !string.IsNullOrWhiteSpace(e.ReasonString) ? $"{e.Reason}: {e.ReasonString.Trim()}"
+        : e.Reason == MqttClientDisconnectReason.NormalDisconnection ? "the broker or the network closed it"
+        : e.Reason.ToString();
+
     /// <summary>The PUBACK reason code, as the protocol numbers it.</summary>
     internal static MqttPubackCode PubackCode(MqttClientPublishResult? result) =>
         (MqttPubackCode)(int)(result?.ReasonCode ?? MqttClientPublishReasonCode.UnspecifiedError);
