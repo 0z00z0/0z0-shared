@@ -327,6 +327,11 @@ brackets stand at either end in the logo's teal-to-blue gradient, a `>` chevron 
 leads, and the label follows in the brand face. It carries its own colours and face, so it needs no
 merged dictionary.
 
+**The button centres itself in the width the control is given.** The control sizes to its content,
+so a host that wants it at the start of that space sets `HorizontalAlignment="Left"` on the control
+itself rather than on anything inside it; setting `Center` on the control changes nothing, since
+that is already where the button sits.
+
 ```xml
 <brand:BrandBracketButton x:Name="UpdateButton" Label="Check for updates" Click="OnCheckForUpdates"/>
 ```
@@ -383,7 +388,8 @@ and saturation, so every figure clears 4.6:1 on all three light surfaces:
 The label at rest takes `TextFillColorPrimaryBrush`. High contrast replaces every brand colour with
 the system highlight colour, as `BrandResources.xaml` does.
 
-Status (2026-09-14): compiles clean in 0.9.1; not yet rendered in the harness or captured.
+Status (2026-09-18): compiles clean in 0.9.2; first rendered in ChargeKeeper 1.58.2 with brand
+0.9.1 — placement seen, states, animations, reduced motion and theme switching not yet reported.
 
 ## Screenshots
 
