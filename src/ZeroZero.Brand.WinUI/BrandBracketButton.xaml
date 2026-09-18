@@ -114,6 +114,7 @@
              platform's own. Its template is only the content: no border, no fill. -->
         <Button x:Name="Surface"
                 Height="32" Padding="0" MinWidth="0" MinHeight="0"
+                HorizontalAlignment="Center"
                 Background="Transparent" BorderThickness="0">
             <Button.Template>
                 <ControlTemplate TargetType="Button">
