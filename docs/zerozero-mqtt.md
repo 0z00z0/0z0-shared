@@ -479,6 +479,13 @@ An unchanged payload is cached but not sent. `PublishNowAsync` bypasses that on 
 what a user-pressed "Publish now" needs, where nothing leaving the machine is indistinguishable
 from a dead connection.
 
+**A value sent while there is no link is skipped, and nothing is logged for it.** `Publish` and
+`RequestPublish` behave alike: nothing is queued, nothing is sent and no line reaches the log per
+value, and `PublishAsync` answers false in silence. Catch-up is the connect itself: every connect
+resends every channel's current value, so what changed during an outage arrives when the link
+returns — the latest value per channel, not the history of it. A host needs no check of its own
+before sending; one that sends only while `IsConnected` is true stays correct.
+
 **Three host obligations the module cannot meet itself:**
 
 - Call `connection.OnPowerResume()` from the host's power-mode handler. The connection does not
@@ -990,6 +997,29 @@ short by a drop; the backoff wait is left to run. Without that separation the lo
 the failed round has just earned, on every round, and the retry rate becomes whatever a socket
 costs — measured at 361 CONNECTs in three seconds against a broker that would rate-limit or ban a
 client for it. It is invisible in development, because it needs a throwing connect sequence.
+
+### What the log records
+
+**One line when the link goes, one when it returns.** A lost connection, or a first connect that
+finds the broker unreachable, writes one Info line with the reason, saying that sending resumes
+when the connection returns. The retries after it write nothing, however long the outage lasts, and
+the connect that ends it writes the Info line naming the transport, port and encryption. A session
+the connection ends itself — an apply with changed parameters, a resume from standby, a connect
+sequence that threw — is not a loss and writes no line for the drop.
+
+**A refusal is an Error, written once.** A broker that refuses the login or the connection, or a
+certificate the connection does not trust, is not fixed by retrying, so it is logged as an Error
+when first seen and not again until the reason changes or a connect has succeeded. A refusal is
+told from an unreachable broker by what the round recorded, never by exception wording: the CONNACK
+reason code the broker answered with, and whether the far end presented a certificate before the
+handshake failed.
+
+**No connection or send failure hands an exception to the log sink.** Each is one line with the
+reason in words — the operating system's or the broker's text, or an exception's type and message —
+so a host prints no stack trace for any of them. A send that fails because the link dropped under it
+is the loss already reported, not an error of its own. A send the broker declines, or one that
+fails while the link still reads as up — a publish that times out on a link nobody has yet noticed
+is dead — is one Error line per send.
 
 ---
 
