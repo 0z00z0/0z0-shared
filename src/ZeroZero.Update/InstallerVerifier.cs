@@ -26,11 +26,13 @@ public enum VerificationVerdict
     SignerMismatch,
 
     /// <summary>Signed by the expected subject under a chain this machine does not trust, with a
-    /// certificate the application does not pin.</summary>
+    /// certificate the application does not pin, and the application does not accept the publisher
+    /// name alone.</summary>
     CertificateNotPinned,
 
     /// <summary>Windows reported something else — an expired certificate, a broken chain, a file it
-    /// could not read. The code is in the result.</summary>
+    /// could not read. The code is in the result. Only an untrusted root reaches the signer check;
+    /// every other fault stops here, whatever the expected signer accepts.</summary>
     SignatureCheckFailed,
 }
 

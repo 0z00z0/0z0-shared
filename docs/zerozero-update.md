@@ -34,8 +34,9 @@ The assemblies are versioned as `UpdateVersion` in `Versions.props` and released
   expected signer, the download-directory prefix, the installer file name with `{version}` in it,
   the installer's arguments, the initial delay and the check interval, the request and download
   timeouts, the API base and the log sink. Validated when the service is built.
-- **`ExpectedSigner`** — who must have signed the installer: the certificate subject, and the
+- **`ExpectedSigner`** — who must have signed the installer: the certificate subject, the
   thumbprints (SHA-1 or SHA-256) of the certificates accepted when the machine does not trust the
+  chain, and `acceptSelfSignedSubject`, which lets the publisher name alone carry an untrusted
   chain. `Match` says whether a certificate is that signer, and why not.
 - **`UpdateService`** — `CheckAsync` finds the latest release and compares it with the running
   version; `PrepareAsync` downloads the installer into a fresh directory and verifies it, and never
@@ -63,14 +64,19 @@ The assemblies are versioned as `UpdateVersion` in `Versions.props` and released
 `ZeroZero.Update.Win32`:
 
 - **`NativeUpdatePrompts`** — the install question as a task dialog with three command links —
-  install now, not now, open the release page — with the stripped notes as its expandable detail,
+  install now, not now, open the release page — with the release notes as its expandable detail,
   and message boxes for up to date, nothing released, a check that failed, an update that cannot
-  be installed and a launch that failed. Every text names the application and says what has and
-  has not run.
+  be installed and a launch that failed. The expander's text is the release body with its markdown
+  stripped, unless the application supplies its own through the `releaseNotes` argument. Every
+  refusal has a sentence of its own and ends the same way: the file was not run, and the release
+  page is where to go instead.
 - **`UpdateFlow`** — `RunAsync(trigger)`: check, ask, prepare, launch, then call the application's
-  shutdown. A manual run reports every outcome; a scheduled one speaks only when there is
-  something to install and logs the rest. One run at a time: a scheduled check that finds a
-  manual one on screen backs off.
+  shutdown, returning an `UpdateFlowRun` carrying the result, the check it read and the release
+  where there is one. A manual run reports every outcome; a scheduled one speaks only when there is
+  something to install and logs the rest; a silent one shows nothing at all, a release included,
+  and hands the release back for the caller's own surface. `InstallAsync(release)` starts an update
+  from a release already found, without checking again. One install at a time, and one check at a
+  time: a caller arriving while a check is in flight joins it and reads its result.
 
 ## Verification before execution
 
@@ -89,16 +95,43 @@ can replace a hash sitting next to it, so a matching hash says only that the byt
 the bytes that were published — nothing about who published them. Only the signature answers that,
 which is why neither check can be turned off and the expected signer is the one input.
 
-The signer check has two forms, decided by what Windows says of the certificate chain. Under a chain
-the machine trusts, the subject alone must match. Under a chain it does not trust — every machine on
-which a self-signed studio certificate has not been installed — the subject must match **and** the
-certificate must be one the application pins by thumbprint. A subject-only rule would accept any
-self-signed certificate spelling the same name. The verdict says which form applied.
+The signer check has three forms, decided by what Windows says of the certificate chain and by what
+the application accepts. Under a chain the machine trusts, the subject alone must match. Under a
+chain it does not trust — every machine on which a self-signed studio certificate has not been
+installed — the subject must match **and** the certificate must be one the application pins by
+thumbprint. The third form is the opt-in below. The verdict says which form applied.
+
+The name is compared whole, without case, with both sides rendered through the same decoder, so
+spacing and case differences between the application's string and the certificate's do not count
+and a shorter name is never a match for a longer one.
+
+### Trusting the publisher name alone
+
+`new ExpectedSigner(subject, acceptSelfSignedSubject: true)` accepts an intact signature by the
+expected subject under a chain the machine does not trust, with no pin. It is chosen per
+application and off by default, so an application that does not ask for it keeps the pin
+requirement exactly as it was.
+
+What it tolerates is an untrusted root and nothing else. Every other fault the signature check
+reports stops before the signer is looked at — a file altered after signing, a file with no
+signature, an expired certificate, a chain that cannot be built — whatever this setting says. The
+subject is compared before the untrusted chain is tolerated, so another publisher's self-signed
+certificate never reaches it.
+
+**What it knowingly accepts is a look-alike.** Anyone can mint a self-signed certificate spelling
+the same name, and under this setting a file signed by one verifies. Pinning the certificate closes
+that and breaks every certificate renewal; the name is the trade chosen. An application that can
+carry a pin should carry one.
+
+Revocation is a separate matter and always has been: the check asks Windows for no revocation
+lookup, so a revoked certificate is refused only where Windows reports it from what it already
+holds.
 
 Verification runs twice: when the file has been downloaded, and again at the moment of launch, so
 the bytes that were verified and the bytes that run are the same bytes or nothing runs. A refused
-file is deleted, the verdict is logged, and the person is told that nothing has run and not to run
-the file by hand.
+file is not run, the verdict is logged, and removing the file is attempted afterwards and separate
+from the decision — it can fail, and its failure is logged rather than shown, which is why no
+message claims the file was removed.
 
 ## Where the published hash comes from
 
@@ -155,10 +188,33 @@ var scheduler = new UpdateScheduler(options.InitialDelay, options.CheckInterval,
 scheduler.Start();
 ```
 
-A menu item or the About window's "check for updates" calls `flow.RunAsync(UpdateTrigger.Manual)`
-from the same thread. `RunAsync` continues on the caller's context after each await, so the
-prompts appear where the call was made; the scheduler's callback runs on a pool thread, and the
-application marshals it to its dialog thread as the sketch shows.
+Which trigger a surface uses decides what reaches the screen:
+
+| Trigger | What appears |
+|---|---|
+| `Manual` | Every outcome. For a surface with nothing of its own to report on — a tray menu item. |
+| `Scheduled` | Nothing, except the install question when a release is found. |
+| `Silent` | Nothing at all, a release included. The run carries the result and the release, and the caller reports on its own button. |
+
+A silent check that found something installs from the release it was handed:
+
+```csharp
+UpdateFlowRun run = await flow.RunAsync(UpdateTrigger.Silent);
+if (run.Result == UpdateFlowResult.UpdateAvailable) ShowTheButton(run.Release!);
+// later, when the button is pressed:
+await flow.InstallAsync(release);
+```
+
+`RunAsync` continues on the caller's context after each await, so the prompts appear where the call
+was made; the scheduler's callback runs on a pool thread, and the application marshals it to its
+dialog thread as the sketch shows.
+
+**A caller arriving while a check is running joins it.** It is handed that same check and reads its
+result, rather than starting a second request or being refused, so an About window opening during
+the scheduled check costs nothing and cannot disagree with it. The shared slot is cleared as the
+check ends, before any caller resumes, so a request arriving after that starts a fresh check. Each
+surface shows its own waiting state while it waits; the component shows none. The caller that
+started the check is the one whose cancellation token is inside the request.
 
 ## What stays with the application
 
@@ -173,6 +229,10 @@ application marshals it to its dialog thread as the sketch shows.
   installer.
 - **Where the check is offered** — a menu item, the About window, both — and the thread the
   dialogs live on.
+- **What a silent check shows.** The component shows nothing for that trigger, so the button, its
+  waiting state, its label when a release is found and what it does with a failure are the
+  application's.
+- **The release-notes text**, where the application keeps its own rather than the release body.
 - **The installer itself**: where it puts things, per-user or per-machine, elevation, and the
   step that closes a running application. The flow assumes a per-user installer that needs no
   elevation and an application that exits once the installer has started.
@@ -187,7 +247,16 @@ application marshals it to its dialog thread as the sketch shows.
   version is not the product's, sets `RunningVersion`.
 - **Pin the next certificate one release ahead.** A certificate rotated in with the same release
   that first expects it is refused by every installed version, since none of them pins it. The
-  release before the rotation carries both thumbprints.
+  release before the rotation carries both thumbprints. An application that accepts the publisher
+  name alone has no rotation problem and no protection from a look-alike either; that is the trade,
+  and it is made once, in the options.
+- **A refusal says nothing about the file being gone.** Removing it is attempted after the
+  decision, its failures are logged rather than shown, and a message claiming a deletion would be
+  false in front of a person often enough to matter. Removal is also not all-or-nothing: the
+  recursive removal of a download directory carries on past an entry it cannot take, so a failure
+  can still have taken the installer with it.
+- **A silent check that finds a release installs nothing.** It returns `UpdateAvailable` and the
+  release; the install starts from `InstallAsync` when the person asks for it.
 - **One hash in the body, the installer's.** A second distinct hash anywhere in the notes — a
   portable build's, a checksum of a checksum — makes the release un-installable through the flow.
 - **The tag is a plain version.** `v1.2.3` or `1.2.3`; a pre-release suffix, a component-prefixed
@@ -216,3 +285,12 @@ unsigned, tampered and truncated forms; the trusted-chain form runs against the 
 library where the machine trusts its signature, and is reported as skipped where it does not. The
 launcher in the tests records and starts nothing, and the dialogs are read back as requests rather
 than shown. Nothing reaches the internet, no installer runs, and no dialog appears on screen.
+
+Status (2026-09-20): what 0.9.0 added — the publisher-name-alone mode, the silent trigger, joining a
+check already in flight, installing a release already found, and the host's own release-notes text —
+is proved by having been run once rather than by tests of its own, and the suite covers it only
+where an existing test already asserted the behaviour it replaced. One case is not proved at all: a
+chain fault other than an untrusted chain, because Windows will not apply a signature with an
+expired certificate and producing one would mean putting a certificate in a store. What was measured
+instead is that a file altered after signing and an unsigned file both still refuse with the mode on,
+and that the verifier reaches the signer check for one trust code only.

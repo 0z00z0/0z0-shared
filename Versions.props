@@ -24,7 +24,7 @@
     <SettingsShellVersion>0.7.0</SettingsShellVersion>
     <StartupVersion>0.8.0</StartupVersion>
     <TrayVersion>0.7.0</TrayVersion>
-    <UpdateVersion>0.8.0</UpdateVersion>
+    <UpdateVersion>0.9.0</UpdateVersion>
     <Win32Version>0.8.0</Win32Version>
   </PropertyGroup>
 

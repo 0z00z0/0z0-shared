@@ -33,9 +33,9 @@ public class UpdateFlowTests
     {
         _service.CheckResult = new UpdateCheckResult(UpdateCheckOutcome.UpToDate, new Version(1, 0, 0, 0), FakeUpdateService.Release);
 
-        UpdateFlowResult result = await Flow().RunAsync(UpdateTrigger.Manual);
+        UpdateFlowRun run = await Flow().RunAsync(UpdateTrigger.Manual);
 
-        Assert.Equal(UpdateFlowResult.UpToDate, result);
+        Assert.Equal(UpdateFlowResult.UpToDate, run.Result);
         Assert.Equal([new Version(1, 0, 0, 0)], _prompts.UpToDate);
         Assert.Empty(_prompts.Asked);
         Assert.Equal(0, _shutdowns);
@@ -46,9 +46,9 @@ public class UpdateFlowTests
     {
         _service.CheckResult = new UpdateCheckResult(UpdateCheckOutcome.UpToDate, new Version(1, 0, 0, 0), FakeUpdateService.Release);
 
-        UpdateFlowResult result = await Flow().RunAsync(UpdateTrigger.Scheduled);
+        UpdateFlowRun run = await Flow().RunAsync(UpdateTrigger.Scheduled);
 
-        Assert.Equal(UpdateFlowResult.UpToDate, result);
+        Assert.Equal(UpdateFlowResult.UpToDate, run.Result);
         Assert.Equal(0, _prompts.Said);
     }
 
@@ -57,9 +57,9 @@ public class UpdateFlowTests
     {
         _service.CheckResult = new UpdateCheckResult(UpdateCheckOutcome.NoReleases, new Version(1, 0, 0, 0));
 
-        UpdateFlowResult result = await Flow().RunAsync(UpdateTrigger.Manual);
+        UpdateFlowRun run = await Flow().RunAsync(UpdateTrigger.Manual);
 
-        Assert.Equal(UpdateFlowResult.NothingReleased, result);
+        Assert.Equal(UpdateFlowResult.NothingReleased, run.Result);
         Assert.Equal(1, _prompts.NothingReleased);
     }
 
@@ -73,9 +73,9 @@ public class UpdateFlowTests
     {
         _service.CheckResult = new UpdateCheckResult(outcome, new Version(1, 0, 0, 0), Detail: "why");
 
-        UpdateFlowResult result = await Flow().RunAsync(UpdateTrigger.Manual);
+        UpdateFlowRun run = await Flow().RunAsync(UpdateTrigger.Manual);
 
-        Assert.Equal(UpdateFlowResult.CheckFailed, result);
+        Assert.Equal(UpdateFlowResult.CheckFailed, run.Result);
         UpdateCheckResult said = Assert.Single(_prompts.CheckFailed);
         Assert.Equal(outcome, said.Outcome);
         Assert.Empty(_prompts.Asked);
@@ -106,9 +106,9 @@ public class UpdateFlowTests
         _service.CheckResult = Available();
         _prompts.Choice = InstallChoice.Later;
 
-        UpdateFlowResult result = await Flow().RunAsync(trigger);
+        UpdateFlowRun run = await Flow().RunAsync(trigger);
 
-        Assert.Equal(UpdateFlowResult.Declined, result);
+        Assert.Equal(UpdateFlowResult.Declined, run.Result);
         ReleaseInfo asked = Assert.Single(_prompts.Asked);
         Assert.Equal("v1.2.3", asked.TagName);
         Assert.Equal(0, _service.Prepares);
@@ -122,9 +122,9 @@ public class UpdateFlowTests
         _service.CheckResult = Available();
         _prompts.Choice = InstallChoice.OpenReleasePage;
 
-        UpdateFlowResult result = await Flow().RunAsync(UpdateTrigger.Manual);
+        UpdateFlowRun run = await Flow().RunAsync(UpdateTrigger.Manual);
 
-        Assert.Equal(UpdateFlowResult.ReleasePageOpened, result);
+        Assert.Equal(UpdateFlowResult.ReleasePageOpened, run.Result);
         Assert.Equal([FakeUpdateService.Release.HtmlUri!], _opened);
         Assert.Equal(0, _service.Prepares);
     }
@@ -148,9 +148,9 @@ public class UpdateFlowTests
         _service.CheckResult = Available();
         _service.Sequence.Clear();
 
-        UpdateFlowResult result = await Flow().RunAsync(UpdateTrigger.Manual);
+        UpdateFlowRun run = await Flow().RunAsync(UpdateTrigger.Manual);
 
-        Assert.Equal(UpdateFlowResult.InstallerStarted, result);
+        Assert.Equal(UpdateFlowResult.InstallerStarted, run.Result);
         Assert.Equal(1, _service.Prepares);
         Assert.Equal(1, _service.Launches);
         Assert.Equal(1, _shutdowns);
@@ -173,9 +173,9 @@ public class UpdateFlowTests
         _service.CheckResult = Available();
         _service.Prepared = FakeUpdateService.NotReady(outcome, verdict);
 
-        UpdateFlowResult result = await Flow().RunAsync(UpdateTrigger.Scheduled);
+        UpdateFlowRun run = await Flow().RunAsync(UpdateTrigger.Scheduled);
 
-        Assert.Equal(UpdateFlowResult.CannotInstall, result);
+        Assert.Equal(UpdateFlowResult.CannotInstall, run.Result);
         PreparedUpdate said = Assert.Single(_prompts.CannotInstall);
         Assert.Equal(outcome, said.Outcome);
         Assert.Equal(0, _service.Launches);
@@ -192,9 +192,9 @@ public class UpdateFlowTests
             Verification = new VerificationResult(VerificationVerdict.SignerMismatch, "not the signer"),
         };
 
-        UpdateFlowResult result = await Flow().RunAsync(UpdateTrigger.Manual);
+        UpdateFlowRun run = await Flow().RunAsync(UpdateTrigger.Manual);
 
-        Assert.Equal(UpdateFlowResult.CannotInstall, result);
+        Assert.Equal(UpdateFlowResult.CannotInstall, run.Result);
         Assert.Equal(0, _service.Launches);
         Assert.Equal(0, _shutdowns);
     }
@@ -205,34 +205,41 @@ public class UpdateFlowTests
         _service.CheckResult = Available();
         _service.LaunchResult = new LaunchResult(false, "refused at launch: the file changed");
 
-        UpdateFlowResult result = await Flow().RunAsync(UpdateTrigger.Manual);
+        UpdateFlowRun run = await Flow().RunAsync(UpdateTrigger.Manual);
 
-        Assert.Equal(UpdateFlowResult.LaunchFailed, result);
+        Assert.Equal(UpdateFlowResult.LaunchFailed, run.Result);
         (PreparedUpdate _, LaunchResult said) = Assert.Single(_prompts.LaunchFailed);
         Assert.Contains("refused at launch", said.Detail);
         Assert.Equal(0, _shutdowns);
     }
 
+    /// <summary>A caller arriving while a check is in flight is handed that same check and reads
+    /// its result, rather than starting a second one or being refused; once the check has ended the
+    /// next request starts a fresh one.</summary>
     [Fact]
-    public async Task ASecondRun_BacksOffWhileTheFirstIsInProgress()
+    public async Task ASecondRun_JoinsTheCheckAlreadyInFlight()
     {
-        _service.CheckResult = Available();
+        _service.CheckResult = new UpdateCheckResult(UpdateCheckOutcome.UpToDate, new Version(1, 0, 0, 0), FakeUpdateService.Release);
         _service.HoldCheck = new TaskCompletionSource();
-        _prompts.Choice = InstallChoice.Later;
         UpdateFlow flow = Flow();
 
-        Task<UpdateFlowResult> first = flow.RunAsync(UpdateTrigger.Scheduled);
-        Task<UpdateFlowResult> second = flow.RunAsync(UpdateTrigger.Manual);
+        Task<UpdateFlowRun> first = flow.RunAsync(UpdateTrigger.Scheduled);
+        Task<UpdateFlowRun> second = flow.RunAsync(UpdateTrigger.Silent);
 
-        // The second run backs off at once; it does not queue behind the first.
-        Assert.True(second.IsCompleted);
-        Assert.Equal(UpdateFlowResult.AlreadyRunning, await second);
+        Assert.False(second.IsCompleted);
         _service.HoldCheck.SetResult();
-        Assert.Equal(UpdateFlowResult.Declined, await first);
-        Assert.Equal(1, _service.Checks);
+        UpdateFlowRun one = await first;
+        UpdateFlowRun two = await second;
 
-        // And the gate opens again once the first run is over.
-        Assert.Equal(UpdateFlowResult.Declined, await flow.RunAsync(UpdateTrigger.Manual));
+        // One check, and the very same result object in both hands.
+        Assert.Equal(1, _service.Checks);
+        Assert.Same(one.Check, two.Check);
+        Assert.Equal(UpdateFlowResult.UpToDate, one.Result);
+        Assert.Equal(UpdateFlowResult.UpToDate, two.Result);
+
+        // The slot is cleared as the check ends, so a later request checks again.
+        _service.HoldCheck = null;
+        await flow.RunAsync(UpdateTrigger.Silent);
         Assert.Equal(2, _service.Checks);
     }
 
