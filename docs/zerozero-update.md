@@ -268,6 +268,15 @@ started the check is the one whose cancellation token is inside the request.
   waits for the next interval.
 - **Nothing is persisted**, so the interval counts from process start: an application restarted
   every hour checks every hour.
+- **The asset name needs the version placeholder.** Matching is exact, case-sensitive and has no
+  wildcard, so an `InstallerFileName` written without `{version}` in it searches for the same
+  literal name at every release and never matches an asset whose own name carries the version.
+- **A release source built outside the component needs its own user agent.** GitHub refuses a
+  request that carries none; only the client the component builds sets one, so a replacement
+  `IReleaseSource` supplies its own.
+- **There is no path that skips the published hash.** The verifier requires one to be present in
+  the release body; a release that publishes none is refused before its signature is even looked
+  at.
 
 ## Take the reference
 

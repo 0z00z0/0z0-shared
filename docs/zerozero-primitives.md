@@ -56,6 +56,29 @@ once the version it references is on the feed, so a change here releases first.
   file's own, which as a package sits in the package cache and in no repository. A tree with no git
   available stamps nothing and the assembly reports the bare number.
 
+## Traps
+
+ChargeKeeper measured these against the logging framework it wires behind the sink. They are
+properties of a logging framework behind `ILogSink` generally, not of that one host.
+
+- **Several writers to one shared log file lose entries silently unless two settings are
+  combined.** Measured: roughly seventy lines lost with neither set, one to three lost with only
+  one of them, none lost with both. The setting that most obviously looks like the fix no longer
+  exists in the framework's current major version and is accepted without complaint, so a
+  configuration that reads as correct can still be doing nothing.
+- **Archiving logs by age can delete an entire history in one write.** An archived file keeps its
+  original creation time across the rename, so a file that stayed open for weeks is judged too old
+  the moment it finally rolls over, and the whole archive goes in a single retention pass — measured
+  against real files on disk, not by reading the framework's configuration. Keep a count of
+  archives instead of an age.
+- **Asking at write time which line of code wrote an entry costs more than letting the compiler
+  supply it.** Measured at 2.2 times the cost of the compiler-supplied caller information, which
+  costs nothing.
+- **A packaged application can be handed a frozen copy of its own log file by the operating
+  system's container mechanism.** One measured case was three weeks stale while the file looked
+  entirely normal. Confirm a read through a route that bypasses the container view before trusting
+  what the file says.
+
 ## Take the reference
 
 Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Primitives` itself;
