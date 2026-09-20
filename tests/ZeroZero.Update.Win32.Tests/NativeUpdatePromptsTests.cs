@@ -109,30 +109,33 @@ public class NativeUpdatePromptsTests
         string text = NativeUpdatePrompts.CannotInstallText(FakeUpdateService.NotReady(outcome));
 
         Assert.Contains(reason, text);
-        Assert.Contains("has been run", text);
+        Assert.EndsWith(NativeUpdatePrompts.RefusalAdvice, text);
     }
 
+    /// <summary>Each verdict is worded for itself, every refusal ends the same way, and nothing
+    /// claims the file was removed: removing it is best-effort and its failures are swallowed.</summary>
     [Theory]
     [InlineData(VerificationVerdict.HashMismatch, "not the file the release published")]
-    [InlineData(VerificationVerdict.NotSigned, "Do not run it by hand")]
-    [InlineData(VerificationVerdict.SignatureInvalid, "Do not run it by hand")]
-    [InlineData(VerificationVerdict.SignerMismatch, "Do not run it by hand")]
-    [InlineData(VerificationVerdict.CertificateNotPinned, "Do not run it by hand")]
-    public void CannotInstallText_ForARefusalNamesTheVerdictAndTheAdvice(VerificationVerdict verdict, string advice)
+    [InlineData(VerificationVerdict.NotSigned, "carries no signature")]
+    [InlineData(VerificationVerdict.SignatureInvalid, "altered since it was signed")]
+    [InlineData(VerificationVerdict.SignerMismatch, "signed by another publisher")]
+    [InlineData(VerificationVerdict.CertificateNotPinned, "certificate this version does not accept")]
+    public void CannotInstallText_ForARefusalNamesTheVerdictAndSaysNothingRan(VerificationVerdict verdict, string sentence)
     {
         string text = NativeUpdatePrompts.CannotInstallText(FakeUpdateService.NotReady(PrepareOutcome.Refused, verdict));
 
-        Assert.Contains("was refused and has not been run", text);
-        Assert.Contains("refused for the test's reason", text);
-        Assert.Contains("has been deleted", text);
-        Assert.Contains(advice, text);
+        Assert.Contains(sentence, text);
+        Assert.EndsWith(NativeUpdatePrompts.RefusalAdvice, text);
+        Assert.DoesNotContain("delet", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public void LaunchFailedText_CarriesTheDetail()
     {
-        Assert.Equal("The installer could not be started: refused at launch: the file changed.",
-            NativeUpdatePrompts.LaunchFailedText(new LaunchResult(false, "refused at launch: the file changed")));
+        string text = NativeUpdatePrompts.LaunchFailedText(new LaunchResult(false, "refused at launch: the file changed"));
+
+        Assert.StartsWith("The installer could not be started: refused at launch: the file changed.", text);
+        Assert.EndsWith(NativeUpdatePrompts.RefusalAdvice, text);
     }
 
     [Fact]

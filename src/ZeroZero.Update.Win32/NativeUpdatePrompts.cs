@@ -14,20 +14,30 @@ public sealed class NativeUpdatePrompts : IUpdatePrompts
 
     internal const string NothingReleasedText = "No release has been published yet.";
 
+    /// <summary>How every refusal ends. Nothing here says the file was removed: removing it is
+    /// best-effort, its failures are logged rather than shown, and a sentence claiming it would be
+    /// false in front of a person often enough to matter.</summary>
+    internal const string RefusalAdvice = "The file was not run. Update from the release page instead.";
+
     private readonly IntPtr _owner;
     private readonly string _applicationName;
     private readonly bool _topmost;
+    private readonly Func<ReleaseInfo, string?>? _releaseNotes;
 
     /// <param name="owner">The window the dialogs are modal to, or zero for none.</param>
     /// <param name="applicationName">The caption of every dialog, and the name in their text.</param>
     /// <param name="topmost">Keep the message boxes above every other window — for a tray
     /// application with no window to bring them forward.</param>
-    public NativeUpdatePrompts(IntPtr owner, string applicationName, bool topmost = false)
+    /// <param name="releaseNotes">The text behind the install dialog's release-notes expander, for
+    /// an application that keeps its own notes. Null, or a null return, takes the release body with
+    /// its markdown stripped, as it is without this; an empty return leaves the expander out.</param>
+    public NativeUpdatePrompts(IntPtr owner, string applicationName, bool topmost = false, Func<ReleaseInfo, string?>? releaseNotes = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(applicationName);
         _owner = owner;
         _applicationName = applicationName;
         _topmost = topmost;
+        _releaseNotes = releaseNotes;
     }
 
     public InstallChoice AskToInstall(ReleaseInfo release, Version runningVersion)
@@ -60,7 +70,8 @@ public sealed class NativeUpdatePrompts : IUpdatePrompts
 
     internal TaskDialogRequest BuildInstallRequest(ReleaseInfo release, Version runningVersion)
     {
-        string notes = ReleaseNotesText.Strip(release.Body);
+        // The host's text is taken as written; only the release body is stripped of its markdown.
+        string notes = _releaseNotes?.Invoke(release) ?? ReleaseNotesText.Strip(release.Body);
         return new TaskDialogRequest
         {
             Caption = _applicationName,
@@ -107,39 +118,54 @@ public sealed class NativeUpdatePrompts : IUpdatePrompts
         };
     }
 
+    /// <summary>Why the update was not installed: one plain sentence per reason, each ending the
+    /// same way — the file was not run, and the release page is where to go instead.</summary>
     internal static string CannotInstallText(PreparedUpdate update)
     {
         ArgumentNullException.ThrowIfNull(update);
-        return update.Outcome switch
+        string reason = update.Outcome switch
         {
-            PrepareOutcome.Refused =>
-                $"The downloaded installer was refused and has not been run: {update.Verification?.Detail ?? update.Detail}.\n\nThe file has been deleted. {RefusalAdvice(update.Verification)}",
+            PrepareOutcome.Refused => RefusedText(update),
             PrepareOutcome.HashNotPublished =>
-                "The release publishes no SHA-256 for its installer, so a download could not be verified. Nothing was downloaded and nothing has been run.",
+                "The release publishes no SHA-256 for its installer, so a download could not be checked against one, and nothing was downloaded.",
             PrepareOutcome.HashAmbiguous =>
-                "The release publishes more than one SHA-256, so the installer's cannot be told from the rest. Nothing was downloaded and nothing has been run.",
+                "The release publishes more than one SHA-256, so the installer's cannot be told from the rest, and nothing was downloaded.",
             PrepareOutcome.InstallerAssetMissing =>
-                $"The release carries no file named {update.InstallerFileName}. Nothing has been run.",
+                $"The release carries no file named {update.InstallerFileName}, so there was nothing to download.",
             PrepareOutcome.DownloadFailed =>
-                $"The download did not complete: {update.Detail}. Nothing has been run.",
+                $"The download did not complete: {update.Detail}.",
             _ => $"The update was not installed: {update.Detail}.",
         };
+        return $"{reason}\n\n{RefusalAdvice}";
     }
+
+    /// <summary>A refusal by verification, worded per verdict. The verifier's own sentence is
+    /// carried where it names something — a hash, a publisher, a thumbprint, a Windows code — and
+    /// left out where it would only repeat the sentence above it.</summary>
+    private static string RefusedText(PreparedUpdate update) => update.Verification?.Verdict switch
+    {
+        VerificationVerdict.HashMismatch =>
+            $"The downloaded installer is not the file the release published: {update.Verification.Detail}.",
+        VerificationVerdict.NotSigned =>
+            "The downloaded installer carries no signature, so there is nothing to say who made it.",
+        VerificationVerdict.SignatureInvalid =>
+            "The downloaded installer has been altered since it was signed.",
+        VerificationVerdict.SignerMismatch =>
+            $"The downloaded installer is signed by another publisher: {update.Verification.Detail}.",
+        VerificationVerdict.CertificateNotPinned =>
+            $"The downloaded installer spells the expected publisher's name with a certificate this version does not accept: {update.Verification.Detail}.",
+        VerificationVerdict.FileMissing =>
+            "The downloaded installer was no longer there to be checked.",
+        VerificationVerdict.SignatureCheckFailed =>
+            $"Windows refused the downloaded installer's signature: {update.Verification.Detail}.",
+        _ => $"The downloaded installer was refused: {update.Verification?.Detail ?? update.Detail}.",
+    };
 
     internal static string LaunchFailedText(LaunchResult result)
     {
         ArgumentNullException.ThrowIfNull(result);
-        return $"The installer could not be started: {result.Detail}.";
+        return $"The installer could not be started: {result.Detail}.\n\n{RefusalAdvice}";
     }
-
-    private static string RefusalAdvice(VerificationResult? verification) => verification?.Verdict switch
-    {
-        VerificationVerdict.HashMismatch =>
-            "The download is not the file the release published. Try again later; if it happens again, take the installer from the release page.",
-        VerificationVerdict.NotSigned or VerificationVerdict.SignatureInvalid or VerificationVerdict.SignerMismatch or VerificationVerdict.CertificateNotPinned =>
-            "The file is not signed by the publisher this version expects. Do not run it by hand.",
-        _ => "",
-    };
 
     private static string Display(Version version) =>
         version.Revision > 0 ? version.ToString(4) : version.Build >= 0 ? version.ToString(3) : version.ToString(2);

@@ -11,24 +11,29 @@ public enum SignerMatch
     /// <summary>The subject is another name.</summary>
     SubjectDiffers,
 
-    /// <summary>The subject is right, the machine does not trust the chain, and the certificate is
-    /// not one the application pins — a self-signed certificate spelling the right name.</summary>
+    /// <summary>The subject is right, the machine does not trust the chain, the certificate is not
+    /// one the application pins, and the application does not accept the name alone — a self-signed
+    /// certificate spelling the right name.</summary>
     CertificateNotPinned,
 }
 
 /// <summary>Who must have signed the installer: the certificate subject, and the thumbprints of the
 /// certificates the application accepts when the machine does not trust the chain — which is every
 /// machine the studio's self-signed certificate has not been installed on. A subject alone would
-/// accept any self-signed certificate that spells the same name.</summary>
+/// accept any self-signed certificate that spells the same name, so a pin is required there unless
+/// the application opts out of it through <see cref="AcceptsSelfSignedSubject"/>.</summary>
 public sealed class ExpectedSigner
 {
     /// <param name="subject">The subject as .NET renders it — <c>CN=Name, O=Organisation, C=NO</c>.</param>
     /// <param name="certificateThumbprints">SHA-1 (40 hex) or SHA-256 (64 hex) thumbprints; separators
     /// and case are ignored. A certificate about to be rotated in is pinned one release ahead.</param>
-    public ExpectedSigner(string subject, IEnumerable<string>? certificateThumbprints = null)
+    /// <param name="acceptSelfSignedSubject">Whether the publisher name alone carries an untrusted
+    /// chain. Off unless the application asks for it; see <see cref="AcceptsSelfSignedSubject"/>.</param>
+    public ExpectedSigner(string subject, IEnumerable<string>? certificateThumbprints = null, bool acceptSelfSignedSubject = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(subject);
         Subject = NormaliseSubject(subject);
+        AcceptsSelfSignedSubject = acceptSelfSignedSubject;
 
         var pins = new HashSet<string>(StringComparer.Ordinal);
         foreach (string thumbprint in certificateThumbprints ?? [])
@@ -41,14 +46,26 @@ public sealed class ExpectedSigner
     /// <summary>Upper-case hex, no separators.</summary>
     public IReadOnlySet<string> CertificateThumbprints { get; }
 
+    /// <summary>Whether an intact signature by this subject is enough under a chain the machine does
+    /// not trust, with no pinned thumbprint. Chosen per application and off by default: with it off
+    /// a pin stays required there. It tolerates an untrusted root and nothing else — every other
+    /// chain fault the signature check reports, expiry included, still refuses — and the subject is
+    /// compared before the untrusted chain is tolerated, so another publisher's self-signed
+    /// certificate cannot reach it. What it knowingly accepts is a look-alike certificate minted
+    /// with the same name.</summary>
+    public bool AcceptsSelfSignedSubject { get; }
+
     /// <param name="chainTrusted">Whether the machine trusts the chain the certificate sits in. A
-    /// trusted chain needs the subject only; an untrusted one needs a pinned thumbprint as well.</param>
+    /// trusted chain needs the subject only; an untrusted one needs a pinned thumbprint as well,
+    /// unless <see cref="AcceptsSelfSignedSubject"/> is on.</param>
     public SignerMatch Match(X509Certificate2 certificate, bool chainTrusted, out string reason)
     {
         ArgumentNullException.ThrowIfNull(certificate);
 
+        // The name is compared whole and without case, as X.500 compares a directory string: a
+        // partial match is not a match, and the rendering above settles the spacing on both sides.
         string subject = NormaliseSubject(certificate.Subject);
-        if (!string.Equals(subject, Subject, StringComparison.Ordinal))
+        if (!string.Equals(subject, Subject, StringComparison.OrdinalIgnoreCase))
         {
             reason = $"signed by '{subject}', not by '{Subject}'";
             return SignerMatch.SubjectDiffers;
@@ -68,6 +85,12 @@ public sealed class ExpectedSigner
             return SignerMatch.Matched;
         }
 
+        if (AcceptsSelfSignedSubject)
+        {
+            reason = $"signed by '{subject}' under a chain this machine does not trust, accepted on the publisher name alone; the certificate's SHA-256 thumbprint is {sha256}";
+            return SignerMatch.Matched;
+        }
+
         reason = CertificateThumbprints.Count == 0
             ? $"signed by '{subject}' under a chain this machine does not trust, and the application pins no certificate; the certificate's SHA-256 thumbprint is {sha256}"
             : $"signed by '{subject}' under a chain this machine does not trust, with a certificate the application does not pin ({sha256})";
@@ -81,7 +104,7 @@ public sealed class ExpectedSigner
     {
         try
         {
-            return new X500DistinguishedName(subject).Decode(X500DistinguishedNameFlags.Reversed);
+            return new X500DistinguishedName(subject.Trim()).Decode(X500DistinguishedNameFlags.Reversed).Trim();
         }
         catch (CryptographicException ex)
         {
