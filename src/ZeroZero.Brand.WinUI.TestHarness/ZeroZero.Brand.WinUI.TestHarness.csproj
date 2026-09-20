@@ -41,6 +41,9 @@
     <!-- The tray host, driven from a rendered icon, a tooltip and a menu of the rig's own; the
          process-state test starts the rig in this mode and measures the process from outside. -->
     <ProjectReference Include="..\ZeroZero.Tray.WinUI\ZeroZero.Tray.WinUI.csproj" />
+    <!-- The shared update window, driven stage by stage from fabricated releases so each can be
+         captured, and driven through the flow so the path that shows nothing can be measured. -->
+    <ProjectReference Include="..\ZeroZero.Update.WinUI\ZeroZero.Update.WinUI.csproj" />
   </ItemGroup>
 
   <ItemGroup>

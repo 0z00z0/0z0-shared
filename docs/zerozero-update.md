@@ -1,16 +1,21 @@
 # The update component
 
-`ZeroZero.Update.Win32` is the entry point: the update dialogs, worded here and marshalled by the
-Win32 foundation, and the check-ask-download-verify-launch orchestration that hands over to the
-application's own shutdown. It carries `ZeroZero.Update`, the flow without its dialogs: the latest
+`ZeroZero.Update.WinUI` is the entry point: one window in the studio's own style for every step a
+person sees during an update. It carries `ZeroZero.Update.Win32`, the orchestration and the
+wording — the check-ask-download-verify-launch flow that hands over to the application's own
+shutdown, what each outcome says as plain sentences, and the interface a surface implements to show
+them. That in turn carries `ZeroZero.Update`, the flow with nothing on screen at all: the latest
 GitHub release against the running version, the download into a fresh private directory, the
 verification of the installer before it runs, the launch-or-refuse policy, the stale-download sweep
-and the check scheduler. Both are plain `net10.0` and declare themselves Windows-only.
-`ZeroZero.Update` takes `ZeroZero.Primitives` for the log sink and the version reader;
-`ZeroZero.Update.Win32` takes `ZeroZero.Win32` for the task dialog and the message boxes. No
-package reference in either.
+and the check scheduler.
 
-The assemblies are versioned as `UpdateVersion` in `Versions.props` and released under
+`ZeroZero.Update` and `ZeroZero.Update.Win32` are plain `net10.0` and declare themselves
+Windows-only; `ZeroZero.Update.WinUI` targets WinUI. `ZeroZero.Update` takes `ZeroZero.Primitives`
+for the log sink and the version reader; `ZeroZero.Update.WinUI` takes `ZeroZero.Brand.WinUI` for
+the bracket action button and the studio typeface, and `ZeroZero.Win32` for monitor metrics and the
+count of transient windows.
+
+The three assemblies are versioned as `UpdateVersion` in `Versions.props` and released under
 `update-v<x.y.z>` tags, with notes under `docs/release-notes/update/`;
 [`releasing.md`](releasing.md) has the procedure. The component releases after `primitives` and
 `win32` are on the feed at the versions it references.
@@ -20,8 +25,8 @@ The assemblies are versioned as `UpdateVersion` in `Versions.props` and released
 | | |
 |---|---|
 | SDK | .NET 10 |
-| Platform | Windows. Both assemblies target plain `net10.0` and declare themselves Windows-only through `SupportedOSPlatform`, with no version: nothing here needs a build floor, and neither project states one. The signature check is WinVerifyTrust. An application taking the component alongside the WinUI components inherits their floor, not one from here. |
-| Manifest | The install dialog is a task dialog, which needs common controls version 6 in the consuming application's own manifest; [`zerozero-win32.md`](zerozero-win32.md) carries the declaration. Without it the question is asked as a yes-or-no message box, which costs two things: the release notes, which the task dialog shows as its detail, and the third choice — "Open the release page" — so a person offered the message box can install or defer and cannot read the notes in a browser first. |
+| Platform | Windows. The two plain assemblies target `net10.0` and declare themselves Windows-only through `SupportedOSPlatform`, with no version. The signature check is WinVerifyTrust. |
+| The application | Able to show a WinUI window, and to call the flow from the thread that owns its windows. There is no path that shows nothing but a message box: a tool with no window at all takes `ZeroZero.Update` and supplies prompts of its own. |
 | The release | A GitHub release, not a draft and not a pre-release, whose tag is a plain version (`v1.2.3`), which carries an asset named exactly as `InstallerFileName` says with the version substituted, and whose body carries the installer's SHA-256 as the only *distinct* 64-digit hexadecimal token in it — one value, repeated as often as the notes like. |
 | The installer | Authenticode-signed by the expected signer, per-user, and able to start while the application exits: the flow launches it without elevation and the application exits once it has started. |
 
@@ -67,13 +72,14 @@ The assemblies are versioned as `UpdateVersion` in `Versions.props` and released
 
 `ZeroZero.Update.Win32`:
 
-- **`NativeUpdatePrompts`** — the install question as a task dialog with three command links —
-  install now, not now, open the release page — with the release notes as its expandable detail,
-  and message boxes for up to date, nothing released, a check that failed, an update that cannot
-  be installed and a launch that failed. The expander's text is the release body with its markdown
-  stripped, unless the application supplies its own through the `releaseNotes` argument. Every
-  refusal has a sentence of its own and ends the same way: the file was not run, and the release
-  page is where to go instead.
+- **`UpdateMessages`** — every sentence the update puts in front of a person, as plain strings:
+  the question's headline and body, the download's headline and the line under its bar, and one
+  sentence per outcome that stops an install. Apart from any window, so a surface written outside
+  this repository words an outcome exactly as the shared one does. Every refusal has a sentence of
+  its own and ends the same way: the file was not run, and the release page is where to go instead.
+- **`IUpdatePrompts`** — what a surface implements. Every call is awaited and does not complete
+  until the person has chosen or read what it put on screen, so nothing in the flow runs behind a
+  window still in front of them.
 - **`UpdateFlow`** — `RunAsync(trigger)`: check, ask, prepare, launch, then call the application's
   shutdown, returning an `UpdateFlowRun` carrying the result, the check it read and the release
   where there is one. A manual run reports every outcome; a scheduled one speaks only when there is
@@ -81,7 +87,106 @@ The assemblies are versioned as `UpdateVersion` in `Versions.props` and released
   and hands the release back for the caller's own surface. `InstallAsync(release)` starts an update
   from a release already found, without checking again. One install at a time, and one check at a
   time: a caller arriving while a check is in flight joins it and reads its result.
-  `UpdateFlowOptions.Progress` is where the download's progress goes for a host driving the flow.
+  `UpdateFlowOptions.Progress` is where a host's own progress goes, alongside the window's bar.
+
+`ZeroZero.Update.WinUI`:
+
+- **`UpdateWindow`** — the window itself, shown one stage at a time. Frameless on a Mica backdrop,
+  always on top, centred on the monitor under the cursor and sized to its own content at whatever
+  scaling that monitor has. It counts itself among the application's transient windows while it is
+  open, so a window beneath it that dismisses itself on focus loss stays where it is.
+- **`UpdateWindowPrompts`** — the flow's prompts, driving one window from the question through the
+  download to the answer. This is what an application constructs.
+- **`UpdateWindowOptions`** — the application's name, the theme, and where its release notes come
+  from where it keeps its own. The wording is the component's, so there is nothing else to set.
+
+## What a person sees
+
+One window, not several. The question, the download that follows it and the answer that follows
+that are one act, so pressing "Install now" leaves the window where it is and starts the download
+in it: nothing disappears and reappears in the middle of a gesture. The notice that nothing newer
+exists and a check that did not complete open the same window at its last stage.
+
+Each picture below is the capture script's output, so it shows the window as it renders rather than
+what the markup claims. Every one is at 175 per cent display scaling.
+
+**The question, with the release's own notes.** Three choices, one per line.
+
+| Light | Dark |
+|---|---|
+| ![The install question, light](screenshots/update-question-light.png) | ![The install question, dark](screenshots/update-question-dark.png) |
+
+**The download.** The bar and the byte count, and no way out: closing would take the window off a
+download it cannot stop.
+
+| Light | Dark |
+|---|---|
+| ![The download, light](screenshots/update-download-light.png) | ![The download, dark](screenshots/update-download-dark.png) |
+
+**The check after the last byte.** Verification reports nothing, so a bar sitting full with a byte
+count still under it would read as a download that stalled; the headline and the line move instead.
+
+| Light | Dark |
+|---|---|
+| ![Checking the download, light](screenshots/update-verifying-light.png) | ![Checking the download, dark](screenshots/update-verifying-dark.png) |
+
+**A refusal**, with the verdict's own sentence and the advice every refusal ends on.
+
+| Light | Dark |
+|---|---|
+| ![A refusal, light](screenshots/update-refusal-light.png) | ![A refusal, dark](screenshots/update-refusal-dark.png) |
+
+**An installer that would not start.**
+
+| Light | Dark |
+|---|---|
+| ![A launch that failed, light](screenshots/update-failure-light.png) | ![A launch that failed, dark](screenshots/update-failure-dark.png) |
+
+**Nothing newer exists.**
+
+| Light | Dark |
+|---|---|
+| ![Up to date, light](screenshots/update-uptodate-light.png) | ![Up to date, dark](screenshots/update-uptodate-dark.png) |
+
+**A check that did not complete**, worded per outcome.
+
+| Light | Dark |
+|---|---|
+| ![A check that failed, light](screenshots/update-check-failed-light.png) | ![A check that failed, dark](screenshots/update-check-failed-dark.png) |
+
+### A window opened on top of another
+
+A window that dismisses itself when it loses focus — the shared About window is one — would close
+the moment the update window appeared in front of it, taking half of what the reader asked for with
+it. `ZeroZero.Win32`'s `TransientWindows` is a count of the application's own short-lived windows;
+the update window counts itself among them for as long as it is open, and a self-dismissing window
+asks `TransientWindows.AnyOpen` before dismissing. An application whose own window closes on focus
+loss adds the same question to it.
+
+A window that was deactivated while a transient was open is not re-examined when the last one
+closes, so it stays open until the reader looks away again. That is the trade: a window outstaying
+its welcome by one glance beats one vanishing mid-update.
+
+### The harness
+
+`src/ZeroZero.Brand.WinUI.TestHarness` opens the window from fabricated releases, so nothing about
+its appearance has to be judged from a build:
+
+```powershell
+dotnet run --project src/ZeroZero.Brand.WinUI.TestHarness -- --update --stage question
+```
+
+`--stage` takes `question`, `download`, `verifying`, `refusal`, `failure`, `uptodate` or
+`check-failed`, and opens that one stage in both themes side by side; the window shows one stage at
+a time, so each costs a run of its own. `--anchor` adds the pure-white patch a capture is checked
+against. `--update --silent <path>` runs the trigger that shows nothing over a service with a
+release to offer, so the windows it did not open can be counted from outside, and
+`--update --over-about update|plain --probe <path>` opens the About window and then a window on top
+of it and records whether the one beneath dismissed itself — `plain` is the control, a window that
+counts itself among nothing, which is how the measurement is known to be able to fail.
+
+`scripts/Capture 'Update window' screenshots.ps1` runs the harness once per stage and writes the
+fourteen pictures above into `docs/screenshots/`.
 
 ## Verification before execution
 
@@ -161,7 +266,7 @@ release of the family carries one.
 
 ## Wiring
 
-Once, at start-up, on the thread that owns the dialogs:
+Once, at start-up, on the thread that owns the windows:
 
 ```csharp
 var options = new UpdateOptions
@@ -177,7 +282,7 @@ var options = new UpdateOptions
 var service = new UpdateService(options);
 service.SweepStaleDownloads(TimeSpan.FromDays(1));
 
-var prompts = new NativeUpdatePrompts(ownerWindowHandle, "Product", topmost: true);
+var prompts = new UpdateWindowPrompts(new UpdateWindowOptions { ApplicationName = "Product" });
 var flow = new UpdateFlow(service, prompts, new UpdateFlowOptions
 {
     Shutdown = () =>
@@ -197,7 +302,7 @@ Which trigger a surface uses decides what reaches the screen:
 
 | Trigger | What appears |
 |---|---|
-| `Manual` | Every outcome. For a surface with nothing of its own to report on — a tray menu item. |
+| `Manual` | Every outcome, each in the window. For a surface with nothing of its own to report on — a tray menu item. |
 | `Scheduled` | Nothing, except the install question when a release is found. |
 | `Silent` | Nothing at all, a release included. The run carries the result and the release, and the caller reports on its own button. |
 
@@ -210,9 +315,9 @@ if (run.Result == UpdateFlowResult.UpdateAvailable) ShowTheButton(run.Release!);
 await flow.InstallAsync(release);
 ```
 
-`RunAsync` continues on the caller's context after each await, so the prompts appear where the call
-was made; the scheduler's callback runs on a pool thread, and the application marshals it to its
-dialog thread as the sketch shows.
+`RunAsync` continues on the caller's context after each await, so the window appears where the call
+was made; the scheduler's callback runs on a pool thread, and the application marshals it to the
+thread that owns its windows as the sketch shows.
 
 **A caller arriving while a check is running joins it.** It is handed that same check and reads its
 result, rather than starting a second request or being refused, so an About window opening during
@@ -223,10 +328,10 @@ started the check is the one whose cancellation token is inside the request.
 
 ## Reporting the download
 
-A 64 MB installer takes long enough that an application showing nothing looks stopped. The
-component measures the download and hands the measurements out; **it draws nothing of its own**,
-for any trigger, so what appears on screen — a bar, a percentage, a line of text, nothing at all —
-is the application's decision and lives on the application's own surface.
+A 64 MB installer takes long enough that a window showing nothing looks stopped. **The window draws
+the bar itself**, from the same measurements, so an application that wants nothing more attaches no
+reporter of its own. A reporter attached in the options is reported to as well, for an application
+that also wants the download on a surface of its own — a tray tooltip, a status line.
 
 Each report is a `DownloadProgress`: the bytes received so far, and the total where there is one.
 
@@ -241,7 +346,8 @@ Each report is a `DownloadProgress`: the bytes received so far, and the total wh
 The total is the response's `Content-Length` where the server sends one, and the size the release
 declares where it does not. It is null only when neither is available.
 
-A host driving the flow attaches its reporter once, in the options:
+A host that wants the download on a surface of its own attaches its reporter once, in the options,
+alongside the window's own bar:
 
 ```csharp
 var flow = new UpdateFlow(service, prompts, new UpdateFlowOptions
@@ -267,20 +373,20 @@ does not wait for a report to be handled.
   signer with its pins. The component carries none of its own.
 - **The running version**, when the entry assembly is not the application — a plug-in host, a
   test — through `UpdateOptions.RunningVersion`.
-- **The owner window handle and the application name** the dialogs take.
+- **The application name and the theme** the window takes. The wording is the component's.
 - **The shutdown callback.** The flow calls it once the installer process exists and never before;
   when and how the application exits is its own decision. An application armed with the lifecycle
   component marks the exit deliberate first, or the relaunch hook starts it again under the
   installer.
-- **Where the check is offered** — a menu item, the About window, both — and the thread the
-  dialogs live on.
+- **Where the check is offered** — a menu item, the About window, both — and the thread its
+  windows live on.
 - **What a silent check shows.** The component shows nothing for that trigger, so the button, its
   waiting state, its label when a release is found and what it does with a failure are the
   application's.
-- **What the download looks like.** The component measures it and reports the numbers; the bar,
-  the wording, the thread it is drawn on and whether anything is shown at all are the
-  application's.
-- **The release-notes text**, where the application keeps its own rather than the release body.
+- **A second surface for the download**, where the window's own bar is not the whole of what the
+  application wants shown.
+- **The release-notes text**, where the application keeps its own rather than the release body,
+  through `UpdateWindowOptions.ReleaseNotes`.
 - **The installer itself**: where it puts things, per-user or per-machine, elevation, and the
   step that closes a running application. The flow assumes a per-user installer that needs no
   elevation and an application that exits once the installer has started.
@@ -307,11 +413,21 @@ does not wait for a report to be handled.
   release; the install starts from `InstallAsync` when the person asks for it.
 - **Progress stops where the download does, and the install does not.** Verification runs after the
   last byte arrives and reports nothing, so a bar that has reached its end sits full while the hash
-  and the signature are checked. A surface that treats the final report as "finished" says so too
-  early; the flow's own result is what finished means.
-- **Attaching no reporter is the whole of turning progress off.** There is no switch, because there
-  is nothing to switch: an application that supplies none is measured no differently from one on
-  0.9.0.
+  and the signature are checked. The window says so; a surface of the application's own that treats
+  the final report as "finished" says so too early, and the flow's own result is what finished
+  means.
+- **The download has no way out.** Closing the window would not stop the download, so the cross is
+  hidden while it runs. `UpdateOptions.DownloadTimeout` is what bounds the wait.
+- **A window that closes on focus loss has to be told.** The update window counts itself among the
+  application's transient windows; a window of the application's own that dismisses itself on focus
+  loss asks `TransientWindows.AnyOpen` before it does, or it closes the moment the update window
+  appears on top of it.
+- **Every prompt is awaited.** The flow does not move on while a window is still in front of a
+  person, so a surface of the application's own that completes before the person has answered will
+  find the update running behind it.
+- **Attaching no reporter turns off the application's own surface, not the window's.** The window
+  draws its bar from the same measurements either way; the reporter in the options is a second
+  place for them to go.
 - **One hash in the body, the installer's.** A second distinct hash anywhere in the notes — a
   portable build's, a checksum of a checksum — makes the release un-installable through the flow.
 - **The tag is a plain version.** `v1.2.3` or `1.2.3`; a pre-release suffix, a component-prefixed
@@ -335,20 +451,30 @@ does not wait for a report to be handled.
 
 ## Take the reference
 
-Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Update.Win32`; it brings
-`ZeroZero.Update`, `ZeroZero.Primitives` and `ZeroZero.Win32` with it. A headless tool takes
-`ZeroZero.Update` alone and supplies its own prompts.
+Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Update.WinUI`; it brings
+`ZeroZero.Update.Win32`, `ZeroZero.Update`, `ZeroZero.Primitives`, `ZeroZero.Brand.WinUI` and
+`ZeroZero.Win32` with it. An application that wants the orchestration and a surface of its own
+takes `ZeroZero.Update.Win32`, and a headless tool takes `ZeroZero.Update` alone.
 
 The tests are in `tests/ZeroZero.Update.Tests` and `tests/ZeroZero.Update.Win32.Tests`, plain
-`net10.0`, and run on Windows only. The release server is a loopback listener that writes exactly
+`net10.0`, and run on Windows only. The window has none: it is proved by the harness and the
+pictures above. The release server is a loopback listener that writes exactly
 the status, headers and bytes each test says, so a download that ends early is a socket closing
 early. The verifier is exercised against real files: copies of the assembly under test signed
 through PowerShell's `Set-AuthenticodeSignature` by certificates made in the test — the expected
 signer, a stranger, and an impostor spelling the expected name with a key of its own — plus the
 unsigned, tampered and truncated forms; the trusted-chain form runs against the runtime's own core
 library where the machine trusts its signature, and is reported as skipped where it does not. The
-launcher in the tests records and starts nothing, and the dialogs are read back as requests rather
-than shown. Nothing reaches the internet, no installer runs, and no dialog appears on screen.
+launcher in the tests records and starts nothing, and the sentences are read back rather than
+shown. Nothing reaches the internet, no installer runs, and no window appears on screen.
+
+Status (2026-09-20): 0.11.0's window is proved by the harness and by the fourteen pictures above,
+not by tests. Three things were measured rather than reasoned about: the silent trigger over a
+service with a release to offer created no visible window at any point in the run; the About window
+survived an update window opening on top of it and closed under a control window that counts itself
+among nothing, so the count is what does the work; and the window sized itself correctly at 175 per
+cent, the scaling every picture was taken at. **100 per cent has not been seen**, because the
+machine the pictures were taken on has one display and it runs at 175 per cent.
 
 Status (2026-09-20): 0.10.0's reporting interval and its final report are proved by having been run
 once, against a local server, rather than by tests of their own — the report count, their order, the

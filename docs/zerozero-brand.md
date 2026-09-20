@@ -59,7 +59,8 @@ References `ZeroZero.Brand.Core` and `ZeroZero.Win32`.
 - **`BrandAboutWindow`** — the shared, parameterised About popup (320 px wide, Mica backdrop, centred
   on the monitor under the cursor, no title bar, always-on-top). A thin shell hosting
   `BrandAboutControl` plus the tray-app-only "Check for Updates" button. **It closes as soon as it
-  loses focus**, whatever is on screen at the time; Escape and the close button take the same path.
+  loses focus**, whatever is on screen at the time, unless a transient window of the same
+  application is up; Escape and the close button take the same path.
   Its height comes from its own layout and never exceeds the monitor's work area. Takes its monitor and DPI
   metrics from the `ZeroZero.Win32` foundation assembly, so it has no dependency on a consuming
   app's own `NativeMethods` class.
@@ -222,15 +223,19 @@ var options = new BrandAboutOptions
 new BrandAboutWindow(options).Activate();
 ```
 
-**The window closes when it loses focus.** There is no setting and no exception — the release-notes
-panel being open does not hold it open, Escape does the same thing, and a fetch in flight is
-abandoned before the window goes. Two guards keep that rule safe to state so plainly: a deactivation
-arriving before the window has ever been activated is ignored, which is what stops a fast
-double-click on whatever opens the window from opening and closing it in one gesture — a second
-click landing after the window has already taken focus is an ordinary click away from it, and closes
-it; and a dismissal already under way cannot start a second one, since closing deactivates the
-window. An About surface that has to stay put is a
-case for hosting `BrandAboutControl` in a page instead.
+**The window closes when it loses focus.** There is no setting — the release-notes panel being open
+does not hold it open, Escape does the same thing, and a fetch in flight is abandoned before the
+window goes. Three guards keep that rule safe to state so plainly. A deactivation arriving before
+the window has ever been activated is ignored, which is what stops a fast double-click on whatever
+opens the window from opening and closing it in one gesture — a second click landing after the
+window has already taken focus is an ordinary click away from it, and closes it. A dismissal
+already under way cannot start a second one, since closing deactivates the window. And a
+deactivation while a transient window of the same application is on screen is ignored, because a
+window the reader asked for is not the reader looking away: pressing "Check for Updates" opens the
+update window on top of this one, and without that guard this one would close under it.
+`ZeroZero.Win32`'s `TransientWindows` is the count, and
+[`zerozero-win32.md`](zerozero-win32.md) says what is deliberately not re-examined afterwards. An
+About surface that has to stay put is a case for hosting `BrandAboutControl` in a page instead.
 
 **The update-check contract** — both callbacks are optional:
 
@@ -434,9 +439,11 @@ resolves them; `--probe <path>` beside it writes the colour and face that reache
 `--rows`, `--titlebar` and `--prompt` open the controls foundation assembly's surfaces
 ([`zerozero-controls.md`](zerozero-controls.md)), `--settings` the settings window shell
 ([`zerozero-settingsshell.md`](zerozero-settingsshell.md)), `--tray` the tray icon with its
-tooltip and menu ([`zerozero-tray.md`](zerozero-tray.md)), and `--native` the Win32 layer's
-dialogs. One component per run, so unrelated windows never land on top of each other. No scenario
-opens `BrandBracketButton` yet.
+tooltip and menu ([`zerozero-tray.md`](zerozero-tray.md)), `--update` the shared update window
+([`zerozero-update.md`](zerozero-update.md)), and `--native` the Win32 layer's dialogs. One
+component per run, so unrelated windows never land on top of each other. `BrandBracketButton` is
+on screen only through the update window, which uses one per choice; no scenario opens it on its
+own.
 
 Two scripts under `scripts/` drive the About scenarios:
 

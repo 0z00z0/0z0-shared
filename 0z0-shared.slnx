@@ -21,6 +21,7 @@
     <Project Path="src/ZeroZero.Tray.WinUI/ZeroZero.Tray.WinUI.csproj" />
     <Project Path="src/ZeroZero.Update/ZeroZero.Update.csproj" />
     <Project Path="src/ZeroZero.Update.Win32/ZeroZero.Update.Win32.csproj" />
+    <Project Path="src/ZeroZero.Update.WinUI/ZeroZero.Update.WinUI.csproj" />
     <Project Path="src/ZeroZero.Win32/ZeroZero.Win32.csproj" />
   </Folder>
   <Folder Name="/tests/">

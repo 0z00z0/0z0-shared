@@ -79,7 +79,8 @@ internal sealed class FakeUpdateService : IUpdateService
     public int SweepStaleDownloads(TimeSpan olderThan) => 0;
 }
 
-/// <summary>Prompts that answer what the test set and record what they were told.</summary>
+/// <summary>Prompts that answer what the test set and record what they were told. Nothing reaches
+/// a screen: every call completes at once, which is what an implementation drawing nothing does.</summary>
 internal sealed class RecordingPrompts : IUpdatePrompts
 {
     public InstallChoice Choice { get; set; } = InstallChoice.Install;
@@ -90,24 +91,56 @@ internal sealed class RecordingPrompts : IUpdatePrompts
     public List<UpdateCheckResult> CheckFailed { get; } = [];
     public List<PreparedUpdate> CannotInstall { get; } = [];
     public List<(PreparedUpdate Update, LaunchResult Result)> LaunchFailed { get; } = [];
+    public List<DownloadProgress> Reported { get; } = [];
+    public int Downloads { get; private set; }
+    public int Dismissals { get; private set; }
     public List<string> Sequence { get; } = [];
 
-    public InstallChoice AskToInstall(ReleaseInfo release, Version runningVersion)
+    public Task<InstallChoice> AskToInstallAsync(ReleaseInfo release, Version runningVersion)
     {
         Asked.Add(release);
         Sequence.Add("ask");
-        return Choice;
+        return Task.FromResult(Choice);
     }
 
-    public void SayUpToDate(Version runningVersion) => UpToDate.Add(runningVersion);
+    public IProgress<DownloadProgress>? BeginDownload(ReleaseInfo release)
+    {
+        Downloads++;
+        Sequence.Add("download");
+        return new Progress<DownloadProgress>(Reported.Add);
+    }
 
-    public void SayNothingReleased() => NothingReleased++;
+    public Task SayUpToDateAsync(Version runningVersion)
+    {
+        UpToDate.Add(runningVersion);
+        return Task.CompletedTask;
+    }
 
-    public void SayCheckFailed(UpdateCheckResult result) => CheckFailed.Add(result);
+    public Task SayNothingReleasedAsync()
+    {
+        NothingReleased++;
+        return Task.CompletedTask;
+    }
 
-    public void SayCannotInstall(PreparedUpdate update) => CannotInstall.Add(update);
+    public Task SayCheckFailedAsync(UpdateCheckResult result)
+    {
+        CheckFailed.Add(result);
+        return Task.CompletedTask;
+    }
 
-    public void SayLaunchFailed(PreparedUpdate update, LaunchResult result) => LaunchFailed.Add((update, result));
+    public Task SayCannotInstallAsync(PreparedUpdate update)
+    {
+        CannotInstall.Add(update);
+        return Task.CompletedTask;
+    }
+
+    public Task SayLaunchFailedAsync(PreparedUpdate update, LaunchResult result)
+    {
+        LaunchFailed.Add((update, result));
+        return Task.CompletedTask;
+    }
+
+    public void Dismiss() => Dismissals++;
 
     public int Said => UpToDate.Count + NothingReleased + CheckFailed.Count + CannotInstall.Count + LaunchFailed.Count;
 }

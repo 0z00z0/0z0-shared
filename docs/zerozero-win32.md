@@ -4,9 +4,9 @@
 dialog and the four message boxes, and dark native chrome for the process. Plain `net10.0`, no
 package references, no project references, no XAML and no Windows App SDK — which is what makes it
 **foundation** rather than a component, and what lets a console tool take it as readily as a WinUI
-application. The About window, the text prompt and the settings shell take their monitor metrics
-from here, the tray assembly the taskbar's scale, and the update component the marshalling of its
-dialogs.
+application. The About window, the text prompt, the settings shell and the update window take their
+monitor metrics from here, the tray assembly the taskbar's scale, and every window that dismisses
+itself on focus loss the count of transient windows that tells it not to.
 
 The assembly is versioned as `Win32Version` in `Versions.props` and released under `win32-v<x.y.z>`
 tags, with notes under `docs/release-notes/win32/`; [`releasing.md`](releasing.md) has the
@@ -49,6 +49,14 @@ the feed, so a change here releases first.
 - **`DarkChrome`** — `Apply(DarkChromeMode)` opts the process's native chrome, context menus above
   all, into the dark theme through two undocumented uxtheme entry points. Returns false on a Windows
   without them, where chrome stays light.
+- **`TransientWindows`** — how many of the application's own short-lived windows are on screen.
+  `Enter()` counts one until the scope is disposed, and `AnyOpen` is the question a window that
+  dismisses itself on focus loss asks before it does: one of its own application's windows taking
+  focus is not the reader looking elsewhere. Without it, opening a window on top of a
+  self-dismissing one closes the window beneath in the same gesture. A window deactivated while a
+  transient was open is not re-examined when the last one closes, so it stays open until the reader
+  looks away again — a window outstaying its welcome by one glance beats one vanishing mid-update.
+  The About window and the update window are the two that use it today.
 
 Not here, by design: which monitor a window goes on, the wording of any dialog, and the trust
 verification the update flow carries. Each stays with the code that owns the decision.

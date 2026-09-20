@@ -81,6 +81,15 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// message box naming the button pressed, and exits.
 /// </para>
 /// <para>
+/// <c>--update</c> opens the shared update window: <c>--stage &lt;name&gt;</c> puts one stage on
+/// screen in both themes side by side — question, download, verifying, refusal, failure, uptodate,
+/// check-failed — one stage per run, because the window shows one at a time.
+/// <c>--update --silent &lt;path&gt;</c> runs the trigger that shows nothing over a service with a
+/// release to offer, so the windows it did not open can be counted from outside, and
+/// <c>--update --over-about update|plain --probe &lt;path&gt;</c> opens the About window and then a
+/// window on top of it, recording whether the one beneath dismissed itself.
+/// </para>
+/// <para>
 /// <c>--tray</c> opens no window either: it puts the tray host's icon in the notification area
 /// from the rig's own drawing, tooltip and menu, and stays until Exit is chosen from the menu.
 /// <c>--file</c> hands the host a file the rig wrote once instead of frames per render;
@@ -135,6 +144,12 @@ public partial class App : Application
         {
             ShowNativeDialogs(commandLine.Any(a => a.Equals("--links", StringComparison.Ordinal)),
                               commandLine.Any(a => a.Equals("--stock", StringComparison.Ordinal)));
+            return;
+        }
+
+        if (commandLine.Any(a => a.Equals("--update", StringComparison.Ordinal)))
+        {
+            ShowUpdate(commandLine);
             return;
         }
 
@@ -555,6 +570,36 @@ public partial class App : Application
 
         NativeMessageBox.Information(IntPtr.Zero, "Native Dialog Demo", $"The dialog returned {pressed}.");
         Exit();
+    }
+
+    /// <summary>
+    /// The shared update window. <c>--stage &lt;name&gt;</c> opens one stage in both themes side by
+    /// side, which is the capture set; the window shows one stage at a time, so each costs a run.
+    /// <c>--silent &lt;path&gt;</c> runs the trigger that shows nothing over a service with a
+    /// release to offer and writes what the run answered, so the windows it did not open can be
+    /// counted from outside. <c>--over-about update|plain</c> opens the About window, which
+    /// dismisses itself on focus loss, then opens a window on top of it and records whether the one
+    /// beneath survived — <c>plain</c> is the control that says the measurement can fail.
+    /// </summary>
+    private void ShowUpdate(string[] commandLine)
+    {
+        if (ValueAfter(commandLine, "--silent") is { Length: > 0 } silentProbe)
+        {
+            _ = UpdateScenario.RunSilentAsync(silentProbe, Exit);
+            return;
+        }
+
+        if (ValueAfter(commandLine, "--over-about") is { Length: > 0 } mode)
+        {
+            _ = UpdateScenario.RunOverAboutAsync(mode, ValueAfter(commandLine, "--probe") ?? "over-about.txt", Exit);
+            return;
+        }
+
+        // Opened first: the update window does not dismiss itself, so the order only decides which
+        // window ends up in front, and the anchor belongs behind.
+        if (commandLine.Any(a => a.Equals("--anchor", StringComparison.Ordinal))) ShowAnchor();
+
+        UpdateScenario.ShowStage(ValueAfter(commandLine, "--stage") ?? "question");
     }
 
     /// <summary>

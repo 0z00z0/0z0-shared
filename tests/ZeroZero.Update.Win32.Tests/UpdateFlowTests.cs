@@ -157,6 +157,9 @@ public class UpdateFlowTests
         // The application exits only once the installer process exists.
         Assert.Equal(["check", "prepare", "launch", "shutdown"], _service.Sequence);
         Assert.Equal(0, _prompts.Said);
+        // The window is handed the download and taken off the screen before the application goes.
+        Assert.Equal(1, _prompts.Downloads);
+        Assert.Equal(1, _prompts.Dismissals);
     }
 
     [Theory]

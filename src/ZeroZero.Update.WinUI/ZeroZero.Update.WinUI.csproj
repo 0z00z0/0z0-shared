@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>ZeroZero.Update.WinUI</RootNamespace>
+    <Version>$(UpdateVersion)</Version>
+
+    <!-- WinUI 3 / Windows App SDK, unpackaged (no MSIX) — a class library consumed by unpackaged
+         apps, so it must not pull in packaging tooling itself. -->
+    <UseWinUI>true</UseWinUI>
+    <WinUISDKReferences>false</WinUISDKReferences>
+
+    <AssemblyTitle>ZeroZero.Update.WinUI</AssemblyTitle>
+    <Product>ZeroZero.Update.WinUI</Product>
+    <Description>The update component's entry point: one window in the studio's own style for every step a person sees during an update — the question with its release notes, the download with its progress, a refusal with its reason, a failure, and the notice that nothing newer exists. Carries ZeroZero.Update.Win32 and ZeroZero.Update with it.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The component's entry point carries the orchestration and the wording, so one reference
+         adopts the whole. -->
+    <ProjectReference Include="..\ZeroZero.Update.Win32\ZeroZero.Update.Win32.csproj" />
+    <!-- The bracket action button and the brand typeface the window renders in. The font resolves
+         under this reference because it ships inside the brand assembly's own folder. -->
+    <ProjectReference Include="..\ZeroZero.Brand.WinUI\ZeroZero.Brand.WinUI.csproj" />
+    <!-- Monitor and DPI metrics for sizing and centring, and the count of transient windows that
+         keeps a self-dismissing window beneath this one from closing itself. -->
+    <ProjectReference Include="..\ZeroZero.Win32\ZeroZero.Win32.csproj" />
+  </ItemGroup>
+
+</Project>
