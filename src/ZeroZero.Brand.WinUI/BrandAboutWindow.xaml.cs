@@ -89,7 +89,9 @@ public sealed partial class BrandAboutWindow : Window
     /// <summary>
     /// Losing focus dismisses the window. The first genuine activation arms it, so the deactivation
     /// a window receives while it is still coming up is ignored rather than read as the reader
-    /// having moved on.
+    /// having moved on, and a transient window of this application on screen holds it: an update
+    /// question opened from this window's own button would otherwise close the window that opened
+    /// it. <see cref="TransientWindows"/> says what is deliberately not re-examined afterwards.
     /// </summary>
     private void OnActivated(object sender, WindowActivatedEventArgs args)
     {
@@ -100,6 +102,7 @@ public sealed partial class BrandAboutWindow : Window
         }
 
         if (!_everActivated) return;
+        if (TransientWindows.AnyOpen) return;
 
         Dismiss();
     }

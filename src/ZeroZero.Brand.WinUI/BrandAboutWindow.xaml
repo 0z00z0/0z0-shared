@@ -36,9 +36,12 @@
         </StackPanel>
 
         <!-- Close button: window-only chrome, overlaid on the header band's top-right corner
-             (Margin approximates the band's own 16,12,16,12 padding so the two line up). -->
+             (Margin approximates the band's own 16,12,16,12 padding so the two line up).
+             U+00D7, the multiplication sign, because the brand face carries it: U+2715, the cross
+             this used, is not in Cascadia Mono and Windows drew it from whatever face it fell back
+             to — a different shape and weight in a window that is otherwise one face throughout. -->
         <Button x:Name="CloseBtn"
-                Content="✕" Width="32" Height="32"
+                Content="&#x00D7;" Width="32" Height="32"
                 Padding="0" FontSize="11"
                 FontFamily="{StaticResource BrandFont}"
                 Background="Transparent"

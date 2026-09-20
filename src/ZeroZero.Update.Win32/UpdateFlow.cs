@@ -44,6 +44,11 @@ public enum UpdateFlowResult
     /// <summary>A release newer than the running version was found and nothing was shown, because
     /// the trigger was <see cref="UpdateTrigger.Silent"/>. The run carries the release.</summary>
     UpdateAvailable,
+
+    /// <summary>The person stopped the download. Nothing was downloaded that is still on disk, the
+    /// directory it was going into is gone, and nothing ran. Not a failure and nothing is
+    /// reported: the person who stopped it knows what happened.</summary>
+    DownloadCancelled,
 }
 
 /// <summary>What a run did, and what it found.</summary>
@@ -63,19 +68,20 @@ public sealed class UpdateFlowOptions
     /// <summary>Opens the release page in the browser. The shell when null.</summary>
     public Action<Uri>? OpenReleasePage { get; init; }
 
-    /// <summary>Where the installer download's progress goes while an install runs, or null for
-    /// none. The flow draws nothing of its own from it: the report reaches whichever surface the
+    /// <summary>Where the installer download's progress goes while an install runs, besides the
+    /// update window's own bar, or null for none. The report reaches whichever surface the
     /// application attached, which decides what to show and marshals to its own thread. Both
     /// install paths carry it — <see cref="UpdateFlow.RunAsync"/> and
     /// <see cref="UpdateFlow.InstallAsync"/> — and a run that downloads nothing, a silent check
-    /// among them, reports nothing.</summary>
+    /// among them, reports nothing. An application content with the window's own bar attaches
+    /// none.</summary>
     public IProgress<DownloadProgress>? Progress { get; init; }
 
     public ILogSink Log { get; init; } = NullLogSink.Instance;
 }
 
 /// <summary>Check, ask, download, verify, launch, hand over. Call <see cref="RunAsync"/> from the
-/// thread that owns the dialogs: the continuation after each await comes back to the caller's
+/// thread that owns the windows: the continuation after each await comes back to the caller's
 /// context, which is where the prompts appear.</summary>
 public sealed class UpdateFlow
 {
@@ -113,10 +119,10 @@ public sealed class UpdateFlow
             case UpdateCheckOutcome.UpdateAvailable:
                 break;
             case UpdateCheckOutcome.UpToDate:
-                if (manual) _prompts.SayUpToDate(check.RunningVersion);
+                if (manual) await _prompts.SayUpToDateAsync(check.RunningVersion);
                 return new UpdateFlowRun(UpdateFlowResult.UpToDate, check);
             case UpdateCheckOutcome.NoReleases:
-                if (manual) _prompts.SayNothingReleased();
+                if (manual) await _prompts.SayNothingReleasedAsync();
                 return new UpdateFlowRun(UpdateFlowResult.NothingReleased, check);
             case UpdateCheckOutcome.RateLimited:
             case UpdateCheckOutcome.Unreachable:
@@ -124,7 +130,7 @@ public sealed class UpdateFlow
             case UpdateCheckOutcome.RequestFailed:
             case UpdateCheckOutcome.InvalidResponse:
             default:
-                if (manual) _prompts.SayCheckFailed(check);
+                if (manual) await _prompts.SayCheckFailedAsync(check);
                 return new UpdateFlowRun(UpdateFlowResult.CheckFailed, check);
         }
 
@@ -202,7 +208,7 @@ public sealed class UpdateFlow
 
     private async Task<UpdateFlowRun> InstallCoreAsync(ReleaseInfo release, Version runningVersion, CancellationToken cancellationToken)
     {
-        switch (_prompts.AskToInstall(release, runningVersion))
+        switch (await _prompts.AskToInstallAsync(release, runningVersion))
         {
             case InstallChoice.Later:
                 _log.Info($"Update to {release.TagName} declined for now.");
@@ -212,23 +218,57 @@ public sealed class UpdateFlow
                 return new UpdateFlowRun(UpdateFlowResult.ReleasePageOpened, Release: release);
         }
 
-        PreparedUpdate prepared = await _service.PrepareAsync(release, _options.Progress, cancellationToken);
+        DownloadSurface surface = _prompts.BeginDownload(release);
+        // The surface's own token beside the caller's: either stops the download, and the
+        // downloader removes the partial file and its directory on the way out.
+        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, surface.Cancelled);
+
+        PreparedUpdate prepared;
+        try
+        {
+            prepared = await _service.PrepareAsync(release, Both(surface.Progress, _options.Progress), stopping.Token);
+        }
+        catch (OperationCanceledException) when (surface.Cancelled.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            // The person stopped it, not the caller. Nothing to report: they know.
+            _log.Info($"Download of {release.TagName} stopped by the person; nothing was kept.");
+            return new UpdateFlowRun(UpdateFlowResult.DownloadCancelled, Release: release);
+        }
+
         if (!prepared.IsReady)
         {
-            _prompts.SayCannotInstall(prepared);
+            await _prompts.SayCannotInstallAsync(prepared);
             return new UpdateFlowRun(UpdateFlowResult.CannotInstall, Release: release);
         }
 
         LaunchResult launch = _service.Launch(prepared);
         if (!launch.Started)
         {
-            _prompts.SayLaunchFailed(prepared, launch);
+            await _prompts.SayLaunchFailedAsync(prepared, launch);
             return new UpdateFlowRun(UpdateFlowResult.LaunchFailed, Release: release);
         }
 
         _log.Info($"Installer for {release.TagName} started; shutting down for it.");
+        // Off the screen before the application goes, so nothing of the update is left in front of
+        // a person watching it close.
+        _prompts.Dismiss();
         _options.Shutdown();
         return new UpdateFlowRun(UpdateFlowResult.InstallerStarted, Release: release);
+    }
+
+    /// <summary>The window's reporter and the application's as one. Either may be absent, and two
+    /// absent reporters stay absent: a download with no reporter reads no clock.</summary>
+    private static IProgress<DownloadProgress>? Both(IProgress<DownloadProgress>? first, IProgress<DownloadProgress>? second) =>
+        first is null ? second : second is null ? first : new PairedProgress(first, second);
+
+    private sealed class PairedProgress(IProgress<DownloadProgress> first, IProgress<DownloadProgress> second)
+        : IProgress<DownloadProgress>
+    {
+        public void Report(DownloadProgress value)
+        {
+            first.Report(value);
+            second.Report(value);
+        }
     }
 
     private void Open(Uri page)

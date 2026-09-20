@@ -1,27 +1,21 @@
-# Launches the BrandAboutWindow test harness and captures WINDOW-ONLY screenshots of both hosting
-# scenarios — the tray-app popup (BrandAboutWindow) and the hosted-control demo (BrandAboutControl
-# embedded in a plain window, simulating an in-navigation About page) — in both themes, to
-# docs\screenshots\, under the filenames the brand guide embeds.
+# Launches the update-window test harness once per stage and captures WINDOW-ONLY screenshots of
+# both themes to docs\screenshots\, under the filenames the update guide embeds.
 #
-# One surface and one theme per run. The popup dismisses itself the moment it loses focus, so a
-# second window opened beside it would take the focus and close it before anything could be
-# captured; the harness opens the popup alone by default and the hosted demo under --hosted, and
-# this script runs it four times.
-#
-# For the same reason a capture is retried: anything on the machine that takes focus while the
-# window settles closes it, and that is the window behaving correctly rather than a failure worth
-# reporting.
+# One stage per run. The window shows one stage at a time by design — the question, the download,
+# the bar full while the hash and the signature are checked, a refusal, a failure, the notice that
+# nothing newer exists, and a check that did not complete — so a picture of each costs a run. Both
+# themes open side by side within a run, and the harness parks them after the last stage change,
+# because every stage change recentres the window on the monitor it opened on.
 #
 # Window-aware capture (PrintWindow + PW_RENDERFULLCONTENT) pulls each window's own composited
-# bitmap straight from DWM — so the translucent Mica backdrop resolves cleanly and no desktop
-# content bleeds through behind or around the dialogue. A plain screen-region grab would capture
-# whatever sits behind the window instead.
+# bitmap straight from DWM, so the translucent Mica backdrop resolves cleanly and no desktop
+# content bleeds through behind or around it. A plain screen-region grab would capture whatever
+# sits behind the window instead.
 #
-# Each capture is anchored. The harness opens a small pure-white window under --anchor, this script
-# parks it beside the window being captured, and the pixel at its centre is read off the screen
-# device context: anything but white means the screen was dimmed, faded or locked, and the capture
-# is refused rather than filed. The reading goes through the device context because a bitmap copy of
-# the screen returns black on some displays.
+# Each capture is anchored. The harness opens a small pure-white window under --anchor and the
+# pixel at its centre is read off the screen device context: anything but white means the screen
+# was dimmed, faded or locked, and the capture is refused rather than filed. The reading goes
+# through the device context because a bitmap copy of the screen returns black on some displays.
 
 $ErrorActionPreference = "Stop"
 
@@ -51,7 +45,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
-public class AboutCapture {
+public class UpdateCapture {
     public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
     [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
     [DllImport("user32.dll")] public static extern int GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
@@ -62,7 +56,6 @@ public class AboutCapture {
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
     [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
     [DllImport("user32.dll")] public static extern IntPtr SetProcessDpiAwarenessContext(IntPtr value);
-    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
     [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr hWnd);
     [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr hWnd, IntPtr dc);
     [DllImport("gdi32.dll")] public static extern uint GetPixel(IntPtr dc, int x, int y);
@@ -86,12 +79,6 @@ public class AboutCapture {
         GetWindowText(hWnd, sb, sb.Capacity);
         return sb.ToString();
     }
-
-    // Moved without being activated: focus has to stay on the window being captured, which closes
-    // the instant it loses it.
-    public static void Park(IntPtr h, int x, int y) {
-        SetWindowPos(h, new IntPtr(-1), x, y, 0, 0, 0x0001 | 0x0010);
-    }
 }
 '@
 Add-Type -AssemblyName System.Drawing
@@ -99,49 +86,42 @@ Add-Type -AssemblyName System.Drawing
 # Per-monitor-v2 so GetWindowRect returns physical pixels and the capture is full-resolution and
 # sharp. Without it every rectangle comes back in system-DPI coordinates and each capture is the
 # top-left corner of the real window.
-[AboutCapture]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
+[UpdateCapture]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
 
 function Find-HarnessWindow([uint32]$processId, [string]$title, [int]$timeoutMs) {
     $deadline = (Get-Date).AddMilliseconds($timeoutMs)
     while ((Get-Date) -lt $deadline) {
-        foreach ($handle in [AboutCapture]::GetProcessWindows($processId)) {
-            if ([AboutCapture]::GetTitle($handle) -eq $title) { return $handle }
+        foreach ($handle in [UpdateCapture]::GetProcessWindows($processId)) {
+            if ([UpdateCapture]::GetTitle($handle) -eq $title) { return $handle }
         }
         Start-Sleep -Milliseconds 150
     }
     return [IntPtr]::Zero
 }
 
-function Test-Anchor([uint32]$processId, $beside) {
+function Test-Anchor([uint32]$processId) {
     $handle = Find-HarnessWindow $processId "White Anchor" 8000
     if ($handle -eq [IntPtr]::Zero) { return $false }
 
-    # Parked beside the captured window rather than in a screen corner, which another always-on-top
-    # window can hold: a patch nothing can see says nothing about the screen.
-    $x = $beside.Left - 260
-    if ($x -lt 0) { $x = $beside.Right + 20 }
-    [AboutCapture]::Park($handle, $x, $beside.Top)
-    Start-Sleep -Milliseconds 400
-
-    $rect = New-Object AboutCapture+RECT
-    [AboutCapture]::GetWindowRect($handle, [ref]$rect) | Out-Null
-    $dc = [AboutCapture]::GetDC([IntPtr]::Zero)
-    $raw = [AboutCapture]::GetPixel($dc, [int](($rect.Left + $rect.Right) / 2), [int](($rect.Top + $rect.Bottom) / 2))
-    [AboutCapture]::ReleaseDC([IntPtr]::Zero, $dc) | Out-Null
+    $rect = New-Object UpdateCapture+RECT
+    [UpdateCapture]::GetWindowRect($handle, [ref]$rect) | Out-Null
+    $dc = [UpdateCapture]::GetDC([IntPtr]::Zero)
+    $raw = [UpdateCapture]::GetPixel($dc, [int](($rect.Left + $rect.Right) / 2), [int](($rect.Top + $rect.Bottom) / 2))
+    [UpdateCapture]::ReleaseDC([IntPtr]::Zero, $dc) | Out-Null
 
     return (($raw -band 0xFF) -eq 255) -and ((($raw -shr 8) -band 0xFF) -eq 255) -and ((($raw -shr 16) -band 0xFF) -eq 255)
 }
 
 function Save-Window([IntPtr]$handle, [string]$path) {
-    $rect = New-Object AboutCapture+RECT
-    [AboutCapture]::GetWindowRect($handle, [ref]$rect) | Out-Null
+    $rect = New-Object UpdateCapture+RECT
+    [UpdateCapture]::GetWindowRect($handle, [ref]$rect) | Out-Null
     $width  = $rect.Right - $rect.Left
     $height = $rect.Bottom - $rect.Top
 
     $bmp = New-Object System.Drawing.Bitmap $width, $height
     $gfx = [System.Drawing.Graphics]::FromImage($bmp)
     $hdc = $gfx.GetHdc()
-    $ok  = [AboutCapture]::PrintWindow($handle, $hdc, 2)   # 2 = PW_RENDERFULLCONTENT
+    $ok  = [UpdateCapture]::PrintWindow($handle, $hdc, 2)   # 2 = PW_RENDERFULLCONTENT
     $gfx.ReleaseHdc($hdc)
     if (-not $ok) { $gfx.Dispose(); $bmp.Dispose(); throw "PrintWindow failed." }
 
@@ -152,38 +132,31 @@ function Save-Window([IntPtr]$handle, [string]$path) {
 
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
-# The title the harness gives each surface, the switches that open it alone, and the file the brand
-# guide embeds. One theme per run: the popup dismisses itself the moment it loses focus, so two
-# windows in one run would leave one of them closing before it could be captured.
-$surfaces = foreach ($theme in @("Light", "Dark")) {
-    @{ Title = "Window Mode";         Args = @("--anchor", "--theme", $theme);             File = "about-window-$($theme.ToLowerInvariant()).png" }
-    @{ Title = "Hosted Control Demo"; Args = @("--anchor", "--hosted", "--theme", $theme); File = "about-hosted-control-$($theme.ToLowerInvariant()).png" }
-}
+# The stage the harness is asked for, and the name the pictures are filed under.
+$stages = @("question", "download", "verifying", "refusal", "failure", "uptodate", "check-failed")
 
-foreach ($surface in $surfaces) {
+foreach ($stage in $stages) {
     $saved = $false
-    foreach ($attempt in 1..4) {
-        $p = Start-Process -FilePath $exePath -ArgumentList $surface.Args -PassThru
+    foreach ($attempt in 1..3) {
+        $p = Start-Process -FilePath $exePath -ArgumentList @("--update", "--stage", $stage, "--anchor") -PassThru
         try {
-            $handle = Find-HarnessWindow ([uint32]$p.Id) $surface.Title 12000
-            if ($handle -eq [IntPtr]::Zero) { continue }
-
-            Start-Sleep -Milliseconds 1200   # let the window finish rendering before capturing
-            if (-not [AboutCapture]::IsWindow($handle)) {
-                Write-Host "'$($surface.Title)' dismissed itself before the capture; retrying."
-                continue
+            $handles = @{}
+            foreach ($theme in @("Light", "Dark")) {
+                $handles[$theme] = Find-HarnessWindow ([uint32]$p.Id) "Update $theme $stage" 12000
             }
+            if ($handles.Values -contains [IntPtr]::Zero) { continue }
 
-            $rect = New-Object AboutCapture+RECT
-            [AboutCapture]::GetWindowRect($handle, [ref]$rect) | Out-Null
-            if (-not (Test-Anchor ([uint32]$p.Id) $rect)) {
+            Start-Sleep -Milliseconds 1200   # let both windows finish rendering before capturing
+            if (-not (Test-Anchor ([uint32]$p.Id))) {
                 Write-Host "The white anchor did not read white: the screen is dimmed or locked. Retrying."
                 continue
             }
 
-            $outPath = Join-Path $outDir $surface.File
-            $size = Save-Window $handle $outPath
-            Write-Host "Saved '$($surface.Title)' screenshot ($size) to $outPath"
+            foreach ($theme in @("Light", "Dark")) {
+                $outPath = Join-Path $outDir "update-$stage-$($theme.ToLowerInvariant()).png"
+                $size = Save-Window $handles[$theme] $outPath
+                Write-Host "Saved '$stage' $theme ($size) to $outPath"
+            }
             $saved = $true
         }
         finally {
@@ -191,5 +164,5 @@ foreach ($surface in $surfaces) {
         }
         if ($saved) { break }
     }
-    if (-not $saved) { throw "Could not capture '$($surface.Title)' in four attempts." }
+    if (-not $saved) { throw "Could not capture the '$stage' stage in three attempts." }
 }

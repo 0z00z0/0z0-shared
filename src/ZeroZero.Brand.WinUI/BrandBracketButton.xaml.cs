@@ -10,10 +10,16 @@ namespace ZeroZero.Brand.WinUI;
 
 /// <summary>
 /// A borderless action button in the brand's own shape, placed by a host on its own: the logo's
-/// square brackets at either end, a leading chevron, the label in the brand face, and a block caret
+/// square brackets at either end, a leading symbol, the label in the brand face, and a block caret
 /// that blinks while the button is hovered or holds keyboard focus. The host sets
-/// <see cref="Label"/> and <see cref="State"/> and handles <see cref="Click"/>; the button draws the
-/// state and owns every animation.
+/// <see cref="Label"/>, <see cref="Symbol"/> and <see cref="State"/> and handles
+/// <see cref="Click"/>; the button draws the state and owns every animation.
+/// <para>
+/// It sizes itself to its own text and centres itself in whatever width it is given, unless
+/// <see cref="FillsWidth"/> is set, which spreads its brackets to the full width instead. A host
+/// wanting several buttons one width puts them in a <see cref="BrandBracketButtonColumn"/>, which
+/// measures the widest and sets the rest to match.
+/// </para>
 /// <para>
 /// Motion follows the system's animation setting, read on every change and every tick: with
 /// animations off nothing blinks, spins or moves, and the spinner is a still ellipsis.
@@ -37,9 +43,20 @@ public sealed partial class BrandBracketButton : UserControl
     private static readonly TimeSpan CaretBlink = TimeSpan.FromMilliseconds(530);
     private static readonly TimeSpan SuccessHold = TimeSpan.FromSeconds(4);
 
+    /// <summary>The symbol a button shows unless the host names another.</summary>
+    public const string DefaultSymbol = ">";
+
     public static readonly DependencyProperty LabelProperty = DependencyProperty.Register(
         nameof(Label), typeof(string), typeof(BrandBracketButton),
         new PropertyMetadata(string.Empty, (d, _) => ((BrandBracketButton)d).ApplyLabel()));
+
+    public static readonly DependencyProperty SymbolProperty = DependencyProperty.Register(
+        nameof(Symbol), typeof(string), typeof(BrandBracketButton),
+        new PropertyMetadata(DefaultSymbol, (d, _) => ((BrandBracketButton)d).ApplySymbol()));
+
+    public static readonly DependencyProperty FillsWidthProperty = DependencyProperty.Register(
+        nameof(FillsWidth), typeof(bool), typeof(BrandBracketButton),
+        new PropertyMetadata(false, (d, _) => ((BrandBracketButton)d).ApplyFillsWidth()));
 
     public static readonly DependencyProperty StateProperty = DependencyProperty.Register(
         nameof(State), typeof(BrandBracketButtonState), typeof(BrandBracketButton),
@@ -65,11 +82,40 @@ public sealed partial class BrandBracketButton : UserControl
     /// <summary>Raised when the button is pressed — by pointer, Enter or Space — in every state.</summary>
     public event RoutedEventHandler? Click;
 
-    /// <summary>The text after the chevron, and the button's accessible name.</summary>
+    /// <summary>The text after the symbol, and the button's accessible name.</summary>
     public string Label
     {
         get => (string)GetValue(LabelProperty);
         set => SetValue(LabelProperty, value);
+    }
+
+    /// <summary>
+    /// The character before the label — a cross for a cancel, an arrow for a download, whatever the
+    /// act is. One plain character in the brand face rather than a picture, so it takes the theme
+    /// and the scaling the rest of the button takes. A chevron where the host names none.
+    /// </summary>
+    /// <remarks>
+    /// Only <see cref="BrandBracketButtonState.Rest"/> and
+    /// <see cref="BrandBracketButtonState.Attention"/> show it: the spinner and the slashed zero
+    /// take its place while <see cref="BrandBracketButtonState.Busy"/> and
+    /// <see cref="BrandBracketButtonState.Success"/> are showing.
+    /// </remarks>
+    public string Symbol
+    {
+        get => (string)GetValue(SymbolProperty);
+        set => SetValue(SymbolProperty, value);
+    }
+
+    /// <summary>
+    /// Whether the button spreads its brackets to the whole width it is given rather than sizing to
+    /// its own text and centring in it. Off, so a button placed on its own is unchanged; a
+    /// <see cref="BrandBracketButtonColumn"/> turns it on for the buttons it holds. The label and
+    /// the symbol stay centred between the brackets either way.
+    /// </summary>
+    public bool FillsWidth
+    {
+        get => (bool)GetValue(FillsWidthProperty);
+        set => SetValue(FillsWidthProperty, value);
     }
 
     /// <summary>What the button shows. <see cref="BrandBracketButtonState.Success"/> returns to
@@ -109,6 +155,8 @@ public sealed partial class BrandBracketButton : UserControl
         };
 
         ApplyLabel();
+        ApplySymbol();
+        ApplyFillsWidth();
     }
 
     private bool AnimationsEnabled => _uiSettings.AnimationsEnabled;
@@ -128,6 +176,11 @@ public sealed partial class BrandBracketButton : UserControl
         LabelText.Text = label;
         AutomationProperties.SetName(Surface, label);
     }
+
+    private void ApplySymbol() => SymbolText.Text = Symbol ?? DefaultSymbol;
+
+    private void ApplyFillsWidth() =>
+        Surface.HorizontalAlignment = FillsWidth ? HorizontalAlignment.Stretch : HorizontalAlignment.Center;
 
     private void ApplyState()
     {

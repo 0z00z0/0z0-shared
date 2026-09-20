@@ -59,7 +59,8 @@ References `ZeroZero.Brand.Core` and `ZeroZero.Win32`.
 - **`BrandAboutWindow`** — the shared, parameterised About popup (320 px wide, Mica backdrop, centred
   on the monitor under the cursor, no title bar, always-on-top). A thin shell hosting
   `BrandAboutControl` plus the tray-app-only "Check for Updates" button. **It closes as soon as it
-  loses focus**, whatever is on screen at the time; Escape and the close button take the same path.
+  loses focus**, whatever is on screen at the time, unless a transient window of the same
+  application is up; Escape and the close button take the same path.
   Its height comes from its own layout and never exceeds the monitor's work area. Takes its monitor and DPI
   metrics from the `ZeroZero.Win32` foundation assembly, so it has no dependency on a consuming
   app's own `NativeMethods` class.
@@ -68,8 +69,10 @@ References `ZeroZero.Brand.Core` and `ZeroZero.Win32`.
   an update channel does not pass one), and an optional `OnBeforeExit` hook for apps that need to
   self-exit cleanly before an installer-triggered relaunch.
 - **`BrandBracketButton`** — a borderless action button in the brand's own shape, placed by a host on
-  its own, with `BrandBracketButtonState` naming what it shows. See
-  [the bracket action button](#the-bracket-action-button).
+  its own, with `BrandBracketButtonState` naming what it shows and `Symbol` the character before its
+  label. See [the bracket action button](#the-bracket-action-button).
+- **`BrandBracketButtonColumn`** — several of those buttons stacked, all at the width of the widest,
+  so their brackets line up. See [the bracket action button](#the-bracket-action-button).
 - **The brand typeface**, Cascadia Mono, with its OFL licence. Shipped as content so it travels with
   the library into every consuming app's output, and the markup asks for it at
   `ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf`. **That folder is the only one both
@@ -222,15 +225,19 @@ var options = new BrandAboutOptions
 new BrandAboutWindow(options).Activate();
 ```
 
-**The window closes when it loses focus.** There is no setting and no exception — the release-notes
-panel being open does not hold it open, Escape does the same thing, and a fetch in flight is
-abandoned before the window goes. Two guards keep that rule safe to state so plainly: a deactivation
-arriving before the window has ever been activated is ignored, which is what stops a fast
-double-click on whatever opens the window from opening and closing it in one gesture — a second
-click landing after the window has already taken focus is an ordinary click away from it, and closes
-it; and a dismissal already under way cannot start a second one, since closing deactivates the
-window. An About surface that has to stay put is a
-case for hosting `BrandAboutControl` in a page instead.
+**The window closes when it loses focus.** There is no setting — the release-notes panel being open
+does not hold it open, Escape does the same thing, and a fetch in flight is abandoned before the
+window goes. Three guards keep that rule safe to state so plainly. A deactivation arriving before
+the window has ever been activated is ignored, which is what stops a fast double-click on whatever
+opens the window from opening and closing it in one gesture — a second click landing after the
+window has already taken focus is an ordinary click away from it, and closes it. A dismissal
+already under way cannot start a second one, since closing deactivates the window. And a
+deactivation while a transient window of the same application is on screen is ignored, because a
+window the reader asked for is not the reader looking away: pressing "Check for Updates" opens the
+update window on top of this one, and without that guard this one would close under it.
+`ZeroZero.Win32`'s `TransientWindows` is the count, and
+[`zerozero-win32.md`](zerozero-win32.md) says what is deliberately not re-examined afterwards. An
+About surface that has to stay put is a case for hosting `BrandAboutControl` in a page instead.
 
 **The update-check contract** — both callbacks are optional:
 
@@ -323,14 +330,16 @@ only its *rendering* moves to the shared control, not its data.
 
 `BrandBracketButton` is a borderless button in the brand's own shape, placed by a host wherever it
 wants one — a "Check for updates" under the About card on a settings page, say. The logo's square
-brackets stand at either end in the logo's teal-to-blue gradient, a `>` chevron in the brand orange
-leads, and the label follows in the brand face. It carries its own colours and face, so it needs no
-merged dictionary.
+brackets stand at either end in the logo's teal-to-blue gradient, a symbol in the brand orange
+leads — a `>` chevron unless the host names another — and the label follows in the brand face. It
+carries its own colours and face, so it needs no merged dictionary.
 
 **The button centres itself in the width the control is given.** The control sizes to its content,
 so a host that wants it at the start of that space sets `HorizontalAlignment="Left"` on the control
 itself rather than on anything inside it; setting `Center` on the control changes nothing, since
-that is already where the button sits.
+that is already where the button sits. That holds however much width the control is given: a width
+imposed on the control moves the button about inside it and never stretches it — measured, and the
+reason `BrandBracketButtonColumn` exists.
 
 ```xml
 <brand:BrandBracketButton x:Name="UpdateButton" Label="Check for updates" Click="OnCheckForUpdates"/>
@@ -388,6 +397,47 @@ and saturation, so every figure clears 4.6:1 on all three light surfaces:
 The label at rest takes `TextFillColorPrimaryBrush`. High contrast replaces every brand colour with
 the system highlight colour, as `BrandResources.xaml` does.
 
+**The symbol is the host's.** `Symbol` is one plain character in the brand face before the label —
+a down arrow for a download, a cross for a stop, whatever the act is — so it takes the theme and
+the scaling the rest of the button takes, which a picture would not. A chevron where the host names
+none, so a button written before this is unchanged. Only `Rest` and `Attention` show it: the
+spinner and the slashed zero take its place while `Busy` and `Success` are showing.
+
+**Pick a character the face carries.** Cascadia Mono covers 1483 code points and a good many
+obvious choices are not among them: `↗` and `✕` are both absent, and Windows draws an absent
+character from whatever font it falls back to — a different shape and weight sitting beside a label
+in the brand face. Measured as present and used by the update window: `↓`, `→`, `»`, `×` and the
+default `>`.
+
+The same reading covers every character the About surfaces draw, and it found two the face does not
+carry. The close cross is now `×` (U+00D7) rather than `✕` (U+2715). The hot beverage on the Donate
+button is gone entirely: **that mark is drawn now**, not typed.
+
+### The Donate mark
+
+A path rather than a character, so it scales with the display, takes the theme, and stays the
+studio's own rather than a fallback font's. It reads as a cup at a glance — a tapered body, a
+handle open to the right, a saucer close under it — at 17 effective pixels, twice the cap height of
+the label beside it and still inside the button's own minimum height, so the row it sits in does
+not grow.
+
+It is the palette's orange, `#e0872a`, on a dark ground. That orange is too pale on a light one, so
+light takes `#895014`, the darker shade of the same hue `BrandBracketButton` already uses: one
+light orange in the component rather than two. Measured off the captured pictures, mark against the
+button's own fill: **6.14:1 on light** (`#895014` on `#f8f8f8`) and **5.03:1 on dark** (`#e0872a`
+on `#2d2d2d`). High contrast takes the system highlight colour, as everything else here does.
+
+The mark is out of the accessibility tree and the button is named by its label, so a screen reader
+hears what it heard when a character led the label.
+
+**One width for several buttons.** A button sizes itself to its own text and centres itself in
+whatever width it is given, which leaves a stack of them at three different lengths with their
+brackets nowhere near each other. `BrandBracketButtonColumn` measures the widest and lays every one
+out at that width; each button then spreads its brackets to fill it and keeps its symbol and label
+centred between them. The column is only as wide as that widest button, so a host centres or aligns
+the whole group as one thing, and a collapsed button takes no width, no height and no spacing.
+`FillsWidth` is the switch the column throws; a button placed anywhere else never sees it.
+
 Status (2026-09-18): compiles clean in 0.9.2; first rendered in ChargeKeeper 1.58.2 with brand
 0.9.1 — placement seen, states, animations, reduced motion and theme switching not yet reported.
 
@@ -395,17 +445,21 @@ Status (2026-09-18): compiles clean in 0.9.2; first rendered in ChargeKeeper 1.5
 
 **`BrandAboutWindow`** (tray-app popup):
 
-![BrandAboutWindow](screenshots/about-window.png)
+| Light | Dark |
+|---|---|
+| ![BrandAboutWindow, light](screenshots/about-window-light.png) | ![BrandAboutWindow, dark](screenshots/about-window-dark.png) |
 
 **`BrandAboutControl`** hosted directly in a plain window (no popup chrome, no update button):
 
-![BrandAboutControl hosted](screenshots/about-hosted-control.png)
+| Light | Dark |
+|---|---|
+| ![BrandAboutControl hosted, light](screenshots/about-hosted-control-light.png) | ![BrandAboutControl hosted, dark](screenshots/about-hosted-control-dark.png) |
 
-Both images are the capture script's output, so they show the surfaces as they actually render
-rather than what the XAML claims.
+Every image is the capture script's output, so it shows the surface as it actually renders rather
+than what the XAML claims.
 
-Status (2026-09-14): captured before 0.9.0, so both show the row as three equal columns with What's
-new first; the row now reads Website, Donate, What's new at natural widths.
+Status (2026-09-20): current, and the first taken in both themes. The close cross is the brand
+face's own `×`, and the Donate button carries the drawn cup.
 
 ## The harness
 
@@ -434,17 +488,20 @@ resolves them; `--probe <path>` beside it writes the colour and face that reache
 `--rows`, `--titlebar` and `--prompt` open the controls foundation assembly's surfaces
 ([`zerozero-controls.md`](zerozero-controls.md)), `--settings` the settings window shell
 ([`zerozero-settingsshell.md`](zerozero-settingsshell.md)), `--tray` the tray icon with its
-tooltip and menu ([`zerozero-tray.md`](zerozero-tray.md)), and `--native` the Win32 layer's
-dialogs. One component per run, so unrelated windows never land on top of each other. No scenario
-opens `BrandBracketButton` yet.
+tooltip and menu ([`zerozero-tray.md`](zerozero-tray.md)), `--update` the shared update window
+([`zerozero-update.md`](zerozero-update.md)), and `--native` the Win32 layer's dialogs. One
+component per run, so unrelated windows never land on top of each other. `BrandBracketButton` is
+on screen only through the update window, which uses one per choice; no scenario opens it on its
+own.
 
 Two scripts under `scripts/` drive the About scenarios:
 
 - **`Show live 'About' dialogue.ps1`** — builds the harness if its exe is missing, then launches it,
   so both windows can be inspected on screen.
-- **`Capture 'About' screenshot.ps1`** — runs the harness twice, once per surface, and writes
-  window-only PNGs into `docs/screenshots/`: `about-window.png` (the popup) and
-  `about-hosted-control.png` (the hosted control), the two images this guide embeds. Capture goes
+- **`Capture 'About' screenshot.ps1`** — runs the harness four times, once per surface per theme,
+  and writes window-only PNGs into `docs/screenshots/`: `about-window-light.png`,
+  `about-window-dark.png`, `about-hosted-control-light.png` and `about-hosted-control-dark.png`,
+  the four images this guide embeds. Capture goes
   through `PrintWindow` with `PW_RENDERFULLCONTENT`, so the translucent Mica backdrop resolves
   cleanly and no desktop content bleeds through. Each capture is anchored against a pure-white patch
   parked beside the window and read off the screen device context, so a dimmed or locked screen is

@@ -86,13 +86,13 @@
                 <VisualState x:Name="Rest"/>
                 <VisualState x:Name="Busy">
                     <VisualState.Setters>
-                        <Setter Target="Chevron.Visibility" Value="Collapsed"/>
+                        <Setter Target="SymbolText.Visibility" Value="Collapsed"/>
                         <Setter Target="Spinner.Visibility" Value="Visible"/>
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="Success">
                     <VisualState.Setters>
-                        <Setter Target="Chevron.Visibility" Value="Collapsed"/>
+                        <Setter Target="SymbolText.Visibility" Value="Collapsed"/>
                         <Setter Target="Zero.Visibility" Value="Visible"/>
                         <Setter Target="LeftBracket.BorderBrush" Value="{ThemeResource BracketTealBrush}"/>
                         <Setter Target="RightBracket.BorderBrush" Value="{ThemeResource BracketTealBrush}"/>
@@ -111,7 +111,9 @@
         </VisualStateManager.VisualStateGroups>
 
         <!-- A real Button underneath, so Enter, Space, focus and the automation peer are the
-             platform's own. Its template is only the content: no border, no fill. -->
+             platform's own. Its template is only the content: no border, no fill. Centred at its
+             own width unless FillsWidth is set, which is what lets a column of buttons share one
+             width with their brackets in line. -->
         <Button x:Name="Surface"
                 Height="32" Padding="0" MinWidth="0" MinHeight="0"
                 HorizontalAlignment="Center"
@@ -147,9 +149,11 @@
                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="18,0,18,0"
                             HorizontalAlignment="Center" VerticalAlignment="Center">
 
-                    <!-- One marker at a time: chevron at rest, spinner while busy, zero on success. -->
+                    <!-- One marker at a time: the button's own symbol at rest, spinner while busy,
+                         zero on success. The symbol is the host's, a chevron unless it says
+                         otherwise, and a plain character in the brand face rather than a picture. -->
                     <Grid Width="14" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw">
-                        <TextBlock x:Name="Chevron" Text="&gt;"
+                        <TextBlock x:Name="SymbolText" Text="&gt;"
                                    FontFamily="{StaticResource BracketFont}" FontSize="14" FontWeight="Bold"
                                    Foreground="{ThemeResource BracketOrangeBrush}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>

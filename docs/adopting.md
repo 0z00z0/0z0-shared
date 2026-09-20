@@ -19,7 +19,7 @@ and how a pin works, and everything below assumes it.
 | Settings shell | The settings window, with every page left to the application | `ZeroZero.SettingsShell.WinUI` | [settings shell](zerozero-settingsshell.md) |
 | Startup | The run-at-logon task, and the repair of one an older build left | `ZeroZero.Startup` | [startup](zerozero-startup.md) |
 | Tray | The tray icon's whole lifecycle — theme, display changes, shell restarts, tooltip, clicks, menu | `ZeroZero.Tray.WinUI`; the icon-file writer alone is `ZeroZero.Tray` | [tray](zerozero-tray.md) |
-| Update | Check, download, verify, launch, hand over | `ZeroZero.Update.Win32`; headless, `ZeroZero.Update` | [update](zerozero-update.md) |
+| Update | Check, ask, download, verify, launch, hand over, all of it on screen | `ZeroZero.Update.WinUI`; own surface, `ZeroZero.Update.Win32`; headless, `ZeroZero.Update` | [update](zerozero-update.md) |
 | Config | Settings on disk: one file holding one type, or one document divided into sections owned by different components | `ZeroZero.Config.Sections`, or `ZeroZero.Config` for a file of one type | [config](zerozero-config.md) |
 | Controls | Settings rows with their info bubbles, title-bar theming, the text prompt — no studio identity | `ZeroZero.Controls.WinUI` | [controls](zerozero-controls.md) |
 | Primitives | The log sink, the version reader, the coalescing gate, the commit stamp | `ZeroZero.Primitives` | [primitives](zerozero-primitives.md) |

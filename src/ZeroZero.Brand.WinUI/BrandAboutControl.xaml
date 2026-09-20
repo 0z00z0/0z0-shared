@@ -12,10 +12,72 @@
          The URI is scoped to this assembly's folder, the one place the font exists on both
          reference routes; the output root holds it only under a project reference. -->
     <UserControl.Resources>
-        <FontFamily x:Key="BrandFont">ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
-        <Style TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="{StaticResource BrandFont}"/>
-        </Style>
+        <ResourceDictionary>
+            <FontFamily x:Key="BrandFont">ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
+            <Style TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource BrandFont}"/>
+            </Style>
+
+            <!--
+                The Donate button's mark, drawn rather than typed. The hot-beverage character it
+                replaced is not in the brand face, so Windows drew it from whatever face it fell
+                back to: a colour emoji of a fixed design beside labels in the studio's own face.
+                A path scales with the display, takes the theme, and stays the studio's to change.
+
+                Read as a cup at a glance: a tapered body, a handle on the right, a saucer under
+                it. Sized in the template at 17 effective pixels, twice the label's cap height
+                beside it, and still inside the button's own minimum height so the row it sits in
+                does not grow.
+            -->
+
+            <!-- A template rather than markup in place: the button is built in code-behind, and
+                 LoadContent gives it this tree with its ThemeResource brushes intact, which a
+                 shape built in code could not have. -->
+            <DataTemplate x:Key="DonateMark">
+                <Viewbox Height="17" VerticalAlignment="Center"
+                         AutomationProperties.AccessibilityView="Raw">
+                    <!-- The canvas is the drawing's own extent, with no margin around it: a
+                         viewbox scales what it is given, so empty canvas would come straight off
+                         the mark's rendered size. -->
+                    <Canvas Width="23.4" Height="19.4">
+                        <!-- The cup: a straight rim, a body a little taller than it is wide, and a
+                             rounded base. -->
+                        <Path Data="M2.5,1.5 H15.5 V8.5 C15.5,12.6 12.6,15.9 9,15.9 C5.4,15.9 2.5,12.6 2.5,8.5 Z"
+                              Fill="{ThemeResource DonateMarkBrush}"/>
+                        <!-- The handle, open to the right and clear of the body, so the shape
+                             cannot read as a beaker. -->
+                        <Path Data="M15.5,3.9 H18 C20.4,3.9 22.3,5.8 22.3,8.2 C22.3,10.6 20.4,12.5 18,12.5 H15.5"
+                              Stroke="{ThemeResource DonateMarkBrush}" StrokeThickness="2.1"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                        <!-- The saucer, under the body only and close under it: carried past the
+                             handle it reads as a line through the mark rather than a thing the cup
+                             stands on. -->
+                        <Path Data="M1,18.3 H17"
+                              Stroke="{ThemeResource DonateMarkBrush}" StrokeThickness="2.1"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                    </Canvas>
+                </Viewbox>
+            </DataTemplate>
+
+            <ResourceDictionary.ThemeDictionaries>
+
+                <!-- "Default" is the dark theme's dictionary, which is WinUI's own naming. The
+                     palette's orange as it is; on a light ground it measures too pale to read, so
+                     light takes the darker shade of the same hue that BrandBracketButton already
+                     uses for its own orange. One light orange in the component, not two. -->
+                <ResourceDictionary x:Key="Default">
+                    <SolidColorBrush x:Key="DonateMarkBrush" Color="#E0872A"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="DonateMarkBrush" Color="#895014"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <SolidColorBrush x:Key="DonateMarkBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
+                </ResourceDictionary>
+
+            </ResourceDictionary.ThemeDictionaries>
+
+        </ResourceDictionary>
     </UserControl.Resources>
 
     <StackPanel x:Name="Root">
