@@ -19,6 +19,22 @@ public static class UpdateMessages
     /// <summary>How every refusal ends.</summary>
     public const string RefusalAdvice = "The file was not run. Update from the release page instead.";
 
+    /// <summary>What each button says. The act, not "OK" — a person reads the button and knows
+    /// what pressing it does without reading the window again.</summary>
+    public const string InstallLabel = "Install now";
+
+    /// <inheritdoc cref="InstallLabel"/>
+    public const string LaterLabel = "Not now";
+
+    /// <inheritdoc cref="InstallLabel"/>
+    public const string ReleasePageLabel = "Open the release page";
+
+    /// <inheritdoc cref="InstallLabel"/>
+    public const string CloseLabel = "Close";
+
+    /// <inheritdoc cref="InstallLabel"/>
+    public const string CancelDownloadLabel = "Stop the download";
+
     /// <summary>The headline over the install question.</summary>
     public static string AvailableHeadline(ReleaseInfo release)
     {

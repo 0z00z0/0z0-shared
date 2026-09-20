@@ -85,29 +85,37 @@
                 </ScrollViewer>
             </Border>
 
-            <StackPanel x:Name="ProgressPanel" Visibility="Collapsed" Spacing="6" Margin="0,2,0,2">
+            <StackPanel x:Name="ProgressPanel" Visibility="Collapsed" Spacing="6" Margin="0,2,0,0">
                 <ProgressBar x:Name="DownloadBar" Minimum="0" Maximum="1" Height="4"
                              Foreground="{ThemeResource UpdateProgressBrush}"/>
                 <TextBlock x:Name="ProgressText" FontSize="11"
                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
             </StackPanel>
 
-            <!-- One action per line: three choices read as three choices, and each sizes itself at
-                 any scaling, which a row of three would not at this width. -->
-            <StackPanel x:Name="Actions" Spacing="2" Margin="0,4,0,0">
-                <brand:BrandBracketButton x:Name="InstallButton" Label="Install now"/>
-                <brand:BrandBracketButton x:Name="LaterButton" Label="Not now"/>
-                <brand:BrandBracketButton x:Name="NotesButton" Label="Open the release page"/>
-                <brand:BrandBracketButton x:Name="CloseButton" Label="Close" Visibility="Collapsed"/>
-            </StackPanel>
+            <!-- One action per line, every button the width of the widest, so their brackets line
+                 up into a column. A row would not fit three choices at this width at any scaling.
+                 Each symbol is the act: down for a download, forward for later, away for the
+                 browser, a tick for read-and-done, a cross for a stop. Every one is a character
+                 the brand face actually carries, checked against its character map rather than
+                 assumed: a symbol it lacks is drawn by whatever font Windows falls back to, which
+                 is a different shape and weight beside the label. -->
+            <brand:BrandBracketButtonColumn x:Name="Actions" Spacing="2" Margin="0,4,0,0"
+                                            HorizontalAlignment="Center">
+                <brand:BrandBracketButton x:Name="InstallButton" Symbol="&#x2193;"/>
+                <brand:BrandBracketButton x:Name="LaterButton" Symbol="&#x00BB;"/>
+                <brand:BrandBracketButton x:Name="NotesButton" Symbol="&#x2192;"/>
+                <brand:BrandBracketButton x:Name="CloseButton" Symbol="&#x2713;" Visibility="Collapsed"/>
+                <brand:BrandBracketButton x:Name="CancelButton" Symbol="&#x00D7;" Visibility="Collapsed"/>
+            </brand:BrandBracketButtonColumn>
 
         </StackPanel>
 
         <!-- Window-only chrome, over the rule's right-hand end, as the About window places its
-             own. Hidden while the download runs: closing would take the window off a download it
-             cannot stop. -->
+             own. Hidden while the download runs: the download has a button of its own that stops
+             it, and a second cross that only hid the window would mean two ways out meaning two
+             different things. -->
         <Button x:Name="DismissButton" Grid.Row="0" Grid.RowSpan="2"
-                Content="&#x2715;" Width="28" Height="28"
+                Content="&#x00D7;" Width="28" Height="28"
                 Padding="0" FontSize="10"
                 FontFamily="{StaticResource BrandFont}"
                 Background="Transparent"

@@ -69,8 +69,10 @@ References `ZeroZero.Brand.Core` and `ZeroZero.Win32`.
   an update channel does not pass one), and an optional `OnBeforeExit` hook for apps that need to
   self-exit cleanly before an installer-triggered relaunch.
 - **`BrandBracketButton`** — a borderless action button in the brand's own shape, placed by a host on
-  its own, with `BrandBracketButtonState` naming what it shows. See
-  [the bracket action button](#the-bracket-action-button).
+  its own, with `BrandBracketButtonState` naming what it shows and `Symbol` the character before its
+  label. See [the bracket action button](#the-bracket-action-button).
+- **`BrandBracketButtonColumn`** — several of those buttons stacked, all at the width of the widest,
+  so their brackets line up. See [the bracket action button](#the-bracket-action-button).
 - **The brand typeface**, Cascadia Mono, with its OFL licence. Shipped as content so it travels with
   the library into every consuming app's output, and the markup asks for it at
   `ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf`. **That folder is the only one both
@@ -328,14 +330,16 @@ only its *rendering* moves to the shared control, not its data.
 
 `BrandBracketButton` is a borderless button in the brand's own shape, placed by a host wherever it
 wants one — a "Check for updates" under the About card on a settings page, say. The logo's square
-brackets stand at either end in the logo's teal-to-blue gradient, a `>` chevron in the brand orange
-leads, and the label follows in the brand face. It carries its own colours and face, so it needs no
-merged dictionary.
+brackets stand at either end in the logo's teal-to-blue gradient, a symbol in the brand orange
+leads — a `>` chevron unless the host names another — and the label follows in the brand face. It
+carries its own colours and face, so it needs no merged dictionary.
 
 **The button centres itself in the width the control is given.** The control sizes to its content,
 so a host that wants it at the start of that space sets `HorizontalAlignment="Left"` on the control
 itself rather than on anything inside it; setting `Center` on the control changes nothing, since
-that is already where the button sits.
+that is already where the button sits. That holds however much width the control is given: a width
+imposed on the control moves the button about inside it and never stretches it — measured, and the
+reason `BrandBracketButtonColumn` exists.
 
 ```xml
 <brand:BrandBracketButton x:Name="UpdateButton" Label="Check for updates" Click="OnCheckForUpdates"/>
@@ -392,6 +396,26 @@ and saturation, so every figure clears 4.6:1 on all three light surfaces:
 
 The label at rest takes `TextFillColorPrimaryBrush`. High contrast replaces every brand colour with
 the system highlight colour, as `BrandResources.xaml` does.
+
+**The symbol is the host's.** `Symbol` is one plain character in the brand face before the label —
+a down arrow for a download, a cross for a stop, whatever the act is — so it takes the theme and
+the scaling the rest of the button takes, which a picture would not. A chevron where the host names
+none, so a button written before this is unchanged. Only `Rest` and `Attention` show it: the
+spinner and the slashed zero take its place while `Busy` and `Success` are showing.
+
+**Pick a character the face carries.** Cascadia Mono covers 1483 code points and a good many
+obvious choices are not among them: `↗` and `✕` are both absent, and Windows draws an absent
+character from whatever font it falls back to — a different shape and weight sitting beside a label
+in the brand face. Measured as present and used by the update window: `↓`, `→`, `»`, `✓`, `×` and
+the default `>`.
+
+**One width for several buttons.** A button sizes itself to its own text and centres itself in
+whatever width it is given, which leaves a stack of them at three different lengths with their
+brackets nowhere near each other. `BrandBracketButtonColumn` measures the widest and lays every one
+out at that width; each button then spreads its brackets to fill it and keeps its symbol and label
+centred between them. The column is only as wide as that widest button, so a host centres or aligns
+the whole group as one thing, and a collapsed button takes no width, no height and no spacing.
+`FillsWidth` is the switch the column throws; a button placed anywhere else never sees it.
 
 Status (2026-09-18): compiles clean in 0.9.2; first rendered in ChargeKeeper 1.58.2 with brand
 0.9.1 — placement seen, states, animations, reduced motion and theme switching not yet reported.

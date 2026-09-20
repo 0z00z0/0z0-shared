@@ -36,7 +36,8 @@ public sealed class UpdateWindowPrompts : IUpdatePrompts
         return choice;
     }
 
-    public IProgress<DownloadProgress>? BeginDownload(ReleaseInfo release) => _window?.BeginDownload(release);
+    public DownloadSurface BeginDownload(ReleaseInfo release) =>
+        _window?.BeginDownload(release) ?? default;
 
     public Task SayUpToDateAsync(Version runningVersion) =>
         SayAsync(UpdateMessages.UpToDateHeadline, UpdateMessages.UpToDateText(runningVersion), attention: false);
@@ -69,7 +70,17 @@ public sealed class UpdateWindowPrompts : IUpdatePrompts
         Forget(window);
     }
 
-    private UpdateWindow Open() => _window ??= new UpdateWindow(_options);
+    private UpdateWindow Open()
+    {
+        if (_window is { } open) return open;
+
+        var window = new UpdateWindow(_options);
+        // A window can close on its own — the cross, Escape, stopping a download — and a reference
+        // to a closed window is one the next run would try to change what it shows.
+        window.Closed += (_, _) => { if (ReferenceEquals(_window, window)) _window = null; };
+        _window = window;
+        return window;
+    }
 
     /// <summary>Lets go of a window that has closed, so the next run opens a fresh one rather than
     /// trying to change what a closed window shows.</summary>

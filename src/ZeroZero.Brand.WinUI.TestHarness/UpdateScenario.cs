@@ -50,7 +50,7 @@ internal static class UpdateScenario
         [new ReleaseAsset("Harness-Setup-1.2.3.exe", 48_234_496, new Uri("https://example.invalid/download/Harness-Setup-1.2.3.exe"))]);
 
     private static readonly List<UpdateWindow> Windows = [];
-    private static readonly List<IProgress<DownloadProgress>> Reporters = [];
+    private static readonly List<DownloadSurface> Surfaces = [];
 
     /// <summary>Opens the named stage in both themes, side by side. The windows are left on screen
     /// for the capture; nothing answers them.</summary>
@@ -141,11 +141,11 @@ internal static class UpdateScenario
     /// into it, which is the only way the bar and its line get a value without a network.</summary>
     private static void Report(UpdateWindow window, long received, long total)
     {
-        var reporter = window.BeginDownload(Release);
+        DownloadSurface surface = window.BeginDownload(Release);
         // Held: the window's reporter posts to the window's own thread, and a collected reporter
         // would never deliver.
-        Reporters.Add(reporter);
-        reporter.Report(new DownloadProgress(received, total));
+        Surfaces.Add(surface);
+        surface.Progress?.Report(new DownloadProgress(received, total));
     }
 
     /// <summary>An update refused by verification: the hash the release published is not the file's.</summary>

@@ -88,6 +88,8 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// release to offer, so the windows it did not open can be counted from outside, and
 /// <c>--update --over-about update|plain --probe &lt;path&gt;</c> opens the About window and then a
 /// window on top of it, recording whether the one beneath dismissed itself.
+/// <c>--update --cancel person|caller --probe &lt;path&gt;</c> downloads from a loopback server and
+/// stops it part-way, recording what the run answered and what was left on disk.
 /// </para>
 /// <para>
 /// <c>--tray</c> opens no window either: it puts the tray host's icon in the notification area
@@ -580,12 +582,20 @@ public partial class App : Application
     /// counted from outside. <c>--over-about update|plain</c> opens the About window, which
     /// dismisses itself on focus loss, then opens a window on top of it and records whether the one
     /// beneath survived — <c>plain</c> is the control that says the measurement can fail.
+    /// <c>--cancel person|caller</c> runs a real download off a loopback server and stops it
+    /// part-way, through the window's own button or through the caller's token.
     /// </summary>
     private void ShowUpdate(string[] commandLine)
     {
         if (ValueAfter(commandLine, "--silent") is { Length: > 0 } silentProbe)
         {
             _ = UpdateScenario.RunSilentAsync(silentProbe, Exit);
+            return;
+        }
+
+        if (ValueAfter(commandLine, "--cancel") is { Length: > 0 } cancelMode)
+        {
+            _ = UpdateCancelScenario.RunAsync(cancelMode, ValueAfter(commandLine, "--probe") ?? "cancel.txt", Exit);
             return;
         }
 

@@ -56,6 +56,10 @@ public sealed partial class UpdateWindow : Window
     private TaskCompletionSource<InstallChoice>? _answer;
     private TaskCompletionSource<bool>? _read;
 
+    /// <summary>Trips when the person stops the download. One per download, so a second run in the
+    /// same window is not born already cancelled.</summary>
+    private CancellationTokenSource? _stopping;
+
     private Stage _stage = Stage.Question;
     private ReleaseInfo? _downloading;
     private bool _hasDetail;
@@ -73,16 +77,23 @@ public sealed partial class UpdateWindow : Window
         Root.RequestedTheme = options.Theme;
         AppNameText.Text = options.ApplicationName;
 
+        InstallButton.Label = UpdateMessages.InstallLabel;
+        LaterButton.Label = UpdateMessages.LaterLabel;
+        NotesButton.Label = UpdateMessages.ReleasePageLabel;
+        CloseButton.Label = UpdateMessages.CloseLabel;
+        CancelButton.Label = UpdateMessages.CancelDownloadLabel;
+
         InstallButton.Click += (_, _) => Answer(InstallChoice.Install);
         LaterButton.Click += (_, _) => Answer(InstallChoice.Later);
         NotesButton.Click += (_, _) => Answer(InstallChoice.OpenReleasePage);
         CloseButton.Click += (_, _) => Finish();
-        DismissButton.Click += (_, _) => Dismiss();
+        CancelButton.Click += (_, _) => StopDownload();
+        DismissButton.Click += (_, _) => Escape();
 
         // Escape is the same act as pressing the way out this stage offers, so it takes the same
         // path. On the root element, so it fires whichever child holds focus.
         var escape = new KeyboardAccelerator { Key = VirtualKey.Escape };
-        escape.Invoked += (_, args) => { args.Handled = true; Dismiss(); };
+        escape.Invoked += (_, args) => { args.Handled = true; Escape(); };
         Root.KeyboardAccelerators.Add(escape);
 
         _transient = TransientWindows.Enter();
@@ -126,10 +137,12 @@ public sealed partial class UpdateWindow : Window
     /// marshals to this window's own thread, so the flow may hand it to a download running
     /// anywhere.
     /// </summary>
-    public IProgress<DownloadProgress> BeginDownload(ReleaseInfo release)
+    public DownloadSurface BeginDownload(ReleaseInfo release)
     {
         ArgumentNullException.ThrowIfNull(release);
 
+        _stopping?.Dispose();
+        _stopping = new CancellationTokenSource();
         _downloading = release;
         HeadlineText.Text = UpdateMessages.DownloadingHeadline(release);
         BodyText.Text = UpdateMessages.DownloadBody(_options.ApplicationName);
@@ -138,7 +151,7 @@ public sealed partial class UpdateWindow : Window
         ProgressText.Text = UpdateMessages.DownloadProgressText(0, null);
 
         GoTo(Stage.Downloading);
-        return new MarshalledProgress(this);
+        return new DownloadSurface(new MarshalledProgress(this), _stopping.Token);
     }
 
     /// <summary>
@@ -168,6 +181,24 @@ public sealed partial class UpdateWindow : Window
         Close();
     }
 
+    /// <summary>What the cross and Escape do, which is whatever the stage's own way out is. During
+    /// a download that is stopping it, not hiding the window from it.</summary>
+    private void Escape()
+    {
+        if (_stage == Stage.Downloading) StopDownload();
+        else Dismiss();
+    }
+
+    /// <summary>Stops the download and goes. The downloader removes the partial file and the
+    /// directory it was going into, and the flow answers the run without reporting anything: the
+    /// person who stopped it knows what happened.</summary>
+    private void StopDownload()
+    {
+        try { _stopping?.Cancel(); }
+        catch (ObjectDisposedException) { /* already gone; the window is closing anyway */ }
+        Dismiss();
+    }
+
     private void Answer(InstallChoice choice)
     {
         // Set before the window goes: the Closed handler answers Later for every other way out.
@@ -191,6 +222,10 @@ public sealed partial class UpdateWindow : Window
         _transient.Dispose();
         _answer?.TrySetResult(InstallChoice.Later);
         _read?.TrySetResult(true);
+        // A window closed while a download runs stops it: nothing is left downloading behind a
+        // window that is no longer there to report it.
+        try { _stopping?.Cancel(); }
+        catch (ObjectDisposedException) { }
     }
 
     /// <summary>Moves to a stage: what that stage shows, the window on screen, and a size that
@@ -206,12 +241,13 @@ public sealed partial class UpdateWindow : Window
         LaterButton.Visibility = Show(question);
         NotesButton.Visibility = Show(question && _hasReleasePage);
         CloseButton.Visibility = Show(message);
-        Actions.Visibility = Show(!downloading);
+        CancelButton.Visibility = Show(downloading);
         ProgressPanel.Visibility = Show(downloading);
         DetailCard.Visibility = Show(question && _hasDetail);
         BodyText.Visibility = Show(BodyText.Text.Length > 0);
 
-        // Closing during a download would take the window off a download it cannot stop.
+        // The download has a button of its own that stops it; a second cross beside it would be a
+        // way out meaning something different.
         DismissButton.Visibility = Show(!downloading);
 
         if (!_shown)

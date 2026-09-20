@@ -44,6 +44,11 @@ public enum UpdateFlowResult
     /// <summary>A release newer than the running version was found and nothing was shown, because
     /// the trigger was <see cref="UpdateTrigger.Silent"/>. The run carries the release.</summary>
     UpdateAvailable,
+
+    /// <summary>The person stopped the download. Nothing was downloaded that is still on disk, the
+    /// directory it was going into is gone, and nothing ran. Not a failure and nothing is
+    /// reported: the person who stopped it knows what happened.</summary>
+    DownloadCancelled,
 }
 
 /// <summary>What a run did, and what it found.</summary>
@@ -213,8 +218,23 @@ public sealed class UpdateFlow
                 return new UpdateFlowRun(UpdateFlowResult.ReleasePageOpened, Release: release);
         }
 
-        PreparedUpdate prepared = await _service.PrepareAsync(
-            release, Both(_prompts.BeginDownload(release), _options.Progress), cancellationToken);
+        DownloadSurface surface = _prompts.BeginDownload(release);
+        // The surface's own token beside the caller's: either stops the download, and the
+        // downloader removes the partial file and its directory on the way out.
+        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, surface.Cancelled);
+
+        PreparedUpdate prepared;
+        try
+        {
+            prepared = await _service.PrepareAsync(release, Both(surface.Progress, _options.Progress), stopping.Token);
+        }
+        catch (OperationCanceledException) when (surface.Cancelled.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            // The person stopped it, not the caller. Nothing to report: they know.
+            _log.Info($"Download of {release.TagName} stopped by the person; nothing was kept.");
+            return new UpdateFlowRun(UpdateFlowResult.DownloadCancelled, Release: release);
+        }
+
         if (!prepared.IsReady)
         {
             await _prompts.SayCannotInstallAsync(prepared);

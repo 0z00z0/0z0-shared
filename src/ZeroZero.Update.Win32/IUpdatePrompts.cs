@@ -9,6 +9,17 @@ public enum InstallChoice
 }
 
 /// <summary>
+/// What a surface hands back when the download starts: where the progress goes, and a token that
+/// trips when the person asks for the download to stop.
+/// </summary>
+/// <param name="Progress">Where each measurement goes, or null where nothing is drawn.</param>
+/// <param name="Cancelled">Trips when the person stopped the download. The flow links it with its
+/// own token, so a stopped download leaves no half-finished file and no directory behind.</param>
+public readonly record struct DownloadSurface(
+    IProgress<DownloadProgress>? Progress = null,
+    CancellationToken Cancelled = default);
+
+/// <summary>
 /// What the flow asks and says. The shared update window in the application; a recorder in a test,
 /// where nothing appears on screen.
 /// </summary>
@@ -27,11 +38,12 @@ public interface IUpdatePrompts
     Task<InstallChoice> AskToInstallAsync(ReleaseInfo release, Version runningVersion);
 
     /// <summary>
-    /// The download is starting. Returns where its progress goes, or null where nothing is drawn.
+    /// The download is starting. Returns where its progress goes and how the person stops it.
     /// Called after the person chose to install and before the first byte; the flow reports to this
-    /// and to the application's own reporter both.
+    /// and to the application's own reporter both. A surface that draws nothing returns the
+    /// default, which reports nowhere and never cancels.
     /// </summary>
-    IProgress<DownloadProgress>? BeginDownload(ReleaseInfo release);
+    DownloadSurface BeginDownload(ReleaseInfo release);
 
     Task SayUpToDateAsync(Version runningVersion);
 

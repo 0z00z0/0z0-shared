@@ -103,11 +103,15 @@ internal sealed class RecordingPrompts : IUpdatePrompts
         return Task.FromResult(Choice);
     }
 
-    public IProgress<DownloadProgress>? BeginDownload(ReleaseInfo release)
+    /// <summary>Trips where the test asked for the download to be stopped, which is what the
+    /// window's own stop button does.</summary>
+    public CancellationTokenSource? StopDownload { get; set; }
+
+    public DownloadSurface BeginDownload(ReleaseInfo release)
     {
         Downloads++;
         Sequence.Add("download");
-        return new Progress<DownloadProgress>(Reported.Add);
+        return new DownloadSurface(new Progress<DownloadProgress>(Reported.Add), StopDownload?.Token ?? default);
     }
 
     public Task SayUpToDateAsync(Version runningVersion)

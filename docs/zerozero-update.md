@@ -110,14 +110,21 @@ exists and a check that did not complete open the same window at its last stage.
 Each picture below is the capture script's output, so it shows the window as it renders rather than
 what the markup claims. Every one is at 175 per cent display scaling.
 
+Status (2026-09-20): the pictures were captured before the buttons were given one width, their own
+symbols and a way to stop the download, so they show three lengths, one chevron on every button and
+no stop button. Run `scripts/Capture 'Update window' screenshots.ps1` to replace them; it refuses a
+locked or dimmed screen rather than filing a black picture.
+
 **The question, with the release's own notes.** Three choices, one per line.
 
 | Light | Dark |
 |---|---|
 | ![The install question, light](screenshots/update-question-light.png) | ![The install question, dark](screenshots/update-question-dark.png) |
 
-**The download.** The bar and the byte count, and no way out: closing would take the window off a
-download it cannot stop.
+**The download.** The bar, the byte count, and one button that stops it. Stopping leaves nothing
+behind — the partial file and the directory it was going into both go — and says nothing
+afterwards: the person who stopped it knows what happened. The cross in the corner is hidden while
+the download runs, so there is one way out meaning one thing.
 
 | Light | Dark |
 |---|---|
@@ -184,6 +191,12 @@ release to offer, so the windows it did not open can be counted from outside, an
 `--update --over-about update|plain --probe <path>` opens the About window and then a window on top
 of it and records whether the one beneath dismissed itself — `plain` is the control, a window that
 counts itself among nothing, which is how the measurement is known to be able to fail.
+
+`--update --cancel person|caller --probe <path>` runs a real download off a loopback server that
+promises forty megabytes and sends them slowly, presses "Install now" through the button's own
+automation peer, and stops the download part-way — through the window's own button under `person`,
+through the token the application passed in under `caller`. It records what the run answered and
+how many download directories and files were left behind.
 
 `scripts/Capture 'Update window' screenshots.ps1` runs the harness once per stage and writes the
 fourteen pictures above into `docs/screenshots/`.
@@ -416,8 +429,13 @@ does not wait for a report to be handled.
   and the signature are checked. The window says so; a surface of the application's own that treats
   the final report as "finished" says so too early, and the flow's own result is what finished
   means.
-- **The download has no way out.** Closing the window would not stop the download, so the cross is
-  hidden while it runs. `UpdateOptions.DownloadTimeout` is what bounds the wait.
+- **Stopping the download reports nothing.** The run answers `DownloadCancelled` and no window
+  says so, because the person who pressed the button already knows. An application that wants to
+  say something says it itself.
+- **A stopped download and a cancelled run are different answers.** The person's button answers
+  `DownloadCancelled`; the token the application passed in still surfaces as an
+  `OperationCanceledException`, so an application shutting down mid-download is not left reading an
+  ordinary outcome and staying up.
 - **A window that closes on focus loss has to be told.** The update window counts itself among the
   application's transient windows; a window of the application's own that dismisses itself on focus
   loss asks `TransientWindows.AnyOpen` before it does, or it closes the moment the update window
