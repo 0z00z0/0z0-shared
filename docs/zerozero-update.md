@@ -110,10 +110,8 @@ exists and a check that did not complete open the same window at its last stage.
 Each picture below is the capture script's output, so it shows the window as it renders rather than
 what the markup claims. Every one is at 175 per cent display scaling.
 
-Status (2026-09-20): the pictures were captured before the buttons were given one width, their own
-symbols and a way to stop the download, so they show three lengths, one chevron on every button and
-no stop button. Run `scripts/Capture 'Update window' screenshots.ps1` to replace them; it refuses a
-locked or dimmed screen rather than filing a black picture.
+Status (2026-09-20): current. Captured from the running window with the buttons at one width, each
+carrying its own symbol, and the download's stop button in place.
 
 **The question, with the release's own notes.** Three choices, one per line.
 

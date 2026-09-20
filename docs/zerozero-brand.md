@@ -443,11 +443,10 @@ Status (2026-09-18): compiles clean in 0.9.2; first rendered in ChargeKeeper 1.5
 Every image is the capture script's output, so it shows the surface as it actually renders rather
 than what the XAML claims.
 
-Status (2026-09-20): **not yet captured.** The close cross changed character in 0.10.0 and the
-pictures are now taken in both themes, so the two that were here — captured before 0.9.0, showing
-the button row as three equal columns — were removed rather than left standing for a window they
-no longer match. `scripts/Capture 'About' screenshot.ps1` writes all four; it refuses a locked or
-dimmed screen rather than filing a black picture, which is why they are missing.
+Status (2026-09-20): current, and the first taken in both themes. The close cross is the brand
+face's own `×`. The Donate button's hot beverage is the one character on these surfaces the face
+does not carry, and the picture shows it: a colour glyph from a fallback face beside labels in the
+brand face.
 
 ## The harness
 
