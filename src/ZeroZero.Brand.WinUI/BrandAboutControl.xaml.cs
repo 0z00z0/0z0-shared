@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Media;
@@ -81,7 +82,9 @@ public sealed partial class BrandAboutControl : UserControl
 
         // Named as the markup named them, so a probe that finds a row button by name still does.
         var siteButton   = CreateRowButton("Website", "SiteBtn");
-        var donateButton = CreateRowButton("☕ Donate", "DonateBtn");
+        var donateButton = CreateRowButton(DonateContent(), "DonateBtn");
+        // The content is a panel now, not a string, so the name is stated rather than inferred.
+        AutomationProperties.SetName(donateButton, "Donate");
         _newsButton      = CreateRowButton("What's new", "NewsBtn");
         _buttonRow.Children.Add(siteButton);
         _buttonRow.Children.Add(donateButton);
@@ -173,17 +176,42 @@ public sealed partial class BrandAboutControl : UserControl
         }
     }
 
-    /// <summary>A button in the row's own style: the brand face at the row's size, natural width.</summary>
-    private Button CreateRowButton(string label, string? name)
+    /// <summary>A button in the row's own style: the brand face at the row's size, natural width.
+    /// The content is a label for every button but Donate, which carries a drawn mark beside
+    /// its own.</summary>
+    private Button CreateRowButton(object content, string? name)
     {
         var button = new Button
         {
-            Content    = label,
+            Content    = content,
             FontSize   = 11,
             FontFamily = (FontFamily)Resources["BrandFont"],
         };
         if (name is not null) button.Name = name;
         return button;
+    }
+
+    /// <summary>
+    /// The drawn cup and the label beside it. The mark comes out of the template in the markup, so
+    /// its colours stay <c>ThemeResource</c> lookups and follow a theme change; a shape built here
+    /// would have taken one colour and kept it.
+    /// </summary>
+    /// <remarks>
+    /// The button reads as one thing to a screen reader: the mark is out of the accessibility tree
+    /// and the button is named by the label alone, as it was when the label carried a character in
+    /// front of it.
+    /// </remarks>
+    private StackPanel DonateContent()
+    {
+        var content = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 6,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        content.Children.Add((UIElement)((DataTemplate)Resources["DonateMark"]).LoadContent());
+        content.Children.Add(new TextBlock { Text = "Donate", VerticalAlignment = VerticalAlignment.Center });
+        return content;
     }
 
     /// <summary>

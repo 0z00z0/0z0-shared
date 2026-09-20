@@ -406,14 +406,29 @@ spinner and the slashed zero take its place while `Busy` and `Success` are showi
 **Pick a character the face carries.** Cascadia Mono covers 1483 code points and a good many
 obvious choices are not among them: `↗` and `✕` are both absent, and Windows draws an absent
 character from whatever font it falls back to — a different shape and weight sitting beside a label
-in the brand face. Measured as present and used by the update window: `↓`, `→`, `»`, `✓`, `×` and
-the default `>`.
+in the brand face. Measured as present and used by the update window: `↓`, `→`, `»`, `×` and the
+default `>`.
 
-The same reading covers every character the About surfaces draw. All of them are in the face except
-two: the close cross, now `×` (U+00D7) rather than `✕` (U+2715), and **the hot beverage on the
-Donate button (U+2615), which is not in the face and still falls back.** That one is a colour emoji
-and replacing it is an appearance decision rather than a typo, so it stands until someone decides
-otherwise.
+The same reading covers every character the About surfaces draw, and it found two the face does not
+carry. The close cross is now `×` (U+00D7) rather than `✕` (U+2715). The hot beverage on the Donate
+button is gone entirely: **that mark is drawn now**, not typed.
+
+### The Donate mark
+
+A path rather than a character, so it scales with the display, takes the theme, and stays the
+studio's own rather than a fallback font's. It reads as a cup at a glance — a tapered body, a
+handle open to the right, a saucer close under it — at 17 effective pixels, twice the cap height of
+the label beside it and still inside the button's own minimum height, so the row it sits in does
+not grow.
+
+It is the palette's orange, `#e0872a`, on a dark ground. That orange is too pale on a light one, so
+light takes `#895014`, the darker shade of the same hue `BrandBracketButton` already uses: one
+light orange in the component rather than two. Measured off the captured pictures, mark against the
+button's own fill: **6.14:1 on light** (`#895014` on `#f8f8f8`) and **5.03:1 on dark** (`#e0872a`
+on `#2d2d2d`). High contrast takes the system highlight colour, as everything else here does.
+
+The mark is out of the accessibility tree and the button is named by its label, so a screen reader
+hears what it heard when a character led the label.
 
 **One width for several buttons.** A button sizes itself to its own text and centres itself in
 whatever width it is given, which leaves a stack of them at three different lengths with their
@@ -444,9 +459,7 @@ Every image is the capture script's output, so it shows the surface as it actual
 than what the XAML claims.
 
 Status (2026-09-20): current, and the first taken in both themes. The close cross is the brand
-face's own `×`. The Donate button's hot beverage is the one character on these surfaces the face
-does not carry, and the picture shows it: a colour glyph from a fallback face beside labels in the
-brand face.
+face's own `×`, and the Donate button carries the drawn cup.
 
 ## The harness
 

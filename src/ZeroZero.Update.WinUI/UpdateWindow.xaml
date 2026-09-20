@@ -95,7 +95,7 @@
             <!-- One action per line, every button the width of the widest, so their brackets line
                  up into a column. A row would not fit three choices at this width at any scaling.
                  Each symbol is the act: down for a download, forward for later, away for the
-                 browser, a tick for read-and-done, a cross for a stop. Every one is a character
+                 browser, a cross to close and a cross to stop. Every one is a character
                  the brand face actually carries, checked against its character map rather than
                  assumed: a symbol it lacks is drawn by whatever font Windows falls back to, which
                  is a different shape and weight beside the label. -->
@@ -104,7 +104,7 @@
                 <brand:BrandBracketButton x:Name="InstallButton" Symbol="&#x2193;"/>
                 <brand:BrandBracketButton x:Name="LaterButton" Symbol="&#x00BB;"/>
                 <brand:BrandBracketButton x:Name="NotesButton" Symbol="&#x2192;"/>
-                <brand:BrandBracketButton x:Name="CloseButton" Symbol="&#x2713;" Visibility="Collapsed"/>
+                <brand:BrandBracketButton x:Name="CloseButton" Symbol="&#x00D7;" Visibility="Collapsed"/>
                 <brand:BrandBracketButton x:Name="CancelButton" Symbol="&#x00D7;" Visibility="Collapsed"/>
             </brand:BrandBracketButtonColumn>
 

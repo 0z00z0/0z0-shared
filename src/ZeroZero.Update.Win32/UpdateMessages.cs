@@ -27,7 +27,7 @@ public static class UpdateMessages
     public const string LaterLabel = "Not now";
 
     /// <inheritdoc cref="InstallLabel"/>
-    public const string ReleasePageLabel = "Open the release page";
+    public const string ReleasePageLabel = "Release page";
 
     /// <inheritdoc cref="InstallLabel"/>
     public const string CloseLabel = "Close";
