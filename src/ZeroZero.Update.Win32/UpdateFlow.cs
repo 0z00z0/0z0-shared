@@ -63,6 +63,12 @@ public sealed class UpdateFlowOptions
     /// <summary>Opens the release page in the browser. The shell when null.</summary>
     public Action<Uri>? OpenReleasePage { get; init; }
 
+    /// <summary>Where the installer download's progress goes while an install runs, or null for
+    /// none. The flow draws nothing of its own from it: the report reaches whichever surface the
+    /// application attached, which decides what to show and marshals to its own thread. Both
+    /// install paths carry it — <see cref="UpdateFlow.RunAsync"/> and
+    /// <see cref="UpdateFlow.InstallAsync"/> — and a run that downloads nothing, a silent check
+    /// among them, reports nothing.</summary>
     public IProgress<DownloadProgress>? Progress { get; init; }
 
     public ILogSink Log { get; init; } = NullLogSink.Instance;

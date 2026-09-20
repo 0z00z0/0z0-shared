@@ -40,9 +40,13 @@ The assemblies are versioned as `UpdateVersion` in `Versions.props` and released
   chain. `Match` says whether a certificate is that signer, and why not.
 - **`UpdateService`** — `CheckAsync` finds the latest release and compares it with the running
   version; `PrepareAsync` downloads the installer into a fresh directory and verifies it, and never
-  runs it; `Launch` verifies the prepared file again and starts it through the shell;
-  `SweepStaleDownloads` removes download directories earlier runs left behind. One instance per
-  application, owning its two HTTP clients for the life of the process.
+  runs it, taking an optional reporter the download's progress goes to; `Launch` verifies the
+  prepared file again and starts it through the shell; `SweepStaleDownloads` removes download
+  directories earlier runs left behind. One instance per application, owning its two HTTP clients
+  for the life of the process.
+- **`DownloadProgress`** — bytes received and the total where there is one, the pair a progress bar
+  is drawn from. [Below](#reporting-the-download) has how often it arrives and what it does not
+  report.
 - **`UpdateCheckOutcome`** — what a check found, and the whole of what an application needs to
   decide what to say. `UpdateAvailable` and `UpToDate` are the two answers a release gives;
   `NoReleases` is the repository having published none; and five say the check did not get one:
@@ -77,6 +81,7 @@ The assemblies are versioned as `UpdateVersion` in `Versions.props` and released
   and hands the release back for the caller's own surface. `InstallAsync(release)` starts an update
   from a release already found, without checking again. One install at a time, and one check at a
   time: a caller arriving while a check is in flight joins it and reads its result.
+  `UpdateFlowOptions.Progress` is where the download's progress goes for a host driving the flow.
 
 ## Verification before execution
 
@@ -216,6 +221,46 @@ check ends, before any caller resumes, so a request arriving after that starts a
 surface shows its own waiting state while it waits; the component shows none. The caller that
 started the check is the one whose cancellation token is inside the request.
 
+## Reporting the download
+
+A 64 MB installer takes long enough that an application showing nothing looks stopped. The
+component measures the download and hands the measurements out; **it draws nothing of its own**,
+for any trigger, so what appears on screen — a bar, a percentage, a line of text, nothing at all —
+is the application's decision and lives on the application's own surface.
+
+Each report is a `DownloadProgress`: the bytes received so far, and the total where there is one.
+
+| | |
+|---|---|
+| How often | At most one report every 250 ms while bytes are arriving, counted from the last report sent, whatever the file's size or the line's speed. `InstallerDownloader.ProgressInterval` is the value. |
+| The last report | A download that completes always ends with one report carrying its true final byte count, whether or not the interval was due. A bar that stops a little short of its end reads as a download that stalled. |
+| A failure or a cancellation | Nothing is reported after the last interval report. That report is the last real measurement and nothing follows it claiming completion or resetting to zero. |
+| An unknown total | `TotalBytes` is null and `Fraction` with it. Nothing is guessed, so a surface with no total shows a marquee or a byte count rather than a percentage. |
+| No reporter attached | The download is the download it was before the interval existed: no clock is read and nothing is allocated for it. |
+
+The total is the response's `Content-Length` where the server sends one, and the size the release
+declares where it does not. It is null only when neither is available.
+
+A host driving the flow attaches its reporter once, in the options:
+
+```csharp
+var flow = new UpdateFlow(service, prompts, new UpdateFlowOptions
+{
+    Shutdown = …,
+    Progress = new Progress<DownloadProgress>(p => ShowBar(p.BytesReceived, p.TotalBytes)),
+    Log = log,
+});
+```
+
+A host driving the service directly passes one per call instead —
+`service.PrepareAsync(release, progress, token)` — and the two layers report identically, because
+the flow does nothing but hand the reporter down.
+
+**Which thread a report arrives on is the reporter's business.** A `Progress<T>` constructed on the
+thread that owns the windows posts back to that thread and is the easy choice; a reporter written
+by hand is called on whatever thread the download is running on and marshals itself. The download
+does not wait for a report to be handled.
+
 ## What stays with the application
 
 - **The options.** Every product string, the repository, the installer file name and the expected
@@ -231,6 +276,9 @@ started the check is the one whose cancellation token is inside the request.
   dialogs live on.
 - **What a silent check shows.** The component shows nothing for that trigger, so the button, its
   waiting state, its label when a release is found and what it does with a failure are the
+  application's.
+- **What the download looks like.** The component measures it and reports the numbers; the bar,
+  the wording, the thread it is drawn on and whether anything is shown at all are the
   application's.
 - **The release-notes text**, where the application keeps its own rather than the release body.
 - **The installer itself**: where it puts things, per-user or per-machine, elevation, and the
@@ -257,6 +305,13 @@ started the check is the one whose cancellation token is inside the request.
   can still have taken the installer with it.
 - **A silent check that finds a release installs nothing.** It returns `UpdateAvailable` and the
   release; the install starts from `InstallAsync` when the person asks for it.
+- **Progress stops where the download does, and the install does not.** Verification runs after the
+  last byte arrives and reports nothing, so a bar that has reached its end sits full while the hash
+  and the signature are checked. A surface that treats the final report as "finished" says so too
+  early; the flow's own result is what finished means.
+- **Attaching no reporter is the whole of turning progress off.** There is no switch, because there
+  is nothing to switch: an application that supplies none is measured no differently from one on
+  0.9.0.
 - **One hash in the body, the installer's.** A second distinct hash anywhere in the notes — a
   portable build's, a checksum of a checksum — makes the release un-installable through the flow.
 - **The tag is a plain version.** `v1.2.3` or `1.2.3`; a pre-release suffix, a component-prefixed
@@ -295,7 +350,15 @@ library where the machine trusts its signature, and is reported as skipped where
 launcher in the tests records and starts nothing, and the dialogs are read back as requests rather
 than shown. Nothing reaches the internet, no installer runs, and no dialog appears on screen.
 
-Status (2026-09-20): what 0.9.0 added — the publisher-name-alone mode, the silent trigger, joining a
+Status (2026-09-20): 0.10.0's reporting interval and its final report are proved by having been run
+once, against a local server, rather than by tests of their own — the report count, their order, the
+final count against the file's real length, a download with no reporter behaving as before, a report
+reaching a host through the flow rather than the service, and a cancelled download sending nothing
+after its last report. The two existing tests that already asserted progress still hold, because
+they assert the reports are monotonic and that the last carries the whole length, neither of which
+the interval changes.
+
+What 0.9.0 added — the publisher-name-alone mode, the silent trigger, joining a
 check already in flight, installing a release already found, and the host's own release-notes text —
 is proved by having been run once rather than by tests of its own, and the suite covers it only
 where an existing test already asserted the behaviour it replaced. One case is not proved at all: a

@@ -55,6 +55,10 @@ public interface IUpdateService
 
     /// <summary>Downloads the release's installer into a fresh directory and verifies it. Never
     /// runs it.</summary>
+    /// <param name="progress">Where the download's progress goes, or null for none. See
+    /// <see cref="InstallerDownloader.DownloadAsync"/> for how often it arrives and what a failed
+    /// download does not report. Nothing else in preparing an update is reported: the verification
+    /// after the download is a step, not a measurement.</param>
     Task<PreparedUpdate> PrepareAsync(ReleaseInfo release, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default);
 
     /// <summary>Verifies the prepared file again and starts it. Refuses anything that is not
