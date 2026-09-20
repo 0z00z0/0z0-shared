@@ -116,7 +116,7 @@ project reference, and the refusal fires on any project whose output is a librar
 **It is not this repository's, and nothing here can remove it.** The refusing text exists only inside
 Microsoft's own `Microsoft.WindowsAppSDK.Base` package, and sits in that package's transitive build
 folder as well as its direct one — which is why a library that never references the Windows App SDK
-itself still fails once the property reaches it. Five library components here take that package, so
+itself still fails once the property reaches it. Six library components here take that package, so
 the reach is the whole reference graph.
 
 Two fixes, and neither of them is this repository's to make:
