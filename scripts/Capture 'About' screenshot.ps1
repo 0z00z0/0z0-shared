@@ -1,12 +1,12 @@
 # Launches the BrandAboutWindow test harness and captures WINDOW-ONLY screenshots of both hosting
 # scenarios — the tray-app popup (BrandAboutWindow) and the hosted-control demo (BrandAboutControl
-# embedded in a plain window, simulating an in-navigation About page) — to docs\screenshots\, under
-# the filenames the brand guide embeds.
+# embedded in a plain window, simulating an in-navigation About page) — in both themes, to
+# docs\screenshots\, under the filenames the brand guide embeds.
 #
-# One surface per run. The popup dismisses itself the moment it loses focus, so a second window
-# opened beside it would take the focus and close it before anything could be captured; the harness
-# opens the popup alone by default and the hosted demo under --hosted, and this script runs it
-# twice.
+# One surface and one theme per run. The popup dismisses itself the moment it loses focus, so a
+# second window opened beside it would take the focus and close it before anything could be
+# captured; the harness opens the popup alone by default and the hosted demo under --hosted, and
+# this script runs it four times.
 #
 # For the same reason a capture is retried: anything on the machine that takes focus while the
 # window settles closes it, and that is the window behaving correctly rather than a failure worth
@@ -153,11 +153,12 @@ function Save-Window([IntPtr]$handle, [string]$path) {
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
 # The title the harness gives each surface, the switches that open it alone, and the file the brand
-# guide embeds.
-$surfaces = @(
-    @{ Title = "Window Mode";         Args = @("--anchor");             File = "about-window.png" }
-    @{ Title = "Hosted Control Demo"; Args = @("--anchor", "--hosted"); File = "about-hosted-control.png" }
-)
+# guide embeds. One theme per run: the popup dismisses itself the moment it loses focus, so two
+# windows in one run would leave one of them closing before it could be captured.
+$surfaces = foreach ($theme in @("Light", "Dark")) {
+    @{ Title = "Window Mode";         Args = @("--anchor", "--theme", $theme);             File = "about-window-$($theme.ToLowerInvariant()).png" }
+    @{ Title = "Hosted Control Demo"; Args = @("--anchor", "--hosted", "--theme", $theme); File = "about-hosted-control-$($theme.ToLowerInvariant()).png" }
+}
 
 foreach ($surface in $surfaces) {
     $saved = $false

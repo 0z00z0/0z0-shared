@@ -409,6 +409,12 @@ character from whatever font it falls back to — a different shape and weight s
 in the brand face. Measured as present and used by the update window: `↓`, `→`, `»`, `✓`, `×` and
 the default `>`.
 
+The same reading covers every character the About surfaces draw. All of them are in the face except
+two: the close cross, now `×` (U+00D7) rather than `✕` (U+2715), and **the hot beverage on the
+Donate button (U+2615), which is not in the face and still falls back.** That one is a colour emoji
+and replacing it is an appearance decision rather than a typo, so it stands until someone decides
+otherwise.
+
 **One width for several buttons.** A button sizes itself to its own text and centres itself in
 whatever width it is given, which leaves a stack of them at three different lengths with their
 brackets nowhere near each other. `BrandBracketButtonColumn` measures the widest and lays every one
@@ -424,17 +430,24 @@ Status (2026-09-18): compiles clean in 0.9.2; first rendered in ChargeKeeper 1.5
 
 **`BrandAboutWindow`** (tray-app popup):
 
-![BrandAboutWindow](screenshots/about-window.png)
+| Light | Dark |
+|---|---|
+| ![BrandAboutWindow, light](screenshots/about-window-light.png) | ![BrandAboutWindow, dark](screenshots/about-window-dark.png) |
 
 **`BrandAboutControl`** hosted directly in a plain window (no popup chrome, no update button):
 
-![BrandAboutControl hosted](screenshots/about-hosted-control.png)
+| Light | Dark |
+|---|---|
+| ![BrandAboutControl hosted, light](screenshots/about-hosted-control-light.png) | ![BrandAboutControl hosted, dark](screenshots/about-hosted-control-dark.png) |
 
-Both images are the capture script's output, so they show the surfaces as they actually render
-rather than what the XAML claims.
+Every image is the capture script's output, so it shows the surface as it actually renders rather
+than what the XAML claims.
 
-Status (2026-09-14): captured before 0.9.0, so both show the row as three equal columns with What's
-new first; the row now reads Website, Donate, What's new at natural widths.
+Status (2026-09-20): **not yet captured.** The close cross changed character in 0.10.0 and the
+pictures are now taken in both themes, so the two that were here — captured before 0.9.0, showing
+the button row as three equal columns — were removed rather than left standing for a window they
+no longer match. `scripts/Capture 'About' screenshot.ps1` writes all four; it refuses a locked or
+dimmed screen rather than filing a black picture, which is why they are missing.
 
 ## The harness
 
@@ -473,9 +486,10 @@ Two scripts under `scripts/` drive the About scenarios:
 
 - **`Show live 'About' dialogue.ps1`** — builds the harness if its exe is missing, then launches it,
   so both windows can be inspected on screen.
-- **`Capture 'About' screenshot.ps1`** — runs the harness twice, once per surface, and writes
-  window-only PNGs into `docs/screenshots/`: `about-window.png` (the popup) and
-  `about-hosted-control.png` (the hosted control), the two images this guide embeds. Capture goes
+- **`Capture 'About' screenshot.ps1`** — runs the harness four times, once per surface per theme,
+  and writes window-only PNGs into `docs/screenshots/`: `about-window-light.png`,
+  `about-window-dark.png`, `about-hosted-control-light.png` and `about-hosted-control-dark.png`,
+  the four images this guide embeds. Capture goes
   through `PrintWindow` with `PW_RENDERFULLCONTENT`, so the translucent Mica backdrop resolves
   cleanly and no desktop content bleeds through. Each capture is anchored against a pure-white patch
   parked beside the window and read off the screen device context, so a dimmed or locked screen is
