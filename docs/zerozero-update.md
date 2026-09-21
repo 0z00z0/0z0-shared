@@ -441,6 +441,13 @@ does not wait for a report to be handled.
 - **Every prompt is awaited.** The flow does not move on while a window is still in front of a
   person, so a surface of the application's own that completes before the person has answered will
   find the update running behind it.
+- **The window does not hold the caller.** The task dialogs it replaced ran on the calling thread
+  and did not return until the person answered; the window does not, and the call that opens
+  it returns once the window is on screen. A host that gates its own notices — one through
+  at a time, the gate reopened when that call returns — reopens it the moment the window
+  opens rather than when the person answers, so a second notice stacks a second window on the
+  first. Await the outcome before reopening such a gate. Measured by a consuming application,
+  on a tray menu reporting an update check.
 - **Attaching no reporter turns off the application's own surface, not the window's.** The window
   draws its bar from the same measurements either way; the reporter in the options is a second
   place for them to go.
