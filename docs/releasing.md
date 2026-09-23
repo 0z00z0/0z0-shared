@@ -29,7 +29,8 @@ the workflow refuses the tag otherwise. A component with unreleased changes rele
 its own tag and its own notes.
 
 The references that cross component lines today: all three MQTT projects, both diagnostics
-projects, `ZeroZero.Lifecycle`, `ZeroZero.Startup` and `ZeroZero.Update` take
+projects, `ZeroZero.Controls.WinUI`, `ZeroZero.Lifecycle`, `ZeroZero.Startup` and
+`ZeroZero.Update` take
 `ZeroZero.Primitives`, `ZeroZero.Mqtt` and `ZeroZero.Mqtt.Discovery` take `ZeroZero.Config`,
 `ZeroZero.Brand.WinUI`, `ZeroZero.Controls.WinUI`, `ZeroZero.Tray` and `ZeroZero.Update.Win32`
 take `ZeroZero.Win32`, and `ZeroZero.Mqtt.WinUI` and `ZeroZero.SettingsShell.WinUI` take
@@ -37,7 +38,8 @@ take `ZeroZero.Win32`, and `ZeroZero.Mqtt.WinUI` and `ZeroZero.SettingsShell.Win
 `ZeroZero.Config`, which is the same key and so not a crossing: the three release together under one
 tag.
 So `primitives`, `config`, `win32` and `build` release in any order,
-`brand`, `controls` and `tray` release after `win32`, `diagnostics`, `lifecycle` and `startup`
+`brand` and `tray` release after `win32`, `controls` releases after `win32` and `primitives`,
+`diagnostics`, `lifecycle` and `startup`
 release after `primitives`, `update` releases after `primitives` and `win32`, `settingsshell`
 releases after `controls`, and `mqtt` releases after `primitives`, `config` and `controls`. Those
 last two reach `win32` as well, but through `controls` rather than directly, and that distinction
