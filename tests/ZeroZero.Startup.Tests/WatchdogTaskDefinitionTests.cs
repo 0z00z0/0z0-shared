@@ -1,0 +1,263 @@
+using System.Diagnostics;
+using Microsoft.Win32.TaskScheduler;
+using Xunit;
+
+namespace ZeroZero.Startup.Tests;
+
+/// <summary>The watchdog definition as the real scheduler library builds it, without registering
+/// anything. The identity is invented: nothing here reaches the scheduler beyond a connection to
+/// it.</summary>
+public sealed class WatchdogTaskDefinitionTests : IDisposable
+{
+    private static readonly TaskIdentity Identity = new(@"MACHINE\someone", "S-1-5-21-1-2-3-1001");
+    private static readonly TaskIdentity AnotherPerson = new(@"MACHINE\other", "S-1-5-21-1-2-3-1002");
+    private static readonly string Executable = Path.Combine(Path.GetTempPath(), "ZeroZero.Startup.Tests", "app.exe");
+
+    private readonly TaskService _service = new();
+
+    public void Dispose() => _service.Dispose();
+
+    private static WatchdogTaskOptions Options(string arguments = "--watchdog-relaunch") => new()
+    {
+        TaskName = "ZeroZero.Startup.Tests.Watchdog",
+        Description = "described",
+        Arguments = arguments,
+        StartCause = WatchdogStartCause.Person,
+        HoldMarkerPath = Path.Combine(Path.GetTempPath(), "ZeroZero.Startup.Tests", "hold.marker"),
+    };
+
+    private TaskDefinition Build(WatchdogTaskOptions? options = null) =>
+        WatchdogTaskDefinition.Build(_service, options ?? Options(), Identity, Executable);
+
+    private static IReadOnlyList<string> Drift(TaskDefinition definition, WatchdogTaskOptions? options = null,
+                                               string? executable = null, TaskIdentity? identity = null) =>
+        WatchdogTaskDefinition.Deviations(definition, options ?? Options(), executable ?? Executable, identity ?? Identity);
+
+    [Fact]
+    public void TheProbeRunsOnTheInterval_OnUnlock_AndOnResume()
+    {
+        using TaskDefinition definition = Build();
+
+        TimeTrigger repeating = Assert.Single(definition.Triggers.OfType<TimeTrigger>());
+        Assert.Equal(TimeSpan.FromMinutes(5), repeating.Repetition.Interval);
+
+        SessionStateChangeTrigger unlock = Assert.Single(definition.Triggers.OfType<SessionStateChangeTrigger>());
+        Assert.Equal(TaskSessionStateChangeType.SessionUnlock, unlock.StateChange);
+        Assert.Equal(Identity.AccountName, unlock.UserId);
+        Assert.Equal(TimeSpan.FromSeconds(5), unlock.Delay);
+
+        EventTrigger resume = Assert.Single(definition.Triggers.OfType<EventTrigger>());
+        Assert.Contains("Microsoft-Windows-Power-Troubleshooter", resume.Subscription, StringComparison.Ordinal);
+        Assert.Equal(TimeSpan.FromSeconds(15), resume.Delay);
+    }
+
+    [Fact]
+    public void TheStartBoundaryIsAlreadyPast_AndTheRepetitionNeverEnds()
+    {
+        using TaskDefinition definition = Build();
+
+        TimeTrigger repeating = Assert.Single(definition.Triggers.OfType<TimeTrigger>());
+        Assert.True(repeating.StartBoundary < DateTime.Now);
+        Assert.Equal(TimeSpan.Zero, repeating.Repetition.Duration);
+    }
+
+    [Fact]
+    public void TheActionStartsTheExecutableWithTheRelaunchArgument()
+    {
+        using TaskDefinition definition = Build();
+
+        ExecAction action = Assert.IsType<ExecAction>(Assert.Single(definition.Actions));
+        Assert.Equal(Executable, action.Path);
+        Assert.Equal("--watchdog-relaunch", action.Arguments);
+        Assert.Equal(Path.GetDirectoryName(Executable), action.WorkingDirectory);
+    }
+
+    [Fact]
+    public void NoArgumentAtAllIsWrittenAsNoneRatherThanAnEmptyOne()
+    {
+        // An empty string round-trips through the scheduler as null, which the deviation read then
+        // compares against "" — the two have to agree or every start rewrites the task.
+        using TaskDefinition definition = Build(Options(arguments: ""));
+
+        ExecAction action = Assert.IsType<ExecAction>(Assert.Single(definition.Actions));
+        Assert.Null(action.Arguments);
+        Assert.Empty(Drift(definition, Options(arguments: "")));
+    }
+
+    [Fact]
+    public void TheSchedulerIsStoppedFromKillingWhatItStarted()
+    {
+        using TaskDefinition definition = Build();
+        TaskSettings settings = definition.Settings;
+
+        Assert.False(settings.DisallowStartIfOnBatteries);
+        Assert.False(settings.StopIfGoingOnBatteries);
+        Assert.False(settings.AllowHardTerminate);
+        Assert.Equal(TimeSpan.Zero, settings.ExecutionTimeLimit);
+        Assert.Equal(TaskInstancesPolicy.IgnoreNew, settings.MultipleInstances);
+        Assert.False(settings.RunOnlyIfIdle);
+        Assert.Equal(ProcessPriorityClass.Normal, settings.Priority);
+        Assert.True(settings.StartWhenAvailable);
+        Assert.True(settings.Enabled);
+    }
+
+    [Fact]
+    public void ItRunsElevatedOnTheInteractiveTokenAsTheGivenIdentity()
+    {
+        using TaskDefinition definition = Build();
+
+        Assert.Equal(Identity.Sid, definition.Principal.UserId);
+        Assert.Equal(TaskRunLevel.Highest, definition.Principal.RunLevel);
+        Assert.Equal(TaskLogonType.InteractiveToken, definition.Principal.LogonType);
+    }
+
+    [Fact]
+    public void ADefinitionTheComponentJustBuiltHasNothingToRepair()
+    {
+        using TaskDefinition definition = Build();
+
+        Assert.Empty(Drift(definition));
+    }
+
+    [Fact]
+    public void ADisabledWatchdogIsADeviation()
+    {
+        // Unlike the logon task, whose enabled flag is the person's choice: this one is the
+        // application's own backstop and a disabled one is repaired.
+        using TaskDefinition definition = Build();
+        definition.Settings.Enabled = false;
+
+        Assert.Contains("is disabled", Drift(definition));
+    }
+
+    [Fact]
+    public void EachMissingTriggerIsItsOwnDeviation()
+    {
+        using TaskDefinition definition = Build();
+        definition.Triggers.Clear();
+
+        IReadOnlyList<string> found = Drift(definition);
+
+        Assert.Contains("has no repeating probe", found);
+        Assert.Contains("does not probe when the workstation is unlocked", found);
+        Assert.Contains("does not probe when the machine resumes", found);
+    }
+
+    [Fact]
+    public void AnIntervalOtherThanTheOneAskedForIsADeviation()
+    {
+        using TaskDefinition definition = Build();
+        definition.Triggers.OfType<TimeTrigger>().Single().Repetition.Interval = TimeSpan.FromHours(1);
+
+        Assert.Contains(Drift(definition), line => line.StartsWith("probes every", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ATaskRegisteredForAnotherAccountIsADeviation()
+    {
+        // A shared machine: a task left by whoever signed in first probes in their session and
+        // never reaches this one's.
+        using TaskDefinition definition = Build();
+
+        IReadOnlyList<string> found = Drift(definition, identity: AnotherPerson);
+
+        Assert.Contains("runs as another account", found);
+        Assert.Contains("probes on another account's unlock", found);
+        Assert.DoesNotContain(found, line => line.Contains("someone", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void AnAccountNamedInEitherFormTheSchedulerUsesIsNotADeviation()
+    {
+        // The scheduler answers with the security identifier or the account name depending on how
+        // the task was written, and comparing one form alone rewrites the task on every start.
+        using TaskDefinition definition = Build();
+        definition.Principal.UserId = Identity.AccountName;
+        definition.Triggers.OfType<SessionStateChangeTrigger>().Single().UserId = Identity.Sid;
+
+        Assert.Empty(Drift(definition));
+    }
+
+    [Fact]
+    public void ARepeatingProbeThatEndsOrStartsElsewhereIsADeviation()
+    {
+        using TaskDefinition definition = Build();
+        TimeTrigger repeating = definition.Triggers.OfType<TimeTrigger>().Single();
+        repeating.Repetition.Duration = TimeSpan.FromHours(12);
+        repeating.StartBoundary = DateTime.Now.AddYears(5);
+
+        IReadOnlyList<string> found = Drift(definition);
+
+        Assert.Contains(found, line => line.StartsWith("stops probing after", StringComparison.Ordinal));
+        Assert.Contains(found, line => line.StartsWith("probes from", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ARepeatingProbeThatIsItselfDisabledIsADeviation()
+    {
+        // The task can be enabled while the trigger inside it is not, and then nothing probes.
+        using TaskDefinition definition = Build();
+        definition.Triggers.OfType<TimeTrigger>().Single().Enabled = false;
+
+        Assert.Contains("has a disabled repeating probe", Drift(definition));
+    }
+
+    [Fact]
+    public void AProbeDelayedByAnotherAmountIsADeviation()
+    {
+        using TaskDefinition definition = Build();
+        definition.Triggers.OfType<SessionStateChangeTrigger>().Single().Delay = TimeSpan.FromMinutes(3);
+        definition.Triggers.OfType<EventTrigger>().Single().Delay = TimeSpan.FromMinutes(7);
+
+        IReadOnlyList<string> found = Drift(definition);
+
+        Assert.Contains(found, line => line.Contains("after an unlock", StringComparison.Ordinal));
+        Assert.Contains(found, line => line.Contains("after a resume", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ATaskRunningAtAnotherPriorityIsADeviation()
+    {
+        // The scheduler's own default is below normal. The logon task's read has always caught
+        // that, and the watchdog's reads the same list.
+        using TaskDefinition definition = Build();
+        definition.Settings.Priority = ProcessPriorityClass.BelowNormal;
+
+        Assert.Contains(Drift(definition), line => line.StartsWith("runs at", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ATaskPointingAtAnotherInstallationIsADeviation()
+    {
+        // The upgrade case: the task survives, the executable moves, and the old path would keep
+        // starting binaries that are no longer there. The line names no path, because it goes out
+        // at information level on every start.
+        using TaskDefinition definition = Build();
+        string moved = Path.Combine(Path.GetTempPath(), "ZeroZero.Startup.Tests", "elsewhere", "app.exe");
+
+        IReadOnlyList<string> found = Drift(definition, executable: moved);
+
+        Assert.Contains("starts another executable", found);
+        Assert.DoesNotContain(found, line => line.Contains("elsewhere", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void TheSettingsTheSchedulerDefaultsToAreEachTheirOwnDeviation()
+    {
+        using TaskDefinition definition = Build();
+        TaskSettings settings = definition.Settings;
+        settings.DisallowStartIfOnBatteries = true;
+        settings.StopIfGoingOnBatteries = true;
+        settings.AllowHardTerminate = true;
+        settings.ExecutionTimeLimit = TimeSpan.FromHours(72);
+        settings.StartWhenAvailable = false;
+
+        IReadOnlyList<string> found = Drift(definition);
+
+        Assert.Contains("starts only on mains power", found);
+        Assert.Contains("stops when the machine goes on battery", found);
+        Assert.Contains("may be hard-terminated", found);
+        Assert.Contains("skips a probe missed while the machine was off", found);
+        Assert.Contains(found, line => line.StartsWith("has an execution time limit", StringComparison.Ordinal));
+    }
+}

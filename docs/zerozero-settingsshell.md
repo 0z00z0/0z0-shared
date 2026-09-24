@@ -5,13 +5,14 @@ page left to the application: Mica chrome with the system title bar painted for 
 navigation pane with a product footer, one scroll viewer over the pages, placement against the
 application's saved rectangle, Escape to close, and a section lifecycle — an enter and a leave
 hook around every change of section, and a per-section build-once flag a rebuild honours.
-`net10.0-windows10.0.26100.0`, the Windows App SDK and `ZeroZero.Controls.WinUI`; no font pack,
-no palette, no theme keys and no strings of its own.
+`net10.0-windows10.0.26100.0`, the Windows App SDK and `ZeroZero.Controls.WinUI`, which brings
+`ZeroZero.Win32` and `ZeroZero.Primitives` with it; no font pack, no palette, no theme keys and no
+strings of its own.
 
 The assembly is versioned as `SettingsShellVersion` in `Versions.props` and released under
 `settingsshell-v<x.y.z>` tags, with notes under `docs/release-notes/settingsshell/`;
 [`releasing.md`](releasing.md) has the procedure. It references `ZeroZero.Controls.WinUI`, so it
-releases after `controls`, which releases after `win32`.
+releases after `controls`, which releases after `win32` and `primitives`.
 
 ## Requirements
 
@@ -99,8 +100,8 @@ for the width it has, not the width it would like.
 ## Take the reference
 
 Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.SettingsShell.WinUI`
-itself, which brings `ZeroZero.Controls.WinUI`, `ZeroZero.Win32` and the toolkit with it. An
-application taking the MQTT module has the first two already.
+itself, which brings `ZeroZero.Controls.WinUI`, `ZeroZero.Win32`, `ZeroZero.Primitives` and the
+toolkit with it. An application taking the MQTT module has the first three already.
 
 Sections, the window, and the panel from [`consume-mqtt-settings-panel.md`](consume-mqtt-settings-panel.md)
 as one of them:

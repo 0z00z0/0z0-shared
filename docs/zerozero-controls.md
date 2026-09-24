@@ -1,18 +1,20 @@
 # The controls foundation assembly
 
 `ZeroZero.Controls.WinUI` holds the WinUI controls that carry no studio identity: the settings-row
-vocabulary — info bubble, section header, card row — title-bar theming, and the single-line text
-prompt. `net10.0-windows10.0.26100.0`, the Windows App SDK, the Community Toolkit's settings
-controls and `ZeroZero.Win32`; no font pack, no palette, and no toolkit type in a public signature.
+vocabulary — info bubble, section header, card row — title-bar theming, the single-line text
+prompt, and the sizing of a popup window to its own content.
+`net10.0-windows10.0.26100.0`, the Windows App SDK, the Community Toolkit's settings
+controls, `ZeroZero.Win32` and `ZeroZero.Primitives`; no font pack, no palette, and no toolkit type
+in a public signature.
 That is what makes it **foundation** rather than a component: any UI component may take it without
 dragging the brand assembly's font pack and About window along, and the MQTT settings panel does,
 for the nineteen bubbles on its rows, as the settings shell does for its title bar.
 
 The assembly is versioned as `ControlsVersion` in `Versions.props` and released under
 `controls-v<x.y.z>` tags, with notes under `docs/release-notes/controls/`;
-[`releasing.md`](releasing.md) has the procedure. It references `ZeroZero.Win32`, so it releases
-after `win32`; a component that references it can only release once the version it references is
-on the feed, so a change here releases before that component.
+[`releasing.md`](releasing.md) has the procedure. It references `ZeroZero.Win32` and
+`ZeroZero.Primitives`, so it releases after both; a component that references it can only release
+once the version it references is on the feed, so a change here releases before that component.
 
 ## Requirements
 
@@ -72,6 +74,22 @@ on the feed, so a change here releases before that component.
   `Confirm` says what the answer does, "Rename", not "OK" — and so is the theme, so an application
   pinned dark passes it. The prompt collapses the field's selection before it closes: closing with
   the opening selection still in place crashed the process inside the XAML runtime, measured.
+- **`PopupWindowFit`** — a window sized to its own content and centred on the monitor it is on. The
+  caller hands it the window, the scroller's content panel, and `PopupWindowFitOptions`: the fixed
+  width, the floor, the scroller's padding, the share of the work area to stop at and where to
+  write the line. `FitToContent()` measures the panel, converts at the window's own rasterisation
+  scale, adds the frame the window actually has, caps at that share, and moves and resizes in one
+  call. The floor wins over the share, and the work area is the single bound nothing passes.
+  **The first activation arrives before the first layout pass**, so the caller asks again
+  when the panel takes its real height; a call before the panel is loaded does nothing and says so
+  once, and a call whose answer has not moved does nothing at all — so a window that raises layout
+  repeatedly is resized once per open rather than once per pass. Whether layout has run is asked of
+  the element rather than inferred from a height of zero: a panel whose rows have not been added
+  yet measures zero and has still been laid out, and reading that as "not ready" would leave such a
+  window at its opening size. The panel's own height is what is read, not the scroller's viewport:
+  the panel's height is independent of the window's, so no second layout pass at the final size is
+  needed. The arithmetic itself is `ZeroZero.Win32`'s `WindowFit`, which a caller sizing something
+  other than a popup uses directly.
 
 Not here, by design: anything carrying the studio's face or palette. Those are the brand component's
 ([`zerozero-brand.md`](zerozero-brand.md)), which a component takes when it needs them and says so.
@@ -81,7 +99,7 @@ the properties it inherits.
 ## Take the reference
 
 Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Controls.WinUI` itself,
-which brings `ZeroZero.Win32` and the toolkit with it. An application taking the MQTT module or the
+which brings `ZeroZero.Win32`, `ZeroZero.Primitives` and the toolkit with it. An application taking the MQTT module or the
 settings shell has it transitively and adds nothing.
 
 A settings page in markup — the header, then rows with a field held to one width and a toggle at
@@ -128,6 +146,20 @@ string? name = await TextPromptWindow.ShowAsync(new TextPromptOptions
 if (name is not null) Rename(name);
 ```
 
+A popup sized to its content — built once, asked again on every layout of the panel:
+
+```csharp
+_fit = new PopupWindowFit(this, ContentPanel, new PopupWindowFitOptions
+{
+    Width = 420,
+    MinimumHeight = 240,
+    ScrollerPadding = Scroller.Padding,
+    Name = "About",
+    Log = log,
+});
+ContentPanel.SizeChanged += (_, _) => _fit.FitToContent();
+```
+
 ## Tests and the harness
 
 `tests/ZeroZero.Controls.Tests` is a plain `net10.0` project that references no WinUI assembly:
@@ -137,7 +169,10 @@ the title-bar enum and palette, compiled in as linked source and pinned — opaq
 grounds the window colour, glyph and fill ordering, no value shared between the two sets — and
 the controls' markup read as data beside the panel's, so the section header keeps the panel's
 sub-header typography and rule, the row keeps its bubble before its field, and the prompt keeps
-its confirm on the right of two equal columns.
+its confirm on the right of two equal columns. `PopupWindowFit` is not covered there: it needs a
+live window and a laid-out panel. The arithmetic it defers to is covered in
+`tests/ZeroZero.Win32.Tests/WindowFitTests.cs`, and what remains here is the plumbing between the
+two — which is looked at, not asserted.
 
 Everything rendered is looked at through `src/ZeroZero.Brand.WinUI.TestHarness`. `--rows` opens
 the row vocabulary in both themes at a page's width and at one narrow enough to wrap; `--titlebar`

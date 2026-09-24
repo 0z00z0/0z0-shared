@@ -13,7 +13,7 @@
 
     <AssemblyTitle>ZeroZero.Controls.WinUI</AssemblyTitle>
     <Product>ZeroZero.Controls.WinUI</Product>
-    <Description>Identity-free WinUI 3 controls for ZeroZero Software apps: the settings-row vocabulary with its info bubble, title-bar theming and the single-line text prompt.</Description>
+    <Description>Identity-free WinUI 3 controls for ZeroZero Software apps: the settings-row vocabulary with its info bubble, title-bar theming, the single-line text prompt and the sizing of a popup window to its own content.</Description>
   </PropertyGroup>
 
   <!--
@@ -32,8 +32,10 @@
 
   <ItemGroup>
     <!-- Foundation on foundation, downward: the text prompt centres itself on the cursor monitor
-         through the monitor metrics, and nothing here reaches past them. -->
+         through the monitor metrics, and the popup sizer does its arithmetic there too. -->
     <ProjectReference Include="..\ZeroZero.Win32\ZeroZero.Win32.csproj" />
+    <!-- The log sink alone. The popup sizer writes one line per open saying what it measured. -->
+    <ProjectReference Include="..\ZeroZero.Primitives\ZeroZero.Primitives.csproj" />
   </ItemGroup>
 
 </Project>

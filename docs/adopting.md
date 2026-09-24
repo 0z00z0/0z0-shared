@@ -17,13 +17,13 @@ and how a pin works, and everything below assumes it.
 | Lifecycle | One instance at a time, relaunch under a limit after a clean exit nobody asked for — never after a crash — and the per-user data folder | `ZeroZero.Lifecycle` | [lifecycle](zerozero-lifecycle.md) |
 | MQTT | The application on a broker and into Home Assistant as one device with entities, and the settings panel | `ZeroZero.Mqtt.WinUI`; headless, `ZeroZero.Mqtt` or `ZeroZero.Mqtt.Discovery` | [mqtt](zerozero-mqtt.md) |
 | Settings shell | The settings window, with every page left to the application | `ZeroZero.SettingsShell.WinUI` | [settings shell](zerozero-settingsshell.md) |
-| Startup | The run-at-logon task, and the repair of one an older build left | `ZeroZero.Startup` | [startup](zerozero-startup.md) |
+| Startup | The run-at-logon task and the repair of one an older build left, and the watchdog task that starts the application again when its process is gone | `ZeroZero.Startup` | [startup](zerozero-startup.md) |
 | Tray | The tray icon's whole lifecycle — theme, display changes, shell restarts, tooltip, clicks, menu | `ZeroZero.Tray.WinUI`; the icon-file writer alone is `ZeroZero.Tray` | [tray](zerozero-tray.md) |
 | Update | Check, ask, download, verify, launch, hand over, all of it on screen | `ZeroZero.Update.WinUI`; own surface, `ZeroZero.Update.Win32`; headless, `ZeroZero.Update` | [update](zerozero-update.md) |
 | Config | Settings on disk: one file holding one type, or one document divided into sections owned by different components | `ZeroZero.Config.Sections`, or `ZeroZero.Config` for a file of one type | [config](zerozero-config.md) |
-| Controls | Settings rows with their info bubbles, title-bar theming, the text prompt — no studio identity | `ZeroZero.Controls.WinUI` | [controls](zerozero-controls.md) |
+| Controls | Settings rows with their info bubbles, title-bar theming, the text prompt, a popup sized to its content — no studio identity | `ZeroZero.Controls.WinUI` | [controls](zerozero-controls.md) |
 | Primitives | The log sink, the version reader, the coalescing gate, the commit stamp | `ZeroZero.Primitives` | [primitives](zerozero-primitives.md) |
-| Win32 | Monitor, DPI and taskbar numbers, the native task dialog and message boxes, dark native chrome | `ZeroZero.Win32` | [win32](zerozero-win32.md) |
+| Win32 | Monitor, DPI and taskbar numbers, fitting a window into a work area, the native task dialog and message boxes, dark native chrome | `ZeroZero.Win32` | [win32](zerozero-win32.md) |
 | Build kit | The shared build rules, the WinUI application block, the manifest, signing, and every third-party version | Not a reference at all — imports, below | [build](zerozero-build.md) |
 
 Config, Controls, Primitives and Win32 are foundation: anything may take them, and most arrive on

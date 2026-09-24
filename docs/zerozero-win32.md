@@ -1,6 +1,7 @@
 # The Win32 foundation assembly
 
-`ZeroZero.Win32` is the raw native layer: monitor, DPI and taskbar metrics as plain numbers, the native task
+`ZeroZero.Win32` is the raw native layer: monitor, DPI and taskbar metrics as plain numbers, the
+arithmetic that fits a window into a work area, the native task
 dialog and the four message boxes, and dark native chrome for the process. Plain `net10.0`, no
 package references, no project references, no XAML and no Windows App SDK — which is what makes it
 **foundation** rather than a component, and what lets a console tool take it as readily as a WinUI
@@ -36,6 +37,22 @@ the feed, so a change here releases first.
   a 1080p work area, zero chrome — never an empty rectangle.
 - **`NativeRect`** — a rectangle in physical pixels, with `ClampInto` for keeping a window inside a
   work area.
+- **`WindowFit`** — the arithmetic over those numbers, so a caller on any user-interface framework
+  measures and this places. `Fit` takes the rectangle a window wants, the window height its content
+  needs and the work area, and answers with the rectangle to open at: grown where the content is
+  taller, cut down to the work area, and moved inside it — except that a rectangle sharing no pixel
+  with the work area is re-centred rather than clamped, because clamping alone jams a window
+  restored onto a monitor that has gone into the nearest corner. `HeightForContent` turns a
+  measured content height into a window height by the difference between what the window is and
+  what it shows today, so the title bar and the scroller's padding are carried rather than added up
+  by hand, and it may shrink as well as grow. `ContentFittedHeight` is the popup case: content at
+  the window's scale plus its frame, floored at a minimum and capped at `HeightCap`, a share of the
+  work area — `DefaultHeightFraction`, four fifths — past which the scroller takes over.
+  **The floor wins over the cap**: a window shorter than its minimum has no room for what it must
+  always show, while one past the fraction is only taller than the policy prefers. The work area
+  itself is the single bound nothing passes, so a floor larger than the monitor gives a window the
+  size of the work area and no more. `ToPhysicalPixels` converts at a scale, treating anything at
+  or below zero as 100 %.
 - **`NativeTaskDialog`** — `Show(owner, TaskDialogRequest)`: caption, headline, body, an expandable
   detail, a stock icon and the buttons — that general, and no more specific. `StockCancelButton`
   adds the system's own Cancel in the user's display language, rather than a custom button spelling
@@ -58,8 +75,9 @@ the feed, so a change here releases first.
   looks away again — a window outstaying its welcome by one glance beats one vanishing mid-update.
   The About window and the update window are the two that use it today.
 
-Not here, by design: which monitor a window goes on, the wording of any dialog, and the trust
-verification the update flow carries. Each stays with the code that owns the decision.
+Not here, by design: which monitor a window goes on, what a window's content measures, the wording
+of any dialog, and the trust verification the update flow carries. Each stays with the code that
+owns the decision — `WindowFit` is told the work area and the heights, and never reads them.
 
 ## The manifest dependency
 
@@ -91,7 +109,8 @@ already has it and adds nothing. Which of those take it directly is in
 
 The tests are in `tests/ZeroZero.Win32.Tests`, plain `net10.0`, and run on Windows only: they call
 user32 and shcore against the real desktop, create a hidden framed window to measure, and read the
-packed task-dialog configuration back through its pointers. No test shows the dialog or a message
+packed task-dialog configuration back through its pointers. `WindowFitTests` needs none of that —
+the arithmetic takes numbers and answers with numbers. No test shows the dialog or a message
 box — a modal dialog would block the run — so those are looked at through the harness instead.
 
 `MonitorMetricsTests.ForCursor_ReportsTheMonitorUnderTheCursorAndItsScale` fails without an

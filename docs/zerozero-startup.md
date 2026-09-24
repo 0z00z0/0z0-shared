@@ -1,30 +1,37 @@
 # The startup component
 
-`ZeroZero.Startup` is the shareable slice of automatic startup: the application's logon task in the
-Task Scheduler — the identity it runs as, the power-safe elevated definition, registration, the
-direct enabled read, enable and disable, deletion, the repair of a task an older build registered,
-and a demand start that proves the task can run. Plain `net10.0`; one project reference,
-`ZeroZero.Primitives`, for the log sink; one package, the `TaskScheduler` library, of which no type
-reaches a public signature. No user interface, no window, no message pump.
+`ZeroZero.Startup` is the application's scheduled tasks. **The logon task** — the identity it runs
+as, the power-safe elevated definition, registration, the direct enabled read, enable and disable,
+deletion, the repair of a task an older build registered, and a demand start that proves the task
+can run. **The watchdog task** — the probe that starts the application again when its process is
+gone, its three triggers, the record of a deliberate exit that holds it off, and the same repair
+discipline applied unconditionally. Plain `net10.0`; one project reference, `ZeroZero.Primitives`,
+for the log sink; one package, the `TaskScheduler` library, of which no type reaches a public
+signature. No user interface, no window, no message pump.
 
-**It is a slice, deliberately.** Automatic startup and elevation are one decision: the task runs at
-the highest level on the interactive token because the application's manifest requires
-administrator, and a registry run key would either fail to start such an application or prompt at
-every logon. What makes that decision stays with the application, and this assembly does not reach
-for it:
+**The two tasks answer to different owners, and that is the whole shape of the component.** The
+logon task exists because the person asked for it, so nothing here creates one and `Repair` leaves
+an absent task absent. The watchdog is the application's own backstop against its process dying, so
+`Ensure` writes one whether or not it was there and whatever the person chose about starting at
+logon. Both run at the highest level on the interactive token, because the application's manifest
+requires administrator and a registry run key would either fail to start such an application or
+prompt at every logon.
+
+What stays with the application:
 
 - **The application manifest** — a build input, and requiring administrator is a per-application
   product decision.
-- **The installer script** — registering the task, the checkbox that offers it, and the launch,
-  kill and uninstall choreography. Inno Setup Pascal cannot reference a package.
-- **The install-directory gate** that stops a development build registering a task pointing at
-  build output.
-- **The watchdog task**, where an application has one — its trigger set, relaunch argument, hold
-  marker and retry budget are that application's resilience design.
-
-**Nothing here creates the logon task.** Whether the application runs at logon is the user's
-choice, made in the installer or in the application's settings, and `Repair` leaves an absent task
-absent.
+- **The installer script** — registering the logon task, the checkbox that offers it, removing both
+  tasks at uninstall, and the launch and kill choreography. Inno Setup Pascal cannot reference a
+  package.
+- **Where the application is installed.** The watchdog takes a predicate rather than a rule of its
+  own: a task pointing at build output starts stale binaries for as long as it survives, and only
+  the application knows which locations are its own.
+- **The single-instance gate.** A watchdog probe that finds a live process has to exit at once, and
+  what enforces that is the application's own instance lock — `ZeroZero.Lifecycle`'s, where it takes
+  that component.
+- **Calling `Hold()` on the way out.** The component records a deliberate exit and reads it back;
+  deciding that an exit was deliberate is the application's.
 
 The assembly is versioned as `StartupVersion` in `Versions.props` and released under
 `startup-v<x.y.z>` tags, with notes under `docs/release-notes/startup/`;
@@ -37,10 +44,10 @@ releases after `primitives` is on the feed at the version it references.
 |---|---|
 | SDK | .NET 10 |
 | Platform | Windows. The assembly targets plain `net10.0` and declares itself Windows-only through `SupportedOSPlatform`, with no version: nothing here needs a build floor, and the project states none. An application taking it alongside the WinUI components inherits their floor, not one from here. |
-| Token | Registering or repairing needs an elevated process: the scheduler refuses a highest-run-level task from a standard token, with an access-denied error. Reading, enabling, disabling, deleting and demand-starting work from any token that owns the task. |
+| Token | Registering or repairing either task needs an elevated process: the scheduler refuses a highest-run-level task from a standard token, with an access-denied error. Reading, enabling, disabling, deleting and demand-starting work from any token that owns the task. `Ensure` reports the refusal as its `Failed` outcome rather than throwing, so an application started without elevation runs on with no backstop instead of not starting. |
 | Globalisation | The consuming application must not set `InvariantGlobalization`. Every write through the scheduler library then fails with a type-initialisation error while every read still works, so the failure looks like a permissions problem. |
 
-## What it contains
+## What the logon task contains
 
 - **`TaskIdentity`** — `Current()`: the account name, which the logon trigger takes, and the
   security identifier, which the principal takes. The scheduler accepts neither in the other's
@@ -154,11 +161,121 @@ started. Where the scheduler refused the start, there is nothing to stop; where 
 program, the copy it started is a legitimate one, and the two readings are the same, so stopping on
 that reading would risk killing a running application.
 
+## What the watchdog task contains
+
+- **`WatchdogTaskOptions`** — `TaskName`; `LogonTaskName`, the name of the application's logon task
+  where it has one, so the two cannot collide; `Description`; `ExecutablePath`, the running
+  executable when null; `Arguments`, the relaunch argument the started process reads to tell a
+  probe's start from a person's; `StartCause`, required, which is that same answer handed back;
+  `Interval`, `UnlockDelay` and `ResumeDelay`, the three probes' timing; `HoldMarkerPath`, required;
+  `RegisterWhen`, the application's check on where it is installed; and `Log`.
+- **`WatchdogTask`** — the task by name. `Ensure()` writes it where it is absent or has drifted and
+  leaves a correct one alone, and never throws. **The constructor checks its arguments and does
+  nothing else**: the scheduler connection, the executable path, the marker path and the collision
+  check all happen inside `Ensure()`, where a refusal is the `Failed` outcome rather than a throw
+  out of an application's start-up path. `Delete()` removes the task and says whether there was
+  one; the installer's uninstall owns that, and nothing in a running application removes its own
+  backstop. `Hold` is the record below, `Restarts` the bound below that.
+- **`WatchdogHold`** — `Hold()` records a deliberate exit, `Release()` clears it, `IsHeld` reads it.
+  A file rather than anything in memory, because the two sides never share a process: the exit is
+  written by the application on its way out and read by the copy the scheduler starts afterwards.
+  **Both `Hold()` and `Release()` say whether they worked**, so a caller can tell the person that an
+  exit went unrecorded instead of finding out when the application comes back by itself; neither
+  throws, because the record of an exit must not stop the exit. The marker carries the moment it was
+  written, and one older than `WatchdogHold.Lifetime` — thirty days — counts as absent: a marker
+  left behind by a clear that failed would otherwise keep the application down for the life of the
+  installation. **A marker that is there but cannot be read counts as held**, because starting the
+  application against the person's choice costs more than leaving it down. Both cases are logged,
+  once each.
+- **`WatchdogStartCause`** and **`WatchdogRestartLimiter`** — the bound on the probe's own restarts,
+  below.
+- **`WatchdogEnsure`** — the decision over delegates, so it is testable with no scheduler, and
+  `WatchdogEnsureResult` with `WatchdogEnsureOutcome`: `Skipped`, `AlreadyCorrect`, `Registered`,
+  `Stopped`, `Failed`.
+
+### The watchdog definition
+
+The same principal and the same power-safe settings as the logon task, with `StartWhenAvailable`
+on so a probe missed while the machine was off runs at the next opportunity, and three triggers
+rather than one:
+
+| Trigger | Timing | Why |
+|---|---|---|
+| Repeating time trigger | every `Interval`, five minutes by default, from a start boundary already in the past | The general backstop. The boundary only has to be a start the scheduler considers reached; the repetition is what schedules the probes. |
+| Session unlock, for the task's own account | `UnlockDelay` after the unlock, five seconds by default | A process killed while the machine was locked would otherwise stay down for up to a whole interval of active use. |
+| Event, Power-Troubleshooter event 1 | `ResumeDelay` after the event, fifteen seconds by default | The same window around sleep. That event is written once the resume has completed, which is the first moment the application can be started again. |
+
+**An absent watchdog is a deviation.** So is a disabled one, unlike the logon task, whose enabled
+flag is the person's choice. `Ensure` lists every deviation in words a log line carries, rewrites
+the whole definition when the list is not empty, and writes nothing when it is.
+
+What it compares, beyond the settings, the principal and the action the two tasks share:
+
+| Read | Deviation when |
+|---|---|
+| The account the task runs as, and the account its unlock trigger names | Neither the security identifier nor the account name matches the identity registering. The scheduler answers with either form depending on how the task was written, so either counts. |
+| The repeating probe | It is absent, its interval differs, its repetition ends rather than running indefinitely, its start boundary is not the fixed one already past, or the trigger itself is disabled. |
+| The unlock probe | It is absent, its delay differs, or it names another account. |
+| The resume probe | It is absent or its delay differs. |
+| `StartWhenAvailable` and the task's enabled flag | Either is off. |
+
+**One account owns the task at a time.** On a machine several people sign in to, the watchdog
+belongs to whichever account last started the application: an account mismatch is a deviation, so
+the next start rewrites the task for the person at the keyboard, and the copy the previous account
+had stops probing. Two accounts running the application at once need two task names.
+
+**No path and no account name reaches a drift line.** That list goes out at information level on
+every start, so where the application is installed and who is signed in stay out of it: the line
+says that the executable differs, not which one it is. The install path is written once, at error
+level, where the write itself failed.
+
+**A watchdog probe's own exit is the application's.** The task starts the executable with
+`Arguments`; what that process then does — find a live instance through the single-instance lock
+and exit, find the hold marker and stay down, or come up — is the application's code, not this
+component's. What the component guarantees is that the probe runs, and that a deliberate exit is on
+record for it to find.
+
+**Two tasks of one name are refused.** Where `LogonTaskName` is given and matches the watchdog's
+own name, `Ensure()` reports `Failed` naming the collision and writes nothing at all, so the logon
+task registered under that name keeps the person's choice about starting at logon rather than being
+replaced by a probe. Scheduler names are case-insensitive, and the comparison is too.
+
+### The restart bound
+
+A probe that starts an application which cannot run would otherwise start it every five minutes for
+ever, and each attempt costs the machine a process launch nobody watches.
+
+**After three probe-started runs inside fifteen minutes, none of which stayed up two minutes, the
+task is disabled**, the outcome is `Stopped`, and one line says so. Nothing repeats it: the probing
+it describes has stopped.
+
+`WatchdogStartCause` is how the component is told which kind of start this is — `Person` or `Probe`
+— and the application already knows, because the probe passes `Arguments`. A `Person` start clears
+the count, so probing resumes on the next start someone asks for: a disabled watchdog is a
+deviation, and the same `Ensure()` call repairs it.
+
+The count is kept in `watchdog-restarts.txt`, beside the hold marker, because the process keeping
+it is the one that keeps dying. **How the component knows a run's length without the dead run
+reporting it**: a probe start is recorded only where the application genuinely came up, since a
+probe that finds a live instance exits at the instance gate, so the gap between two recorded starts
+is the previous run's length plus the wait for the next probe — and that wait is at most the probe
+interval. A gap longer than the interval plus two minutes means the run outlasted the bar, and the
+count starts again. The gap bounds the run's length from above, so a run that only just passed the
+bar may still be counted.
+
+A count file that cannot be read or written answers "keep probing", and the failure is logged: a
+backstop lost to a transient file error costs more than one restart too many.
+
 ## Wiring
 
 At start, on the elevated process:
 
 ```csharp
+const string RelaunchArgument = "--watchdog-relaunch";
+WatchdogStartCause cause = args.Contains(RelaunchArgument)
+    ? WatchdogStartCause.Probe
+    : WatchdogStartCause.Person;
+
 using var task = new StartupTask(new StartupTaskOptions
 {
     TaskName = "Product",
@@ -166,7 +283,35 @@ using var task = new StartupTask(new StartupTaskOptions
     Log = log,
 });
 StartupTaskRepairResult repair = task.Repair();
+
+using var watchdog = new WatchdogTask(new WatchdogTaskOptions
+{
+    TaskName = "Product Watchdog",
+    LogonTaskName = "Product",
+    Description = "Starts Product again if its process is gone.",
+    Arguments = RelaunchArgument,
+    StartCause = cause,
+    HoldMarkerPath = Path.Combine(dataFolder, "watchdog-hold.marker"),
+    RegisterWhen = InstalledHere,
+    Log = log,
+});
+watchdog.Ensure();
+
+if (cause == WatchdogStartCause.Person && !watchdog.Hold.Release())
+    log.Info("The deliberate-exit marker is still there, so the watchdog stays held off.");
 ```
+
+And on the tray menu's Exit:
+
+```csharp
+if (!watchdog.Hold.Hold())
+    log.Info("The deliberate exit went unrecorded, so the watchdog may start Product again.");
+```
+
+**The marker is cleared only on a start the person asked for.** A start from the watchdog's own
+relaunch argument clears nothing: it is not the person asking, and clearing the record there would
+defeat it. That same answer is what `StartCause` carries, so the one reading of the command line
+serves both the marker and the restart bound.
 
 In the tray menu, `task.IsEnabled` for the check mark and `task.Enable()` or `task.Disable()` on
 the click, catching `InvalidOperationException` as "not installed with a startup task". The
@@ -200,3 +345,17 @@ reported as skipped, from a standard token.
 `DemandStartDecisionTests` covers the same decisions with no scheduler, which is the only way to
 reach the queued state on demand: the scheduler passes through it too briefly to be caught, and it
 is the state that must not count as a start.
+
+The watchdog is covered in five files. `WatchdogTaskDefinitionTests` builds the definition through
+the real scheduler library without registering anything and pins the three triggers, the relaunch
+argument, the power-safe settings and every deviation the repair reads — the account, the
+repetition's duration, the start boundary, each trigger's delay and the process priority included.
+`WatchdogEnsureTests` drives the decision over delegates with no scheduler at all, including the
+two cases that separate it from the logon task's — an absent task is written, and a disabled one is
+repaired — and the bound that disables the task instead of writing it. `WatchdogHoldTests` works
+against the real file system under a folder of its own. `WatchdogRestartLimiterTests` drives the
+bound on a stub clock, so fifteen minutes of restarts cost no time at all.
+`WatchdogTaskTests` registers disposable tasks in the root folder
+under the prefix `ZeroZero.Watchdog.Tests.` — its own, not the logon tests', which sweep every task
+carrying theirs at first use while the two classes run in parallel — and four of its tests need an
+elevated process and are skipped, and reported as skipped, from a standard token.
