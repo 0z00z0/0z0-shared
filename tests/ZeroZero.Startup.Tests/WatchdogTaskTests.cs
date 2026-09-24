@@ -94,8 +94,10 @@ public sealed class WatchdogTaskTests : IDisposable
 
         WatchdogEnsureResult again = watchdog.Ensure();
 
-        Assert.Equal(WatchdogEnsureOutcome.AlreadyCorrect, again.Outcome);
+        // The deviations first: a failure then names what the scheduler gave back differently from
+        // what was written, rather than only saying the outcome was the wrong one.
         Assert.Empty(again.Deviations);
+        Assert.Equal(WatchdogEnsureOutcome.AlreadyCorrect, again.Outcome);
     }
 
     [ElevatedFact]

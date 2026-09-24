@@ -40,12 +40,21 @@ internal static class CommonTaskDefinition
             arguments.Length == 0 ? null : arguments,
             Path.GetDirectoryName(executablePath));
 
-    /// <summary>Whether a value the scheduler read back names the given identity. The scheduler
-    /// answers with the security identifier or the account name depending on how the task was
-    /// written, so either counts: comparing one form alone rewrites the task on every start.</summary>
-    internal static bool IsIdentity(string? value, TaskIdentity identity) =>
-        string.Equals(value, identity.Sid, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(value, identity.AccountName, StringComparison.OrdinalIgnoreCase);
+    /// <summary>Whether a value the scheduler read back names the given identity. Three forms count,
+    /// because the scheduler answers in whichever it chose to store: the security identifier, the
+    /// account name with its domain, and the account name without it. Measured: a principal written
+    /// by security identifier comes back as the bare account name, so a check on one form alone
+    /// rewrites the task on every start.</summary>
+    internal static bool IsIdentity(string? value, TaskIdentity identity)
+    {
+        if (string.IsNullOrEmpty(value)) return false;
+        if (string.Equals(value, identity.Sid, StringComparison.OrdinalIgnoreCase)) return true;
+        if (string.Equals(value, identity.AccountName, StringComparison.OrdinalIgnoreCase)) return true;
+
+        int separator = identity.AccountName.LastIndexOf('\\');
+        return separator >= 0
+            && string.Equals(value, identity.AccountName[(separator + 1)..], StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>Every way a registered task differs from what both builders write, added to the
     /// caller's list in words a log line can carry. No path and no account name: a drift line is
