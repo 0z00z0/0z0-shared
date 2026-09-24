@@ -125,6 +125,24 @@ public class WindowFitTests
     }
 
     [Fact]
+    public void AFloorTallerThanTheCapWinsOverTheCap()
+    {
+        // 600 units at 150 % is 900 physical pixels and the frame adds 40, so the floor is 940 —
+        // past the 832 cap. A window shorter than its floor has no room for what it must always
+        // show, while one past the fraction is only taller than the policy prefers.
+        Assert.Equal(940, WindowFit.ContentFittedHeight(100, 1.5, chromeHeight: 40, workAreaHeight: 1040,
+                                                        minimumContentUnits: 600, WindowFit.DefaultHeightFraction));
+    }
+
+    [Fact]
+    public void NothingExceedsTheWorkAreaItself_NotEvenTheFloor()
+    {
+        // A floor of 900 units at 150 % is 1390 with the frame, taller than the whole work area.
+        Assert.Equal(1040, WindowFit.ContentFittedHeight(2000, 1.5, chromeHeight: 40, workAreaHeight: 1040,
+                                                         minimumContentUnits: 900, WindowFit.DefaultHeightFraction));
+    }
+
+    [Fact]
     public void ANegativeChromeReadingIsIgnoredRatherThanSubtracted()
     {
         // A client area reported larger than the frame would otherwise shrink the window.

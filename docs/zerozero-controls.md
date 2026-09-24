@@ -79,13 +79,17 @@ once the version it references is on the feed, so a change here releases before 
   width, the floor, the scroller's padding, the share of the work area to stop at and where to
   write the line. `FitToContent()` measures the panel, converts at the window's own rasterisation
   scale, adds the frame the window actually has, caps at that share, and moves and resizes in one
-  call. **The first activation arrives before the first layout pass**, so the caller asks again
-  when the panel takes its real height; a call with nothing laid out yet does nothing and says so
+  call. The floor wins over the share, and the work area is the single bound nothing passes.
+  **The first activation arrives before the first layout pass**, so the caller asks again
+  when the panel takes its real height; a call before the panel is loaded does nothing and says so
   once, and a call whose answer has not moved does nothing at all — so a window that raises layout
-  repeatedly is resized once per open rather than once per pass. The panel's own height is what is
-  read, not the scroller's viewport: the panel's height is independent of the window's, so no
-  second layout pass at the final size is needed. The arithmetic itself is `ZeroZero.Win32`'s
-  `WindowFit`, which a caller sizing something other than a popup uses directly.
+  repeatedly is resized once per open rather than once per pass. Whether layout has run is asked of
+  the element rather than inferred from a height of zero: a panel whose rows have not been added
+  yet measures zero and has still been laid out, and reading that as "not ready" would leave such a
+  window at its opening size. The panel's own height is what is read, not the scroller's viewport:
+  the panel's height is independent of the window's, so no second layout pass at the final size is
+  needed. The arithmetic itself is `ZeroZero.Win32`'s `WindowFit`, which a caller sizing something
+  other than a popup uses directly.
 
 Not here, by design: anything carrying the studio's face or palette. Those are the brand component's
 ([`zerozero-brand.md`](zerozero-brand.md)), which a component takes when it needs them and says so.

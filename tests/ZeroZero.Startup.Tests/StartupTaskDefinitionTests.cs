@@ -131,8 +131,10 @@ public sealed class StartupTaskDefinitionTests : IDisposable
     [InlineData("logon type", "logon type")]
     [InlineData("no trigger", "no logon trigger")]
     [InlineData("no action", "starts nothing")]
-    [InlineData("other executable", "rather than")]
-    [InlineData("other arguments", "passes")]
+    // Neither line names the path or the arguments it found: the deviation list goes out at
+    // information level on every start.
+    [InlineData("other executable", "starts another executable")]
+    [InlineData("other arguments", "passes other arguments")]
     public void EachSettingAnOlderBuildLeftBehindIsNamedAsADeviation(string tamper, string expected)
     {
         using TaskDefinition definition = Build();

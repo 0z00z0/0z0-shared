@@ -10,6 +10,11 @@ public sealed class WatchdogTaskOptions
     /// installer's uninstall step has to remove a task of this name.</summary>
     public required string TaskName { get; init; }
 
+    /// <summary>The name of the application's logon task, where it has one. Given, it stops the two
+    /// tasks sharing a name: writing the watchdog over the logon task would replace it, and the
+    /// person's choice about starting at logon would go with it.</summary>
+    public string? LogonTaskName { get; init; }
+
     public string Description { get; init; } = "";
 
     /// <summary>What the task starts. The running executable when null.</summary>
@@ -19,6 +24,11 @@ public sealed class WatchdogTaskOptions
     /// relaunch rather than a person starting the application. The application decides what to do
     /// with it; an empty string passes none.</summary>
     public string Arguments { get; init; } = "";
+
+    /// <summary>What started this copy of the application, which the relaunch argument above
+    /// answers. Required, because a restart loop that nobody bounds is exactly what the answer
+    /// prevents and a default would silently disarm it.</summary>
+    public required WatchdogStartCause StartCause { get; init; }
 
     /// <summary>How often the probe runs. A short interval bounds how long a killed process stays
     /// gone, and the unlock and resume triggers close the window where a kill during sleep would
@@ -35,7 +45,7 @@ public sealed class WatchdogTaskOptions
     /// <summary>The file whose presence tells a probe that the person exited on purpose. Required:
     /// where an application's data lives is the application's own answer, and a watchdog with
     /// nowhere to record a deliberate exit starts the application again against the person's
-    /// choice.</summary>
+    /// choice. Its folder also holds the count of the probe's own restarts.</summary>
     public required string HoldMarkerPath { get; init; }
 
     /// <summary>Whether the executable about to be written into the task may be. A development build

@@ -30,7 +30,7 @@ must supply; the rationale behind a given rule lives in the source comment besid
 |---|---|---|---|
 | `ZeroZero.Primitives` | `net10.0` | — | The log sink, the version reader, the coalescing gate |
 | `ZeroZero.Config` | `net10.0` | — | Atomic JSON files, snapshot reads, mutation under one lock, quarantine of an unreadable file |
-| `ZeroZero.Controls.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Win32`, the Community Toolkit | The settings-row vocabulary, title-bar theming, the text prompt |
+| `ZeroZero.Controls.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Win32`, `ZeroZero.Primitives`, the Community Toolkit | The settings-row vocabulary, title-bar theming, the text prompt, the popup sized to its content |
 | `ZeroZero.Mqtt` | `net10.0` | `ZeroZero.Primitives`, `ZeroZero.Config`, `MQTTnet` | Topics, payloads, QoS, retain, the Last Will, transports, endpoint search, certificate trust, command routing, publish groups |
 | `ZeroZero.Mqtt.Discovery` | `net10.0` | `ZeroZero.Mqtt`, `ZeroZero.Primitives`, `ZeroZero.Config` | Entities, component types, the device document, availability, eviction |
 | `ZeroZero.Mqtt.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Mqtt`, `ZeroZero.Mqtt.Discovery`, `ZeroZero.Primitives`, `ZeroZero.Controls.WinUI` | Rendering the settings a user edits |
@@ -40,8 +40,9 @@ part of the module: none carries MQTT vocabulary, none references a component, a
 documented on its own — [`zerozero-primitives.md`](zerozero-primitives.md),
 [`zerozero-config.md`](zerozero-config.md) and [`zerozero-controls.md`](zerozero-controls.md). The
 panel's reference to `ZeroZero.Controls.WinUI` carries `InfoIcon` and nothing else, and that
-assembly takes `ZeroZero.Win32` for its text prompt's placement, so the Win32 layer reaches an
-application through the module transitively; nothing in the module calls it. No brand assembly
+assembly takes `ZeroZero.Win32` for its text prompt's placement and `ZeroZero.Primitives` for the
+log sink its popup sizer writes to, so the Win32 layer reaches an application through the module
+transitively; nothing in the module calls it. No brand assembly
 reaches the module: the About control is the brand component's, documented in
 [`zerozero-brand.md`](zerozero-brand.md), and an application that wants it takes that component
 as a reference of its own.

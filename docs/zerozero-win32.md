@@ -48,7 +48,11 @@ the feed, so a change here releases first.
   by hand, and it may shrink as well as grow. `ContentFittedHeight` is the popup case: content at
   the window's scale plus its frame, floored at a minimum and capped at `HeightCap`, a share of the
   work area — `DefaultHeightFraction`, four fifths — past which the scroller takes over.
-  `ToPhysicalPixels` converts at a scale, treating anything at or below zero as 100 %.
+  **The floor wins over the cap**: a window shorter than its minimum has no room for what it must
+  always show, while one past the fraction is only taller than the policy prefers. The work area
+  itself is the single bound nothing passes, so a floor larger than the monitor gives a window the
+  size of the work area and no more. `ToPhysicalPixels` converts at a scale, treating anything at
+  or below zero as 100 %.
 - **`NativeTaskDialog`** — `Show(owner, TaskDialogRequest)`: caption, headline, body, an expandable
   detail, a stock icon and the buttons — that general, and no more specific. `StockCancelButton`
   adds the system's own Cancel in the user's display language, rather than a custom button spelling

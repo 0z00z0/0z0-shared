@@ -13,7 +13,7 @@ licensed, public.
 | `ZeroZero.Config` | `config` (foundation) | `net10.0` | One JSON settings file holding one type: typed snapshot reads, mutation under one lock, a write that lands whole or not at all, change notification, quarantine of a file that cannot be parsed. |
 | `ZeroZero.Config.Sections` | `config` (foundation) | `net10.0` | One settings document whose top-level keys are sections owned by different components, addressed one section at a time. A sibling section, a section from a build that no longer exists and a hand-written comment all survive a write untouched; no write adds a comment or a second key differing from another only in case. Carries the migration from an older file, which writes the new one and leaves the old one where it was. Takes `ZeroZero.Config`. |
 | `ZeroZero.Config.Watch` | `config` (foundation) | `net10.0` | Picks up an edit made to a settings file outside the application, without a restart: one file watcher, a quiet window so a single save is examined once, and a classifier naming which values are only cosmetic — everything it does not name counts. Takes `ZeroZero.Config`, and watches a whole-file store or a single section alike. |
-| `ZeroZero.Controls.WinUI` | `controls` (foundation) | `net10.0-windows10.0.26100.0` | WinUI controls with no studio identity: the settings-row vocabulary — info bubble, section header, card row — title-bar theming, and the single-line text prompt. Takes `ZeroZero.Win32` and the Community Toolkit's settings controls. |
+| `ZeroZero.Controls.WinUI` | `controls` (foundation) | `net10.0-windows10.0.26100.0` | WinUI controls with no studio identity: the settings-row vocabulary — info bubble, section header, card row — title-bar theming, the single-line text prompt, and the sizing of a popup window to its own content. Takes `ZeroZero.Win32`, `ZeroZero.Primitives` and the Community Toolkit's settings controls. |
 | `ZeroZero.Diagnostics` | `diagnostics` | `net10.0` | Crash diagnostics: the process-wide unhandled-exception arms routed to one place, a crash-line appender that never throws, and the startup version line. The component's entry point; carries the dump registration with it. |
 | `ZeroZero.Diagnostics.Dumps` | `diagnostics` | `net10.0` | The Windows Error Reporting local dump registration with a lifecycle: arm, disarm, sweep older builds' registrations, remove the shared root once empty, prune old dump files. Windows only. |
 | `ZeroZero.Lifecycle` | `lifecycle` | `net10.0` | The single-instance lock held for the life of the process, the deliberate-exit mark, relaunch on any other clean exit under a sliding-window limit, and the per-user data path. Windows only. |
@@ -22,13 +22,13 @@ licensed, public.
 | `ZeroZero.Mqtt.WinUI` | `mqtt` | `net10.0-windows10.0.26100.0` | The MQTT settings panel a host embeds. |
 | `ZeroZero.Primitives` | `primitives` (foundation) | `net10.0` | The two-member log sink and its no-op, the reader of the version an assembly reports with its About-box form, the coalescing gate, and the source-revision stamp as build properties and targets. |
 | `ZeroZero.SettingsShell.WinUI` | `settingsshell` | `net10.0-windows10.0.26100.0` | The settings window with every page left to the application: Mica chrome with the title bar painted for the theme, a navigation pane with a product footer, one scroll viewer over the pages, placement against the application's saved rectangle, Escape to close, and a section lifecycle with enter and leave hooks and a per-section build-once flag. Takes `ZeroZero.Controls.WinUI`. |
-| `ZeroZero.Startup` | `startup` | `net10.0` | The application's logon task in the Task Scheduler: identity, the power-safe elevated definition, registration, the direct enabled read, enable, disable, delete, repair and demand-start verification. Windows only. |
+| `ZeroZero.Startup` | `startup` | `net10.0` | The application's scheduled tasks. The logon task: identity, the power-safe elevated definition, registration, the direct enabled read, enable, disable, delete, repair and demand-start verification. The watchdog task: the probe that starts the application again when its process is gone, on an interval and again just after an unlock and a resume, written and kept correct on every start, with the record of a deliberate exit that holds it off and the bound that ends a restart loop. Takes `ZeroZero.Primitives`. Windows only. |
 | `ZeroZero.Tray` | `tray` | `net10.0` | The plain half of the tray component: the PNG-in-ICO file writer, the slot size at the taskbar's own scale, and whether the taskbar is light or dark with the stroke tone that reads on it. Headless, no drawing; takes `ZeroZero.Win32`. Windows only. |
 | `ZeroZero.Tray.WinUI` | `tray` | `net10.0-windows10.0.26100.0` | The component's entry point: the tray icon host for a WinUI 3 application — the icon's lifecycle with the notify-icon library's efficiency mode refused, the theme, display and shell-restart listeners, the rendered-file cache, tooltip discipline, click classification and the menu refresh protocol. Drawing and notifications stay with the application. Carries `ZeroZero.Tray` with it; takes the notify-icon library and `Microsoft.Win32.SystemEvents`, and no type of either reaches its public signature. |
 | `ZeroZero.Update` | `update` | `net10.0` | The update flow without its dialogs: the latest GitHub release against the running version, the download into a fresh private directory, verification of the installer — its Authenticode signature and publisher against the expected signer, and its SHA-256 against the hash the release publishes — before it runs, the launch-or-refuse policy, the stale-download sweep and the check scheduler. Takes `ZeroZero.Primitives`. Windows only. |
 | `ZeroZero.Update.Win32` | `update` | `net10.0` | The update component's orchestration: the check-ask-download-verify-launch flow that hands over to the application's own shutdown, what it asks and says as plain sentences, and the interface a surface implements to show them. Carries `ZeroZero.Update` with it. Windows only. |
 | `ZeroZero.Update.WinUI` | `update` | `net10.0-windows` | The update component's entry point: one window in the studio's own style for every step a person sees during an update — the question with its release notes, the download with its progress, a refusal with its reason, a failure, and the notice that nothing newer exists. Carries `ZeroZero.Update.Win32` and `ZeroZero.Update` with it. |
-| `ZeroZero.Win32` | `win32` (foundation) | `net10.0` | The raw Win32 layer: monitor, DPI and taskbar metrics as plain numbers, the native task dialog and message boxes, dark native chrome. No XAML, no Windows App SDK. |
+| `ZeroZero.Win32` | `win32` (foundation) | `net10.0` | The raw Win32 layer: monitor, DPI and taskbar metrics as plain numbers, the arithmetic that fits a window into a work area, the native task dialog and message boxes, dark native chrome. No XAML, no Windows App SDK. |
 
 Taking `ZeroZero.Mqtt.WinUI` brings the whole MQTT module and the primitives, config, controls and
 win32 foundations with it, so an application with a settings page needs the one reference; the About
@@ -74,8 +74,8 @@ broker at run time, and Home Assistant 2024.11.0 or later for discovery.
   section-addressed document and what a write does and does not touch, the migration, and the
   watcher with its quiet window and change classifier.
 - [`docs/zerozero-controls.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-controls.md) —
-  the controls foundation assembly: the settings-row vocabulary, title-bar theming and the text
-  prompt.
+  the controls foundation assembly: the settings-row vocabulary, title-bar theming, the text
+  prompt and the popup sized to its content.
 - [`docs/zerozero-diagnostics.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-diagnostics.md) —
   the diagnostics component: the crash handlers, the crash line, the version line, the dump
   registration and its lifecycle, and the wiring order.
@@ -94,7 +94,8 @@ broker at run time, and Home Assistant 2024.11.0 or later for discovery.
 - [`docs/zerozero-lifecycle.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-lifecycle.md) —
   the lifecycle component: the lock, the relaunch and its limit, the data path, and the wiring order.
 - [`docs/zerozero-startup.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-startup.md) —
-  the startup component: the logon task, its definition and repair, and what stays with the application.
+  the startup component: the logon task and the watchdog task, their definitions and repair, the
+  bound on the watchdog's restarts, and what stays with the application.
 - [`docs/zerozero-update.md`](https://github.com/0z00z0/0z0-shared/blob/main/docs/zerozero-update.md) —
   the update component: the two verification checks, where the published hash comes from, the
   wiring, and what stays with the application.

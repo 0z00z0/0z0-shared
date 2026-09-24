@@ -23,13 +23,15 @@ public sealed class WatchdogTaskTests : IDisposable
     private readonly string _folder = Path.Combine(Path.GetTempPath(), "ZeroZero.Startup.Tests.Watchdog." + Guid.NewGuid().ToString("N"));
     private readonly RecordingLogSink _log = new();
 
-    private WatchdogTask Watchdog(Func<string, bool>? registerWhen = null) =>
+    private WatchdogTask Watchdog(Func<string, bool>? registerWhen = null, string? logonTaskName = null) =>
         new(new WatchdogTaskOptions
         {
             TaskName = _name,
+            LogonTaskName = logonTaskName,
             Description = "Disposable test watchdog. Delete freely.",
             ExecutablePath = CommandInterpreter,
             Arguments = "/c exit 0",
+            StartCause = WatchdogStartCause.Person,
             HoldMarkerPath = Path.Combine(_folder, "watchdog-hold.marker"),
             RegisterWhen = registerWhen,
             Log = _log,
@@ -163,9 +165,46 @@ public sealed class WatchdogTaskTests : IDisposable
     }
 
     [Fact]
+    public void TwoTasksOfOneNameAreRefusedAndNeitherIsWritten()
+    {
+        // Writing the watchdog over the logon task would replace it, and the person's choice about
+        // starting at logon would go with it.
+        using WatchdogTask watchdog = Watchdog(logonTaskName: _name);
+
+        WatchdogEnsureResult result = watchdog.Ensure();
+
+        Assert.Equal(WatchdogEnsureOutcome.Failed, result.Outcome);
+        Assert.Contains(_name, result.Error!.Message, StringComparison.Ordinal);
+        Assert.Null(ReadIndependently(task => task?.Name));
+    }
+
+    [Fact]
+    public void ANameThatDiffersOnlyInCaseIsStillACollision()
+    {
+        // Scheduler names are case-insensitive, so the comparison is too.
+        using WatchdogTask watchdog = Watchdog(logonTaskName: _name.ToUpperInvariant());
+
+        Assert.Equal(WatchdogEnsureOutcome.Failed, watchdog.Ensure().Outcome);
+        Assert.Null(ReadIndependently(task => task?.Name));
+    }
+
+    [Fact]
+    public void ALogonTaskOfAnotherNameIsNoCollision()
+    {
+        using WatchdogTask watchdog = Watchdog(registerWhen: _ => false, logonTaskName: _name + ".Logon");
+
+        Assert.Equal(WatchdogEnsureOutcome.Skipped, watchdog.Ensure().Outcome);
+    }
+
+    [Fact]
     public void ATaskNameIsRequired()
     {
-        Assert.Throws<ArgumentException>(() => new WatchdogTask(new WatchdogTaskOptions { TaskName = " ", HoldMarkerPath = "x" }));
+        Assert.Throws<ArgumentException>(() => new WatchdogTask(new WatchdogTaskOptions
+        {
+            TaskName = " ",
+            StartCause = WatchdogStartCause.Person,
+            HoldMarkerPath = "x",
+        }));
         Assert.Throws<ArgumentNullException>(() => new WatchdogTask(null!));
     }
 }

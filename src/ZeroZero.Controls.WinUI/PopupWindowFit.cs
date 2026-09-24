@@ -42,9 +42,11 @@ public sealed class PopupWindowFit
     /// since the last call.</summary>
     public void FitToContent()
     {
-        double panel = _content.ActualHeight;
+        // Whether layout has run is asked of the element itself. A measured height of zero is a
+        // real answer — a panel whose rows have not been added yet has one — and reading it as
+        // "not laid out" leaves such a window at its opening size until something else resizes it.
         double scale = _content.XamlRoot?.RasterizationScale ?? 0;
-        if (panel <= 0 || scale <= 0)
+        if (!_content.IsLoaded || scale <= 0)
         {
             if (!_deferralWritten)
                 _options.Log.Info($"{_options.Name} fit deferred: the content is not laid out yet.");
@@ -52,7 +54,7 @@ public sealed class PopupWindowFit
             return;
         }
 
-        double content = panel + _options.ScrollerPadding.Top + _options.ScrollerPadding.Bottom;
+        double content = _content.ActualHeight + _options.ScrollerPadding.Top + _options.ScrollerPadding.Bottom;
 
         // A window's native geometry is physical pixels; everything measured above is
         // device-independent units.

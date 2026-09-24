@@ -63,17 +63,24 @@ public static class WindowFit
     /// <summary>
     /// The height in physical pixels of a window showing <paramref name="contentUnits"/> of content
     /// with no scrolling: the content converted at <paramref name="scale"/>, plus the window's own
-    /// non-client height, never below <paramref name="minimumContentUnits"/> and never above the
-    /// <see cref="HeightCap"/> of <paramref name="workAreaHeight"/>, where the scroller takes over.
-    /// The content's height is independent of the window's, so no layout pass at the final size is
-    /// needed first.
+    /// non-client height, capped at the <see cref="HeightCap"/> of <paramref name="workAreaHeight"/>
+    /// where the scroller takes over. The content's height is independent of the window's, so no
+    /// layout pass at the final size is needed first.
+    /// <para><paramref name="minimumContentUnits"/> wins over the cap. A window shorter than its
+    /// own floor has no room for what it must always show, while one past the fraction is only
+    /// taller than the policy prefers. <paramref name="workAreaHeight"/> is the single bound
+    /// nothing passes, so a floor larger than the monitor gives a window the size of the work
+    /// area and no more.</para>
     /// </summary>
     public static int ContentFittedHeight(double contentUnits, double scale, int chromeHeight,
                                           int workAreaHeight, int minimumContentUnits, double fraction)
     {
-        int needed = ToPhysicalPixels((int)Math.Ceiling(Math.Max(contentUnits, minimumContentUnits)), scale)
-                   + Math.Max(chromeHeight, 0);
-        return Math.Min(needed, HeightCap(workAreaHeight, fraction));
+        int chrome = Math.Max(chromeHeight, 0);
+        int floor = ToPhysicalPixels(minimumContentUnits, scale) + chrome;
+        int needed = ToPhysicalPixels((int)Math.Ceiling(contentUnits), scale) + chrome;
+
+        int capped = Math.Min(needed, HeightCap(workAreaHeight, fraction));
+        return Math.Min(Math.Max(capped, floor), workAreaHeight);
     }
 
     /// <summary>

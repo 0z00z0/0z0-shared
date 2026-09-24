@@ -9,10 +9,13 @@ public class WatchdogEnsureTests
     private readonly RecordingLogSink _log = new();
     private int _deviationReads;
     private int _writes;
+    private int _stops;
 
-    private WatchdogEnsureResult Run(bool exists, string[] deviations, bool? mayRegister = null, Exception? writeFails = null) =>
+    private WatchdogEnsureResult Run(bool exists, string[] deviations, bool? mayRegister = null,
+                                     Exception? writeFails = null, bool? withinBound = null) =>
         WatchdogEnsure.Run(
             mayRegister: mayRegister is null ? null : () => mayRegister.Value,
+            withinRestartBound: withinBound is null ? null : () => withinBound.Value,
             exists: () => exists,
             deviations: () =>
             {
@@ -24,6 +27,7 @@ public class WatchdogEnsureTests
                 _writes++;
                 if (writeFails is not null) throw writeFails;
             },
+            stopProbing: () => _stops++,
             _log);
 
     [Fact]
@@ -82,6 +86,30 @@ public class WatchdogEnsureTests
     }
 
     [Fact]
+    public void TooManyRestartsStopTheProbingInsteadOfWritingTheTask()
+    {
+        // The guard the restart bound exists for: a task that would otherwise be rewritten, and
+        // would then keep starting an application that cannot run, is disabled instead.
+        WatchdogEnsureResult result = Run(exists: true, ["is disabled"], withinBound: false);
+
+        Assert.Equal(WatchdogEnsureOutcome.Stopped, result.Outcome);
+        Assert.Empty(result.Deviations);
+        Assert.Equal(1, _stops);
+        Assert.Equal(0, _writes);
+        Assert.Equal(0, _deviationReads);
+    }
+
+    [Fact]
+    public void AStartInsideTheBoundWritesTheTaskAsUsual()
+    {
+        WatchdogEnsureResult result = Run(exists: false, [], withinBound: true);
+
+        Assert.Equal(WatchdogEnsureOutcome.Registered, result.Outcome);
+        Assert.Equal(1, _writes);
+        Assert.Equal(0, _stops);
+    }
+
+    [Fact]
     public void AWriteThatFailsIsAnOutcomeCarryingTheException()
     {
         var refusal = new UnauthorizedAccessException("refused");
@@ -99,7 +127,7 @@ public class WatchdogEnsureTests
     {
         var outage = new InvalidOperationException("no scheduler");
 
-        WatchdogEnsureResult result = WatchdogEnsure.Run(null, () => throw outage, () => [], () => _writes++, _log);
+        WatchdogEnsureResult result = WatchdogEnsure.Run(null, null, () => throw outage, () => [], () => _writes++, null, _log);
 
         Assert.Equal(WatchdogEnsureOutcome.Failed, result.Outcome);
         Assert.Same(outage, result.Error);
@@ -109,8 +137,10 @@ public class WatchdogEnsureTests
     [Fact]
     public void ANullDelegateIsRefused()
     {
-        Assert.Throws<ArgumentNullException>(() => WatchdogEnsure.Run(null, null!, () => [], () => { }));
-        Assert.Throws<ArgumentNullException>(() => WatchdogEnsure.Run(null, () => true, null!, () => { }));
-        Assert.Throws<ArgumentNullException>(() => WatchdogEnsure.Run(null, () => true, () => [], null!));
+        Assert.Throws<ArgumentNullException>(() => WatchdogEnsure.Run(null, null, null!, () => [], () => { }));
+        Assert.Throws<ArgumentNullException>(() => WatchdogEnsure.Run(null, null, () => true, null!, () => { }));
+        Assert.Throws<ArgumentNullException>(() => WatchdogEnsure.Run(null, null, () => true, () => [], null!));
+        // A bound with no way to stop probing would reach the bound and do nothing about it.
+        Assert.Throws<ArgumentNullException>(() => WatchdogEnsure.Run(null, () => true, () => true, () => [], () => { }));
     }
 }

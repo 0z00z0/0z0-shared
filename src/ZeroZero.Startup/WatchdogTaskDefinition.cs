@@ -3,7 +3,8 @@ using Microsoft.Win32.TaskScheduler;
 namespace ZeroZero.Startup;
 
 /// <summary>The watchdog task as it should be registered, and what differs between that and a task
-/// already there.</summary>
+/// already there. The settings, the principal and the action are shared with the logon task and
+/// live in <see cref="CommonTaskDefinition"/>; the three triggers are this task's own.</summary>
 internal static class WatchdogTaskDefinition
 {
     /// <summary>Resume from standby. The Power-Troubleshooter provider writes event 1 once the
@@ -17,20 +18,22 @@ internal static class WatchdogTaskDefinition
     /// only has to be a start the scheduler already considers reached.</summary>
     internal static readonly DateTime ProbeStartBoundary = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Unspecified);
 
+    /// <summary>No end to the repetition. The scheduler reads zero as "indefinitely", and any other
+    /// value stops the probes at a moment nothing announces.</summary>
+    internal static readonly TimeSpan ProbeRepetitionDuration = TimeSpan.Zero;
+
     internal static TaskDefinition Build(TaskService service, WatchdogTaskOptions options,
                                          TaskIdentity identity, string executablePath)
     {
         TaskDefinition definition = service.NewTask();
         definition.RegistrationInfo.Description = options.Description;
 
-        definition.Principal.UserId = identity.Sid;
-        definition.Principal.LogonType = TaskLogonType.InteractiveToken;
-        definition.Principal.RunLevel = TaskRunLevel.Highest;
+        CommonTaskDefinition.ApplyPrincipal(definition.Principal, identity);
 
         definition.Triggers.Add(new TimeTrigger
         {
             StartBoundary = ProbeStartBoundary,
-            Repetition = { Interval = options.Interval },
+            Repetition = { Interval = options.Interval, Duration = ProbeRepetitionDuration },
         });
         definition.Triggers.Add(new SessionStateChangeTrigger
         {
@@ -44,11 +47,9 @@ internal static class WatchdogTaskDefinition
             Delay = options.ResumeDelay,
         });
 
-        definition.Actions.Add(new ExecAction(executablePath,
-                                              options.Arguments.Length == 0 ? null : options.Arguments,
-                                              Path.GetDirectoryName(executablePath)));
+        definition.Actions.Add(CommonTaskDefinition.Action(executablePath, options.Arguments));
 
-        StartupTaskDefinition.ApplyPowerSafeSettings(definition.Settings);
+        CommonTaskDefinition.ApplyPowerSafeSettings(definition.Settings);
         // A probe missed while the machine was off runs at the next opportunity rather than being
         // dropped, which is the case the watchdog exists for.
         definition.Settings.StartWhenAvailable = true;
@@ -59,50 +60,59 @@ internal static class WatchdogTaskDefinition
     /// <summary>Every way a registered task differs from the one <see cref="Build"/> would make, in
     /// words a log line can carry. Empty when nothing needs rewriting. Unlike the logon task, the
     /// enabled flag is a deviation: the watchdog is the application's own backstop rather than a
-    /// choice the person made, so a disabled one is repaired.</summary>
+    /// choice the person made, so a disabled one is repaired.
+    /// <para>Neither a path nor an account name appears here. The list is written at information
+    /// level on an ordinary start, and the install path belongs to the failure path alone.</para>
+    /// </summary>
     internal static IReadOnlyList<string> Deviations(TaskDefinition registered, WatchdogTaskOptions options,
-                                                     string executablePath)
+                                                     string executablePath, TaskIdentity identity)
     {
         var found = new List<string>();
         TaskSettings settings = registered.Settings;
 
-        if (settings.DisallowStartIfOnBatteries) found.Add("starts only on mains power");
-        if (settings.StopIfGoingOnBatteries) found.Add("stops when the machine goes on battery");
-        if (settings.AllowHardTerminate) found.Add("may be hard-terminated");
-        if (settings.ExecutionTimeLimit != TimeSpan.Zero) found.Add($"has an execution time limit of {settings.ExecutionTimeLimit}");
-        if (settings.MultipleInstances != TaskInstancesPolicy.IgnoreNew) found.Add($"has multiple-instance policy {settings.MultipleInstances}");
-        if (settings.RunOnlyIfIdle) found.Add("runs only when idle");
         if (!settings.StartWhenAvailable) found.Add("skips a probe missed while the machine was off");
         if (!settings.Enabled) found.Add("is disabled");
 
-        if (registered.Principal.RunLevel != TaskRunLevel.Highest) found.Add("does not run elevated");
-        if (registered.Principal.LogonType != TaskLogonType.InteractiveToken) found.Add($"runs with logon type {registered.Principal.LogonType}");
+        // One account owns the task at a time. A task left behind by another person on a shared
+        // machine probes in their session and never reaches this one's.
+        if (!CommonTaskDefinition.IsIdentity(registered.Principal.UserId, identity))
+            found.Add("runs as another account");
 
         TimeTrigger? repeating = registered.Triggers.OfType<TimeTrigger>().FirstOrDefault();
         if (repeating is null)
             found.Add("has no repeating probe");
-        else if (repeating.Repetition.Interval != options.Interval)
-            found.Add($"probes every {repeating.Repetition.Interval} rather than every {options.Interval}");
-
-        if (!registered.Triggers.OfType<SessionStateChangeTrigger>()
-                       .Any(t => t.StateChange == TaskSessionStateChangeType.SessionUnlock))
-            found.Add("does not probe when the workstation is unlocked");
-
-        if (!registered.Triggers.OfType<EventTrigger>()
-                       .Any(t => string.Equals(t.Subscription, ResumeSubscription, StringComparison.Ordinal)))
-            found.Add("does not probe when the machine resumes");
-
-        ExecAction? action = registered.Actions.OfType<ExecAction>().FirstOrDefault();
-        if (action is null)
-            found.Add("starts nothing");
         else
         {
-            if (!string.Equals(action.Path?.Trim('"'), executablePath, StringComparison.OrdinalIgnoreCase))
-                found.Add($"starts '{action.Path}' rather than '{executablePath}'");
-            if (!string.Equals(action.Arguments ?? "", options.Arguments, StringComparison.Ordinal))
-                found.Add($"passes '{action.Arguments}' rather than '{options.Arguments}'");
+            if (repeating.Repetition.Interval != options.Interval)
+                found.Add($"probes every {repeating.Repetition.Interval} rather than every {options.Interval}");
+            if (repeating.Repetition.Duration != ProbeRepetitionDuration)
+                found.Add($"stops probing after {repeating.Repetition.Duration}");
+            if (repeating.StartBoundary != ProbeStartBoundary)
+                found.Add($"probes from {repeating.StartBoundary:yyyy-MM-dd HH:mm:ss} rather than from a boundary already past");
+            if (!repeating.Enabled)
+                found.Add("has a disabled repeating probe");
         }
 
+        SessionStateChangeTrigger? unlock = registered.Triggers.OfType<SessionStateChangeTrigger>()
+            .FirstOrDefault(t => t.StateChange == TaskSessionStateChangeType.SessionUnlock);
+        if (unlock is null)
+            found.Add("does not probe when the workstation is unlocked");
+        else
+        {
+            if (unlock.Delay != options.UnlockDelay)
+                found.Add($"probes {unlock.Delay} after an unlock rather than {options.UnlockDelay}");
+            if (!CommonTaskDefinition.IsIdentity(unlock.UserId, identity))
+                found.Add("probes on another account's unlock");
+        }
+
+        EventTrigger? resume = registered.Triggers.OfType<EventTrigger>()
+            .FirstOrDefault(t => string.Equals(t.Subscription, ResumeSubscription, StringComparison.Ordinal));
+        if (resume is null)
+            found.Add("does not probe when the machine resumes");
+        else if (resume.Delay != options.ResumeDelay)
+            found.Add($"probes {resume.Delay} after a resume rather than {options.ResumeDelay}");
+
+        CommonTaskDefinition.AddDeviations(found, registered, executablePath, options.Arguments);
         return found;
     }
 }

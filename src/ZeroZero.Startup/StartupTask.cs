@@ -89,7 +89,9 @@ public sealed class StartupTask : IDisposable
         TaskIdentity identity = Identity();
         using TaskDefinition definition = StartupTaskDefinition.Build(_service, _options, identity, _executablePath, enabled: true);
         RegisterDefinition(definition, identity);
-        _log.Info($"Startup task '{TaskName}' registered for {identity.AccountName}.");
+        // No account name: this line goes out at information level on an ordinary start, and who is
+        // signed in is not the log's business.
+        _log.Info($"Startup task '{TaskName}' registered.");
     }
 
     /// <exception cref="InvalidOperationException">No task of the name is registered. The user asked
@@ -143,6 +145,12 @@ public sealed class StartupTask : IDisposable
             },
             verify: _options.VerifyByDemandStart ? () => DemandStart(VerificationWait).Succeeded : null,
             _log);
+
+        // The install path is written here and nowhere else: the deviation list goes out at
+        // information level on an ordinary start, and a path in it says where the application lives
+        // to anyone reading the log.
+        if (result.Outcome == StartupTaskRepairOutcome.RepairFailed)
+            _log.Error(nameof(StartupTask), new InvalidOperationException($"The startup task '{TaskName}' was not rewritten for '{_executablePath}'."));
 
         LogStateAfterRepair();
         return result;

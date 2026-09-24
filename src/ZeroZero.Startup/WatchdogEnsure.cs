@@ -15,18 +15,25 @@ public static class WatchdogEnsure
 
     /// <param name="mayRegister">Whether the executable may be written into a task at all. Null
     /// registers whatever runs.</param>
+    /// <param name="withinRestartBound">Whether the probe has restarted the application too often to
+    /// keep probing. Null leaves the restarts unbounded.</param>
     /// <param name="exists">Whether a task of the name is registered.</param>
     /// <param name="deviations">What differs from the intended task; empty when nothing does.</param>
     /// <param name="write">Registers the intended task, over any existing one.</param>
+    /// <param name="stopProbing">Stops a registered task from probing again. Called only where
+    /// <paramref name="withinRestartBound"/> says the bound is reached.</param>
     public static WatchdogEnsureResult Run(Func<bool>? mayRegister,
+                                           Func<bool>? withinRestartBound,
                                            Func<bool> exists,
                                            Func<IReadOnlyList<string>> deviations,
                                            Action write,
+                                           Action? stopProbing = null,
                                            ILogSink? log = null)
     {
         ArgumentNullException.ThrowIfNull(exists);
         ArgumentNullException.ThrowIfNull(deviations);
         ArgumentNullException.ThrowIfNull(write);
+        if (withinRestartBound is not null) ArgumentNullException.ThrowIfNull(stopProbing);
         log ??= NullLogSink.Instance;
 
         IReadOnlyList<string> found = [];
@@ -36,6 +43,14 @@ public static class WatchdogEnsure
             {
                 log.Info("Watchdog task not written: the running executable is not one this application registers from.");
                 return new WatchdogEnsureResult(WatchdogEnsureOutcome.Skipped, found, null);
+            }
+
+            // Before anything is written: a task rewritten and then disabled in the same call would
+            // report the rewrite as the outcome and hide the reason probing stopped.
+            if (withinRestartBound is not null && !withinRestartBound())
+            {
+                stopProbing!();
+                return new WatchdogEnsureResult(WatchdogEnsureOutcome.Stopped, found, null);
             }
 
             found = exists() ? deviations() : [NotRegistered];
