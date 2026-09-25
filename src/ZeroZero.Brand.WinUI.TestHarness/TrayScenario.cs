@@ -25,33 +25,43 @@ internal sealed class TrayScenario : IDisposable
 
     /// <summary>The icon's identity, fixed so the rig can find its own entry in the shell's
     /// per-icon settings.</summary>
-    private static readonly Guid Id = new("5D1F3B62-7A4C-4E0B-9C2D-A1B2C3D4E5F6");
+    private static readonly Guid DefaultId = new("5D1F3B62-7A4C-4E0B-9C2D-A1B2C3D4E5F6");
+
+    private readonly Guid _id;
 
     private readonly TrayHost _host;
     private readonly string? _probePath;
     private readonly bool _ownFile;
     private readonly bool _openMenu;
     private readonly ElementTheme? _menuTheme;
+    private readonly TrayIconPlacement? _placement;
+    private readonly int _restoreAfterMs;
     private readonly Action _exit;
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "ZeroZero.Tray.Harness");
     private readonly DateTimeOffset _startedAt = DateTimeOffset.UtcNow;
     private DispatcherQueueTimer? _stopTimer;
     private DispatcherQueueTimer? _menuTimer;
+    private DispatcherQueueTimer? _restoreTimer;
+    private bool _asked;
     private int _clicks;
     private bool _paused;
     private bool _disposed;
 
-    public TrayScenario(string? probePath, bool ownFile, bool openMenu, ElementTheme? menuTheme, Action exit)
+    public TrayScenario(string? probePath, bool ownFile, bool openMenu, ElementTheme? menuTheme,
+                        TrayIconPlacement? placement, int restoreAfterMs, Guid? id, Action exit)
     {
         _probePath = probePath;
         _ownFile = ownFile;
         _openMenu = openMenu;
         _menuTheme = menuTheme;
+        _placement = placement;
+        _restoreAfterMs = restoreAfterMs;
+        _id = id ?? DefaultId;
         _exit = exit;
         _host = new TrayHost(new TrayHostOptions
         {
             Name = "ZeroZero Tray Harness",
-            Id = Id,
+            Id = _id,
             Icon = Render,
             Tooltip = TooltipLines,
             Menu = MenuItems,
@@ -67,6 +77,25 @@ internal sealed class TrayScenario : IDisposable
     public void Start()
     {
         _host.Start();
+
+        // Asked for once the icon exists, because the shell keeps no entry for an icon it has
+        // never seen. Put back when the rig exits: the setting is the user's.
+        if (_placement is { } wanted) _asked = _host.AskForPlacement(wanted);
+
+        // The placement put back while the icon is still up, so what the shell does with the
+        // restore can be looked at rather than inferred from an icon that has gone.
+        if (_asked && _restoreAfterMs > 0)
+        {
+            _restoreTimer = DispatcherQueue.GetForCurrentThread().CreateTimer();
+            _restoreTimer.Interval = TimeSpan.FromMilliseconds(_restoreAfterMs);
+            _restoreTimer.IsRepeating = false;
+            _restoreTimer.Tick += (_, _) =>
+            {
+                _host.RestorePlacement();
+                _asked = false;
+            };
+            _restoreTimer.Start();
+        }
 
         if (_openMenu)
         {
@@ -105,6 +134,8 @@ internal sealed class TrayScenario : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        // Before the host goes: restoring writes through it, and disposing lets go of the icon.
+        if (_asked) _host.RestorePlacement();
         _host.Dispose();
     }
 
@@ -166,6 +197,9 @@ internal sealed class TrayScenario : IDisposable
             $"theme\t{request.Theme}",
             $"icon\t{(_ownFile ? OwnFilePath : _host.CachePath)}",
             $"placement\t{Placement()}",
+            $"setting\t{(_host.Placement is { } now ? now.ToString() : "no entry")}",
+            $"asked\t{(_placement is { } asked ? asked.ToString() : "nothing")}",
+            $"written\t{_asked}",
         ];
         string staging = _probePath + ".tmp";
         File.WriteAllLines(staging, lines);

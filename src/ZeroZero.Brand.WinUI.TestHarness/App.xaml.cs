@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Media;
 using Windows.UI;
 using ZeroZero.Brand.Core;
 using ZeroZero.Controls.WinUI;
+using ZeroZero.Tray;
 using ZeroZero.SettingsShell.WinUI;
 using ZeroZero.Win32;
 // This project's own namespace nests inside ZeroZero.Brand (same collision documented in
@@ -99,7 +100,11 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// <c>--file</c> hands the host a file the rig wrote once instead of frames per render;
 /// <c>--menu</c> opens the menu by the tray after two seconds, so a capture needs no click, and
 /// <c>--menu-theme Light|Dark</c> pins the menu's theme rather than letting it follow the
-/// taskbar's; <c>--anchor</c> adds the white window a capture is checked against;
+/// taskbar's; <c>--place NotificationArea|Overflow</c> asks the shell to draw the icon there
+/// and puts the setting back on exit, or after <c>--restore-after &lt;ms&gt;</c> with the icon
+/// still up; <c>--icon-id &lt;guid&gt;</c> gives the icon another identity, so a registration the
+/// shell has never seen can be measured; <c>--anchor</c> adds the white window a capture is
+/// checked against;
 /// <c>--probe &lt;path&gt;</c> writes what the
 /// host created to that path, marks it complete with an empty <c>.done</c> file beside it, logs
 /// every click beside it, and exits once a <c>.stop</c> file appears beside the probe.
@@ -147,7 +152,15 @@ public partial class App : Application
                          "Light" => ElementTheme.Light,
                          "Dark" => ElementTheme.Dark,
                          _ => null,
-                     });
+                     },
+                     ValueAfter(commandLine, "--place") switch
+                     {
+                         "NotificationArea" => TrayIconPlacement.NotificationArea,
+                         "Overflow" => TrayIconPlacement.Overflow,
+                         _ => null,
+                     },
+                     int.TryParse(ValueAfter(commandLine, "--restore-after"), out int restoreMs) ? restoreMs : 0,
+                     Guid.TryParse(ValueAfter(commandLine, "--icon-id"), out Guid iconId) ? iconId : null);
             return;
         }
 
@@ -544,9 +557,10 @@ public partial class App : Application
     /// tooltip and the menu, with no window at all. With a probe path the rig records what the host
     /// created and stays until a stop file appears; otherwise it stays until Exit is chosen.
     /// </summary>
-    private void ShowTray(string? probePath, bool ownFile, bool openMenu, ElementTheme? menuTheme)
+    private void ShowTray(string? probePath, bool ownFile, bool openMenu, ElementTheme? menuTheme,
+                          TrayIconPlacement? placement, int restoreAfterMs, Guid? id)
     {
-        _tray = new TrayScenario(probePath, ownFile, openMenu, menuTheme, Exit);
+        _tray = new TrayScenario(probePath, ownFile, openMenu, menuTheme, placement, restoreAfterMs, id, Exit);
         _tray.Start();
     }
 
