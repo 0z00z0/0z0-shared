@@ -23,6 +23,7 @@ public sealed class TrayHost : IDisposable
     private DispatcherQueue? _dispatcher;
     private TrayClickPolicy? _clicks;
     private TrayIconRequest? _request;
+    private TrayIconPlacement? _placementReplaced;
     private bool _disposed;
 
     public TrayHost(TrayHostOptions options)
@@ -42,12 +43,56 @@ public sealed class TrayHost : IDisposable
 
     /// <summary>
     /// The identity the shell holds the icon by, read from the library's own icon rather than
-    /// worked out again; null before <see cref="Start"/>. The library derives an identity from the
-    /// icon's name and registers that, so an application that supplied one of its own has a
-    /// <see cref="Id"/> the shell has never seen (measured: the shell answers no rectangle for it).
-    /// This is the identity the shell's per-icon settings are keyed on.
+    /// worked out again; null before <see cref="Start"/>. It is <see cref="Id"/>, and the shell's
+    /// per-icon settings are keyed on it.
     /// </summary>
     public Guid? ShellId => _icon?.TrayIcon.Id;
+
+    /// <summary>Where the shell draws the icon now, as its own setting says; null before
+    /// <see cref="Start"/>, and null while the shell keeps no entry for the icon, which is the
+    /// case until it has drawn it at least once.</summary>
+    public TrayIconPlacement? Placement => ShellId is { } id ? NotifyIconSettings.Read(id) : null;
+
+    /// <summary>
+    /// Asks the shell to draw the icon in the notification area rather than behind the overflow
+    /// chevron, or the other way round: the setting is written, and the icon is then registered
+    /// again, because the shell reads the setting when an icon is registered and not while one is
+    /// up. Returns whether anything was written — false means the setting already reads as wanted,
+    /// or the shell keeps no entry this icon alone picks out, and in neither case is the icon
+    /// disturbed.
+    /// </summary>
+    /// <remarks>The setting is the person's own. Only the entry carrying this icon's identity is
+    /// ever written, nothing is written when it already says what is wanted, and what the first
+    /// write replaced is kept so <see cref="RestorePlacement"/> can put it back. On the UI thread,
+    /// after <see cref="Start"/>.</remarks>
+    public bool AskForPlacement(TrayIconPlacement wanted)
+    {
+        ThrowIfNotStarted();
+        if (ShellId is not { } id) return false;
+
+        var before = NotifyIconSettings.Read(id);
+        if (!NotifyIconSettings.Write(id, wanted)) return false;
+
+        _placementReplaced ??= before;
+        Reregister();
+        return true;
+    }
+
+    /// <summary>
+    /// Puts back the placement this host first replaced, and registers the icon again. Returns
+    /// whether anything was written; nothing was ever replaced, or the setting already reads that
+    /// way, and nothing happens.
+    /// </summary>
+    public bool RestorePlacement()
+    {
+        ThrowIfNotStarted();
+        if (ShellId is not { } id || _placementReplaced is not { } before) return false;
+        if (!NotifyIconSettings.Write(id, before)) return false;
+
+        _placementReplaced = null;
+        Reregister();
+        return true;
+    }
 
     /// <summary>Raised on the UI thread when a refresh the host started on its own — after a
     /// theme, display or shell change — throws, which is the application's icon delegate or its
@@ -82,8 +127,11 @@ public sealed class TrayHost : IDisposable
 
         var icon = new TaskbarIcon
         {
-            Id = Id,
+            // The name first and the identity after it, deliberately: the library derives an
+            // identity of its own from the name and assigns it, so a name applied last overwrites
+            // whatever identity was set before it and the shell never sees the one asked for.
             CustomName = _options.Name,
+            Id = Id,
             // A left click is reported at once; whether it was the first half of a double click
             // is the policy's to say.
             NoLeftClickDelay = true,
@@ -170,6 +218,24 @@ public sealed class TrayHost : IDisposable
 
         _loaded?.Dispose();
         _loaded = null;
+    }
+
+    /// <summary>Removes the icon and adds it again, so the shell reads the per-icon settings
+    /// afresh. The library keeps the icon's state, so what comes back is the same icon with the
+    /// same tooltip and the same menu.</summary>
+    private void Reregister()
+    {
+        if (_icon is not { IsCreated: true } icon) return;
+
+        try
+        {
+            icon.TrayIcon.TryRemove();
+            icon.TrayIcon.Create();
+        }
+        catch (InvalidOperationException ex)
+        {
+            Failed?.Invoke(this, ex);
+        }
     }
 
     private static TimeSpan Now => TimeSpan.FromMilliseconds(Environment.TickCount64);
