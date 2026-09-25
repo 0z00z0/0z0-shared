@@ -1,3 +1,5 @@
+using Microsoft.UI.Xaml;
+
 namespace ZeroZero.Tray.WinUI;
 
 /// <summary>What the application supplies to the host: its identity, the icon delegate, the
@@ -25,6 +27,13 @@ public sealed class TrayHostOptions
     /// <summary>The menu for the current state, asked for each time the menu is about to open. No
     /// menu when not given.</summary>
     public Func<IEnumerable<TrayMenuItem>>? Menu { get; init; }
+
+    /// <summary>The theme the menu is drawn in. Not given, it follows the taskbar's own theme,
+    /// read at every rebuild: the menu opens on the taskbar, and a menu following the apps theme
+    /// instead draws light against a dark taskbar. An application pinned to one theme passes it
+    /// here, and <see cref="ElementTheme.Default"/> leaves the process's menu mode alone, which is
+    /// what Windows decides from the apps theme.</summary>
+    public ElementTheme? MenuTheme { get; init; }
 
     /// <summary>What a single left click does.</summary>
     public Action? LeftClick { get; init; }

@@ -310,6 +310,10 @@ only its *rendering* moves to the shared control, not its data.
 
 - The control inherits the host page's theme (everything but the fixed-colour brand header band
   uses `ThemeResource` brushes), so no extra theming work is needed.
+- **The card draws its own frame** — a rounded stroke in the stock card colour, with the header
+  band's corners following it. A host that wraps the control in a border of its own gets two
+  frames; the wrapper also sits outside the header band, whose corners then break out of it, and
+  has to be corrected whenever the card's layout moves. Host the control on its own.
 - Never shows an update button of its own — there is no `BrandAboutOptions` and no update-flow
   concept at this layer. A page that wants a check for updates places a `BrandBracketButton` beside
   or under the control and drives it from its own update flow.

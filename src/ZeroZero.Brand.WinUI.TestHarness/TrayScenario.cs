@@ -4,7 +4,7 @@ using System.Drawing.Imaging;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using Microsoft.UI.Dispatching;
-using Microsoft.Win32;
+using Microsoft.UI.Xaml;
 using ZeroZero.Tray;
 using ZeroZero.Tray.WinUI;
 using ZeroZero.Win32;
@@ -31,23 +31,22 @@ internal sealed class TrayScenario : IDisposable
     private readonly string? _probePath;
     private readonly bool _ownFile;
     private readonly bool _openMenu;
-    private readonly bool _promote;
+    private readonly ElementTheme? _menuTheme;
     private readonly Action _exit;
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "ZeroZero.Tray.Harness");
     private readonly DateTimeOffset _startedAt = DateTimeOffset.UtcNow;
     private DispatcherQueueTimer? _stopTimer;
     private DispatcherQueueTimer? _menuTimer;
-    private string? _promotedKey;
     private int _clicks;
     private bool _paused;
     private bool _disposed;
 
-    public TrayScenario(string? probePath, bool ownFile, bool openMenu, bool promote, Action exit)
+    public TrayScenario(string? probePath, bool ownFile, bool openMenu, ElementTheme? menuTheme, Action exit)
     {
         _probePath = probePath;
         _ownFile = ownFile;
         _openMenu = openMenu;
-        _promote = promote;
+        _menuTheme = menuTheme;
         _exit = exit;
         _host = new TrayHost(new TrayHostOptions
         {
@@ -56,6 +55,7 @@ internal sealed class TrayScenario : IDisposable
             Icon = Render,
             Tooltip = TooltipLines,
             Menu = MenuItems,
+            MenuTheme = _menuTheme,
             LeftClick = () => Note("left"),
             DoubleClick = () => Note("double"),
             CacheDirectory = _directory,
@@ -67,7 +67,6 @@ internal sealed class TrayScenario : IDisposable
     public void Start()
     {
         _host.Start();
-        if (_promote) Promote();
 
         if (_openMenu)
         {
@@ -107,54 +106,22 @@ internal sealed class TrayScenario : IDisposable
         if (_disposed) return;
         _disposed = true;
         _host.Dispose();
-        Unpromote();
     }
 
-    private const string NotifyIconSettings = @"Control Panel\NotifyIconSettings";
-
-    /// <summary>Puts the rig's icon in the taskbar proper rather than the overflow, through the
-    /// shell's own per-icon setting: the entry for this executable gets IsPromoted, the value the
-    /// taskbar settings page writes. The shell keeps one entry per executable, written when it
-    /// first sees the executable and carrying the identity it saw then, so the match is on the
-    /// path. Undone on exit.</summary>
-    private void Promote()
-    {
-        using var settings = Registry.CurrentUser.OpenSubKey(NotifyIconSettings, writable: true);
-        if (settings is null) return;
-
-        foreach (string name in settings.GetSubKeyNames())
-        {
-            using var entry = settings.OpenSubKey(name, writable: true);
-            if (entry is null) continue;
-            if (!string.Equals(entry.GetValue("ExecutablePath") as string, Environment.ProcessPath, StringComparison.OrdinalIgnoreCase)) continue;
-
-            entry.SetValue("IsPromoted", 1, RegistryValueKind.DWord);
-            _promotedKey = name;
-            return;
-        }
-    }
-
-    private void Unpromote()
-    {
-        if (_promotedKey is null) return;
-        using var entry = Registry.CurrentUser.OpenSubKey(NotifyIconSettings + "\\" + _promotedKey, writable: true);
-        entry?.DeleteValue("IsPromoted", throwOnMissingValue: false);
-        _promotedKey = null;
-    }
-
-    /// <summary>Where the shell put the icon, asked of the shell by the icon's identity: its
-    /// rectangle in physical pixels, and whether that lies within the taskbar window, which is
-    /// what tells an icon in the taskbar proper from one in the overflow.</summary>
+    /// <summary>Where the shell put the icon, asked of the shell by the identity the shell holds
+    /// — the one the application supplied gets no answer. An icon behind the overflow chevron is
+    /// given the chevron's own rectangle, so this says where the icon can be reached rather than
+    /// where it is drawn.</summary>
     private string Placement()
     {
-        var identifier = new NOTIFYICONIDENTIFIER { cbSize = (uint)Marshal.SizeOf<NOTIFYICONIDENTIFIER>(), guidItem = _host.Id };
+        var identifier = new NOTIFYICONIDENTIFIER { cbSize = (uint)Marshal.SizeOf<NOTIFYICONIDENTIFIER>(), guidItem = _host.ShellId ?? _host.Id };
         int result = Shell_NotifyIconGetRect(ref identifier, out RECT rect);
         if (result != 0) return $"unknown (0x{result:X8})";
 
         IntPtr taskbar = FindWindow("Shell_TrayWnd", null);
         bool inTaskbar = taskbar != IntPtr.Zero && GetWindowRect(taskbar, out RECT bar)
             && rect.Left >= bar.Left && rect.Top >= bar.Top && rect.Right <= bar.Right && rect.Bottom <= bar.Bottom;
-        return $"{rect.Left},{rect.Top},{rect.Right},{rect.Bottom} {(inTaskbar ? "taskbar" : "overflow")}";
+        return $"{rect.Left},{rect.Top},{rect.Right},{rect.Bottom} {(inTaskbar ? "in the taskbar" : "outside the taskbar")}";
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -193,6 +160,7 @@ internal sealed class TrayScenario : IDisposable
         [
             $"created\t{_host.IsCreated}",
             $"id\t{_host.Id.ToString("B").ToUpperInvariant()}",
+            $"shell-id\t{(_host.ShellId is { } shell ? shell.ToString("B").ToUpperInvariant() : "none")}",
             $"pid\t{Environment.ProcessId.ToString(CultureInfo.InvariantCulture)}",
             $"slot\t{request.SlotPixels.ToString(CultureInfo.InvariantCulture)}",
             $"theme\t{request.Theme}",

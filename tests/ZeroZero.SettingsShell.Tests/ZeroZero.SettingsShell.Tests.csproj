@@ -13,7 +13,10 @@
 
   <ItemGroup>
     <!-- The framework-free half of the shell: the section lifecycle, which names no WinUI type
-         on purpose so the order of every hook can be pinned here, and the placement arithmetic. -->
+         on purpose so the order of every hook can be pinned here, the placement arithmetic, and
+         the backdrop colour, whose channels are plain numbers for this reason. -->
+    <Compile Include="..\..\src\ZeroZero.SettingsShell.WinUI\BackdropColour.cs" Link="Linked\BackdropColour.cs" />
+    <Compile Include="..\..\src\ZeroZero.SettingsShell.WinUI\BackdropTint.cs" Link="Linked\BackdropTint.cs" />
     <Compile Include="..\..\src\ZeroZero.SettingsShell.WinUI\SectionPlan.cs" Link="Linked\SectionPlan.cs" />
     <Compile Include="..\..\src\ZeroZero.SettingsShell.WinUI\ISectionHost.cs" Link="Linked\ISectionHost.cs" />
     <Compile Include="..\..\src\ZeroZero.SettingsShell.WinUI\SectionLifecycle.cs" Link="Linked\SectionLifecycle.cs" />
