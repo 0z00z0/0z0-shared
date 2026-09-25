@@ -35,6 +35,10 @@ internal static class SettingsShellScenario
         public bool Maximise { get; init; }
         public int CloseAfterMs { get; init; }
         public bool Rebuild { get; init; }
+
+        /// <summary>The colour the backdrop is tinted with, one per theme. None leaves the
+        /// backdrop as Windows tints it, which is the ground the defect shows on.</summary>
+        public BackdropTint? BackdropTint { get; init; }
     }
 
     /// <summary>The store an application keeps in its own document, here in memory and logged, so
@@ -181,6 +185,7 @@ internal static class SettingsShellScenario
             Sections = sections,
             Theme = theme,
             RectStore = new MemoryRectStore(title, options.SeedRect),
+            BackdropTint = options.BackdropTint,
             ProductMark = new SvgImageSource(MarkUri),
             ProductName = "Brand Test Harness",
             ProductVersion = "0.0.0-dev",

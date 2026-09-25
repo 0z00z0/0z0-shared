@@ -64,6 +64,9 @@ the XAML runtime is up.
 - `Menu` — a delegate returning `TrayMenuItem`s: `Command(text, action)` and `Toggle(text,
   isChecked, action)`, each with an enabled flag that defaults to true, and `Separator()`, which
   takes nothing — a rule between groups has nothing to enable.
+- `MenuTheme` — the theme the menu is drawn in. Not given, the menu follows the taskbar's own
+  theme, read again at every rebuild; an application pinned to one theme names it here, and
+  `ElementTheme.Default` hands the menu back to the application's theme.
 - `LeftClick` and `DoubleClick` — the actions.
 - `CacheDirectory` — where a render is written; the temporary folder when not given.
   `ReopenGuard` — how long after a pop-out's dismissal a click is dropped; the system's
@@ -107,9 +110,42 @@ the XAML runtime is up.
   mouse-down that precedes the mouse-up the library opens the menu on, so what opens is current
   without the application touching a control; `RefreshMenu()` rebuilds it ahead of that, and
   `ShowMenu(x, y)` opens it at a point on screen the way a right click would.
+- **The menu's theme.** The menu is drawn in the taskbar's theme, read from the same registry value
+  the icon's stroke tone comes from and applied at every rebuild, so a theme changed while the
+  application runs is in the menu that opens next. The menu is a native popup rather than a XAML
+  flyout, so its colours come from the process's own menu mode — `SetPreferredAppMode` with
+  `FlushMenuThemes`, both exported by ordinal from `uxtheme` — and not from any theme property on
+  the flyout or the icon: measured, a theme set on either leaves the menu light. The mode is
+  process-wide, so it covers every Win32 menu the application shows; on a Windows without the
+  export the menu stays as Windows draws it.
 - **Refresh.** `Refresh()` after a state change asks for the icon and the tooltip again;
   `RefreshTooltip()` the tooltip alone. `CurrentRequest` is the slot and theme last rendered for,
-  `IsCreated` whether the shell holds the icon, `Id` the identity it holds it under.
+  `IsCreated` whether the shell holds the icon.
+- **Two identities.** `Id` is what the application supplied, or what the host derived from `Name`;
+  `ShellId` is what the shell actually holds the icon under, read from the library's own icon
+  after `Start()`. They differ, because the library derives an identity from the icon's name and
+  registers that: measured on Windows 11 build 26220.6682, the shell answers no rectangle for a
+  supplied `Id` and answers one for `ShellId`. Anything that asks the shell about the icon —
+  `Shell_NotifyIconGetRect`, the per-icon settings — takes `ShellId`.
+
+### The menu on screen
+
+| Taskbar light | Taskbar dark |
+|---|---|
+| ![Tray menu, light](screenshots/tray-menu-light.png) | ![Tray menu, dark](screenshots/tray-menu-dark.png) |
+
+`scripts/Capture 'Tray menu' screenshots.ps1` writes both, one harness run per theme, pinning the
+theme rather than moving the machine's own taskbar setting.
+
+**A trap: an icon cannot lift itself out of the overflow.** The shell keeps one entry per icon
+under the current user's `Control Panel\NotifyIconSettings`, keyed on the identity `ShellId` names,
+and its `IsPromoted` value is what the taskbar settings page writes to move an icon between the
+notification area and the overflow. Writing that value from the application succeeds and reads
+back, and the shell ignores it: measured on Windows 11 build 26220.6682 from a normal account,
+with the value written while the icon was up and again before the icon was created, the
+notification area's contents were unchanged both times, read through the automation tree.
+Whether a sign-in makes it take effect is untested. So there is nothing here to call, and an
+application writing the value itself should expect nothing from it in the session that wrote it.
 
 **Stays with the application:** the drawing, notifications — the two applications notify
 through different platform APIs, and a host that picked one would impose a rewrite on the other —

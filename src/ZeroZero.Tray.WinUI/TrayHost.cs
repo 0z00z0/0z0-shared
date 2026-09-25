@@ -1,6 +1,7 @@
 using H.NotifyIcon;
 using H.NotifyIcon.Core;
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Win32;
 
@@ -34,9 +35,19 @@ public sealed class TrayHost : IDisposable
         Id = options.Id ?? TrayIcon.CreateUniqueGuidFromString(options.Name);
     }
 
-    /// <summary>The identity the shell knows the icon by: the one given, or the one derived from
-    /// the name.</summary>
+    /// <summary>The identity handed to the notify-icon library: the one given, or the one derived
+    /// from the name. Not necessarily the identity the shell ends up holding —
+    /// <see cref="ShellId"/> is that one.</summary>
     public Guid Id { get; }
+
+    /// <summary>
+    /// The identity the shell holds the icon by, read from the library's own icon rather than
+    /// worked out again; null before <see cref="Start"/>. The library derives an identity from the
+    /// icon's name and registers that, so an application that supplied one of its own has a
+    /// <see cref="Id"/> the shell has never seen (measured: the shell answers no rectangle for it).
+    /// This is the identity the shell's per-icon settings are keyed on.
+    /// </summary>
+    public Guid? ShellId => _icon?.TrayIcon.Id;
 
     /// <summary>Raised on the UI thread when a refresh the host started on its own — after a
     /// theme, display or shell change — throws, which is the application's icon delegate or its
@@ -169,6 +180,43 @@ public sealed class TrayHost : IDisposable
         if (_icon is null) throw new InvalidOperationException("The host has not started.");
     }
 
+    /// <summary>
+    /// Draws the menu in the taskbar's own theme, or in the one the application pinned. The menu
+    /// is a native popup rather than a XAML flyout, so its colours come from the process's menu
+    /// mode and not from any property on the flyout or the icon (measured: a theme set on either
+    /// leaves the menu light). The mode is process-wide and covers every Win32 menu the
+    /// application shows.
+    /// </summary>
+    private void ApplyMenuTheme()
+    {
+        var mode = (_options.MenuTheme ?? ThemeForTaskbar()) switch
+        {
+            ElementTheme.Light => NativeMethods.PreferredAppMode.ForceLight,
+            ElementTheme.Dark => NativeMethods.PreferredAppMode.ForceDark,
+            // Default hands the menu back to the application, which is what Windows decides from
+            // the apps theme on its own.
+            _ => NativeMethods.PreferredAppMode.Default,
+        };
+
+        try
+        {
+            NativeMethods.SetPreferredAppMode(mode);
+            // Without this the first menu's theme is cached for the process and every later one
+            // opens in it, whatever the mode now says.
+            NativeMethods.FlushMenuThemes();
+        }
+        catch (Exception ex) when (ex is EntryPointNotFoundException or DllNotFoundException)
+        {
+            // Before Windows 10 1903 there is no such export, and the menu then stays as Windows
+            // draws it — which is what a host that never asked would have had.
+        }
+    }
+
+    /// <summary>The element theme the taskbar is drawn in now. Its own registry value, not the
+    /// apps one the application follows.</summary>
+    private static ElementTheme ThemeForTaskbar() =>
+        TaskbarThemes.Read() == TaskbarTheme.Light ? ElementTheme.Light : ElementTheme.Dark;
+
     private static TrayIconRequest ReadRequest()
     {
         var theme = TaskbarThemes.Read();
@@ -237,6 +285,8 @@ public sealed class TrayHost : IDisposable
     private void RebuildMenu()
     {
         if (_icon is null || _options.Menu is null) return;
+
+        ApplyMenuTheme();
 
         var flyout = new MenuFlyout();
         foreach (var item in _options.Menu())

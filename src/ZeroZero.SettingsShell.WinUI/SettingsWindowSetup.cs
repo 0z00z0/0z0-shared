@@ -23,6 +23,11 @@ public sealed class SettingsWindowSetup
     /// application; an application pinned to one theme passes it here.</summary>
     public ElementTheme Theme { get; init; } = ElementTheme.Default;
 
+    /// <summary>The colour behind the window's content, one per theme. None leaves the backdrop as
+    /// Windows tints it, which follows the wallpaper. An application sets it to the colour of its
+    /// own main window, so the two windows match.</summary>
+    public BackdropTint? BackdropTint { get; init; }
+
     /// <summary>Where the rectangle is kept between runs. None opens centred on the cursor's
     /// monitor every time and remembers nothing.</summary>
     public IWindowRectStore? RectStore { get; init; }

@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using Xunit;
+using ZeroZero.SettingsShell.WinUI;
 
 namespace ZeroZero.SettingsShell.Tests;
 
@@ -15,11 +16,16 @@ public class MarkupTests
     private static readonly XNamespace X = "http://schemas.microsoft.com/winfx/2006/xaml";
 
     [Fact]
-    public void TheBackdropIsMicaBaseAlt()
+    public void TheBackdropIsMicaBaseAltAndStaysSoWhereNoColourIsSupplied()
     {
         var mica = Load().Descendants(P + "MicaBackdrop").Single();
 
         Assert.Equal("BaseAlt", mica.Attribute("Kind")?.Value);
+        // The markup's Mica names no colour, so Windows tints it from the wallpaper. That is what
+        // a window keeps whenever the application supplies none, in either theme: the resolution
+        // has to answer with nothing, or the window swaps in a tinted backdrop nobody asked for.
+        Assert.Null(BackdropTint.Resolve(null, dark: true));
+        Assert.Null(BackdropTint.Resolve(null, dark: false));
     }
 
     [Fact]

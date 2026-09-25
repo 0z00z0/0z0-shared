@@ -25,9 +25,10 @@
         <StackPanel>
             <brand:BrandAboutControl x:Name="AboutControl"/>
 
-            <!-- Check for Updates: window-only, appended below the hosted control's own body.
-                 Padding matches the control's body padding so it reads as one continuous panel. -->
-            <StackPanel Padding="16,0,16,16">
+            <!-- Check for Updates: window-only, beneath the card rather than inside it, since the
+                 card draws its own frame. Padding matches the card's body padding, so the button
+                 lines up with what sits above it. -->
+            <StackPanel Padding="16,12,16,16">
                 <Button x:Name="UpdateBtn"
                         Content="Check for Updates"
                         FontSize="11" FontFamily="{StaticResource BrandFont}"

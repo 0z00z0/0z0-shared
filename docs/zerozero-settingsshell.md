@@ -179,6 +179,22 @@ and the content are transparent over the backdrop, the footer's version line tak
 secondary text brush, and every page brings its own look. A host that brands its pages brands
 them as pages, and the shell shows what it is given.
 
+**The backdrop's colour.** Behind the content is Mica, which Windows tints from the wallpaper
+while the window is active — so the settings window of an application whose wallpaper is blue
+turns blue, and matches nothing the application draws. `BackdropTint` names the colour instead,
+one for each theme, and the window follows its own live theme between them:
+
+```csharp
+BackdropTint = new BackdropTint
+{
+    Light = BackdropColour.Parse("#F3F3F3"),
+    Dark  = BackdropColour.Parse("#1B1B1F"),
+},
+```
+
+An application sets it to the colour of its own main window, so the two windows match. Left
+unset, the backdrop stays as Windows tints it.
+
 ## Traps
 
 - **A build-once section named by `Rebuild(tag)` throws.** Rebuild everything with `Rebuild()`

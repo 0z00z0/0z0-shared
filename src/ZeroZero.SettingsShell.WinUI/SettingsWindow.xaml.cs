@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Input;
 using Windows.Foundation;
 using Windows.Graphics;
 using Windows.System;
+using Windows.UI;
 using ZeroZero.Controls.WinUI;
 using ZeroZero.Win32;
 
@@ -79,6 +80,11 @@ public sealed partial class SettingsWindow : Window, ISectionHost<UIElement>
         // changes, a root left at Default follows the application and is repainted on every
         // live change — including the one after load, when the actual theme first becomes real.
         TitleBarTheming.Follow(this);
+
+        // The backdrop follows the same live theme as the bar above it: the markup's untinted Mica
+        // stays wherever the application supplied no colour.
+        ApplyBackdrop();
+        Root.ActualThemeChanged += (_, _) => ApplyBackdrop();
 
         Root.KeyDown += OnRootKeyDown;
         Root.Loaded += OnRootLoaded;
@@ -219,6 +225,18 @@ public sealed partial class SettingsWindow : Window, ISectionHost<UIElement>
         _appWindow.Changed -= OnAppWindowChanged;
         _lifecycle.Close();
         if (_setup.RectStore is { } store && _restoredRect is { } rect) store.Save(rect);
+    }
+
+    /// <summary>Tints the backdrop with the colour the application gave for the theme the window
+    /// renders in now. Nothing given leaves the markup's own Mica in place, which Windows tints
+    /// from the wallpaper.</summary>
+    private void ApplyBackdrop()
+    {
+        if (BackdropTint.Resolve(_setup.BackdropTint, Root.ActualTheme == ElementTheme.Dark) is not { } colour) return;
+
+        var tint = Color.FromArgb(255, colour.Red, colour.Green, colour.Blue);
+        if (SystemBackdrop is TintedMicaBackdrop already) already.Colour = tint;
+        else SystemBackdrop = new TintedMicaBackdrop(tint);
     }
 
     private void ApplyLayout(SettingsWindowSetup setup)

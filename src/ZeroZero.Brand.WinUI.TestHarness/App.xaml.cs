@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Media;
 using Windows.UI;
 using ZeroZero.Brand.Core;
 using ZeroZero.Controls.WinUI;
+using ZeroZero.SettingsShell.WinUI;
 using ZeroZero.Win32;
 // This project's own namespace nests inside ZeroZero.Brand (same collision documented in
 // BrandAboutWindow.xaml.cs), so an unqualified "Brand" resolves to the namespace segment
@@ -63,7 +64,8 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// <para>
 /// <c>--settings</c> opens the settings window shell, one per theme, with four fabricated
 /// sections: a page from the row vocabulary, the MQTT panel built once, a timer page and the
-/// About control. <c>--only Light|Dark</c> opens one; <c>--fit</c> fits it to its pages;
+/// About control. <c>--tint &lt;#RRGGBB&gt;</c> gives the backdrop that colour instead of the one
+/// Windows takes from the wallpaper. <c>--only Light|Dark</c> opens one; <c>--fit</c> fits it to its pages;
 /// <c>--rect X,Y,W,H</c> seeds the rectangle store; <c>--navigate a,b,c</c> walks the sections;
 /// <c>--rebuild</c>, <c>--maximise</c> and <c>--close-after &lt;ms&gt;</c> take the steps a
 /// saved-rectangle measurement needs. Every hook and store call is logged to
@@ -95,9 +97,10 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// <c>--tray</c> opens no window either: it puts the tray host's icon in the notification area
 /// from the rig's own drawing, tooltip and menu, and stays until Exit is chosen from the menu.
 /// <c>--file</c> hands the host a file the rig wrote once instead of frames per render;
-/// <c>--menu</c> opens the menu by the tray after two seconds, so a capture needs no click;
-/// <c>--promote</c> puts the icon in the taskbar proper rather than the overflow, through the
-/// shell's own per-icon setting, undone on exit; <c>--probe &lt;path&gt;</c> writes what the
+/// <c>--menu</c> opens the menu by the tray after two seconds, so a capture needs no click, and
+/// <c>--menu-theme Light|Dark</c> pins the menu's theme rather than letting it follow the
+/// taskbar's; <c>--anchor</c> adds the white window a capture is checked against;
+/// <c>--probe &lt;path&gt;</c> writes what the
 /// host created to that path, marks it complete with an empty <c>.done</c> file beside it, logs
 /// every click beside it, and exits once a <c>.stop</c> file appears beside the probe.
 /// </para>
@@ -135,10 +138,16 @@ public partial class App : Application
         var commandLine = Environment.GetCommandLineArgs();
         if (commandLine.Any(a => a.Equals("--tray", StringComparison.Ordinal)))
         {
+            if (commandLine.Any(a => a.Equals("--anchor", StringComparison.Ordinal))) ShowAnchor();
             ShowTray(ValueAfter(commandLine, "--probe"),
                      commandLine.Any(a => a.Equals("--file", StringComparison.Ordinal)),
                      commandLine.Any(a => a.Equals("--menu", StringComparison.Ordinal)),
-                     commandLine.Any(a => a.Equals("--promote", StringComparison.Ordinal)));
+                     ValueAfter(commandLine, "--menu-theme") switch
+                     {
+                         "Light" => ElementTheme.Light,
+                         "Dark" => ElementTheme.Dark,
+                         _ => null,
+                     });
             return;
         }
 
@@ -535,9 +544,9 @@ public partial class App : Application
     /// tooltip and the menu, with no window at all. With a probe path the rig records what the host
     /// created and stays until a stop file appears; otherwise it stays until Exit is chosen.
     /// </summary>
-    private void ShowTray(string? probePath, bool ownFile, bool openMenu, bool promote)
+    private void ShowTray(string? probePath, bool ownFile, bool openMenu, ElementTheme? menuTheme)
     {
-        _tray = new TrayScenario(probePath, ownFile, openMenu, promote, Exit);
+        _tray = new TrayScenario(probePath, ownFile, openMenu, menuTheme, Exit);
         _tray.Start();
     }
 
@@ -863,6 +872,13 @@ public partial class App : Application
             Rebuild = commandLine.Any(a => a.Equals("--rebuild", StringComparison.Ordinal)),
             Maximise = commandLine.Any(a => a.Equals("--maximise", StringComparison.Ordinal)),
             CloseAfterMs = int.TryParse(ValueAfter(commandLine, "--close-after"), out int ms) ? ms : 0,
+            BackdropTint = ValueAfter(commandLine, "--tint") is { Length: > 0 } tint
+                ? new ZeroZero.SettingsShell.WinUI.BackdropTint
+                  {
+                      Light = BackdropColour.Parse(tint),
+                      Dark = BackdropColour.Parse(tint),
+                  }
+                : null,
         };
         string? only = ValueAfter(commandLine, "--only");
 
