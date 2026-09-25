@@ -13,9 +13,10 @@ namespace ZeroZero.Tray.WinUI;
 /// is <see cref="TrayIconPlacements.Plan"/>'s decision; this only carries it out, and writes
 /// nothing while the shell has no entry for the icon, which is the case until the icon has been
 /// created at least once.</para>
-/// <para>A write on its own does not move the icon: the shell reads the setting when the icon is
-/// registered, so the icon has to be registered again afterwards.
-/// <see cref="TrayHost.AskForPlacement"/> does both.</para>
+/// <para>A write is followed by registering the icon again, which
+/// <see cref="TrayHost.AskForPlacement"/> does for the caller. The placement itself takes effect at
+/// the next sign-in: the shell keeps its own list of the notification area for the length of a
+/// session and writes that list out rather than reading it back.</para>
 /// </remarks>
 public static class NotifyIconSettings
 {

@@ -12,7 +12,8 @@ public sealed class TrayHostOptions
     /// new icon and forgets whether the user chose to show it.</summary>
     public required string Name { get; init; }
 
-    /// <summary>The icon's identity in the shell; derived from <see cref="Name"/> when not given.</summary>
+    /// <summary>The icon's identity in the shell; derived from <see cref="Name"/> when not given.
+    /// The shell treats a change of it as a new icon, so it stays fixed across versions.</summary>
     public Guid? Id { get; init; }
 
     /// <summary>The icon for the current state at the requested slot and tone. Called on the UI

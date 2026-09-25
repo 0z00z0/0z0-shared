@@ -36,16 +36,14 @@ public sealed class TrayHost : IDisposable
         Id = options.Id ?? TrayIcon.CreateUniqueGuidFromString(options.Name);
     }
 
-    /// <summary>The identity handed to the notify-icon library: the one given, or the one derived
-    /// from the name. Not necessarily the identity the shell ends up holding —
-    /// <see cref="ShellId"/> is that one.</summary>
+    /// <summary>The identity the icon registers under: the one given, or the one derived from the
+    /// name. The shell treats a change of it as a new icon, so it stays fixed across versions or
+    /// the person has to place the icon again.</summary>
     public Guid Id { get; }
 
-    /// <summary>
-    /// The identity the shell holds the icon by, read from the library's own icon rather than
-    /// worked out again; null before <see cref="Start"/>. It is <see cref="Id"/>, and the shell's
-    /// per-icon settings are keyed on it.
-    /// </summary>
+    /// <summary>The identity the shell holds the icon by, read from the library's own icon rather
+    /// than worked out again; null before <see cref="Start"/>. It is <see cref="Id"/>, and the
+    /// shell's per-icon settings are keyed on it.</summary>
     public Guid? ShellId => _icon?.TrayIcon.Id;
 
     /// <summary>Where the shell draws the icon now, as its own setting says; null before
@@ -55,16 +53,20 @@ public sealed class TrayHost : IDisposable
 
     /// <summary>
     /// Asks the shell to draw the icon in the notification area rather than behind the overflow
-    /// chevron, or the other way round: the setting is written, and the icon is then registered
-    /// again, because the shell reads the setting when an icon is registered and not while one is
-    /// up. Returns whether anything was written — false means the setting already reads as wanted,
-    /// or the shell keeps no entry this icon alone picks out, and in neither case is the icon
-    /// disturbed.
+    /// chevron, or the other way round: the setting is written and the icon is then registered
+    /// again. Returns whether anything was written — false means the setting already reads as
+    /// wanted, or the shell keeps no entry this icon alone picks out, and in neither case is the
+    /// icon disturbed.
     /// </summary>
-    /// <remarks>The setting is the person's own. Only the entry carrying this icon's identity is
+    /// <remarks>The placement takes effect at the next sign-in: the shell keeps its own list of
+    /// the notification area for the length of a session and writes that list out rather than
+    /// reading it back. An application that starts at logon gets what it asked for; one switched
+    /// on mid-session does not move until then, which is worth saying where the person chooses
+    /// it.
+    /// <para>The setting is the person's own. Only the entry carrying this icon's identity is
     /// ever written, nothing is written when it already says what is wanted, and what the first
     /// write replaced is kept so <see cref="RestorePlacement"/> can put it back. On the UI thread,
-    /// after <see cref="Start"/>.</remarks>
+    /// after <see cref="Start"/>.</para></remarks>
     public bool AskForPlacement(TrayIconPlacement wanted)
     {
         ThrowIfNotStarted();
