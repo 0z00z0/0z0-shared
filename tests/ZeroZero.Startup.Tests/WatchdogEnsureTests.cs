@@ -85,6 +85,7 @@ public class WatchdogEnsureTests
         Assert.Equal(1, _writes);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void TooManyRestartsStopTheProbingInsteadOfWritingTheTask()
     {

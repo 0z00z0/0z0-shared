@@ -79,6 +79,7 @@ public class MqttProbeClassifierTests
             MqttProbe.ClassifyConnectException(wrapped, CancellationToken.None).Outcome);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ClassifyConnectException_SeparatesTheTwoTlsFailuresOnTheCertificateAlone()
     {
@@ -204,6 +205,7 @@ public class MqttProbeClassifierTests
         Assert.Equal("InvalidOperationException: broker said no", result.Detail);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ProbeClientId_IsNeverThePublishersOwn()
     {

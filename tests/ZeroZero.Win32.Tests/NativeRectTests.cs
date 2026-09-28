@@ -78,6 +78,7 @@ public class NativeRectTests
         Assert.Equal(new NativeRect(0, 0, 1200, 1000), clamped);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ClampInto_HonoursBoundsThatDoNotStartAtTheOrigin()
     {

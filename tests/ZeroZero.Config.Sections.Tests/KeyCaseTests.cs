@@ -52,6 +52,7 @@ public sealed class KeyCaseTests : SectionedTestBase
         Assert.Null(Create().Section<GeneralSection>("general").ConflictingKey);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void A_write_that_would_add_a_section_differing_only_in_case_is_refused_and_nothing_moves()
     {

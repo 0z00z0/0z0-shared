@@ -117,6 +117,7 @@ public class DiscoveryPublisherTests
         Assert.Equal(0, harness.Broker.CountOn(topic));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task ARetirementSurvivesARestartAsAThingAlreadyDone()
     {
@@ -281,6 +282,7 @@ public class DiscoveryPublisherTests
         Assert.True(document < cleanup, "the old topic must not be emptied before the document exists");
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AMigrationIsNotReplayedAsARetirementAfterARestart()
     {
@@ -330,6 +332,7 @@ public class DiscoveryPublisherTests
         Assert.DoesNotContain(Sample.State("cpu_load"), harness.Broker.Topics);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task EvictionSurvivesAProcessRestart()
     {
@@ -353,6 +356,7 @@ public class DiscoveryPublisherTests
         Assert.Equal(["vm_alpha"], ledger.Read().Find(Sample.DeviceId)!.Entities.Select(e => e.EntityId));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task ADeviceIdChangedWhileTheApplicationWasClosedIsStillAbandoned()
     {
@@ -429,6 +433,7 @@ public class DiscoveryPublisherTests
             harness.Broker.Calls.Single(c => c.Count > 1).Select(m => m.Topic));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AGroupSwitchedOffLeavesItsEntitiesUnavailableNotRemoved()
     {
@@ -474,6 +479,7 @@ public class DiscoveryPublisherTests
             harness.Ledger.Read().Find(Sample.DeviceId)!.Entities[0].StateTopic);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task ACapabilityThatCannotBeReadKeepsWhateverWasAnnounced()
     {
@@ -535,6 +541,7 @@ public class DiscoveryPublisherTests
         Assert.Empty(harness.Broker.Messages);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task APassThatDidNotLandIsNotWrittenDown()
     {
@@ -549,6 +556,7 @@ public class DiscoveryPublisherTests
         Assert.Empty(harness.Ledger.Read().Devices);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task ADocumentThatDidNotLandHoldsBackTheSweepBehindIt()
     {

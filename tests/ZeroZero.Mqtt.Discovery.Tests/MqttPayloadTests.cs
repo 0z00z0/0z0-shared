@@ -15,6 +15,7 @@ public class MqttPayloadTests
         Assert.Null(MqttPayload.Flag(null));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Number_UsesAPointRegardlessOfTheMachinesCulture()
     {
@@ -28,6 +29,7 @@ public class MqttPayloadTests
         finally { CultureInfo.CurrentCulture = previous; }
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Number_ReadsBackWhateverACommaCultureWouldMangle()
     {

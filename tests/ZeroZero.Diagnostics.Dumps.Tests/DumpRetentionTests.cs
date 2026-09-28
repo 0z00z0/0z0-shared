@@ -22,6 +22,7 @@ public class DumpRetentionTests : IDisposable
         return path;
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void TheNewestStayAndTheOldestGo()
     {

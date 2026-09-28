@@ -47,6 +47,7 @@ public sealed class TimestampTests : IDisposable
     private IReadOnlyDictionary<string, string?> Environment =>
         new Dictionary<string, string?> { ["ZEROZERO_SIGN_PFX_PASSWORD"] = _password };
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void The_signing_script_refuses_a_file_it_could_not_timestamp()
     {
@@ -75,6 +76,7 @@ public sealed class TimestampTests : IDisposable
         Assert.Equal(Subject, SignerOf(file));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Release_verification_refuses_a_published_executable_with_no_timestamp()
     {

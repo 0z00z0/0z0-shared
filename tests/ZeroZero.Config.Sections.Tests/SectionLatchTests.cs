@@ -8,6 +8,7 @@ namespace ZeroZero.Config.Sections.Tests;
 /// or finds the document broken, must not stop a good configuration being written back.</summary>
 public sealed class SectionLatchTests : SectionedTestBase
 {
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void A_document_held_open_at_construction_is_not_written_over()
     {
@@ -66,6 +67,7 @@ public sealed class SectionLatchTests : SectionedTestBase
         Assert.Contains("\"ConfigVersion\": 1", OnDisk(), StringComparison.Ordinal);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void A_document_broken_by_hand_is_written_over_once_a_read_has_succeeded()
     {

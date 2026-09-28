@@ -39,6 +39,7 @@ public class TrayTooltipTests
         Assert.EndsWith("a…", text, StringComparison.Ordinal);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Compose_KeepsTheSuffixWholeWhenTheBodyIsCut()
     {

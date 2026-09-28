@@ -77,6 +77,7 @@ public class MqttConnectionRecoveryTests
     /// <remarks>Counted at the broker rather than read off the connection: the state oscillates far
     /// faster than anything can sample it, so a flag or a status line says nothing. The window is
     /// wall-clock and the count is monotonic, so a slow machine only ever lowers it.</remarks>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AThrowingConnectSequenceRetriesOnTheBackoffRatherThanContinuously()
     {
@@ -102,6 +103,7 @@ public class MqttConnectionRecoveryTests
     /// <summary>The status callback runs inside the connect sequence, so a host whose handler throws
     /// once — a disposed control, a marshalling error — would otherwise have its own exception read as
     /// a connect failure and its socket dropped, on every pass, for ever.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AStatusSubscriberThatThrowsDoesNotCostTheConnection()
     {

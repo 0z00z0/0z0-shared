@@ -1,14 +1,22 @@
-name: Run every test project
+name: Run the tests
 description: >-
-  Discovers every project under tests/ and runs each against the solution build, failing at the end
-  naming every project that failed. Shared by ci.yml and release.yml, so the two cannot drift and a
-  new test project cannot be left out of either.
+  Runs the guards of the modules named, of every module when none is, or every test when asked.
+  Reached only from the CI workflow's manual trigger: nothing runs it on a push, a pull request or
+  a tag.
 
 inputs:
   configuration:
     description: The configuration the solution was built in.
     required: false
     default: Release
+  modules:
+    description: Component keys separated by spaces, as in "mqtt config". Empty runs every module.
+    required: false
+    default: ""
+  full:
+    description: Every test of the selected modules rather than their guards.
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -21,8 +29,14 @@ runs:
     # runner without it never starts the bootstrapper either. Some tests bind a loopback TcpListener
     # and speak MQTT to it, so the runner needs nothing beyond the loopback interface — no broker,
     # and no outbound network.
-    - name: Unit tests — every project under tests/
+    - name: Tests
       shell: pwsh
       env:
         CONFIGURATION: ${{ inputs.configuration }}
-      run: ./.github/scripts/run-tests.ps1 -Configuration $env:CONFIGURATION
+        MODULES: ${{ inputs.modules }}
+        FULL: ${{ inputs.full }}
+      run: |
+        $arguments = @("-Configuration", $env:CONFIGURATION)
+        if ("$env:MODULES".Trim()) { $arguments += @("-Module", "$env:MODULES".Trim()) } else { $arguments += "-AllModules" }
+        if ($env:FULL -eq "true") { $arguments += "-Full" }
+        ./.github/scripts/run-tests.ps1 @arguments

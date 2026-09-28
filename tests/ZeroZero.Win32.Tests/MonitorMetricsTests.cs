@@ -28,6 +28,7 @@ public class MonitorMetricsTests
         Assert.True(scale >= 1.0, $"scale {scale}");
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ForCursor_ReportsTheMonitorUnderTheCursorAndItsScale()
     {

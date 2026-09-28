@@ -105,6 +105,7 @@ public sealed class SectionedStoreTests : WatcherTestBase
     /// <summary>The re-read does not throw on a case conflict — it succeeds and moves nothing — so
     /// the refusal reaches the watcher as neither a change nor an exception. It is reported once,
     /// as an obstruction, and never as a change.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void A_hand_edit_to_a_section_spelled_in_another_case_is_reported_as_an_obstruction_and_not_as_a_change()
     {

@@ -50,6 +50,7 @@ public sealed class ManifestTests : IDisposable
         Assert.Equal("{InstallerUrl}", result.Output.Trim());
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Rewrites_that_line_and_nothing_else()
     {

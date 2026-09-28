@@ -19,6 +19,7 @@ public class DumpRegistrationTests : IDisposable
 
     public void Dispose() => _hive.Dispose();
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ArmWritesTheThreeValuesWindowsErrorReportingReadsInTheKindsItExpects()
     {
@@ -77,6 +78,7 @@ public class DumpRegistrationTests : IDisposable
         Assert.Null(_registration.Read("Partial.exe"));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void DisarmRemovesTheRegistrationAndTheRootItLeavesEmpty()
     {
@@ -172,6 +174,7 @@ public class DumpRegistrationTests : IDisposable
         Assert.Null(_hive.OpenLocalDumps());
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void TheRealRootIsWhereWindowsErrorReportingReads() =>
         Assert.Equal(@"SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps", DumpRegistration.LocalDumpsPath);

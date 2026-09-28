@@ -8,6 +8,7 @@ public sealed class SigningGateTests
     private static ScriptResult Gate(string refType, string? secret) =>
         Scripts.Run("signing-gate.ps1", new Dictionary<string, string?> { ["RELEASE_SIGNING_SECRET"] = secret }, "-RefType", refType);
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Fails_a_tag_without_the_secret()
     {

@@ -81,6 +81,7 @@ public sealed class SectionIsolationTests : SectionedTestBase
         Assert.Equal(8, store.Section<GeneralSection>("general").Read().Retries);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void The_document_is_copied_aside_before_a_section_it_cannot_read_is_repaired()
     {

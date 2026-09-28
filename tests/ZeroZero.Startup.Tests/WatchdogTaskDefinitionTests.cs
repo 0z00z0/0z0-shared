@@ -84,6 +84,7 @@ public sealed class WatchdogTaskDefinitionTests : IDisposable
         Assert.Empty(Drift(definition, Options(arguments: "")));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void TheSchedulerIsStoppedFromKillingWhatItStarted()
     {

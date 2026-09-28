@@ -158,6 +158,7 @@ public sealed class WatcherOnDiskTests : WatcherTestBase
         Assert.Single(harness.Changed);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void The_stores_own_write_is_examined_and_reported_as_no_change()
     {
@@ -199,6 +200,7 @@ public sealed class WatcherOnDiskTests : WatcherTestBase
         Assert.Equal(9, reported.After.Retries);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void A_first_file_arriving_by_rename_is_reported()
     {

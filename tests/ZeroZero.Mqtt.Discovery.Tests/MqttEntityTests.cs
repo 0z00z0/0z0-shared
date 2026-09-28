@@ -42,6 +42,7 @@ public class MqttEntityTests
         Assert.True(button.IsCommand);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AnAbsentReadingIsPublishedAsTheResetLiteralNotAsAnEmptyPayload()
     {

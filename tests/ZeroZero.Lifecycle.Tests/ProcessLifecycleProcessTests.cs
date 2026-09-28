@@ -31,6 +31,7 @@ public sealed class ProcessLifecycleProcessTests : IDisposable
         Directory.Delete(_dir, recursive: true);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AnExitNobodyAskedForStartsTheExecutableAgainWithTheRelaunchArgument()
     {

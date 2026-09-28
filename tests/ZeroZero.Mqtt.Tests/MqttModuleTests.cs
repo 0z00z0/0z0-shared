@@ -14,6 +14,7 @@ public class MqttModuleTests
 {
     private static readonly Assembly Module = typeof(MqttSettings).Assembly;
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void VersionIsWhatTheLoadedAssemblyCarriesRatherThanACompiledInConstant()
     {

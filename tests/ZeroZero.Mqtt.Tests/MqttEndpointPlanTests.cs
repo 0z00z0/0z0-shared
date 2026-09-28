@@ -33,6 +33,7 @@ public class MqttEndpointPlanTests
             [.. MqttEndpointPlan.Ports(MqttTransport.Tcp), .. MqttEndpointPlan.Ports(MqttTransport.WebSocket)],
             MqttEndpointPlan.OfferedPorts);
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void EncryptionOrder_AsksForCipherFirstUnderAutomatic() =>
         Assert.Equal([true, false], MqttEndpointPlan.EncryptionOrder(MqttEncryptionMode.Auto));
@@ -52,6 +53,7 @@ public class MqttEndpointPlanTests
         Assert.Equal([new(1883, MqttTransport.Tcp, true), new(1883, MqttTransport.Tcp, false)], sweep);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Sweep_LeadsWithTheRememberedEndpoint()
     {
@@ -91,6 +93,7 @@ public class MqttEndpointPlanTests
         Assert.Null(MqttEndpointPlan.Reusable(Request(), otherUser));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Reusable_IgnoresAnEntryThatDoesNotSayWhetherItWasEncrypted()
     {
@@ -158,6 +161,7 @@ public class MqttEndpointPlanTests
             MqttEndpointPlan.NextEndpoint(Request(port: 1883, transport: MqttTransportMode.Tcp), null, nothingThere));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void NextEndpoint_NeverRetriesInClearTextAfterAnUntrustedCertificate()
     {
@@ -220,6 +224,7 @@ public class MqttEndpointPlanTests
         Assert.False(MqttEndpointPlan.DowngradeBlocked(attempts, new(1883, MqttTransport.Tcp, true)));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ShouldProbe_HasNoTriggerThatIsNotAButtonPress()
     {

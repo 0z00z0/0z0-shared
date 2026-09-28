@@ -73,6 +73,7 @@ public sealed class WatcherOverflowTests : WatcherTestBase
     /// <summary>The watcher is thrown away and rebuilt inside the failure, so this is the test that
     /// the rebuilt one is armed. Without it the watcher goes deaf at the first dropped notification
     /// and never says so again.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void An_edit_after_a_dropped_notification_is_still_reported()
     {

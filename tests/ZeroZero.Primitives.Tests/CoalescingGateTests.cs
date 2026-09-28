@@ -10,6 +10,7 @@ public class CoalescingGateTests
     [Fact]
     public void TheFirstSignalStartsTheLoop() => Assert.True(new CoalescingGate().Signal());
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ASignalArrivingWhileOneRunsStartsNothingSecond()
     {
@@ -53,6 +54,7 @@ public class CoalescingGateTests
         Assert.True(gate.Signal());
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ABurstOfSignalsCostsOnePassPlusOneTrailingPass()
     {

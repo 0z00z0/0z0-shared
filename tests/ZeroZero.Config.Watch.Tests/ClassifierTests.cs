@@ -37,6 +37,7 @@ public sealed class ClassifierTests
         Assert.True(classifier.IsSubstantive(new AppSettings(), new AppSettings { StartMinimised = true }));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void A_value_added_after_the_list_was_written_counts()
     {

@@ -1,0 +1,13 @@
+<Project>
+
+  <!-- MSBuild reads only the nearest Directory.Build.props, so the repository's own comes first and
+       every test project builds with what the rest of the tree does. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)..'))" />
+
+  <!-- The default-run mark, compiled into every test project from one file. -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Guard.cs" Link="Guard.cs" Visible="false" />
+    <Using Include="ZeroZero.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -49,6 +49,7 @@ public sealed class ManifestVerificationTests(PackedRelease release)
         Assert.Contains("the manifest's and the build's", result.Output);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Refuses_a_manifest_that_describes_the_previous_release()
     {

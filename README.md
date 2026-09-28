@@ -117,8 +117,14 @@ dotnet build 0z0-shared.slnx -c Release
 .\.github\scripts\run-tests.ps1
 ```
 
-The script is the test definition CI and the release workflow share: it discovers every project
-under `tests/`, runs each against the Release build, and fails naming every project that failed.
+With no switch the script runs the **guards** of the modules the working tree has changed since
+`origin/main`: about a tenth of each module's tests, chosen so that a failure among them is one a
+person would otherwise meet. `-Module <key>` names the modules, `-AllModules` takes every module's
+guards, and `-Full` runs every test. Nothing runs tests on its own: CI runs them only from its manual
+trigger, and a release runs none.
+
+**A green default run does not mean the suite passes.** [`docs/testing.md`](docs/testing.md) says
+what it leaves unproved.
 
 ## Releasing
 
@@ -155,6 +161,7 @@ reusable workflow the applications call, with a signing gate and a manifest rewr
 | [`docs/consume-win32-foundation.md`](docs/consume-win32-foundation.md) | Replacing an application's own native helper: what the Win32 assembly does not cover, and why it and the build kit are one piece of work. |
 | [`docs/consume-lifecycle.md`](docs/consume-lifecycle.md) | Replacing an application's own instance lock and relaunch limiter, and what stays for crash recovery. |
 | [`docs/consume-build-kit.md`](docs/consume-build-kit.md) | Replacing an application's own signing call and manifest: what the kit takes over, what stays, and the self-contained property that fails every library. |
+| [`docs/testing.md`](docs/testing.md) | Running the tests: the default guards run, the full run, what a default run does not prove, and what earns a test the guard mark. |
 | [`docs/releasing.md`](docs/releasing.md) | Cutting a component release, what the workflow guards, and how to run the guards locally. |
 | [`docs/release-notes/`](docs/release-notes) | One file per tag, under the component's folder from `0.7.0` and at the folder root for the earlier tags that released everything together. What a release contains and what it breaks. |
 | [`docs/TODO-HANDLING.md`](docs/TODO-HANDLING.md) | The studio-wide work-tracking convention every 0z0 repo follows: GitHub Issues are the source of truth, and a git-ignored local `TODO.md` mirrors them. |

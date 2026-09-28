@@ -4,6 +4,7 @@ namespace ZeroZero.Win32.Tests;
 
 public class DarkChromeTests
 {
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Apply_FindsBothThemeEntryPointsOnThisWindows()
     {

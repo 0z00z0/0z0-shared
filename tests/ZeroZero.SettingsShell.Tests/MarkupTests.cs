@@ -40,6 +40,7 @@ public class MarkupTests
         Assert.Equal("Collapsed", navigation.Attribute("IsBackButtonVisible")?.Value);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ThePaneNeverCollapsesWithTheWindowWidth()
     {

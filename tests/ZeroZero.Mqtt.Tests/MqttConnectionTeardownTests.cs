@@ -35,6 +35,7 @@ public class MqttConnectionTeardownTests
     /// been through. The endpoint recall is the hook because it is called inside the gate.</summary>
     /// <remarks>The connection is left with a maintain loop it cannot connect on — the reconcile ran
     /// to its end — which costs a refused socket on a dead port and nothing else.</remarks>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task DisposingFromInsideAReconcileLeavesTheReleaseWithSomethingToReleaseInto()
     {

@@ -38,6 +38,7 @@ public class MqttSettingsFileTests : IDisposable
         Assert.Equal(MqttCertificateTrustMode.System, settings.CertificateTrust.Mode);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void EverySettingSurvivesARoundTrip()
     {
@@ -71,6 +72,7 @@ public class MqttSettingsFileTests : IDisposable
         Assert.False(settings.Groups["metrics"]);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AnEnumIsPersistedAsItsDeclaredName()
     {

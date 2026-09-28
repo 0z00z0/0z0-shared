@@ -11,6 +11,7 @@ public class IcoFileTests
     private static readonly byte[] Widest = PngFixture.Bytes(256, 40, padding: 3, fill: 0x22);
     private static readonly byte[] Tallest = PngFixture.Bytes(33, 256, padding: 11, fill: 0x33);
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Build_WritesTheDirectoryFromEachFramesOwnHeader()
     {

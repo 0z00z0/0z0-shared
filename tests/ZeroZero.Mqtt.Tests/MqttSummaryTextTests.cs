@@ -53,6 +53,7 @@ public class MqttSummaryTextTests
         Assert.Equal("broker.invalid · 8883 · TCP · encrypted", Summary(request, Memory(), trust: trust));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AcceptingAnyCertificateAppendsTheOneWarningTheOtherThreeModesNeverShow()
     {

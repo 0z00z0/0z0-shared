@@ -95,6 +95,7 @@ public class StartupTaskTests
 
     /// <summary>A program that stays resident never exits, so nothing settles inside the wait and
     /// the reading taken at the end of it is the whole answer.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ADemandStartCountsAProgramThatStaysResidentAsAStart()
     {
@@ -153,6 +154,7 @@ public class StartupTaskTests
     /// through <see cref="StartupTask.Repair"/> itself; a standard token cannot register the
     /// highest-run-level task a rewrite writes, so here the same composition is built by hand over
     /// a real task whose executable fails.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void TheVerificationARepairRunsRefusesATaskWhoseExecutableFails()
     {
@@ -227,6 +229,7 @@ public class StartupTaskTests
     /// scheduler call: read outside the delegates it would take the application down at start-up
     /// over a task it never needed to be running.
     /// </summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ARepairThatCannotReadTheCurrentIdentityIsAnOutcomeNotAThrow()
     {

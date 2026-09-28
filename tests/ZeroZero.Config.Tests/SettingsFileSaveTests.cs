@@ -73,6 +73,7 @@ public class SettingsFileSaveTests : SettingsFileTestBase
         Assert.True(IsRefusal(result.Error), $"Expected the file-system refusal, got {result.Error}.");
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void FailedWrite_LeavesTheExistingFileWhole()
     {
@@ -126,6 +127,7 @@ public class SettingsFileSaveTests : SettingsFileTestBase
         Assert.Equal(0, changes);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ConcurrentUpdates_AreSerialisedAndNoneIsLost()
     {

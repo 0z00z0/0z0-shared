@@ -18,6 +18,7 @@ public class DemandStartDecisionTests
 
     /// <summary>The defect 0.7.2 closed: a run that is only queued has moved the run time on
     /// without starting anything, and must not count as a start.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AQueuedRunHasNotStartedItsProgram() =>
         Assert.False(StartupTask.StartedAndStillRunning(TaskState.Queued, Moved, Before));
@@ -63,6 +64,7 @@ public class DemandStartDecisionTests
     /// and a run still reading as running when the wait ends counts as a start, so a wait shorter
     /// than that reports a program which started and failed as one that started and stayed up.
     /// </summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void TheVerificationWaitOutlastsTheSchedulersReportingOfAFinishedRun() =>
         Assert.True(StartupTask.VerificationWait >= TimeSpan.FromSeconds(10),

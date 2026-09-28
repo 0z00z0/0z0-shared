@@ -82,6 +82,7 @@ public class MqttProbeSessionTests
         Assert.False(session.Busy);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ALateProgressReportDoesNotOverwriteTheVerdict()
     {

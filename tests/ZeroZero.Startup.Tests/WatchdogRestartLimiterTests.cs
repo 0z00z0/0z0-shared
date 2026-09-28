@@ -53,6 +53,7 @@ public sealed class WatchdogRestartLimiterTests : IDisposable
         Assert.False(limiter.RecordStart(WatchdogStartCause.Probe));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AStartOlderThanTheWindowNoLongerCounts()
     {

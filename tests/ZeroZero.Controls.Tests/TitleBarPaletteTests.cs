@@ -43,6 +43,7 @@ public class TitleBarPaletteTests
             Assert.True(argb >> 24 == 0xFF, $"{theme} {name} is #{argb:X8}, not opaque.");
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Theory]
     [InlineData(TitleBarTheme.Dark, DarkGround)]
     [InlineData(TitleBarTheme.Light, LightGround)]

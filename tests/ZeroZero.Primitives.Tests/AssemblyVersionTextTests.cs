@@ -47,6 +47,7 @@ public class AssemblyVersionTextTests
         public override IList<CustomAttributeData> GetCustomAttributesData() => [];
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ReadIsWhatTheLoadedAssemblyCarriesRatherThanACompiledInConstant()
     {

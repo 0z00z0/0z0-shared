@@ -6,6 +6,7 @@ namespace ZeroZero.Config.Tests;
 /// like without being rejected.</summary>
 public class SettingsFileJsonTests : SettingsFileTestBase
 {
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Enums_ArePersistedAsTheirDeclaredMemberName()
     {
@@ -43,6 +44,7 @@ public class SettingsFileJsonTests : SettingsFileTestBase
         Assert.Equal(SampleMode.Cold, Create().Read().Mode);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Enums_AnUnknownMemberNameCostsEveryOtherSettingInTheFile()
     {

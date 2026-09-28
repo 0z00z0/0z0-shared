@@ -39,6 +39,7 @@ public class UnattendedUpdatePolicyTests
         }
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task SettingOff_InstallsNothingAndChecksNothing()
     {
@@ -54,6 +55,7 @@ public class UnattendedUpdatePolicyTests
         Assert.Equal(0, _shutdowns);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task MachineInUse_RefusesUntilTenMinutesHavePassed()
     {
@@ -87,6 +89,7 @@ public class UnattendedUpdatePolicyTests
         Assert.Equal(1, _shutdowns);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task ApplicationRefusesTheMoment_NothingStarts()
     {

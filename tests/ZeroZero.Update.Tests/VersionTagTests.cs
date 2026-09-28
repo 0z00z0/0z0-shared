@@ -30,6 +30,7 @@ public class VersionTagTests
         Assert.False(VersionTag.TryParse(tag, out _));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Normalise_MakesTheRunningVersionComparableToItsOwnTag()
     {

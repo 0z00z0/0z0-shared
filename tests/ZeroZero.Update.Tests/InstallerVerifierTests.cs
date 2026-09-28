@@ -37,6 +37,7 @@ public class InstallerVerifierTests(SignedFileFactory files) : IClassFixture<Sig
         Assert.Null(result.TrustResult);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Verify_RefusesAFileSignedBySomeoneElse()
     {
@@ -48,6 +49,7 @@ public class InstallerVerifierTests(SignedFileFactory files) : IClassFixture<Sig
         Assert.Equal(SignedFileFactory.OtherSubject, result.SignerSubject);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Verify_RefusesAnUnsignedFile()
     {
@@ -78,6 +80,7 @@ public class InstallerVerifierTests(SignedFileFactory files) : IClassFixture<Sig
         Assert.Contains(result.Verdict, new[] { VerificationVerdict.NotSigned, VerificationVerdict.SignatureInvalid, VerificationVerdict.SignatureCheckFailed });
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Verify_RefusesATamperedFileEvenAgainstItsOwnHash()
     {
@@ -90,6 +93,7 @@ public class InstallerVerifierTests(SignedFileFactory files) : IClassFixture<Sig
         Assert.Equal(TRUST_E_BAD_DIGEST, result.TrustResult);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Verify_RefusesAnImpostorSpellingTheExpectedNameWithAnUnpinnedCertificate()
     {

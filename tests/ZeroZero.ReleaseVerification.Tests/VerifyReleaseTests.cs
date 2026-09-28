@@ -30,6 +30,7 @@ public sealed class VerifyReleaseTests(PackedRelease release)
         return Scripts.Run("verify-release.ps1", null, all.ToArray());
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Accepts_the_published_bytes_when_they_are_the_builds()
     {
@@ -54,6 +55,7 @@ public sealed class VerifyReleaseTests(PackedRelease release)
         Assert.True(result.Passed, result.ToString());
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Refuses_a_published_package_that_is_another_pack_of_this_build()
     {
@@ -221,6 +223,7 @@ public sealed class VerifyReleaseTests(PackedRelease release)
         Assert.Contains($"says id 'ZeroZero.Other'; the artefact is {PackedRelease.PackageId}", result.Output);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Refuses_a_package_whose_assembly_was_built_at_another_commit()
     {
@@ -404,6 +407,7 @@ public sealed class VerifyReleaseTests(PackedRelease release)
         Assert.Contains("so the installer was signed", result.Output);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Refuses_an_unsigned_step_that_ran_when_signing_is_required()
     {

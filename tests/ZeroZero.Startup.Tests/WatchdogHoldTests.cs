@@ -24,6 +24,7 @@ public sealed class WatchdogHoldTests : IDisposable
         Assert.False(Hold().IsHeld);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ADeliberateExitIsRecordedAndReadBack()
     {

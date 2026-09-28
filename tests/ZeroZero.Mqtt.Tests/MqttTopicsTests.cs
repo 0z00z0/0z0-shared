@@ -22,6 +22,7 @@ public class MqttTopicsTests
         Assert.Equal("exampleapp/exampleapp_desk01/cmd/quiet_mode",
             MqttTopics.Command(Root, Device, "quiet_mode"));
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void CommandFilter_CoversEveryCommandEntityAndOnlyThose()
     {

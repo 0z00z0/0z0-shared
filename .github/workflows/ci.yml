@@ -1,10 +1,25 @@
 name: CI
 
+# A push or a pull request builds the solution and runs no test. Tests run when someone asks for
+# them through the manual trigger: the guards of the modules named, or of every module when none is,
+# or every test when "full" is ticked. docs/testing.md says what a guards run leaves unproved.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      modules:
+        description: Component keys separated by spaces, as in "mqtt config". Empty runs every module.
+        type: string
+        required: false
+        default: ""
+      full:
+        description: Every test instead of the guards.
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   build:
@@ -25,10 +40,12 @@ jobs:
       - name: Build
         run: dotnet build 0z0-shared.slnx -c Release --no-restore
 
-      # The one test-run definition, shared with the release workflow. It discovers every project
-      # under tests/ when it runs, so a new test project is in the run the moment it exists, and it
-      # fails at the end naming every project that failed. A hand-written step per project was the
-      # alternative, and a forgotten step is a project whose tests never run while everything stays
-      # green.
-      - name: Unit tests
+      # The one test-run definition, the same script a local run uses. It discovers every project
+      # under tests/ when it runs, so a new test project joins its module the moment it exists, and
+      # it fails at the end naming every project that failed.
+      - name: Tests
+        if: github.event_name == 'workflow_dispatch'
         uses: ./.github/actions/run-tests
+        with:
+          modules: ${{ inputs.modules }}
+          full: ${{ inputs.full }}

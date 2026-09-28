@@ -43,6 +43,7 @@ public sealed class InstalledShapeMigrationTests : SectionedTestBase
     public InstalledShapeMigrationTests() =>
         File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "installed-settings.json"), SourcePath);
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void The_fixture_is_the_shape_that_was_measured()
     {
@@ -72,6 +73,7 @@ public sealed class InstalledShapeMigrationTests : SectionedTestBase
         Assert.Equal(2, new SectionedSettingsFile(InstalledOptions(2)).DocumentVersion);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Every_section_arrives_with_the_bytes_the_old_file_held()
     {
@@ -147,6 +149,7 @@ public sealed class InstalledShapeMigrationTests : SectionedTestBase
         Assert.Equal("Hibernate", lid.LidDelaySavedDcAction);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void A_type_spelling_a_member_with_the_initialism_reads_nothing_and_its_write_is_refused()
     {

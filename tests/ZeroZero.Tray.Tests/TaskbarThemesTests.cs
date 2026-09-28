@@ -5,6 +5,7 @@ namespace ZeroZero.Tray.Tests;
 
 public class TaskbarThemesTests
 {
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void FromRegistryValue_OneIsLight()
     {
@@ -47,6 +48,7 @@ public class TaskbarThemesTests
         Assert.Equal(expected, TaskbarThemes.Read());
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void StrokeToneFor_IsTheOppositeOfTheTaskbar()
     {

@@ -105,6 +105,7 @@ public class PaletteContrastTests
             Measured.Select(row => (string)row[0]!).Order());
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void EveryAccentClearsTheNonTextFloorOnBothBrandGrounds()
     {
@@ -138,6 +139,7 @@ public class PaletteContrastTests
     /// Text on an accent is black, and Indigo is the single exception. Stated as a rule rather than
     /// per colour so a caller picks one text colour for the palette instead of guessing per fill.
     /// </summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void EveryAccentTakesBlackTextExceptIndigoWhichTakesWhite()
     {

@@ -25,6 +25,7 @@ public class TaskDialogMarshallingTests
     private const uint TDF_SIZE_TO_CONTENT = 0x01000000;
     private const uint TDCBF_CANCEL_BUTTON = 0x0008;
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void PackedSizes_MatchTheHeaderForThisArchitecture()
     {
@@ -65,6 +66,7 @@ public class TaskDialogMarshallingTests
         Assert.Equal(IntPtr.Zero, marshalling.Config.pszExpandedInformation);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Buttons_MarshalInOrderWithTheirIdsAndText()
     {

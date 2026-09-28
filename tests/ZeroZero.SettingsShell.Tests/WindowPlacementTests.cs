@@ -90,6 +90,7 @@ public class WindowPlacementTests
         Assert.Equal(Cursor.Bottom, rect.Bottom);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ASavedRectangleOnAMonitorThatHasGone_LandsOnTheNearestOne()
     {

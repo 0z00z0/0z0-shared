@@ -16,6 +16,7 @@ public class MqttEntityIdTests
     public void Normalise_ReducesToTheTopicSafeAlphabet(string raw, string expected) =>
         Assert.Equal(expected, MqttEntityId.Normalise(raw));
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Normalise_CollapsesRunsRatherThanKeepingOneUnderscorePerCharacter()
     {
@@ -50,6 +51,7 @@ public class MqttEntityIdTests
         Assert.Null(MqttEntityId.Validate("cpu load"));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Resolve_GivesTheFirstClaimantThePlainId()
     {

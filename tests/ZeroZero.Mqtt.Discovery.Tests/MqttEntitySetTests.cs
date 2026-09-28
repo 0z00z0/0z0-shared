@@ -9,6 +9,7 @@ public class MqttEntitySetTests
     private static PublishGroupSnapshot Groups(params PublishGroup[] declared) =>
         new PublishGroupSet(new MemorySettingsStore(), declared).Snapshot();
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ADuplicateIdIsRejected()
     {

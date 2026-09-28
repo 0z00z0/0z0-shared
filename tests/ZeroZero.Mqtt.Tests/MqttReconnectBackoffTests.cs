@@ -23,6 +23,7 @@ public class MqttReconnectBackoffTests
 
     /// <summary>What a broker that is simply down earns: each round waits twice the last, and the
     /// doubling stops at the cap rather than running past it.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void EachFailedRoundDoublesTheWaitUntilItReachesTheCap()
     {
@@ -59,6 +60,7 @@ public class MqttReconnectBackoffTests
     /// <summary>The whole point of the mechanism: a peer that accepts the connection and drops it
     /// again inside the flap window must not have each connect read as a success. Every flap costs
     /// more than the last, so a flapping broker cannot pull the retry rate back to continuous.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void APeerThatKeepsDroppingInsideTheFlapWindowEscalatesInsteadOfResetting()
     {
@@ -99,6 +101,7 @@ public class MqttReconnectBackoffTests
     /// <summary>A blip that pushed the wait most of the way to the cap must not still be charged once
     /// the connection has held. Without the reset one bad minute leaves a healthy link reconnecting a
     /// minute late for the rest of the session.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AConnectionThatHoldsPastTheFlapWindowDropsBackToTheFloor()
     {
@@ -189,6 +192,7 @@ public class MqttReconnectBackoffTests
     /// <summary>A shutdown that arrives mid-wait has to end the wait. One that runs its timer out
     /// regardless holds the process open for however long the wait happened to be — up to the cap.
     /// </summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AShutdownDuringTheWaitEndsItRatherThanRunningTheTimerOut()
     {

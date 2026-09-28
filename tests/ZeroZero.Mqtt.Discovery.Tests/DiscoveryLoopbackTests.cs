@@ -121,6 +121,7 @@ public class DiscoveryLoopbackTests
         }
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AnInboundCommandReachesTheEntityThatOwnsIt()
     {

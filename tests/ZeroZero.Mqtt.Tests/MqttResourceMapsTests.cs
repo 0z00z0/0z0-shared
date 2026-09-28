@@ -106,6 +106,7 @@ public class MqttResourceMapsTests
     /// <summary>The case that regresses silently: both indexes file the key under the bare map, so
     /// only the order the two are opened in decides which wording the panel renders. The library's
     /// index is written first here and still asked second, because the module's order decides.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void TheApplicationsIndexOutranksTheLibrarysOwnFile() =>
         Assert.Equal(

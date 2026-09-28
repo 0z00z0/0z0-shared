@@ -13,6 +13,7 @@ public class TrayIconPlacementsTests
     private static readonly Guid Ours = new("5D1F3B62-7A4C-4E0B-9C2D-A1B2C3D4E5F6");
     private static readonly Guid Theirs = new("0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0");
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void TheEntryCarryingTheIconIsTheOneWritten()
     {

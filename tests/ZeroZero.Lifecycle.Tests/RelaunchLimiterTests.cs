@@ -33,6 +33,7 @@ public sealed class RelaunchLimiterTests : IDisposable
         Assert.Contains(_log.Infos, line => line.Contains("refused", StringComparison.Ordinal));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ARelaunchOlderThanTheWindowNoLongerCounts()
     {

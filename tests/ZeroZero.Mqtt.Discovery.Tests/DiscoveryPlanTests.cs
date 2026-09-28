@@ -239,6 +239,7 @@ public class DiscoveryPlanTests
         Assert.Null(pass.Ledger.Find("exampleapp_old"));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ARecordWrittenBeforeTheDeviceIdWasStoredKeepsItsIdentity()
     {

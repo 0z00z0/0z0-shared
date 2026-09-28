@@ -85,10 +85,7 @@ updates no ref and so triggers nothing. Recovering means deleting the remote tag
 again — the commit is unchanged, so nothing is rewritten.
 
 **That recovery is for a tag no run ever saw, and for nothing else.** A run that started and went
-red is re-run from the failed job; the tag is correct and deleting it buys nothing. Read the failing
-step before choosing: a red unit-test step naming a known flaky test is the run, not the release,
-and the whole suite runs on every tag, so a flake anywhere in the repository reddens a release of a
-component it has no connection to.
+red is re-run from the failed job; the tag is correct and deleting it buys nothing.
 
 The workflow then runs, in this order, and stops at the first failure:
 
@@ -98,7 +95,7 @@ The workflow then runs, in this order, and stops at the first failure:
 | Release notes present | `docs/release-notes/<key>/v<x.y.z>.md` is missing. |
 | Tag matches the declared version | `<Key>Version` or the evaluated `Version` of any packable project of the key differs from the tag, or no project has the key. |
 | Referenced components are released | A **direct** project reference from the released component to another component names a version whose tag `<other>-v<version>` is not on the remote. A component reached only through another one is not asked about. |
-| Unit tests | Any test project fails — the whole suite runs, not the component's alone. |
+| Build | The solution does not build in Release. No test runs on a tag; [`testing.md`](testing.md) says how a test run is asked for and what a default one leaves unproved. |
 | Pack the component | The output folder does not end up holding exactly one `<Name>.<version>.nupkg` per selected project. Once it does, the script writes `release-artefacts.json` beside the packages — the tag, the commit and the SHA-256 of every package as packed — and the job keeps that record as a workflow artefact. |
 | Push to GitHub Packages | Any push fails, `409` for an already-published version included. |
 | Verify release | What the feed serves is not what this run packed — the assertions below. A job of its own, so nothing the release job built is in reach and the only thing checked is what came down the wire. |
@@ -158,8 +155,8 @@ with itself and proves nothing.
 What it deliberately does not check: a package with no assembly under `lib/` — the build kit — has
 no stamp to read and passes on bytes and nuspec alone; a signature's chain, because the studio
 certificate is self-signed and no runner trusts its root, so `-Signer` proves the subject string
-and only `-SignerThumbprint` proves the certificate; and the build itself — the tests, the version
-guards and the dependency guard run before packing and are not repeated after it.
+and only `-SignerThumbprint` proves the certificate; and the build itself — the version guards and
+the dependency guard run before packing and are not repeated after it.
 
 ## Verifying an application's release
 
@@ -217,7 +214,6 @@ dotnet restore 0z0-shared.slnx
 .\.github\scripts\release-guard.ps1 -Tag mqtt-v0.7.0 -Check Versions
 .\.github\scripts\release-guard.ps1 -Tag mqtt-v0.7.0 -Check Dependencies
 dotnet build 0z0-shared.slnx -c Release --no-restore
-.\.github\scripts\run-tests.ps1
 .\.github\scripts\pack-component.ps1 -Tag mqtt-v0.7.0 -Output artifacts
 dotnet nuget push artifacts\ZeroZero.Mqtt.0.7.0.nupkg --source C:\feed
 .\.github\scripts\verify-release.ps1 -Tag mqtt-v0.7.0 -Artefacts artifacts\release-artefacts.json -Commit (git rev-parse HEAD) -Location C:\feed

@@ -86,6 +86,7 @@ public class SectionLifecycleTests
         Assert.Equal("b", lifecycle.Current);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Select_LeavesTheOldHidesItShowsTheNewThenEnters()
     {
@@ -145,6 +146,7 @@ public class SectionLifecycleTests
         Assert.Empty(rig.Host.Log);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Rebuild_LeavesABuildOnceSectionAloneAndRebuildsTheRest()
     {

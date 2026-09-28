@@ -25,6 +25,7 @@ public class MqttCertificateTrustTests
     public void SystemTrust_IsTheDefault() =>
         Assert.Equal(MqttCertificateTrustMode.System, new MqttCertificateTrust().Mode);
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void SystemTrust_TakesThePlatformsAnswerAndNothingElse()
     {
@@ -53,6 +54,7 @@ public class MqttCertificateTrustTests
         Assert.True(trust.Accepts(Presented(certificate, systemTrusted: false)));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void APinnedThumbprint_RefusesEveryOtherCertificate()
     {
@@ -88,6 +90,7 @@ public class MqttCertificateTrustTests
         Assert.False(trust.Accepts(Presented(other, systemTrusted: true)));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AnUnusableThumbprintRefusesRatherThanFallingBackToThePlatform()
     {

@@ -30,6 +30,7 @@ public class SettingsFileUnreadableFileTests : SettingsFileTestBase
         Assert.Empty(QuarantineCopies());
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Update_AfterAnUnreadableLoad_IsRefusedAndTheFileIsLeftWhole()
     {
@@ -60,6 +61,7 @@ public class SettingsFileUnreadableFileTests : SettingsFileTestBase
         Assert.Equal("desk", OnDisk().Label);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Reload_ThatSucceeds_LiftsTheRefusalForGood()
     {

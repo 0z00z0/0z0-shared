@@ -216,6 +216,7 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
         Assert.Contains("/* nothing here has been read since build 14 */", after, StringComparison.Ordinal);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void A_new_file_that_lost_a_key_is_refused_and_removed()
     {

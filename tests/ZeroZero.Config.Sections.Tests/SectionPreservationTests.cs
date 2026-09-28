@@ -57,6 +57,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
         Assert.Contains("\"Never\": [1, 2, 3]", OnDisk(), StringComparison.Ordinal);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Only_the_changed_member_moves()
     {
@@ -90,6 +91,7 @@ public sealed class SectionPreservationTests : SectionedTestBase
             OnDisk().IndexOf("\"ConfigVersion\"", StringComparison.Ordinal));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void A_hand_written_comment_survives_a_save()
     {

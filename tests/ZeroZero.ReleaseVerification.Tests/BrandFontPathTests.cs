@@ -88,6 +88,7 @@ public sealed class BrandFontPathTests(PackedBrand brand)
         (Path.Combine("src", "ZeroZero.Brand.WinUI", "Themes", "BrandResources.xaml"), 1),
     ];
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Every_font_uri_in_the_markup_names_a_file_the_package_carries()
     {
@@ -120,6 +121,7 @@ public sealed class BrandFontPathTests(PackedBrand brand)
         }
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void The_markup_is_read_rather_than_matched_against_nothing()
     {

@@ -166,6 +166,7 @@ public sealed class WatchdogTaskTests : IDisposable
         Assert.True(watchdog.Hold.IsHeld);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void TwoTasksOfOneNameAreRefusedAndNeitherIsWritten()
     {

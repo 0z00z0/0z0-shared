@@ -30,6 +30,7 @@ public class DiscoveryLedgerFileTests : IDisposable
     public void AFreshDirectoryHasNothingRecorded() =>
         Assert.Empty(DiscoveryLedgerFile.In(_directory).Read().Devices);
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void WhatOneRunWroteTheNextRunReads()
     {

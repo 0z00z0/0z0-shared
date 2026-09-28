@@ -62,6 +62,7 @@ public class SingleInstanceLockTests
         taken.ReleaseMutex();
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AMutexItsHolderAbandonedCountsAsTakenAndSaysWhich()
     {
@@ -124,6 +125,7 @@ public class SingleInstanceLockTests
         Assert.False(SingleInstanceOutcome.RefusedDenied.IsTaken());
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ThePublicPathRefusesTwiceAndThenHoldsOneLockForTheProcessLifetime()
     {

@@ -15,6 +15,7 @@ public class MqttProbeLoopbackTests
         new("127.0.0.1", port, "user", "placeholder", ClientId: "exampleapp_probe",
             Transport: MqttTransportMode.Tcp, Encryption: MqttEncryptionMode.Off);
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task NothingListening_IsUnreachableAndNotACredentialFailure()
     {
@@ -24,6 +25,7 @@ public class MqttProbeLoopbackTests
         Assert.Contains("Could not reach the broker", MqttStatusText.Describe(report));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task ABrokerRefusingTheCredentials_IsAnAuthRejection()
     {

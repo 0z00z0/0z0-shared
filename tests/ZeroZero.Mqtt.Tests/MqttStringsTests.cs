@@ -231,6 +231,7 @@ public class MqttStringsTests
         Assert.Equal("", string.Join(", ", orphaned));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void TheResourceFileCarriesTheSameTextAsTheModule()
     {

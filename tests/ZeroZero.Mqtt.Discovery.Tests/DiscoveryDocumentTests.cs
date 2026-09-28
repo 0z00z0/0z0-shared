@@ -28,6 +28,7 @@ public class DiscoveryDocumentTests
         _ => [],
     };
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void TheRootCarriesTheDeviceTheOriginAndAvailability()
     {
@@ -38,6 +39,7 @@ public class DiscoveryDocumentTests
             document.Select(pair => pair.Key));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AvailabilityIsPublishedOnceAtTheRoot()
     {
@@ -182,6 +184,7 @@ public class DiscoveryDocumentTests
         Assert.DoesNotContain("default_entity_id", EveryKey(document));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void UniqueIdIsTheDeviceIdAndTheEntityId()
     {
@@ -202,6 +205,7 @@ public class DiscoveryDocumentTests
         Assert.Equal("button", (string?)Component(document, "restart")["p"]);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AStateTopicIsOneBareTopicPerEntity()
     {
@@ -249,6 +253,7 @@ public class DiscoveryDocumentTests
         Assert.False(Component(document, "charging").ContainsKey("command_topic"));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AButtonDeclaresNoStateChannel()
     {
@@ -292,6 +297,7 @@ public class DiscoveryDocumentTests
         Assert.Equal("measurement", (string?)sensor["state_class"]);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ASensorWithNothingToDeclareDeclaresNothing()
     {

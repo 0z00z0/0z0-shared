@@ -129,6 +129,7 @@ public class UpdateFlowTests
         Assert.Equal(0, _service.Prepares);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task OpeningTheReleasePage_RefusesAnythingButHttps()
     {
@@ -142,6 +143,7 @@ public class UpdateFlowTests
         Assert.Contains(_log.Infos, line => line.Contains("not https"));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task Installing_PreparesLaunchesAndThenShutsDown()
     {
@@ -185,6 +187,7 @@ public class UpdateFlowTests
         Assert.Equal(0, _shutdowns);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AReadyUpdateWithoutAVerifiedVerdict_IsNotLaunched()
     {
@@ -202,6 +205,7 @@ public class UpdateFlowTests
         Assert.Equal(0, _shutdowns);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task ALaunchThatFails_IsReportedAndTheApplicationStaysUp()
     {

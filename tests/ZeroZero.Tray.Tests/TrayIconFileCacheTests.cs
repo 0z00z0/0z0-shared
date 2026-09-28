@@ -44,6 +44,7 @@ public sealed class TrayIconFileCacheTests : IDisposable
         Assert.Equal(written, File.GetLastWriteTimeUtc(path));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Resolve_WritesAgainWhenARenderDiffers()
     {

@@ -34,6 +34,7 @@ public sealed class TrayHostProcessTests : IDisposable
 
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 
+    [Trait(Guard.Category, Guard.Value)]
     [WindowsAppRuntimeFact]
     public void TheProcessIsNotThrottledOnceTheIconIsCreated()
     {

@@ -21,6 +21,7 @@ public class MqttSocketBudgetTests
     }
 
     /// <summary>Which budget applies, not how long it is — hence the named constant.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void SocketBudget_IsShortWhereThereIsAnotherCandidateToMoveOnTo() =>
         Assert.Equal(MqttProbe.SilentTimeout, MqttProbe.SocketBudget(candidates: 14, escalated: false));
@@ -116,6 +117,7 @@ public class MqttSocketBudgetTests
     /// offered no encryption and carried no credential, so the plain retry behind it stays open — but
     /// one that presented a certificate and then failed still blocks it, and no shortening of the
     /// socket stage may turn a handshake failure into a clear-text retry.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task ASilentCandidate_LeavesThePlainRetryOpenAndACertificateFailureStillBlocksIt()
     {

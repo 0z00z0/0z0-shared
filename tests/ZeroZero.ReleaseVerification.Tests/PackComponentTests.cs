@@ -7,6 +7,7 @@ namespace ZeroZero.ReleaseVerification.Tests;
 [Collection(PackedReleaseCollection.Name)]
 public sealed class PackComponentTests(PackedRelease release)
 {
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Records_the_hash_of_the_package_as_packed()
     {

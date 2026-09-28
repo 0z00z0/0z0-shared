@@ -58,6 +58,7 @@ public sealed class StartupTaskDefinitionTests : IDisposable
         Assert.Equal("--startup", Assert.IsType<ExecAction>(Assert.Single(definition.Actions)).Arguments);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void TheSettingsArePowerSafe()
     {

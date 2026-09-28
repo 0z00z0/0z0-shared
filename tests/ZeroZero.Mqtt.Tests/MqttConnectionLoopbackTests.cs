@@ -83,6 +83,7 @@ public class MqttConnectionLoopbackTests
         Assert.Equal(MqttConnectionState.Connected, connection.State);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task EachEntityGetsItsOwnBareTopicCarryingAPlainValue()
     {
@@ -115,6 +116,7 @@ public class MqttConnectionLoopbackTests
     /// <summary>A publish the broker declined must not take the dedupe slot with it, or the value
     /// that never arrived is indistinguishable from one that did and the topic stays wrong until it
     /// happens to change again.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task ARefusedPublishIsRolledBackAndSentAgainOnTheNextPass()
     {
@@ -230,6 +232,7 @@ public class MqttConnectionLoopbackTests
     /// <summary>No current reading sends the channel's no-value payload, which by default is the
     /// literal a receiver reads as "no value" rather than a zero-length payload it ignores — and it
     /// does so once, not on every pass.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AChannelWithNoCurrentReadingSendsItsNoValuePayloadExactlyOnce()
     {
@@ -365,6 +368,7 @@ public class MqttConnectionLoopbackTests
     /// <remarks>The changed apply comes first as a control, so a reconnect is known to be visible;
     /// then a round trip after the repeated apply proves the session that carried it is the same
     /// one, rather than a silence that might only mean the test was not looking long enough.</remarks>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task ApplyingTheSameParametersAgainDoesNotBounceTheSocket()
     {
@@ -404,6 +408,7 @@ public class MqttConnectionLoopbackTests
     /// this hands it, and a consumer that re-applies on a settings change would then reconnect on the
     /// strength of its own success — a loop with no local symptom, because every part of it is
     /// working exactly as designed.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AnEndpointThatHasNotMovedIsNotHandedOverAgain()
     {
@@ -486,6 +491,7 @@ public class MqttConnectionLoopbackTests
     /// keys are taken out of the pending set before the send, and a throw past the rollback leaves
     /// nothing anywhere that knows the topic was ever published. The value then stays retained on the
     /// broker for ever, under an entity the document no longer declares.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AnEvictionBatchTheTokenCancelledIsPutBackRatherThanLost()
     {
@@ -512,6 +518,7 @@ public class MqttConnectionLoopbackTests
     /// id is gone from everything else by then, so discarding the answer leaves a ghost device on the
     /// receiver with every retained value intact and nothing in the process that knows it exists —
     /// which is the one thing the retirement slot exists to prevent.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task ARefusedEvictionOfASupersededDeviceIdIsTriedAgain()
     {
@@ -550,6 +557,7 @@ public class MqttConnectionLoopbackTests
         Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("gpu_load")) == "7"));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task RemovingTheDeviceEmptiesEveryTopicItOwned()
     {
@@ -607,6 +615,7 @@ public class MqttConnectionLoopbackTests
     /// is indistinguishable on the wire from somebody sending an empty command. For a text entity an
     /// empty string is a value, so a discriminator that fails turns "clear a stuck command" into "set
     /// the entity to empty" — on this connect, and on every reconnect after it.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task TheEchoOfItsOwnRetainedClearIsNotTakenAsACommand()
     {
@@ -632,6 +641,7 @@ public class MqttConnectionLoopbackTests
     /// <summary>And the note is spent on the one message. A discriminator that stands for ever swaps
     /// the fault round: every genuine empty command on that topic is swallowed instead, which for a
     /// text entity is the one value it can never be set to again.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AnEmptyCommandIsAValueOnceTheNoteFromItsOwnClearIsSpent()
     {
@@ -657,6 +667,7 @@ public class MqttConnectionLoopbackTests
     /// next starts, which makes it a single point of failure: a handler that throws and is not caught
     /// ends the reader, and every command after it is enqueued into a queue nothing drains. The
     /// symptom is a device that answers nothing, with no error anywhere after the first.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AThrowingCommandHandlerDoesNotEndTheWorkQueue()
     {
@@ -688,6 +699,7 @@ public class MqttConnectionLoopbackTests
         Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AutomaticEncryptionAgainstAPlainBroker_ConnectsInClearText()
     {
@@ -711,6 +723,7 @@ public class MqttConnectionLoopbackTests
     /// Automatic. A far end that drops the packet rather than refusing it says nothing and spends the
     /// whole connect budget doing so, and no candidate may be allowed to spend that where there is
     /// another one to move on to.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task EveryCandidateOpensASocketBeforeAnyMqttIsSpoken()
     {
@@ -780,6 +793,7 @@ public class MqttConnectionLoopbackTests
         connection.Dispose();
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void TeardownIsBoundedRatherThanOpenEnded()
     {

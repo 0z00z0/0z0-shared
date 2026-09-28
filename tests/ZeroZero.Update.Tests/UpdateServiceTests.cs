@@ -50,6 +50,7 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
     private IEnumerable<string> DownloadDirectories() =>
         Directory.EnumerateDirectories(Path.GetTempPath(), _prefix + "-*");
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task Check_ReportsANewerRelease()
     {
@@ -184,6 +185,7 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
         Assert.Contains("nightly", result.Detail);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task Prepare_DownloadsIntoAFreshDirectoryVerifiesAndLaunches()
     {
@@ -215,6 +217,7 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
         Assert.Equal("/quiet", arguments);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task Prepare_RefusesAWrongHashAndRemovesTheFile()
     {
@@ -233,6 +236,7 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
         Assert.Empty(_launcher.Started);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task Prepare_DownloadsNothingWhenTheReleasePublishesNoHash()
     {
@@ -364,6 +368,7 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
         Assert.Equal(VerificationVerdict.CertificateNotPinned, prepared.Verification!.Verdict);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task Launch_RefusesAFileThatChangedAfterItWasPrepared()
     {
@@ -416,6 +421,7 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
         Assert.True(File.Exists(prepared.InstallerPath));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void RunningVersion_DefaultsToTheEntryAssemblyAndNeverToTheLibrary()
     {
@@ -438,6 +444,7 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
         Assert.NotEqual(VersionTag.Normalise(typeof(UpdateService).Assembly.GetName().Version!), service.RunningVersion);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Options_AreValidatedAtConstruction()
     {

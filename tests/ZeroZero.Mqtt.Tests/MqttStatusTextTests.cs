@@ -129,6 +129,7 @@ public class MqttStatusTextTests
     public void Describe_OfAnEmptyRunSaysThereWasNothingToTry() =>
         Assert.Equal("No broker host set.", MqttStatusText.Describe(new MqttProbeReport([])));
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Describe_OfASuccessfulRunIsTheOutcomeAndNotTheAttempts()
     {

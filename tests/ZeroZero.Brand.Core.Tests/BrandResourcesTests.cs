@@ -32,6 +32,7 @@ public class BrandResourcesTests
 
     private static readonly string[] PaletteThemes = ["Default", "Light"];
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void EveryPaletteConstantIsDeclaredOnceAndRepeatedInLightAndDark()
     {
@@ -54,6 +55,7 @@ public class BrandResourcesTests
         }
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void EveryThemeCarriesTheSameKeys()
     {
@@ -83,6 +85,7 @@ public class BrandResourcesTests
         }
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void HighContrastCarriesNoPaletteValue()
     {

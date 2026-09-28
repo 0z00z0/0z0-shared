@@ -109,6 +109,7 @@ public class UpdateSchedulerTests
     /// <summary>A host that stops the schedule explicitly and then disposes on the way out calls this
     /// twice, and the second call must cost nothing. Cancelling an already-disposed source throws,
     /// and a throw from an exit path is a crash where the work was already done.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task Dispose_IsRepeatable()
     {

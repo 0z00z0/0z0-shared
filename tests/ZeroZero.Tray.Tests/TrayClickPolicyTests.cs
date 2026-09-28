@@ -53,6 +53,7 @@ public class TrayClickPolicyTests
         Assert.Equal(TrayClick.Ignored, policy.OnDoubleClick(At(1300)));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ALeftUpWithinTheGuardAfterADismissalIsIgnoredAndTheNextOneIsNot()
     {

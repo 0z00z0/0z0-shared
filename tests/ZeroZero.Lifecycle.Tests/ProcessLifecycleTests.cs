@@ -82,6 +82,7 @@ public sealed class ProcessLifecycleTests : IDisposable
         Assert.Equal(RelaunchDecision.DeliberateExit, lifecycle.DecideOnExit());
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void TheFourthUnmarkedExitInTheWindowIsNotRelaunched()
     {

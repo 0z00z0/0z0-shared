@@ -207,6 +207,7 @@ public class MqttBrokerEditsTests
         Assert.False(validation.Usable);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AnInvalidPortIsRefusedRatherThanCollapsingToAutomatic()
     {

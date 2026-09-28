@@ -19,6 +19,7 @@ public class CrashHandlersTests : IDisposable
 
     public void Dispose() => _scratch.Dispose();
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AnUnhandledExceptionInARealProcessReachesTheSinkAndTheCrashLine()
     {
@@ -91,6 +92,7 @@ public class CrashHandlersTests : IDisposable
         Assert.Contains("  Application.UnhandledException  System.InvalidOperationException: from the window", File.ReadAllText(appender.FilePath));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ReportOutlivesASinkThatThrows()
     {
@@ -114,6 +116,7 @@ public class CrashHandlersTests : IDisposable
         Assert.Equal(("error", "source", null), Assert.Single(sink.Entries));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AnUnobservedTaskReachesALiveRegistrationAndNotADisposedOne()
     {

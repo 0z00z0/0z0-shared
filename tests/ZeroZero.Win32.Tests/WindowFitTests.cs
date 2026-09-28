@@ -134,6 +134,7 @@ public class WindowFitTests
                                                         minimumContentUnits: 600, WindowFit.DefaultHeightFraction));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void NothingExceedsTheWorkAreaItself_NotEvenTheFloor()
     {

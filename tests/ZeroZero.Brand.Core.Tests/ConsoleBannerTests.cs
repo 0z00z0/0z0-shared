@@ -106,6 +106,7 @@ public class ConsoleBannerTests
 
     /// <summary>The banner's whole reason for existing: it has to survive a legacy code page and
     /// redirected output, so no brand glyph and no box drawing may reach it.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void Print_EmitsAsciiOnly_WhenTheSuppliedDataIsAscii()
     {

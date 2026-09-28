@@ -56,6 +56,7 @@ public class MarkupTests
         Assert.Contains(children[1].Descendants(P + "TextBlock"), t => t.Attribute(X + "Name")?.Value == "HeadingText");
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void RowPutsTheBubbleBeforeTheField()
     {

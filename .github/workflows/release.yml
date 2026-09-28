@@ -77,13 +77,11 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: ./.github/scripts/release-guard.ps1 -Tag $env:TAG -Check Dependencies
 
+      # No test runs on a tag. The release is gated by the guards above, this build, and the verify
+      # job below, which compares what the feed serves with what this job packed. Tests run when
+      # someone asks for them, through the CI workflow's manual trigger; docs/testing.md.
       - name: Build
         run: dotnet build 0z0-shared.slnx -c Release --no-restore
-
-      # The whole suite, not only the component's: the same definition CI uses, and a release cut
-      # from a red build is worse than no release.
-      - name: Unit tests
-        uses: ./.github/actions/run-tests
 
       # Only the component's projects pack, both WinUI assemblies included where the component has
       # them: their packages carry the compiled XAML and the .pri index beside the assembly, and a

@@ -5,6 +5,7 @@ namespace ZeroZero.Config.Sections.Tests;
 /// <summary>The version key's asymmetric handling, and what a reload announces.</summary>
 public sealed class SectionVersionAndReloadTests : SectionedTestBase
 {
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void A_document_from_a_newer_build_is_neither_read_nor_written()
     {
@@ -141,6 +142,7 @@ public sealed class SectionVersionAndReloadTests : SectionedTestBase
         Assert.Equal(0, graphChanged);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void A_write_builds_on_an_edit_made_out_of_band_rather_than_on_what_memory_holds()
     {
