@@ -14,6 +14,19 @@ public readonly record struct InstallMoment(bool Accepted, string Reason = "")
     public static InstallMoment NotNow(string reason) => new(false, reason);
 }
 
+/// <summary>How often a check runs. <see cref="Once"/> is what a periodic interval cannot express
+/// at any value: no interval, however long, stops checking for the rest of the process.</summary>
+public enum CheckCadence
+{
+    /// <summary>A check runs once <see cref="UnattendedUpdateOptions.CheckInterval"/> has passed
+    /// since the last one.</summary>
+    Periodic,
+
+    /// <summary>One check, after <see cref="UnattendedUpdateOptions.InitialDelay"/>, and never
+    /// again for the life of the process — whatever that check finds.</summary>
+    Once,
+}
+
 /// <summary>What an application supplies to install updates without anyone accepting anything.
 /// Absent, nothing of the kind happens.</summary>
 public sealed class UnattendedUpdateOptions
@@ -22,11 +35,18 @@ public sealed class UnattendedUpdateOptions
     /// application sets it, so an absent setting installs nothing and checks nothing.</summary>
     public bool Enabled { get; init; }
 
-    /// <summary>How long after <see cref="UnattendedUpdatePolicy.Start"/> the first tick runs.</summary>
+    /// <summary>How long after <see cref="UnattendedUpdatePolicy.Start"/> the first tick runs, and
+    /// the first check under either cadence.</summary>
     public TimeSpan InitialDelay { get; init; } = TimeSpan.FromSeconds(30);
 
-    /// <summary>How long between one check and the next. Once a day unless the application sets
-    /// it. Counted from process start, never persisted.</summary>
+    /// <summary>Periodic unless the application sets it. <see cref="CheckCadence.Once"/> governs
+    /// checking only: an installer already found and prepared still follows the machine-free rule,
+    /// <see cref="MayInstallNow"/> and the retry when it could not start.</summary>
+    public CheckCadence Cadence { get; init; } = CheckCadence.Periodic;
+
+    /// <summary>How long between one check and the next under <see cref="CheckCadence.Periodic"/>.
+    /// Once a day unless the application sets it. Counted from process start, never persisted.
+    /// Ignored under <see cref="CheckCadence.Once"/>.</summary>
     public TimeSpan CheckInterval { get; init; } = TimeSpan.FromHours(24);
 
     /// <summary>How often the policy looks again between checks. A check that did not complete and

@@ -97,9 +97,11 @@ The three assemblies are versioned as `UpdateVersion` in `Versions.props` and re
   asked. It drives the check, the download and the launch itself, shows nothing at any point, and
   returns an `UnattendedTick` saying where the pass ended. [Below](#installing-without-being-asked)
   is the whole of what it decides.
-- **`UnattendedUpdateOptions`** — what the application supplies: whether this happens at all, the
-  check cadence, the retry tick, the shutdown callback and the call the component makes immediately
-  before an installer starts. Absent, nothing of the kind happens.
+- **`UnattendedUpdateOptions`** — what the application supplies: whether this happens at all, how
+  often a check runs — periodically or once — the retry tick, the shutdown callback and the call
+  the component makes immediately before an installer starts. Absent, nothing of the kind happens.
+- **`CheckCadence`** — `Periodic`, checking every `CheckInterval`, or `Once`, checking a single time
+  after `InitialDelay` and never again for the life of the process. Governs checking only.
 - **`InstallMoment`** — the answer to that call: `InstallMoment.Now`, or `InstallMoment.NotNow`
   with a few words for the log. It is about the moment it was asked and is never kept.
 - **`SilentUpdatePrompts`** — prompts that answer themselves and draw nothing, for a flow that must
@@ -386,6 +388,14 @@ has passed since the last one, which is a day unless the application sets it. A 
 complete does not stamp the cadence, so the next tick checks again rather than waiting for the next
 day, and an installer that could not start is retried on that same tick.
 
+**A cadence that checks once.** `Cadence` is `CheckCadence.Periodic` unless the application sets it,
+and behaves exactly as above. `CheckCadence.Once` runs the single check after `InitialDelay` and
+never again for the life of the process, whatever that check finds — something a periodic interval
+cannot express at any value, since even the longest one checks again eventually. The cadence governs
+checking only: an installer already found and prepared keeps following the machine-free rule,
+`MayInstallNow` and the retry when it could not start, so the ticks go on for as long as the
+scheduler runs and simply find no check due once the one check has run.
+
 **The machine has to be free, and that rule is the component's.** An installer starts only where the
 screen is locked, or nothing has touched the keyboard or the mouse for ten minutes.
 `UnattendedUpdatePolicy.RequiredIdle` is the value, and it is fixed: an application refuses a moment
@@ -570,6 +580,9 @@ does not wait for a report to be handled.
 - **With unattended installing off, the policy checks nothing either.** It is the whole of that
   path, not an install step bolted onto a check, so an application that wants a scheduled check with
   the setting off wires `UpdateScheduler` over `UpdateFlow` as well.
+- **`CheckCadence.Once` stops checking, not ticking.** The scheduler still runs every
+  `RetryInterval` after the single check, because an installer already found still needs the
+  machine-free rule, `MayInstallNow` and the launch retry applied to it on every tick.
 - **A refusal reason is the log key, so it must not carry a number that moves.** "The machine is in
   use" writes one line for an afternoon; the same sentence with the minutes counted into it writes a
   line on every tick, which is the thing the once-per-reason rule exists to stop.
@@ -595,6 +608,9 @@ unsigned, tampered and truncated forms; the trusted-chain form runs against the 
 library where the machine trusts its signature, and is reported as skipped where it does not. The
 launcher in the tests records and starts nothing, and the sentences are read back rather than
 shown. Nothing reaches the internet, no installer runs, and no window appears on screen.
+
+Status (2026-09-28): `CheckCadence.Once` has a test of its own — after the single check, no later
+tick checks again, whatever that check found.
 
 Status (2026-09-28): the four guards on installing without being asked each have a test of their
 own — the setting, the ten minutes, the moment an application refuses, and a check that found
