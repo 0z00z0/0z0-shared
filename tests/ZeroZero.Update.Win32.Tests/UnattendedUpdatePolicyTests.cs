@@ -12,18 +12,32 @@ public class UnattendedUpdatePolicyTests
     private readonly RecordingLogSink _log = new();
     private int _shutdowns;
 
-    private UnattendedUpdatePolicy Policy(bool enabled = true, Func<ReleaseInfo, InstallMoment>? mayInstallNow = null, CheckCadence cadence = CheckCadence.Periodic) =>
+    private UnattendedUpdatePolicy Policy(bool enabled = true, Func<ReleaseInfo, InstallMoment>? mayInstallNow = null, CheckCadence cadence = CheckCadence.Periodic,
+        TimeSpan? initialDelay = null, TimeSpan? retryInterval = null, Action<UnattendedTick>? tickReported = null) =>
         new(_service, new UnattendedUpdateOptions
         {
             Enabled = enabled,
             Cadence = cadence,
+            InitialDelay = initialDelay ?? TimeSpan.FromSeconds(30),
+            RetryInterval = retryInterval ?? TimeSpan.FromMinutes(10),
             MayInstallNow = mayInstallNow,
+            TickReported = tickReported,
             Shutdown = () => _shutdowns++,
             Log = _log,
         }, _idle);
 
     private void ReleaseIsWaiting() =>
         _service.CheckResult = new UpdateCheckResult(UpdateCheckOutcome.UpdateAvailable, new Version(1, 0, 0, 0), FakeUpdateService.Release);
+
+    private static async Task WaitUntil(Func<bool> condition, TimeSpan within)
+    {
+        DateTime deadline = DateTime.UtcNow + within;
+        while (!condition())
+        {
+            Assert.True(DateTime.UtcNow < deadline, "The condition did not come true in time.");
+            await Task.Delay(10);
+        }
+    }
 
     [Fact]
     public async Task SettingOff_InstallsNothingAndChecksNothing()
@@ -126,5 +140,51 @@ public class UnattendedUpdatePolicyTests
         UnattendedTick second = await policy.TickAsync();
         Assert.Equal(UnattendedOutcome.NotDue, second.Outcome);
         Assert.Equal(1, _service.Checks);
+    }
+
+    /// <summary>The gap <c>TickReported</c> closes: a policy driving itself through <see
+    /// cref="UnattendedUpdatePolicy.Start"/> hands every tick's result to the callback, because the
+    /// scheduler calls <see cref="UnattendedUpdatePolicy.TickAsync"/> internally and otherwise keeps
+    /// it to itself. A callback that throws must not take the tick, or the policy, down with it — the
+    /// direct call below bypasses the scheduler's own resilience so this is the policy's own guard
+    /// being tested, not the scheduler's.</summary>
+    [Fact]
+    public async Task TickReported_SeesASelfDrivenTick_AndACallbackThatThrowsDoesNotStopThePolicy()
+    {
+        _service.CheckResult = new UpdateCheckResult(UpdateCheckOutcome.UpToDate, new Version(1, 0, 0, 0), FakeUpdateService.Release);
+        var seenByScheduler = new List<UnattendedTick>();
+
+        using (UnattendedUpdatePolicy driven = Policy(
+            initialDelay: TimeSpan.Zero,
+            retryInterval: TimeSpan.FromMilliseconds(20),
+            tickReported: tick => { lock (seenByScheduler) seenByScheduler.Add(tick); }))
+        {
+            driven.Start();
+            await WaitUntil(() => { lock (seenByScheduler) return seenByScheduler.Count > 0; }, TimeSpan.FromSeconds(5));
+        }
+
+        UnattendedTick first;
+        lock (seenByScheduler) first = seenByScheduler[0];
+        Assert.Equal(UnattendedOutcome.NothingToInstall, first.Outcome);
+
+        int calls = 0;
+        using UnattendedUpdatePolicy direct = Policy(tickReported: _ =>
+        {
+            calls++;
+            throw new InvalidOperationException("the callback's own fault");
+        });
+
+        UnattendedTick tick = await direct.TickAsync();
+
+        Assert.Equal(UnattendedOutcome.NothingToInstall, tick.Outcome);
+        Assert.Equal(1, calls);
+        (string source, Exception? error) = Assert.Single(_log.Errors);
+        Assert.Equal(nameof(UnattendedUpdatePolicy), source);
+        Assert.IsType<InvalidOperationException>(error);
+
+        // The policy itself is unharmed: a second tick still runs and is still reported.
+        UnattendedTick second = await direct.TickAsync();
+        Assert.Equal(UnattendedOutcome.NotDue, second.Outcome);
+        Assert.Equal(2, calls);
     }
 }

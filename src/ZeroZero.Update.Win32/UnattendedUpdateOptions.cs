@@ -63,6 +63,13 @@ public sealed class UnattendedUpdateOptions
     /// Null accepts every moment.</summary>
     public Func<ReleaseInfo, InstallMoment>? MayInstallNow { get; init; }
 
+    /// <summary>Called with every tick's result, whatever the outcome — the same
+    /// <see cref="UnattendedTick"/> a direct call to <see cref="UnattendedUpdatePolicy.TickAsync"/>
+    /// returns, for an application whose policy drives itself and would otherwise never see one.
+    /// Null reports nothing, and the policy runs exactly as it does with no callback set. A callback
+    /// that throws is logged and never stops the policy: the tick it was reporting already stands.</summary>
+    public Action<UnattendedTick>? TickReported { get; init; }
+
     public ILogSink Log { get; init; } = NullLogSink.Instance;
 
     internal void Validate()

@@ -112,6 +112,14 @@ public sealed class UnattendedUpdatePolicy : IDisposable
     /// <summary>One pass of the decision. The scheduler runs it one at a time.</summary>
     public async Task<UnattendedTick> TickAsync(CancellationToken cancellationToken = default)
     {
+        UnattendedTick tick = await DecideAsync(cancellationToken).ConfigureAwait(false);
+        Report(tick);
+        return tick;
+    }
+
+    /// <summary>The decision itself, ahead of the one place every path reports through.</summary>
+    private async Task<UnattendedTick> DecideAsync(CancellationToken cancellationToken)
+    {
         if (!_options.Enabled) return new UnattendedTick(UnattendedOutcome.Disabled);
 
         // The installer is running and the application is on its way out. A tick landing in that
@@ -170,6 +178,23 @@ public sealed class UnattendedUpdatePolicy : IDisposable
         _log.Info($"Installer for {release.TagName} started with nobody asked; shutting down for it.");
         _options.Shutdown();
         return new UnattendedTick(UnattendedOutcome.InstallerStarted, launch.Detail, release);
+    }
+
+    /// <summary>Hands the tick to the application's own callback, whatever it decided. The only place
+    /// this is called from, so a self-driven policy — the scheduler calls <see cref="TickAsync"/>
+    /// internally and keeps the result to itself — reports exactly what a direct call returns.</summary>
+    private void Report(UnattendedTick tick)
+    {
+        if (_options.TickReported is not { } reported) return;
+        try
+        {
+            reported(tick);
+        }
+        catch (Exception ex)
+        {
+            // The callback's own fault, not the policy's: the tick it was reporting already stands.
+            _log.Error(nameof(UnattendedUpdatePolicy), ex);
+        }
     }
 
     public void Dispose() => _scheduler?.Dispose();
