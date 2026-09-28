@@ -77,6 +77,12 @@ public sealed class UpdateFlowOptions
     /// none.</summary>
     public IProgress<DownloadProgress>? Progress { get; init; }
 
+    /// <summary>The check this flow shares with every other flow holding the same one, so a run
+    /// arriving while any of them is checking joins that check. Null gives the flow a check of its
+    /// own, joined only by its own runs. Built over another service than the flow's, it is refused
+    /// when the flow is constructed.</summary>
+    public SharedUpdateCheck? SharedCheck { get; init; }
+
     public ILogSink Log { get; init; } = NullLogSink.Instance;
 }
 
@@ -89,8 +95,7 @@ public sealed class UpdateFlow
     private readonly IUpdatePrompts _prompts;
     private readonly UpdateFlowOptions _options;
     private readonly ILogSink _log;
-    private readonly Lock _checkGate = new();
-    private Task<UpdateCheckResult>? _check;
+    private readonly SharedUpdateCheck _check;
     private int _installing;
 
     public UpdateFlow(IUpdateService service, IUpdatePrompts prompts, UpdateFlowOptions options)
@@ -103,14 +108,18 @@ public sealed class UpdateFlow
         _prompts = prompts;
         _options = options;
         _log = options.Log;
+
+        _check = options.SharedCheck ?? new SharedUpdateCheck(service);
+        // A joined check hands over another service's answer, running version included.
+        if (!ReferenceEquals(_check.Service, service))
+            throw new ArgumentException("The shared check was built over another service than this flow's.", nameof(options));
     }
 
     public async Task<UpdateFlowRun> RunAsync(UpdateTrigger trigger, CancellationToken cancellationToken = default)
     {
         bool manual = trigger == UpdateTrigger.Manual;
 
-        Task<UpdateCheckResult> shared = SharedCheck(cancellationToken, out bool mine);
-        UpdateCheckResult check = mine ? await shared : await shared.WaitAsync(cancellationToken);
+        UpdateCheckResult check = await _check.CheckAsync(cancellationToken);
 
         // Only a release goes on from here. Every other outcome is named, and the default catches
         // one added later: without it a new outcome would reach the install path with no release.
@@ -151,44 +160,6 @@ public sealed class UpdateFlow
     {
         ArgumentNullException.ThrowIfNull(release);
         return GuardedInstallAsync(release, _service.RunningVersion, cancellationToken);
-    }
-
-    /// <summary>The check every caller shares. One arriving while a check is in flight is handed
-    /// that check and reads its result, rather than starting a second one or being refused. The
-    /// slot is cleared as the check ends, before any caller resumes, so the next request starts a
-    /// fresh check rather than reading an answer that has already been given.</summary>
-    /// <param name="mine">Whether this caller started the check. The one that started it awaits it
-    /// directly, so its own token is the one inside the request; a caller that joined waits under
-    /// its own token instead.</param>
-    private Task<UpdateCheckResult> SharedCheck(CancellationToken cancellationToken, out bool mine)
-    {
-        lock (_checkGate)
-        {
-            if (_check is { IsCompleted: false } running)
-            {
-                mine = false;
-                return running;
-            }
-
-            Task<UpdateCheckResult> fresh = CheckAndClearAsync(cancellationToken);
-            // A check that finished before returning has already cleared the slot; storing it
-            // would leave a finished answer where the next caller looks for one in flight.
-            _check = fresh.IsCompleted ? null : fresh;
-            mine = true;
-            return fresh;
-        }
-    }
-
-    private async Task<UpdateCheckResult> CheckAndClearAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await _service.CheckAsync(cancellationToken);
-        }
-        finally
-        {
-            lock (_checkGate) _check = null;
-        }
     }
 
     private async Task<UpdateFlowRun> GuardedInstallAsync(ReleaseInfo release, Version runningVersion, CancellationToken cancellationToken)

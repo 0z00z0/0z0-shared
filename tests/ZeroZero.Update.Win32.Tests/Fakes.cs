@@ -77,6 +77,24 @@ internal sealed class FakeUpdateService : IUpdateService
     }
 
     public int SweepStaleDownloads(TimeSpan olderThan) => 0;
+
+    public List<PreparedUpdate> Discarded { get; } = [];
+
+    public void Discard(PreparedUpdate update)
+    {
+        Discarded.Add(update);
+        Sequence.Add("discard");
+    }
+}
+
+/// <summary>A clock that stands still until the test moves it. Nothing else of time is read.</summary>
+internal sealed class ManualClock : TimeProvider
+{
+    private DateTimeOffset _now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+
+    public override DateTimeOffset GetUtcNow() => _now;
+
+    public void Advance(TimeSpan by) => _now += by;
 }
 
 /// <summary>Prompts that answer what the test set and record what they were told. Nothing reaches

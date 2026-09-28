@@ -67,6 +67,13 @@ public interface IUpdateService
 
     /// <summary>Removes download directories older builds or earlier runs left behind.</summary>
     int SweepStaleDownloads(TimeSpan olderThan);
+
+    /// <summary>Removes a prepared installer that will not run, and the directory it was downloaded
+    /// into. Never throws for a file that will not go; that is logged and left for the sweep. An
+    /// implementation that keeps no file has nothing to remove, which is what the default does.</summary>
+    void Discard(PreparedUpdate update)
+    {
+    }
 }
 
 /// <summary>The update flow over GitHub releases. One instance per application, owning its two
@@ -225,6 +232,20 @@ public sealed class UpdateService : IUpdateService, IDisposable
 
     public int SweepStaleDownloads(TimeSpan olderThan) =>
         DownloadDirectory.Sweep(_options.DirectoryPrefix, olderThan, _log, except: _currentDirectory);
+
+    /// <summary>Removes the directory a prepared installer was downloaded into, where it is one
+    /// this service creates — its prefix, a fresh identifier, under the temporary folder. Any other
+    /// path is left alone: the record is public, and a path in it is no proof of where it came
+    /// from.</summary>
+    public void Discard(PreparedUpdate update)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        if (Path.GetDirectoryName(update.InstallerPath) is not { } directory) return;
+        if (!DownloadDirectory.IsOwn(directory, _options.DirectoryPrefix)) return;
+
+        Discard(directory);
+        _log.Info($"Removed {update.InstallerFileName}: it will not run.");
+    }
 
     public void Dispose()
     {
