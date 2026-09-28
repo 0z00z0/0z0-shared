@@ -45,12 +45,21 @@ Call `Initialise(MqttPanelSetup)` once, from the hosting page's constructor or `
 
 ## The setup object
 
-Required: the settings store, the declared publish groups, the topic root, the activity record, an
-accessor for the connection state, the publish-now callback, and the two change callbacks.
+Construct it from the live connection, `new MqttPanelSetup(connection) { ... }`. The activity
+record, the connection state, the remembered endpoint and Publish now are then read from that
+connection whenever a row is drawn, so the Status rows and the closed Broker line always describe
+the same link.
 
-Optional and worth supplying: `RecallEndpoint` (the same accessor the connection is given, so the
-Status rows can say what the connection landed on), `DefaultDeviceName`, the master card's title,
-description and info text, `PublishGroupsInfo`, `DeviceIdConsequence`, `CommandLabel`, and `Log`.
+Required on top: the settings store, the declared publish groups, the topic root, and the two change
+callbacks.
+
+Optional and worth supplying: `DefaultDeviceName`, the master card's title, description and info
+text, `PublishGroupsInfo`, `DeviceIdConsequence`, `CommandLabel`, and `Log`.
+
+**A host with no `MqttConnection` to hand** uses `new MqttPanelSetup { ... }` and sets `Activity`,
+`ConnectionState` and `PublishNow` itself; `Initialise` throws an `ArgumentException` naming the
+first one missing. `RecallEndpoint` is then the same accessor the connection is given, and without
+it the Status rows never show where the connection landed.
 
 **If the application already stores MQTT settings of its own, carry them into the store before the
 panel is first shown.** The module reads only its own file, so an upgrading user otherwise opens the
@@ -269,5 +278,8 @@ en-GB, so a resource map that fails to load leaves a readable panel rather than 
 - **It never touches the network while a field is being edited.** The endpoint check runs on Test
   connection and on Apply, and on nothing else — not on a field settling, not on focus leaving a
   box, and not on the page being shown.
+- **Apply does not repeat a test that has just passed.** When the newest test passed on exactly
+  the values being applied — host, port, transport, encryption, username, password, certificate
+  trust and device id — Apply shows that pass again and opens no connection.
 - Nothing in the Broker group takes effect until Apply, and an unapplied edit is marked beside the
   section heading rather than inside the group that holds the fields.

@@ -228,6 +228,87 @@ public class MqttProbeSessionTests
         Assert.False(session.IsFailure);
     }
 
+    // ------------------------------------------------------------------------------------------
+    // Apply repeats no test that has already passed on the same values.
+    // ------------------------------------------------------------------------------------------
+
+    private static readonly MqttProbeTarget Tested = new(
+        Host: "broker.example.com", Port: 8883, Username: "desk", Password: "secret-one",
+        ClientId: "desk01_probe", Transport: MqttTransportMode.Tcp, Encryption: MqttEncryptionMode.On,
+        Memory: new MqttEndpointMemory("broker.example.com", "desk", 1883, MqttTransport.Tcp, false),
+        CertificateTrust: MqttCertificateTrust.ForThumbprint("AB12"));
+
+    private static MqttProbeSession PassedOn(MqttProbeTarget target)
+    {
+        var session = new MqttProbeSession();
+        long token = session.Start(target);
+        session.Settle(token, Succeeded(8883, MqttTransport.Tcp));
+        session.Finish(token);
+        return session;
+    }
+
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void ApplyAfterAPassOnTheSameValuesShowsThatPassAndStartsNoRun()
+    {
+        var session = PassedOn(Tested);
+        // The line goes whenever a field moves, even when it moves back to what was tested.
+        session.Clear();
+
+        // The live connection's reconnect can move the remembered endpoint between the test and
+        // Apply; that orders a sweep and is not one of the values being asked about.
+        var applied = Tested with
+        {
+            Memory = new MqttEndpointMemory("broker.example.com", "desk", 8883, MqttTransport.Tcp, true),
+        };
+
+        Assert.False(session.TryReuse(MqttProbeTrigger.TestConnection, applied),
+            "Test connection reused an earlier pass instead of testing");
+        Assert.False(session.HasLine);
+
+        Assert.True(session.TryReuse(MqttProbeTrigger.Apply, applied));
+        Assert.StartsWith("Connected over TCP", session.Line, StringComparison.Ordinal);
+        Assert.False(session.IsFailure);
+        Assert.False(session.Busy);
+    }
+
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void ApplyTestsAgainWhenAnyOneValueDiffersOrTheNewestVerdictFailed()
+    {
+        var variants = new (string Field, MqttProbeTarget Target)[]
+        {
+            ("host", Tested with { Host = "other.example.com" }),
+            ("port", Tested with { Port = 1883 }),
+            ("automatic port", Tested with { Port = null }),
+            ("transport", Tested with { Transport = MqttTransportMode.WebSocket }),
+            ("encryption", Tested with { Encryption = MqttEncryptionMode.Off }),
+            ("username", Tested with { Username = "desk2" }),
+            ("password", Tested with { Password = "secret-two" }),
+            ("certificate trust mode", Tested with { CertificateTrust = MqttCertificateTrust.SystemTrust }),
+            ("pinned certificate", Tested with { CertificateTrust = MqttCertificateTrust.ForThumbprint("CD34") }),
+            ("client id", Tested with { ClientId = "desk02_probe" }),
+        };
+
+        foreach (var (field, target) in variants)
+        {
+            var session = PassedOn(Tested);
+            Assert.False(session.TryReuse(MqttProbeTrigger.Apply, target),
+                $"a different {field} reused the pass on the earlier values");
+        }
+
+        // The newest verdict on the same values is a failure, so the pass before it answers nothing.
+        var failedSince = PassedOn(Tested);
+        long token = failedSince.Start(Tested);
+        failedSince.Settle(token, new MqttProbeReport(
+            [new MqttEndpointAttempt(new(8883, MqttTransport.Tcp), MqttProbeOutcome.Unreachable)]));
+        failedSince.Finish(token);
+
+        Assert.False(failedSince.TryReuse(MqttProbeTrigger.Apply, Tested),
+            "an older pass answered for values whose newest test failed");
+        Assert.True(failedSince.IsFailure);
+    }
+
     [Fact]
     public void ATranslatedSessionComposesItsLinesFromItsOwnStrings()
     {

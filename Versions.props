@@ -19,7 +19,7 @@
     <ControlsVersion>0.8.0</ControlsVersion>
     <DiagnosticsVersion>0.7.0</DiagnosticsVersion>
     <LifecycleVersion>0.7.1</LifecycleVersion>
-    <MqttVersion>0.8.1</MqttVersion>
+    <MqttVersion>0.9.0</MqttVersion>
     <PrimitivesVersion>0.7.0</PrimitivesVersion>
     <SettingsShellVersion>0.8.0</SettingsShellVersion>
     <StartupVersion>0.8.1</StartupVersion>

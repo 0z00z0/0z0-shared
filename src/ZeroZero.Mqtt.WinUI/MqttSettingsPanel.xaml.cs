@@ -73,9 +73,14 @@ public sealed partial class MqttSettingsPanel : UserControl
 
     /// <summary>Hands the panel everything it needs and does the first read-back. Called once, from
     /// the host, on the UI thread.</summary>
+    /// <exception cref="ArgumentException">A setup built without the connection leaves
+    /// <see cref="MqttPanelSetup.Activity"/>, <see cref="MqttPanelSetup.ConnectionState"/> or
+    /// <see cref="MqttPanelSetup.PublishNow"/> unset.</exception>
     public void Initialise(MqttPanelSetup setup)
     {
-        _setup = setup ?? throw new ArgumentNullException(nameof(setup));
+        ArgumentNullException.ThrowIfNull(setup);
+        setup.EnsureConnectionMembers(nameof(setup));
+        _setup = setup;
 
         _strings = new MqttStrings(setup.Strings ?? MqttResourceStrings.Instance);
         _text = new MqttPanelText(_strings);
@@ -841,40 +846,51 @@ public sealed partial class MqttSettingsPanel : UserControl
             return;
         }
 
-        RunProbe(request);
+        var target = ProbeTarget(request);
+
+        // Apply straight after a pass on these exact values shows that pass again: a second
+        // connection would only prove the same fact twice.
+        if (_probe.TryReuse(trigger, target))
+        {
+            RefreshEditIndicators();
+            RefreshStatus();
+            return;
+        }
+
+        RunProbe(target);
     }
+
+    /// <summary>The staged values as a probe tries them.</summary>
+    private MqttProbeTarget ProbeTarget(MqttEndpointRequest request) => new(
+        Host: request.Host,
+        Port: request.Port,
+        Username: request.Username,
+        Password: _edits.Password,
+        ClientId: MqttProbe.ProbeClientId(EffectiveDeviceId()),
+        Transport: request.Transport,
+        Encryption: request.Encryption,
+        // Read, never written. A test that recorded where the broker answered would change the sweep
+        // order of the live connection, which is precisely what it promises not to do.
+        Memory: Memory(),
+        // The trust in the field rather than the saved one, like every other value here: a test that
+        // vouched for trust the connection will not use answers about nothing.
+        CertificateTrust: _edits.Trust);
 
     /// <summary>async void, and guarded whole: nothing may escape into the dispatcher. Never blocks
     /// the UI thread — every stage of the sweep is a socket wait, and the only work back here is the
     /// progress line and the result.</summary>
-    private async void RunProbe(MqttEndpointRequest request)
+    private async void RunProbe(MqttProbeTarget target)
     {
-        if (_setup is not { } setup) return;
+        if (_setup is null) return;
 
         var cts = new CancellationTokenSource();
         _probeCts = cts;
-        long token = _probe.Start();
+        long token = _probe.Start(target);
         RefreshEditIndicators();
         RefreshStatus();
 
         try
         {
-            var target = new MqttProbeTarget(
-                Host: request.Host,
-                Port: request.Port,
-                Username: request.Username,
-                Password: _edits.Password,
-                ClientId: MqttProbe.ProbeClientId(EffectiveDeviceId()),
-                Transport: request.Transport,
-                Encryption: request.Encryption,
-                // Read, never written. A test that recorded where the broker answered would change
-                // the sweep order of the live connection, which is precisely what it promises not to
-                // do.
-                Memory: Memory(),
-                // The trust in the field rather than the saved one, like every other value here: a
-                // test that vouched for trust the connection will not use answers about nothing.
-                CertificateTrust: _edits.Trust);
-
             // The sweep's churn is the only visible evidence of several seconds of work, so every
             // candidate replaces the line and nothing is debounced. Reported from whichever thread
             // the probe resumed on, so it is bounced through RunOnUi rather than trusted to land
