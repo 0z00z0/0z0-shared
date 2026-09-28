@@ -230,6 +230,9 @@ public sealed class MqttStrings
             // bracket.
             ["SummaryBrokerNotSet"]    = "No broker set",
             ["SummaryBroker"]          = "{0} · {1} · {2} · {3}",
+            // Appended only under the trust mode that accepts any certificate — the other three
+            // modes never reach this key.
+            ["SummaryBrokerTrustAny"]  = "{0} — any certificate accepted",
             ["SummaryDetected"]        = "{0} (detected)",
             ["SummaryEncrypted"]       = "encrypted",
             ["SummaryNotEncrypted"]    = "not encrypted",

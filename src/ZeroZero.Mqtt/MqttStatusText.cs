@@ -22,8 +22,9 @@ public static class MqttStatusText
     /// <summary>The Broker section's line while it is closed: what the connection is configured
     /// with, a value left on Automatic marked as detected rather than chosen. Pure.</summary>
     public static string SummariseBroker(
-        MqttEndpointRequest request, MqttEndpointMemory? memory, MqttConnectionState state) =>
-        MqttPanelText.Default.SummariseBroker(request, memory, state);
+        MqttEndpointRequest request, MqttEndpointMemory? memory, MqttConnectionState state,
+        MqttCertificateTrustMode trust) =>
+        MqttPanelText.Default.SummariseBroker(request, memory, state, trust);
 
     /// <summary>The publish section's line while it is closed: how many declared groups are switched
     /// on. Pure.</summary>
