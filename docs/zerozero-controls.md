@@ -16,6 +16,8 @@ The assembly is versioned as `ControlsVersion` in `Versions.props` and released 
 `ZeroZero.Primitives`, so it releases after both; a component that references it can only release
 once the version it references is on the feed, so a change here releases before that component.
 
+This guide is complete for adoption: the component's own source and tests need not be read.
+
 ## Requirements
 
 | | |
@@ -37,12 +39,14 @@ once the version it references is on the feed, so a change here releases before 
   falls back to the stock "info" glyph. All three are dependency properties, so a row built in code
   binds them. The glyph names Segoe Fluent Icons with Segoe MDL2 Assets as its fallback, so it still
   draws on a Windows older than 11, and the foreground resolves a stock theme brush, so the bubble
-  follows the host's theme with no key to declare.
+  follows the host's theme with no key to declare. With no subject the name is plain "More
+  information". A bare bubble does not hide itself when `Info` is empty; the row and the section
+  header hide theirs.
 - **`SettingsSectionHeader`** — the sub-heading that opens a group of rows: a rule, the heading,
   an optional bubble and a `Trailing` slot for a marker such as "Unapplied changes". The rule sits
   above the heading and carries the gap between groups, so a heading binds downwards to its own
-  cards; `ShowDivider` is off for the first group on a page. `Heading`, `Info` and `InfoSubject`
-  are the bubble's inputs, the bubble shows only when `Info` holds text, and the subject defaults
+  cards; `ShowDivider`, on by default, is turned off for the first group on a page. `Heading`, `Info`
+  and `InfoSubject` are the bubble's inputs, the bubble shows only when `Info` holds text, and the subject defaults
   to the heading. Size, weight and spacing are the heading's own — the MQTT panel's sub-header,
   lifted — while colour and face are inherited: a host restyles by setting `Foreground` or
   `FontFamily` on the instance, and nothing in the control outranks that.
@@ -54,7 +58,8 @@ once the version it references is on the feed, so a change here releases before 
   a toggle wants. The card wraps on its own when it is narrower than the toolkit's threshold
   (about 476 device-independent units): the field drops beneath the header, left-aligned. That is
   the toolkit's behaviour, driven by the card's width and not the window's, and the harness shows
-  it at 420.
+  it at 420. Every property is optional: a null `Description` shows no line, the bubble shows only
+  when `Info` holds text, and an empty `InfoSubject` takes `Header` when that is a string.
 - **`TitleBarTheming`** — `Apply(window, theme)` paints the system title bar for a theme, and
   `Follow(window)` paints it for the content's theme now and on every live change. Mica does not
   paint the caption area, so a dark page whose bar is left alone shows a light strip behind its
@@ -65,7 +70,9 @@ once the version it references is on the feed, so a change here releases before 
   light one. So on light an untouched bar is left alone, and a bar that was dark is painted
   `TitleBarPalette.Light`, which is within two units of untouched. `TitleBarPalette` is the twelve
   caption colours as plain ARGB values, framework-free so a test can pin both sets. Does nothing on
-  a Windows whose title bar cannot be recoloured.
+  a Windows whose title bar cannot be recoloured. A passed palette replaces the dark set only, and
+  `TitleBarPalette.Dark with { … }` changes some colours and keeps the rest. **`Follow` before the
+  window has content paints once and never follows**, so call it after the content is set.
 - **`TextPromptWindow`** — `ShowAsync(TextPromptOptions)`: a frameless Mica window centred on the
   monitor under the cursor, with a title, a message, one field, an optional note beneath it, and
   an equal-width cancel-and-confirm row with the confirm on the right. Resolves with the text on
@@ -74,6 +81,9 @@ once the version it references is on the feed, so a change here releases before 
   `Confirm` says what the answer does, "Rename", not "OK" — and so is the theme, so an application
   pinned dark passes it. The prompt collapses the field's selection before it closes: closing with
   the opening selection still in place crashed the process inside the XAML runtime, measured.
+  The text comes back untrimmed. `Title`, `Message` and `Confirm` are required; `Cancel` defaults to
+  "Cancel", `MaxLength` to 0 (no limit), and without `AllowEmpty` whitespace alone does not enable
+  the confirm.
 - **`PopupWindowFit`** — a window sized to its own content and centred on the monitor it is on. The
   caller hands it the window, the scroller's content panel, and `PopupWindowFitOptions`: the fixed
   width, the floor, the scroller's padding, the share of the work area to stop at and where to
@@ -89,7 +99,8 @@ once the version it references is on the feed, so a change here releases before 
   window at its opening size. The panel's own height is what is read, not the scroller's viewport:
   the panel's height is independent of the window's, so no second layout pass at the final size is
   needed. The arithmetic itself is `ZeroZero.Win32`'s `WindowFit`, which a caller sizing something
-  other than a popup uses directly.
+  other than a popup uses directly. `Width` and `MinimumHeight` are required; `ScrollerPadding`
+  (none), `HeightFraction` (0.8), `Name` ("Popup") and `Log` (silent) are optional.
 
 Not here, by design: anything carrying the studio's face or palette. Those are the brand component's
 ([`zerozero-brand.md`](zerozero-brand.md)), which a component takes when it needs them and says so.

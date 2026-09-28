@@ -15,6 +15,8 @@ tags, with notes under `docs/release-notes/mqtt/`; [`releasing.md`](releasing.md
 This document is the implementation guide. It states what the module does and what an application
 must supply; the rationale behind a given rule lives in the source comment beside it.
 
+This guide is complete for adoption: the component's own source and tests need not be read.
+
 ## Requirements
 
 | | |
@@ -64,7 +66,10 @@ never pulls WinUI in — which is what keeps the entity model testable on a mach
 
 `MQTTnet` is a functional package reference, present only in `ZeroZero.Mqtt`, and no client-library
 type reaches a public signature: the module's own `MqttQos`, `MqttMessage`, `MqttConnackCode` and
-`MqttPubackCode` stand in front of it.
+`MqttPubackCode` stand in front of it. The QoS is `AtLeastOnce` and a message is retained unless it
+says otherwise. Every connection speaks MQTT 5.0: a CONNACK of `BadUserNameOrPassword` or
+`NotAuthorised` reads as a refused login and any other failure as a refused connection, and a PUBACK
+other than `Success` or `NoMatchingSubscribers` makes `PublishAsync` answer false.
 
 ---
 
@@ -193,6 +198,12 @@ rule and its edges are the store's own, stated in
 [`zerozero-config.md`](zerozero-config.md#the-write-latch-and-what-is-preserved). The same holds for
 `DiscoveryLedgerFile`.
 
+`MqttSettings` starts switched off, and nothing touches the network until `Enabled` is on and `Host`
+is set. A null `Port` and `Auto` transport and encryption leave the endpoint to the sweep; a host
+typed as `ws://` or `wss://` is used as written. Trust starts at `SystemTrust`, empty credentials
+mean anonymous, and a blank `DiscoveryPrefix` reads as `homeassistant`. **`MqttSettingsFile` writes
+the password in clear text**, to `mqtt.json` under `In(directory)`.
+
 #### Carrying an existing broker block across
 
 **The module reads its own file and nothing else. A consumer that already stores MQTT settings
@@ -295,7 +306,9 @@ behind an icon. A group with no info text gets no icon at all.
 State persists per group key, never per index, so inserting or reordering a group cannot move a
 user's choices onto different groups. A key absent from the stored dictionary takes the group's own
 `DefaultOn`, so a group added in a later version starts where its author intended. A declared group
-renders whether or not it currently has entities.
+renders whether or not it currently has entities. `DefaultOn` is true unless set, two groups sharing
+a key throw, and a null key or one nothing declared is always on. `Set` raises `Changed`, on which
+`DiscoveryPublisher` republishes, so a group switched in code needs no further signal.
 
 ### 4. Declare the entity table
 
@@ -387,7 +400,10 @@ var perMachine = machine.Volumes.Select(v => new MqttSensor
 ```
 
 `MqttEntityId.Resolve(names)` does the same for a whole list at once. Order matters and is the
-input's, so the same list always produces the same ids.
+input's, so the same list always produces the same ids. An id is lower-case ASCII letters and digits
+with one underscore per run of anything else, at most 48 characters, `entity` where nothing is left,
+and `_2`, `_3` and so on on a collision. An entity whose `Include` throws keeps what the ledger
+records for it, and is neither announced nor withheld where the ledger has none.
 
 ### 5. Compose the connection
 
@@ -507,6 +523,16 @@ await publisher.SetEntitiesAsync(new MqttEntitySet(rebuilt));
 That rebuilds the channels, the command targets and the document in one pass, and empties the state
 topics of entities that have gone.
 
+Of `MqttConnectionSetup` only `TopicRoot` is required; without `RememberEndpoint` the endpoint is
+remembered for the process's life alone, and without a `Listener` nothing is announced.
+**`StateChanged` arrives on whichever thread changed the state**, usually a background one.
+`Failed` means the broker answered and refused, which waiting will not change; `Retrying` means
+nothing answered. `ApplyAsync` logs a failure rather than throwing. A channel's `Payload` is read on
+a background thread, and one that throws leaves the last value standing; an empty, shared or
+`availability` key, or one carrying `/`, `+` or `#`, throws. A subscription's handler runs on the
+command worker, one message at a time. A receiver's birth message is answered within
+`BirthRepublishDelay`, 30 seconds.
+
 ### 6. Host the panel
 
 The panel is a tall `StackPanel` and scrolls nothing itself, so it goes inside the page's own
@@ -549,7 +575,10 @@ Mqtt.Initialise(new MqttPanelSetup
 ```
 
 `Initialise` is called once, on the UI thread, from the hosting page's constructor or its `Loaded`
-handler.
+handler. `Settings` through `PublishSetChanged` are required; without `RecallEndpoint` no detected
+endpoint shows, and without `CommandLabel` the rows show entity ids. **`DefaultDeviceName`, which is
+`<TopicRoot> (<machine name>)` when null, must be what `MqttConnectionSetup.DefaultDeviceName`
+produces**, or the Device name placeholder shows a name that is never published.
 
 **Two obligations the panel's own copy depends on.** `ConnectionChanged` must run the connection's
 apply path, because the device-id dialogue promises the old entities are removed and the ledger is
@@ -595,7 +624,9 @@ Concretely, three things stay out of anything the module holds:
   own success.
 
 Two projections built from equal settings are equal, which is the whole of why applying on every
-settings change is safe.
+settings change is safe. A host with a credential store of its own builds `MqttConnectParameters`
+itself, with its key in `CredentialRef` and a fetch in `Password`. An apply that is switched off or
+has no host publishes offline and leaves the device in place.
 
 ---
 
@@ -618,7 +649,8 @@ Every reader is required, and typed to what its platform holds — a boolean for
 for a number. Only the sensor's is a string, because a sensor carries a number, a duration or a word
 with equal standing. Numeric payloads go through `MqttPayload.Number`, which formats with
 `InvariantCulture`: a decimal comma on the wire is read as a thousands separator by a receiver in
-another locale, or not at all.
+another locale, or not at all. It gives null for NaN and infinity, and the inbound `ReadFlag` and
+`ReadNumber` answer null for anything they cannot read.
 
 **One bare topic per entity, carrying a plain value.** Nothing composes a JSON payload, nothing
 writes a `value_template`, and a shell script or a flow engine reads a topic with no parsing.
@@ -653,7 +685,8 @@ whatever it last published: an absent reading publishes nothing, and a (re)conne
 payload so a receiver that restarted has it. Two consequences follow, and both are the point rather
 than a side effect — the entity no longer clears when its reading goes away, on any pass and not
 only on connect; and an entity that has never had a reading publishes nothing at all, so it reads as
-unknown until its first real value rather than being announced absent.
+unknown until its first real value rather than being announced absent. A switched-off group
+withholds its entities without calling `Include`.
 
 Members each component adds of its own:
 
@@ -671,7 +704,10 @@ Bounds are declared once and enforced twice: the receiver keeps its own control 
 `Accept` refuses anything outside them, because a payload can arrive from anything holding a broker
 connection. A `MqttNumber` step below `MqttNumber.MinimumStep` (0.001) is refused at declaration —
 the receiver's schema rejects it, and the component would vanish from the document with nothing to
-see locally. `MqttText.Pattern` is never the only guard; `Accept` still judges what arrives.
+see locally. `MqttText.Pattern` is never the only guard; `Accept` still judges what arrives. `Apply`
+is required on every writable component and `Press` on the button; otherwise `Step` is 1, the text
+lengths 0 to 255, the payloads `ON` and `OFF`, and the rest null, false or the first enum member,
+which writes nothing to the document.
 
 ### Topics
 
@@ -696,7 +732,9 @@ The device id defaults to `<topicRoot>_<sanitised machine name>`, and it must be
 installation publishing to one broker: it is the MQTT client id — two machines sharing it disconnect
 each other in a loop — and the `unique_id` stem, so they would also overwrite each other's entities.
 Nothing local can check that, so a host offering the field says so where the user types it. The
-machine-name default is unique by construction.
+machine-name default is unique by construction. `MqttIdentity` keeps `a-z` and `0-9`, turns anything
+else into an underscore and stops at 48 characters; a machine name with neither gives
+`<topicRoot>_device`, and a typed id that is blank or has neither falls back to the default.
 
 ### Commands
 
@@ -725,7 +763,8 @@ understands is one it will not act on.
 Two refusals arise below the entity. A payload for an entity that is not currently announced is
 `Unrecognised`, so a command addressed to a switched-off group is reported rather than quietly acted
 on. A payload that arrives with the retain flag set is `Retained` and the topic is emptied: a
-command is an event, and a retained one would be redelivered and re-fire on every reconnect.
+command is an event, and a retained one would be redelivered and re-fire on every reconnect. For
+those two the `MqttCommandRefusal` handed to `CommandRefused` carries no wording.
 
 ### The document
 
@@ -739,7 +778,9 @@ and `cmps`. Each entry under `cmps` is keyed by entity id and carries `p` (the p
 
 **A component is removed by writing it with only its platform key.** Leaving it out of a later
 document does not remove it — the receiver keeps what it already has — so removal is something the
-document says, not something it omits.
+document says, not something it omits. `DiscoveryDevice` requires `Manufacturer`, `Model` and
+`SoftwareVersion`, `DiscoveryOrigin` requires `Name` and `SoftwareVersion`, and an optional field
+left empty is left out. `DiscoveryDocument.Build` is pure, so a test asserts the exact bytes.
 
 ---
 
@@ -834,7 +875,8 @@ what has to be emptied is exactly what was sent, and recomposing it under today'
 a topic nothing was ever published on. The next connect reconciles against the record.
 
 `Ledger` is required on `DiscoveryPublisherSetup` and has no default, because every alternative is a
-choice with consequences. `DiscoveryLedgerFile.In(directory)` is one line and durable.
+choice with consequences. `DiscoveryLedgerFile.In(directory)`, writing `mqtt-discovery.json`, is one
+line and durable.
 `TransientLedgerStore` is the deliberate opt-out — right for a test and for a host with genuinely
 nowhere to write — and without a durable store an entity removed while the application was closed is
 never evicted, a retirement is replayed on every start, and a migration is replayed as a retirement,
@@ -943,7 +985,8 @@ value alongside it, and `Validate()` passes it as it stands.
 The settings panel offers all four as its **Certificate trust** row, under **Encrypted connection**.
 The two pinned modes show a box for the thumbprint or the base64 certificate, and Apply and Test are
 both refused while that box is empty. The last entry shows one line saying what choosing it gives
-up.
+up. A host that writes a pin through the store itself checks `Validate()` first, since the
+connection refuses every certificate under an unusable pin.
 
 ### The endpoint sweep
 
@@ -967,6 +1010,14 @@ enabled and a host is set. **Editing a field is not a trigger, and neither is sh
 probe costs real seconds and puts the machine on the network, so it follows a press and nothing
 else; the guarantee that opening the settings page touches no broker holds equally while the fields
 are being typed into. What is remembered leads the sweep once one runs, and decides the order only.
+A remembered endpoint never holds a password, and one that did not record its encryption is never
+read as plain; WebSocket on 443, 8084 and 8883 is always encrypted.
+
+`MqttProbe.RunAsync` publishes nothing, sets no Last Will and never throws; a blank host gives an
+empty report, which reads as `Failed`. **Its progress arrives on the probing thread**, so a user
+interface marshals it. It connects as `<deviceId>_probe`, since the live client id would make the
+broker drop the live session. A lone candidate gets 10 seconds, each of several 4, and a silent
+socket 3.
 
 ### What the module reports about itself
 
@@ -1056,6 +1107,12 @@ would refuse.
 The panel never writes a settings store directly: every commit goes through `IMqttSettingsStore.Update`,
 so a host whose configuration is one document keeps its own read-modify-write.
 
+A host that draws its own form keeps these rules through two plain `net10.0` types.
+`MqttBrokerEdits` stages the Broker block, certificate trust included and the device fields not: a
+typed port must fall in 1 to 65535, `Validate()` is the gate Apply and Test share, `Apply(store)`
+writes nothing when it refuses, and `Reload` moves only untouched fields to the new saved values.
+`MqttProbeSession` keeps the line under Test connection and drops anything from a superseded run.
+
 ### What a closed section says about itself
 
 The Broker group and the publish group both open closed, and each carries a line the module composes
@@ -1093,7 +1150,8 @@ The entities behind the groups are never counted, because the panel is not shown
 Both lines compose through `MqttPanelText.SummariseBroker` and `MqttPanelText.SummarisePublish` in
 the plain `net10.0` assembly, with `MqttPublishRows.Tally` reducing a `PublishGroupSet` to the two
 numbers from one snapshot. The panel assembles no sentence of its own, so what a closed section says
-is testable without a window.
+is testable without a window. A row's info icon has an English screen-reader subject whatever the
+translation.
 
 ### The info-text ownership split
 
@@ -1230,7 +1288,8 @@ stands, so a resource map that fails to load leaves a readable panel rather than
 
 `MqttPanelText` composes every sentence the panel renders, and `MqttStatusText` is its static facade
 over the module's own en-GB — useful to a host rendering the same status outside the panel, in a
-tray tooltip or a log line.
+tray tooltip or a log line. `MqttPanelSetup.Strings` left null reads the module's own `.resw`, and a
+key found nowhere reads as itself.
 
 **Every key is flat, and a key that changes name is a translation that silently stops being read**:
 the lookup finds nothing, answers null, and the built-in en-GB stands with no error anywhere. A
@@ -1307,7 +1366,8 @@ the user keeps their settings across that.
 and this one does not publish at all. `RetiredChannel` covers the value topics — the shared payload
 topic of a JSON-per-device implementation, or a state topic under a key no entity carries any more.
 A pair may not be both migrating and retired; the two write one topic with opposite intent, and the
-declaration is refused.
+declaration is refused, as is a retired pair that is still a live entity. The publisher's constructor
+and `SetEntitiesAsync` throw; the fire-and-forget `SetEntities` logs instead.
 
 **Whether the old availability topic needs anything depends on the identity, and only on that.** A
 consumer that keeps its topic root and its device id declares only the value topics its predecessor

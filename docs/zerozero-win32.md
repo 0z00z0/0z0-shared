@@ -14,6 +14,8 @@ tags, with notes under `docs/release-notes/win32/`; [`releasing.md`](releasing.m
 procedure. A component that references it can only release once the version it references is on
 the feed, so a change here releases first.
 
+This guide is complete for adoption: the component's own source and tests need not be read.
+
 ## Requirements
 
 | | |
@@ -35,8 +37,9 @@ the feed, so a change here releases first.
   answer is physical pixels or a plain factor; the caller decides which monitor gets which window
   and does the arithmetic. A call that fails yields something usable — the primary monitor at 100%,
   a 1080p work area, zero chrome — never an empty rectangle.
-- **`NativeRect`** — a rectangle in physical pixels, with `ClampInto` for keeping a window inside a
-  work area.
+- **`NativeRect(Left, Top, Right, Bottom)`** — a rectangle in physical pixels, right and bottom
+  exclusive as Win32 reports them, with `Width`, `Height` and `ClampInto` for keeping a window
+  inside a work area.
 - **`WindowFit`** — the arithmetic over those numbers, so a caller on any user-interface framework
   measures and this places. `Fit` takes the rectangle a window wants, the window height its content
   needs and the work area, and answers with the rectangle to open at: grown where the content is
@@ -60,12 +63,20 @@ the feed, so a change here releases first.
   width. Returns the id of the button pressed, or `TaskDialogButton.CancelId` when the dialog was
   closed. The wording is the caller's, and so is any fallback: `Show` throws where the dialog cannot
   appear, and `IsAvailable` is the branch to take before building the request.
+- **`TaskDialogRequest`** — `Caption`, `Headline` and `Buttons` are required, and an empty button
+  list makes `Show` throw. Optional: `Body`, `Detail` (collapsed behind a toggle), `Icon`
+  (`TaskDialogIcon`: `None`, the default, `Information`, `Warning`, `Error`, `Shield`),
+  `DefaultButtonId` (the first button when unset), `AllowCancel` (true: the cross and Escape close it
+  with `CancelId`), and `CommandLinks`, `StockCancelButton` and `SizeToContent`, all false. No radio
+  buttons, check box or footer. **`TaskDialogButton(Id, Text)`** — ids are the caller's, clear of
+  `CancelId`, which is 2; as a command link, a line break in `Text` puts a note under the title.
 - **`NativeMessageBox`** — `Information`, `Warning`, `Error` and a yes-or-no `Question`, each modal
   to an owner or to nothing, each with a `topmost` option for a tray application that has no window
   to bring the box forward. A box that cannot be shown throws rather than returning as if it had.
 - **`DarkChrome`** — `Apply(DarkChromeMode)` opts the process's native chrome, context menus above
   all, into the dark theme through two undocumented uxtheme entry points. Returns false on a Windows
-  without them, where chrome stays light.
+  without them, where chrome stays light. `AllowDark` follows the system theme, `ForceDark` is always
+  dark, and `Default` and `ForceLight` stay light.
 - **`TransientWindows`** — how many of the application's own short-lived windows are on screen.
   `Enter()` counts one until the scope is disposed, and `AnyOpen` is the question a window that
   dismisses itself on focus loss asks before it does: one of its own application's windows taking

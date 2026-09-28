@@ -20,6 +20,8 @@ The three assemblies are versioned as `UpdateVersion` in `Versions.props` and re
 [`releasing.md`](releasing.md) has the procedure. The component releases after `primitives` and
 `win32` are on the feed at the versions it references.
 
+This guide is complete for adoption: the component's own source and tests need not be read.
+
 ## Requirements
 
 | | |
@@ -38,17 +40,22 @@ The three assemblies are versioned as `UpdateVersion` in `Versions.props` and re
   product name for the user agent, the running version (the entry assembly's when null), the
   expected signer, the download-directory prefix, the installer file name with `{version}` in it,
   the installer's arguments, the initial delay and the check interval, the request and download
-  timeouts, the API base and the log sink. Validated when the service is built.
+  timeouts, the API base and the log sink. Validated when the service is built: the owner, name,
+  product name, signer, prefix and file name are required, and a blank or malformed value throws.
+  Defaults: requests 30 s, downloads 10 min, GitHub's API, no log; `InitialDelay` (30 s) and
+  `CheckInterval` (24 h) are for `UpdateScheduler`.
 - **`ExpectedSigner`** — who must have signed the installer: the certificate subject, the
   thumbprints (SHA-1 or SHA-256) of the certificates accepted when the machine does not trust the
   chain, and `acceptSelfSignedSubject`, which lets the publisher name alone carry an untrusted
-  chain. `Match` says whether a certificate is that signer, and why not.
+  chain. `Match` says whether a certificate is that signer, and why not. A subject that is not a
+  distinguished name, or a thumbprint that is not 40 or 64 hexadecimal digits, throws.
 - **`UpdateService`** — `CheckAsync` finds the latest release and compares it with the running
   version; `PrepareAsync` downloads the installer into a fresh directory and verifies it, and never
   runs it, taking an optional reporter the download's progress goes to; `Launch` verifies the
   prepared file again and starts it through the shell; `SweepStaleDownloads` removes download
   directories earlier runs left behind. One instance per application, owning its two HTTP clients
-  for the life of the process.
+  for the life of the process. Only a `Ready` update is launched, and **`Launch` never throws**:
+  anything that stops it is `Started` false with a `Detail`.
 - **`DownloadProgress`** — bytes received and the total where there is one, the pair a progress bar
   is drawn from. [Below](#reporting-the-download) has how often it arrives and what it does not
   report.
@@ -57,23 +64,28 @@ The three assemblies are versioned as `UpdateVersion` in `Versions.props` and re
   `NoReleases` is the repository having published none; and five say the check did not get one:
   `RateLimited`, `Unreachable` (nothing answered), `TimedOut` (something is there and did not answer
   in time), `RequestFailed` (a failure status rather than a release) and `InvalidResponse` (an answer
-  that is not a release this version understands). Every one carries a `Detail` sentence for a person
-  to read; **none of them has to be read to tell the outcomes apart**, which is the point of there
-  being eight. A cancellation the caller asked for is no outcome at all: the check throws.
+  that is not a release this version understands). The other six carry a `Detail` sentence for a
+  person to read, and the two answers a release gives carry an empty one; **none of them has to be
+  read to tell the outcomes apart**, which is the point of there being eight. A cancellation the
+  caller asked for is no outcome at all: the check throws.
 - **`UpdateScheduler`** — runs a check after an initial delay and then at an interval, one at a
-  time, counted from process start and never persisted: the component stores nothing.
+  time, counted from process start and never persisted: the component stores nothing. A negative
+  delay or an interval of zero or less throws; a check that throws is logged and the schedule goes on.
 - **`MachineIdle`** — reads the machine at one moment: how long since the last keyboard or mouse
   input in this session, and whether the session is locked. A measurement and nothing more; what
   counts as free enough to start an installer is decided above it. A reading that does not come back
   is no time at all and not locked, so a machine that cannot be read never looks untouched.
   `IMachineIdle` is the seam a test supplies its own reading through.
-- **`InstallerVerifier`** — the two checks below, as one call with one verdict.
+- **`InstallerVerifier`** — the two checks below, as one call with one verdict; only `Verified` runs
+  a file, and an expected hash that is not 64 hexadecimal digits throws.
 - **`PublishedHash`** — the installer's SHA-256 read from the release body; `ReleaseNotesText`
   strips the notes for a dialog and leaves the hash line out; `VersionTag` reads a tag as a
   four-part version so a running `1.2.3` is not out of date against its own `v1.2.3`.
-- **`GitHubReleaseSource`**, **`InstallerDownloader`**, **`DownloadDirectory`** and
-  **`ShellInstallerLauncher`** — the pieces behind the service, each replaceable through an
-  interface in a test.
+- **`GitHubReleaseSource`** and **`ShellInstallerLauncher`** — the release source and the launcher
+  behind the service, each replaceable in a test through the `IReleaseSource` and
+  `IInstallerLauncher` the constructor takes; null takes these two. `InstallerDownloader` is concrete
+  with no interface and `DownloadDirectory` is static, so neither can be replaced; a download that
+  falls short reaches a caller of the service only as `DownloadFailed`.
 
 `ZeroZero.Update.Win32`:
 
@@ -84,7 +96,10 @@ The three assemblies are versioned as `UpdateVersion` in `Versions.props` and re
   its own and ends the same way: the file was not run, and the release page is where to go instead.
 - **`IUpdatePrompts`** — what a surface implements. Every call is awaited and does not complete
   until the person has chosen or read what it put on screen, so nothing in the flow runs behind a
-  window still in front of them.
+  window still in front of them. The three answers to a check with nothing to install are asked for
+  under `Manual` only, `SayCannotInstallAsync` and `SayLaunchFailedAsync` on every path to an
+  install, and `Dismiss` once the installer runs, before the shutdown callback; a default
+  `DownloadSurface` reports nowhere and never cancels.
 - **`UpdateFlow`** — `RunAsync(trigger)`: check, ask, prepare, launch, then call the application's
   shutdown, returning an `UpdateFlowRun` carrying the result, the check it read and the release
   where there is one. A manual run reports every outcome; a scheduled one speaks only when there is
@@ -93,31 +108,37 @@ The three assemblies are versioned as `UpdateVersion` in `Versions.props` and re
   from a release already found, without checking again. One install at a time, and one check at a
   time: a caller arriving while a check is in flight joins it and reads its result.
   `UpdateFlowOptions.Progress` is where a host's own progress goes, alongside the window's bar.
+  `Shutdown` is the one required option; `OpenReleasePage`, the shell when null, opens only an
+  `https` address.
 - **`UnattendedUpdatePolicy`** — when a check happens and when an installer may start with nobody
   asked. It drives the check, the download and the launch itself, shows nothing at any point, and
   returns an `UnattendedTick` saying where the pass ended. [Below](#installing-without-being-asked)
-  is the whole of what it decides.
+  is the whole of what it decides. `TickAsync` is one pass, which `Start` runs every `RetryInterval`.
 - **`UnattendedUpdateOptions`** — what the application supplies: whether this happens at all, how
   often a check runs — periodically or once — the retry tick, the shutdown callback, the call the
   component makes immediately before an installer starts, and the callback every tick's result is
-  reported to. Absent, nothing of the kind happens.
+  reported to. Absent, nothing of the kind happens. `Shutdown` is required, the first tick comes
+  `InitialDelay` (30 s) after `Start`, and a negative delay or an interval of zero or less throws.
 - **`CheckCadence`** — `Periodic`, checking every `CheckInterval`, or `Once`, checking a single time
   after `InitialDelay` and never again for the life of the process. Governs checking only.
 - **`InstallMoment`** — the answer to that call: `InstallMoment.Now`, or `InstallMoment.NotNow`
   with a few words for the log. It is about the moment it was asked and is never kept.
 - **`SilentUpdatePrompts`** — prompts that answer themselves and draw nothing, for a flow that must
-  not reach a screen whatever its outcome.
+  not reach a screen whatever its outcome. [Traps](#traps) has what they answer.
 
 `ZeroZero.Update.WinUI`:
 
 - **`UpdateWindow`** — the window itself, shown one stage at a time. Frameless on a Mica backdrop,
   always on top, centred on the monitor under the cursor and sized to its own content at whatever
   scaling that monitor has. It counts itself among the application's transient windows while it is
-  open, so a window beneath it that dismisses itself on focus loss stays where it is.
+  open, so a window beneath it that dismisses itself on focus loss stays where it is. Closing the
+  question answers `Later`; closing during the download stops it, as Escape does.
 - **`UpdateWindowPrompts`** — the flow's prompts, driving one window from the question through the
   download to the answer. This is what an application constructs.
 - **`UpdateWindowOptions`** — the application's name, the theme, and where its release notes come
   from where it keeps its own. The wording is the component's, so there is nothing else to set.
+  `ApplicationName` is required; `Theme` follows the application; a null `ReleaseNotes`, or a null
+  from it, shows the release body without its markdown, and an empty string leaves the notes out.
 
 ## What a person sees
 
@@ -538,6 +559,10 @@ does not wait for a report to be handled.
   can still have taken the installer with it.
 - **A silent check that finds a release installs nothing.** It returns `UpdateAvailable` and the
   release; the install starts from `InstallAsync` when the person asks for it.
+- **`SilentUpdatePrompts` always answers "Install".** A flow wired to them under `Manual` or
+  `Scheduled` downloads and starts whatever release it finds, with neither the machine-idle rule nor
+  the question to the application: both live in `UnattendedUpdatePolicy`, not in the flow. An
+  install nobody asked for goes through the policy.
 - **Progress stops where the download does, and the install does not.** Verification runs after the
   last byte arrives and reports nothing, so a bar that has reached its end sits full while the hash
   and the signature are checked. The window says so; a surface of the application's own that treats

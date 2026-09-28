@@ -15,6 +15,8 @@ The assembly is versioned as `PrimitivesVersion` in `Versions.props` and release
 [`releasing.md`](releasing.md) has the procedure. A component that references it can only release
 once the version it references is on the feed, so a change here releases first.
 
+This guide is complete for adoption: the component's own source and tests need not be read.
+
 ## Requirements
 
 | | |
@@ -34,13 +36,15 @@ once the version it references is on the feed, so a change here releases first.
   name.
 - **`AssemblyVersionText.Read(assembly)`** — the version the assembly carries: the informational
   version where one is stamped (`0.7.0+1a2b3c4`), the assembly version otherwise, and the empty
-  string where the assembly carries neither — never a fabricated number. Read off the loaded assembly
-  rather than compiled in from a constant, so a build made from a working tree between tags says
-  which source produced it; a constant from the same property the pin is written against can never
-  disagree with the pin, and disagreeing is the point.
+  string where the assembly carries neither — never a fabricated number. The fallback has four
+  parts, `0.7.0.0`, and no commit. Read off the loaded assembly rather than compiled in from a
+  constant, so a build made from a working tree between tags says which source produced it; a
+  constant from the same property the pin is written against can never disagree with the pin, and
+  disagreeing is the point.
 - **`AssemblyVersionText.ForDisplay(version)`** — the same text with a commit after the `+` cut to
   seven characters. The SDK's own stamp is the full forty, which no About box has room for.
-  Metadata that is not a commit, and a version carrying none, pass through untouched. An About box
+  Metadata that is not all hexadecimal, and a version carrying none, pass through untouched. Both
+  calls throw `ArgumentNullException` on null. An About box
   fed from the brand component's `AboutInfo` takes `ForDisplay(Read(typeof(App).Assembly))` as its
   version.
 - **`CoalescingGate`** — collapses a burst of signals into one in-flight pass plus at most one
@@ -48,13 +52,16 @@ once the version it references is on the feed, so a change here releases first.
   returns true only to the caller that must start the loop; the loop calls `BeginPass()` before each
   pass and `ShouldRepeat()` after, and ends when that answers false. It tracks two flags and holds no
   thread and no timer, so the coalescing decision is testable without either.
+  Safe to signal from any thread. Only a false `ShouldRepeat()` clears the running flag: a loop left
+  any other way, an exception out of a pass included, leaves every later `Signal()` answering false.
 - **The source-revision stamp** — `build/ZeroZero.Primitives.props` and
   `build/ZeroZero.Primitives.targets`. The targets file sets `SourceRevisionId` to the short
   seven-character commit of the consuming project's own repository, so `AssemblyInformationalVersion`
   reads `<version>+<commit>` and `Read` returns exactly that; without it the SDK's own stamp is the
   full forty characters. The commit is read from the consuming project's directory, never from the
   file's own, which as a package sits in the package cache and in no repository. A tree with no git
-  available stamps nothing and the assembly reports the bare number.
+  available stamps nothing and the assembly reports the bare number; a failed git call never fails
+  the build. A `SourceRevisionId` the project or command line sets itself is kept.
 
 ## Traps
 

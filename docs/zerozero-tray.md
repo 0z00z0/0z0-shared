@@ -14,6 +14,8 @@ Both are versioned as `TrayVersion` in `Versions.props` and released together un
 has the procedure. `ZeroZero.Tray` references `ZeroZero.Win32` for the taskbar's scale, so the
 component releases after `win32`.
 
+This guide is complete for adoption: the component's own source and tests need not be read.
+
 ## Requirements
 
 | | |
@@ -35,7 +37,7 @@ component releases after `win32`.
   24 at 150 %, 28 at 175 %, 32 at 200 %), and `PixelsForTaskbar()` is the slot at the taskbar's
   own scale. Under per-monitor DPI awareness the process's scale follows whichever monitor its
   last window was on, which is not where the icon is drawn; an icon rendered at the wrong size is
-  resampled by the shell and comes out soft.
+  resampled by the shell and comes out soft. A scale that is zero, negative or not a number throws.
 - **`TaskbarThemes`** — `Read()` says whether the taskbar is `TaskbarTheme.Light` or `Dark`, from
   the `SystemUsesLightTheme` value under the personalisation key. That is the system-theme
   switch, not the apps-theme switch beside it: the taskbar follows the first, and an icon drawn
@@ -43,6 +45,10 @@ component releases after `win32`.
   a DWORD of 1 is light and anything else, absent included, is dark — and `StrokeToneFor` names
   the tone an icon's strokes need on a taskbar of that theme: `StrokeTone.Dark` on light,
   `StrokeTone.Light` on dark.
+- **`TrayIconPlacements`** — `Plan(settings, icon, wanted)` takes the `TrayIconSetting` entries
+  read and returns the one `TrayIconPlacementPlan` write, or null, by the rules
+  [below](#where-the-shell-draws-the-icon). `TrayIconPlacement` is `NotificationArea` or `Overflow`;
+  an `IsPromoted` of 1 is the first, and 0, absent or anything else the second.
 
 ## The host
 
@@ -71,6 +77,8 @@ the XAML runtime is up.
 - `CacheDirectory` — where a render is written; the temporary folder when not given.
   `ReopenGuard` — how long after a pop-out's dismissal a click is dropped; the system's
   double-click time when not given.
+- `Name` and `Icon` are required; without `Tooltip` or `Menu` the icon has none, and a click with
+  no action does nothing.
 
 **What the host does with them.**
 
@@ -132,6 +140,12 @@ the XAML runtime is up.
   whether anything was written; `RestorePlacement()` puts back what the first write replaced. The
   rules are under the settings key below.
 
+- **Refusals.** `Start()` throws when called twice or on a thread with no dispatcher queue; the
+  refresh, menu and placement calls throw before `Start()` and after `Dispose()`, and `IsStarted`
+  says which. `FromFrames` refuses an empty list and `Command` and `Toggle` a blank label; `FromFile`
+  does not check that the file exists, and it must when the host loads it. `TrayClickPolicy`,
+  `TrayClick` and `TrayIconFileCache` are the click rules and the cache on their own, for a test.
+
 ### The menu on screen
 
 | Taskbar light | Taskbar dark |
@@ -164,6 +178,9 @@ the setting.
   shell sees the icon — or when more than one does, which is two installations this process cannot
   tell apart.
 - A write is followed by registering the icon again, which `AskForPlacement` does for the caller.
+
+`NotifyIconSettings.Read(icon)` and `Write(icon, wanted)` read and write the setting without
+registering the icon again, which `AskForPlacement` adds.
 
 **Stays with the application:** the drawing, notifications — the two applications notify
 through different platform APIs, and a host that picked one would impose a rewrite on the other —
