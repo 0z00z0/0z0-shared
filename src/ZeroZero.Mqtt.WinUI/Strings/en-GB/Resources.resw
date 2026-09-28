@@ -506,6 +506,9 @@ Leaving the box empty falls back to the name derived from this machine.</value>
   <data name="SummaryBrokerNotSet" xml:space="preserve">
     <value>No broker set</value>
   </data>
+  <data name="SummaryBrokerTrustAny" xml:space="preserve">
+    <value>{0} — any certificate accepted</value>
+  </data>
   <data name="SummaryDetected" xml:space="preserve">
     <value>{0} (detected)</value>
   </data>

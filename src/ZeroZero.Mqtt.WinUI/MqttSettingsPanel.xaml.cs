@@ -717,7 +717,8 @@ public sealed partial class MqttSettingsPanel : UserControl
         MqttPanelSetup setup, MqttEndpointRequest request, MqttEndpointMemory? memory,
         MqttConnectionState state)
     {
-        SetSummary(BrokerExpanderDescription, _text.SummariseBroker(request, memory, state));
+        var trust = setup.Settings.Read().CertificateTrust.Mode;
+        SetSummary(BrokerExpanderDescription, _text.SummariseBroker(request, memory, state, trust));
         SetSummary(PublishExpanderDescription, _text.SummarisePublish(MqttPublishRows.Tally(setup.Groups)));
     }
 

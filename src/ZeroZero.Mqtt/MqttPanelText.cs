@@ -140,9 +140,14 @@ public sealed class MqttPanelText
     /// same value is a reading from an earlier moment, and printing it unqualified would be the very
     /// error the marking exists to prevent, reached by another route; the field falls back to the
     /// bare instruction instead.</para>
+    /// <para><paramref name="trust"/> only ever adds the one clause that says the link accepts
+    /// whatever certificate the broker presents — the other three modes leave the line exactly as it
+    /// reads without this parameter, because each of them still proves which machine answered and a
+    /// summary that grew for them would be crying wolf.</para>
     /// </remarks>
     public string SummariseBroker(
-        MqttEndpointRequest request, MqttEndpointMemory? memory, MqttConnectionState state)
+        MqttEndpointRequest request, MqttEndpointMemory? memory, MqttConnectionState state,
+        MqttCertificateTrustMode trust)
     {
         string host = (request.Host ?? "").Trim();
         if (host.Length == 0) return _text.Get("SummaryBrokerNotSet");
@@ -182,7 +187,14 @@ public sealed class MqttPanelText
             _ => Detected(found?.Encrypted is { } encrypted ? Encryption(encrypted) : null),
         };
 
-        return _text.Format("SummaryBroker", host, port, transport, encryption);
+        string summary = _text.Format("SummaryBroker", host, port, transport, encryption);
+
+        // The one mode that gives up proving which machine answered, so it is the one mode this line
+        // says anything about. Wrapping the finished line rather than adding a fifth argument keeps
+        // the other three modes byte-for-byte what they were.
+        return trust == MqttCertificateTrustMode.AcceptAny
+            ? _text.Format("SummaryBrokerTrustAny", summary)
+            : summary;
     }
 
     /// <summary>The publish section's line while it is closed: how many declared groups are switched
