@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ZeroZero.Primitives;
 
 namespace ZeroZero.Update.Win32;
@@ -12,27 +13,35 @@ public enum UnattendedOutcome
     /// <summary>The next check is not due and nothing is waiting to install.</summary>
     NotDue,
 
-    /// <summary>The check did not complete. The cadence is not stamped, so the next tick checks
-    /// again rather than waiting for the next day.</summary>
+    /// <summary>The check did not complete and nothing is held. The cadence is not stamped, so the
+    /// next tick checks again rather than waiting for the next day. Where a release is held, the
+    /// tick carries on with it instead and reports where that ended.</summary>
     CheckFailed,
 
-    /// <summary>The check completed and there is nothing newer to install.</summary>
+    /// <summary>The check completed, there is nothing newer to install, and nothing is held.</summary>
     NothingToInstall,
 
-    /// <summary>The release was not downloaded, or did not verify. Nothing ran, and the next check
-    /// decides again.</summary>
+    /// <summary>The release was not downloaded, or did not verify, and no verified installer is
+    /// held. Nothing ran, and the next check decides again.</summary>
     NotPrepared,
 
     /// <summary>A verified installer is in hand and this moment was refused. Nothing ran; the next
     /// tick asks again.</summary>
     Refused,
 
-    /// <summary>The installer did not start. The next tick prepares it again.</summary>
+    /// <summary>The installer did not start. The next tick prepares it again, or the newer release
+    /// already waiting where a check has found one.</summary>
     LaunchFailed,
 
     /// <summary>The installer is running and the application has been told to exit. Every tick
     /// after it answers the same and does nothing, so no second installer is started.</summary>
     InstallerStarted,
+
+    // Appended, so the members above keep the numbers they already had.
+
+    /// <summary>A release is held and <see cref="UnattendedUpdateOptions.MayDownloadNow"/> refused
+    /// its download at this moment. Nothing was downloaded; the next tick asks again.</summary>
+    DownloadRefused,
 }
 
 /// <param name="Reason">Why the tick ended where it did, in a few words. Empty where there is
@@ -46,10 +55,13 @@ public sealed record UnattendedTick(UnattendedOutcome Outcome, string Reason = "
 /// <remarks>
 /// The scheduler ticks at <see cref="UnattendedUpdateOptions.RetryInterval"/> and each tick decides
 /// what is due, so one short tick serves both a check on its cadence and a retry of what did not
-/// finish. A verified installer is held between ticks, so a refused moment costs no second
-/// download. <see cref="CheckCadence"/> governs checking only: under <see cref="CheckCadence.Once"/>
-/// the ticks go on for as long as the scheduler runs, retrying a moment that was refused or an
-/// installer that could not start, and simply find no check due once the one check has run.
+/// finish. A release found and a verified installer are both held between ticks, so a refused
+/// moment costs no second check and no second download. Checking goes on while something is held,
+/// and a strictly newer release takes the held one's place once it has been downloaded and
+/// verified, or at once where nothing of the held one was downloaded. <see cref="CheckCadence"/>
+/// governs checking only: under <see cref="CheckCadence.Once"/> the ticks go on for as long as the
+/// scheduler runs, retrying a moment that was refused or an installer that could not start, and
+/// simply find no check due once the one check has run.
 /// </remarks>
 public sealed class UnattendedUpdatePolicy : IDisposable
 {
@@ -69,9 +81,13 @@ public sealed class UnattendedUpdatePolicy : IDisposable
     private readonly ILogSink _log;
     private readonly UpdateScheduler? _scheduler;
     private DateTimeOffset? _checkedAt;
+
+    // Found and not yet downloaded. Always newer than _prepared where both are set: an installer
+    // already verified stays until its replacement is.
     private ReleaseInfo? _release;
     private PreparedUpdate? _prepared;
     private string? _refusal;
+    private string? _downloadRefusal;
     private bool _handedOver;
 
     // Set the moment the one check under CheckCadence.Once is attempted, before its outcome is
@@ -93,10 +109,12 @@ public sealed class UnattendedUpdatePolicy : IDisposable
         _log = options.Log;
 
         // Its own flow, wired to prompts that answer themselves, so nothing on this path can draw
-        // over the application's own update window.
+        // over the application's own update window. A shared check shares the answer only: the
+        // trigger and these prompts still decide what this run shows, which is nothing.
         _flow = new UpdateFlow(service, SilentUpdatePrompts.Instance, new UpdateFlowOptions
         {
             Shutdown = options.Shutdown,
+            SharedCheck = options.SharedCheck,
             Log = options.Log,
         });
 
@@ -126,35 +144,64 @@ public sealed class UnattendedUpdatePolicy : IDisposable
         // gap must not start a second one.
         if (_handedOver) return new UnattendedTick(UnattendedOutcome.InstallerStarted, "the installer is already running", _prepared?.Release);
 
-        if (_prepared is null)
+        // Checking goes on while something is held, so a release published since is still found.
+        if (CheckDue)
         {
-            if (_release is null)
+            if (_options.Cadence == CheckCadence.Once) _onceChecked = true;
+
+            UpdateFlowRun run = await _flow.RunAsync(UpdateTrigger.Silent, cancellationToken).ConfigureAwait(false);
+            if (run.Result == UpdateFlowResult.CheckFailed)
             {
-                if (!CheckDue) return new UnattendedTick(UnattendedOutcome.NotDue);
-                if (_options.Cadence == CheckCadence.Once) _onceChecked = true;
-
-                UpdateFlowRun run = await _flow.RunAsync(UpdateTrigger.Silent, cancellationToken).ConfigureAwait(false);
-                if (run.Result == UpdateFlowResult.CheckFailed)
-                    return new UnattendedTick(UnattendedOutcome.CheckFailed, run.Check?.Detail ?? "");
-
+                // A check that did not complete says nothing about what is held, which stays.
+                if (Held is null) return new UnattendedTick(UnattendedOutcome.CheckFailed, run.Check?.Detail ?? "");
+            }
+            else
+            {
                 _checkedAt = _time.GetUtcNow();
-                if (run.Result != UpdateFlowResult.UpdateAvailable || run.Release is null)
+                if (run.Result == UpdateFlowResult.UpdateAvailable && run.Release is { } found && (Held is not { } held || found.Version > held.Version))
+                    _release = found;
+                else if (Held is null)
                     return new UnattendedTick(UnattendedOutcome.NothingToInstall);
-
-                _release = run.Release;
             }
-
-            PreparedUpdate prepared = await _service.PrepareAsync(_release, progress: null, cancellationToken).ConfigureAwait(false);
-            if (!prepared.IsReady)
-            {
-                _release = null;
-                return new UnattendedTick(UnattendedOutcome.NotPrepared, prepared.Detail, prepared.Release);
-            }
-
-            _prepared = prepared;
+        }
+        else if (Held is null)
+        {
+            return new UnattendedTick(UnattendedOutcome.NotDue);
         }
 
-        PreparedUpdate ready = _prepared;
+        if (_release is { } waiting)
+        {
+            InstallMoment download = _options.MayDownloadNow?.Invoke(waiting) ?? InstallMoment.Now;
+            if (!download.Accepted)
+            {
+                LogOncePerReason(ref _downloadRefusal, download.Reason, $"Not downloading {waiting.TagName} yet: {download.Reason}.");
+                // An installer already verified is still offered while its replacement waits.
+                if (_prepared is null) return new UnattendedTick(UnattendedOutcome.DownloadRefused, download.Reason, waiting);
+            }
+            else
+            {
+                _downloadRefusal = null;
+                PreparedUpdate prepared = await _service.PrepareAsync(waiting, progress: null, cancellationToken).ConfigureAwait(false);
+                _release = null;
+                if (prepared.IsReady)
+                {
+                    // Held first, discarded second: a removal that throws leaves the new one held.
+                    PreparedUpdate? replaced = _prepared;
+                    _prepared = prepared;
+                    if (replaced is not null)
+                    {
+                        _log.Info($"{waiting.TagName} replaces {replaced.Release.TagName}, which was waiting to install.");
+                        _service.Discard(replaced);
+                    }
+                }
+                else if (_prepared is null)
+                {
+                    return new UnattendedTick(UnattendedOutcome.NotPrepared, prepared.Detail, prepared.Release);
+                }
+            }
+        }
+
+        PreparedUpdate ready = _prepared ?? throw new UnreachableException("Nothing is held to install.");
         ReleaseInfo release = ready.Release;
 
         // The component's own rule first, and it is the one an application cannot reach.
@@ -168,8 +215,10 @@ public sealed class UnattendedUpdatePolicy : IDisposable
         LaunchResult launch = _service.Launch(ready);
         if (!launch.Started)
         {
-            // A verified file that would not start is downloaded and verified again by the next tick.
+            // A verified file that would not start is downloaded and verified again by the next tick,
+            // unless a newer release is already waiting to take its place.
             _prepared = null;
+            _release ??= release;
             _log.Info($"The installer for {release.TagName} did not start: {launch.Detail}.");
             return new UnattendedTick(UnattendedOutcome.LaunchFailed, launch.Detail, release);
         }
@@ -204,6 +253,9 @@ public sealed class UnattendedUpdatePolicy : IDisposable
             ? !_onceChecked
             : _checkedAt is not { } last || _time.GetUtcNow() - last >= _options.CheckInterval;
 
+    /// <summary>The newest release held, downloaded or not; null where nothing is.</summary>
+    private ReleaseInfo? Held => _release ?? _prepared?.Release;
+
     /// <summary>A locked screen is free at once; otherwise the machine must have gone untouched for
     /// <see cref="RequiredIdle"/>.</summary>
     private InstallMoment MachineFree()
@@ -215,14 +267,17 @@ public sealed class UnattendedUpdatePolicy : IDisposable
 
     private UnattendedTick Refuse(InstallMoment moment, ReleaseInfo release)
     {
-        // Once per reason: the same cause on every tick for an hour writes one line, and a different
-        // cause writes its own.
-        if (!string.Equals(_refusal, moment.Reason, StringComparison.Ordinal))
-        {
-            _refusal = moment.Reason;
-            _log.Info($"Not installing {release.TagName} yet: {moment.Reason}.");
-        }
-
+        LogOncePerReason(ref _refusal, moment.Reason, $"Not installing {release.TagName} yet: {moment.Reason}.");
         return new UnattendedTick(UnattendedOutcome.Refused, moment.Reason, release);
+    }
+
+    /// <summary>Once per reason: the same cause on every tick for an hour writes one line, and a
+    /// different cause writes its own. Each gate keeps its own last reason, so two gates refusing on
+    /// one tick do not unseat each other and write both lines on every tick.</summary>
+    private void LogOncePerReason(ref string? last, string reason, string line)
+    {
+        if (string.Equals(last, reason, StringComparison.Ordinal)) return;
+        last = reason;
+        _log.Info(line);
     }
 }

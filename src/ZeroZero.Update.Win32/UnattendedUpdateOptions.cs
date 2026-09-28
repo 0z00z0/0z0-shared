@@ -2,8 +2,8 @@ using ZeroZero.Primitives;
 
 namespace ZeroZero.Update.Win32;
 
-/// <summary>Whether an installer may start at this moment. The answer is about this moment and is
-/// never kept: the attempt after it asks again.</summary>
+/// <summary>Whether a release may be downloaded, or an installer may start, at this moment. The
+/// answer is about this moment and is never kept: the attempt after it asks again.</summary>
 /// <param name="Reason">Why not, in a few words. The log is keyed on it, so one wording per cause
 /// keeps an hour of refusals to one line.</param>
 public readonly record struct InstallMoment(bool Accepted, string Reason = "")
@@ -40,8 +40,8 @@ public sealed class UnattendedUpdateOptions
     public TimeSpan InitialDelay { get; init; } = TimeSpan.FromSeconds(30);
 
     /// <summary>Periodic unless the application sets it. <see cref="CheckCadence.Once"/> governs
-    /// checking only: an installer already found and prepared still follows the machine-free rule,
-    /// <see cref="MayInstallNow"/> and the retry when it could not start.</summary>
+    /// checking only: a release already found still follows <see cref="MayDownloadNow"/>, the
+    /// machine-free rule, <see cref="MayInstallNow"/> and the retry when it could not start.</summary>
     public CheckCadence Cadence { get; init; } = CheckCadence.Periodic;
 
     /// <summary>How long between one check and the next under <see cref="CheckCadence.Periodic"/>.
@@ -58,6 +58,11 @@ public sealed class UnattendedUpdateOptions
     /// and exit. Called after the installer process exists and never before.</summary>
     public required Action Shutdown { get; init; }
 
+    /// <summary>Asked once a release has been found and before anything of it is downloaded, on
+    /// every tick until it is. A refusal keeps the release without downloading it; the next tick
+    /// asks again. Null accepts every moment, so everything found is downloaded.</summary>
+    public Func<ReleaseInfo, InstallMoment>? MayDownloadNow { get; init; }
+
     /// <summary>Asked immediately before the installer starts, once the machine-free rule has
     /// already passed. A refusal stops that attempt and nothing else; the next tick asks again.
     /// Null accepts every moment.</summary>
@@ -69,6 +74,12 @@ public sealed class UnattendedUpdateOptions
     /// Null reports nothing, and the policy runs exactly as it does with no callback set. A callback
     /// that throws is logged and never stops the policy: the tick it was reporting already stands.</summary>
     public Action<UnattendedTick>? TickReported { get; init; }
+
+    /// <summary>The check the application's own flows share, so the policy's check joins one
+    /// someone asked for and the other way round. Built over the service the policy is given, or
+    /// the policy refuses it. Null keeps the policy's check to itself. Either way the policy's flow
+    /// answers its own prompts and draws nothing.</summary>
+    public SharedUpdateCheck? SharedCheck { get; init; }
 
     public ILogSink Log { get; init; } = NullLogSink.Instance;
 

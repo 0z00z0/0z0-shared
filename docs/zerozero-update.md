@@ -53,9 +53,13 @@ This guide is complete for adoption: the component's own source and tests need n
   version; `PrepareAsync` downloads the installer into a fresh directory and verifies it, and never
   runs it, taking an optional reporter the download's progress goes to; `Launch` verifies the
   prepared file again and starts it through the shell; `SweepStaleDownloads` removes download
-  directories earlier runs left behind. One instance per application, owning its two HTTP clients
-  for the life of the process. Only a `Ready` update is launched, and **`Launch` never throws**:
-  anything that stops it is `Started` false with a `Detail`.
+  directories earlier runs left behind; `Discard` removes a prepared installer that will not run,
+  with its directory, where that directory is one the service made — its prefix and a fresh
+  identifier under the temporary folder — and leaves any other path alone. One instance per
+  application, owning its two HTTP clients for the life of the process. Only a `Ready` update is
+  launched, and **`Launch` never throws**: anything that stops it is `Started` false with a
+  `Detail`. `IUpdateService.Discard` has a default that does nothing, for an implementation that
+  keeps no file.
 - **`DownloadProgress`** — bytes received and the total where there is one, the pair a progress bar
   is drawn from. [Below](#reporting-the-download) has how often it arrives and what it does not
   report.
@@ -108,20 +112,30 @@ This guide is complete for adoption: the component's own source and tests need n
   from a release already found, without checking again. One install at a time, and one check at a
   time: a caller arriving while a check is in flight joins it and reads its result.
   `UpdateFlowOptions.Progress` is where a host's own progress goes, alongside the window's bar.
-  `Shutdown` is the one required option; `OpenReleasePage`, the shell when null, opens only an
-  `https` address.
+  `UpdateFlowOptions.SharedCheck` makes that one check shared with every other flow holding the
+  same `SharedUpdateCheck`; null keeps it to this flow's own runs. `Shutdown` is the one required
+  option; `OpenReleasePage`, the shell when null, opens only an `https` address.
+- **`SharedUpdateCheck`** — one check at a time across every flow holding it, built once over the
+  application's service. A run on any of those flows arriving while a check is in flight on any
+  other joins it and reads its result. Only the check is shared: each run still speaks, asks or
+  stays quiet as its own trigger and its own flow's prompts say. A flow built over another service
+  than the shared check's throws `ArgumentException`. [Below](#one-check-across-several-flows) has
+  the wiring.
 - **`UnattendedUpdatePolicy`** — when a check happens and when an installer may start with nobody
   asked. It drives the check, the download and the launch itself, shows nothing at any point, and
   returns an `UnattendedTick` saying where the pass ended. [Below](#installing-without-being-asked)
   is the whole of what it decides. `TickAsync` is one pass, which `Start` runs every `RetryInterval`.
 - **`UnattendedUpdateOptions`** — what the application supplies: whether this happens at all, how
   often a check runs — periodically or once — the retry tick, the shutdown callback, the call the
-  component makes immediately before an installer starts, and the callback every tick's result is
-  reported to. Absent, nothing of the kind happens. `Shutdown` is required, the first tick comes
-  `InitialDelay` (30 s) after `Start`, and a negative delay or an interval of zero or less throws.
+  component makes before a release is downloaded (`MayDownloadNow`), the call it makes immediately
+  before an installer starts (`MayInstallNow`), the callback every tick's result is reported to, and
+  the check the application's own flows share (`SharedCheck`). Absent, nothing of the kind happens.
+  `Shutdown` is required, the first tick comes `InitialDelay` (30 s) after `Start`, and a negative
+  delay or an interval of zero or less throws. Every other member is optional and null by default:
+  no call accepts every moment, and no shared check keeps the policy's check to itself.
 - **`CheckCadence`** — `Periodic`, checking every `CheckInterval`, or `Once`, checking a single time
   after `InitialDelay` and never again for the life of the process. Governs checking only.
-- **`InstallMoment`** — the answer to that call: `InstallMoment.Now`, or `InstallMoment.NotNow`
+- **`InstallMoment`** — the answer to either call: `InstallMoment.Now`, or `InstallMoment.NotNow`
   with a few words for the log. It is about the moment it was asked and is never kept.
 - **`SilentUpdatePrompts`** — prompts that answer themselves and draw nothing, for a flow that must
   not reach a screen whatever its outcome. [Traps](#traps) has what they answer.
@@ -377,17 +391,61 @@ check ends, before any caller resumes, so a request arriving after that starts a
 surface shows its own waiting state while it waits; the component shows none. The caller that
 started the check is the one whose cancellation token is inside the request.
 
+### One check across several flows
+
+A flow's own check is joined only by that flow's runs. An application with more than one flow — a
+tray item with the update window, a window with a silent button of its own, the unattended policy —
+builds one `SharedUpdateCheck` over its service and hands it to each of them:
+
+```csharp
+var check = new SharedUpdateCheck(service);
+
+var trayFlow = new UpdateFlow(service, new UpdateWindowPrompts(windowOptions), new UpdateFlowOptions
+{
+    Shutdown = shutdown,
+    SharedCheck = check,
+    Log = log,
+});
+var aboutFlow = new UpdateFlow(service, aboutPrompts, new UpdateFlowOptions
+{
+    Shutdown = shutdown,
+    SharedCheck = check,
+    Log = log,
+});
+var policy = new UnattendedUpdatePolicy(service, new UnattendedUpdateOptions
+{
+    Enabled = settings.InstallUpdatesUnattended,
+    Shutdown = shutdown,
+    SharedCheck = check,
+    Log = log,
+});
+```
+
+A run on any of them that arrives while a check is in flight on any other joins it: one request, and
+the same `UpdateCheckResult` in every hand. **Only the check is shared.** What a run does with the
+answer is decided afterwards by its own trigger and its own flow's prompts, so the policy's silent
+run shows nothing while a manual run beside it reports in the update window, and a manual run that
+joined the policy's check still reports in its window. The token rule above holds across flows: the
+run that started the check carries its token into the request, and a run that joined waits under its
+own.
+
+The shared check must be built over the same service instance the flow is given; a flow handed one
+built over another service throws `ArgumentException` when it is constructed, since a joined answer
+carries the running version it was checked against. One install at a time stays a rule of each flow:
+the shared check joins checks, not installs.
+
 ## Installing without being asked
 
 An application may let updates install with nobody accepting anything. It switches that on, sets how
-often a check runs, and answers one question just before an installer starts. Everything else is the
-component's.
+often a check runs, and may answer two questions: whether a release found is worth downloading at
+all, and whether an installer may start just now. Everything else is the component's.
 
 ```csharp
 var policy = new UnattendedUpdatePolicy(service, new UnattendedUpdateOptions
 {
     Enabled = settings.InstallUpdatesUnattended,
     CheckInterval = TimeSpan.FromHours(24),
+    MayDownloadNow = release => metered ? InstallMoment.NotNow("the connection is metered") : InstallMoment.Now,
     MayInstallNow = release => busy ? InstallMoment.NotNow("a job is running") : InstallMoment.Now,
     Shutdown = () =>
     {
@@ -414,9 +472,17 @@ day, and an installer that could not start is retried on that same tick.
 and behaves exactly as above. `CheckCadence.Once` runs the single check after `InitialDelay` and
 never again for the life of the process, whatever that check finds — something a periodic interval
 cannot express at any value, since even the longest one checks again eventually. The cadence governs
-checking only: an installer already found and prepared keeps following the machine-free rule,
+checking only: a release already found keeps following `MayDownloadNow`, the machine-free rule,
 `MayInstallNow` and the retry when it could not start, so the ticks go on for as long as the
 scheduler runs and simply find no check due once the one check has run.
+
+**The application is asked before anything is downloaded.** `MayDownloadNow` is called once a check
+has found a release and before a byte of it is fetched. An `InstallMoment.NotNow` keeps the release
+without downloading it, the tick reports `DownloadRefused` with the reason and the release, and the
+next tick asks again. An application that supplies no call accepts every moment, so everything found
+is downloaded. One that keeps installing switched off for the life of the process refuses here every
+time: the policy then goes on checking and reporting what it found, and never pays for a download
+that the gate before the launch would refuse anyway.
 
 **The machine has to be free, and that rule is the component's.** An installer starts only where the
 screen is locked, or nothing has touched the keyboard or the mouse for ten minutes.
@@ -429,29 +495,51 @@ an `InstallMoment.NotNow` stops that attempt and nothing further. The answer is 
 alone: it is never stored, and the next tick asks again. An application that supplies no call accepts
 every moment.
 
-**A verified installer is held between ticks**, so a refusal costs no second download: the next tick
-asks again and starts the file it already has.
+**What was found is held between ticks**, so a refusal costs no second check and no second download:
+a release refused before its download is asked about again, and a verified installer refused before
+its launch is started from the file already in hand.
+
+**Checking goes on while something is held.** A check still runs on its cadence while a release waits
+for its download or a verified installer waits for its moment, so a release published in the
+meantime is found:
+
+- **A strictly newer release takes the held one's place.** Where nothing of the held release was
+  downloaded, it is forgotten at once and the newer one goes through the gates from the start.
+- **A verified installer stays until its replacement has verified.** The newer release is asked about
+  with `MayDownloadNow`, downloaded and verified, and only then is the old installer removed through
+  `IUpdateService.Discard` and the new one held. Until then the old one is still offered and may
+  still start.
+- **A check that fails keeps what is held**, and the tick carries on with it rather than stopping at
+  the failure; the next tick checks again. A newer release that does not download or does not
+  verify is forgotten, and the installer already held stays.
+- **The same version, or an older one, changes nothing.** Only a strictly newer release replaces what
+  is held.
 
 **A refusal is logged once per reason.** The reason a refusal carries is what the log is keyed on, so
 a machine in use all afternoon writes one line and a different cause writes its own. One wording per
 cause is what makes that work — a reason carrying a number that changes every tick writes a line
-every tick.
+every tick. The gate before the download and the gate before the launch each keep their own last
+reason, so both refusing on one tick still writes one line each rather than one of each on every
+tick.
 
 **Nothing reaches a screen.** The check runs under `UpdateTrigger.Silent`, the flow's prompts are
 `SilentUpdatePrompts`, and the installer is started the way `Launch` starts it. There is no window to
-dismiss and no question to answer, so the tick may run on any thread.
+dismiss and no question to answer, so the tick may run on any thread. A `SharedCheck` changes none of
+that: it shares the check's answer with the application's own flows, and what this run does with it
+is still decided by its own trigger and prompts.
 
 Each tick says where it ended:
 
 | `UnattendedOutcome` | What happened |
 |---|---|
 | `Disabled` | The application has not switched this on. Nothing was checked and nothing ran. |
-| `NotDue` | The next check is not due and nothing is waiting to install. |
-| `CheckFailed` | The check did not complete. The cadence is not stamped, so the next tick checks again. |
-| `NothingToInstall` | The check completed and there is nothing newer. |
-| `NotPrepared` | The release was not downloaded, or did not verify. Nothing ran, and the next check decides again. |
+| `NotDue` | The next check is not due and nothing is held. |
+| `CheckFailed` | The check did not complete and nothing is held. The cadence is not stamped, so the next tick checks again. With something held, the tick carries on with it instead. |
+| `NothingToInstall` | The check completed, there is nothing newer, and nothing is held. |
+| `DownloadRefused` | A release is held and `MayDownloadNow` refused its download at this moment. Nothing was downloaded, and the next tick asks again. |
+| `NotPrepared` | The release was not downloaded, or did not verify, and no verified installer is held. Nothing ran, and the next check decides again. |
 | `Refused` | A verified installer is in hand and this moment was refused. `Reason` says which rule refused it. |
-| `LaunchFailed` | The installer did not start. The next tick downloads and verifies it again. |
+| `LaunchFailed` | The installer did not start. The next tick downloads and verifies it again, or the newer release already waiting where a check found one. |
 | `InstallerStarted` | The installer is running and the shutdown callback has been called. Every tick after it answers the same and does nothing, so a tick landing while the application is still on its way out starts no second installer. |
 
 **A direct call sees its own tick; a self-driven policy does not, unless it asks to.**
@@ -464,7 +552,11 @@ policy: the tick it was reporting already stands, and the schedule goes on.
 The policy owns its own flow, wired to prompts that answer themselves, so it cannot draw over the
 window the application shows for a check someone asked for. Both may exist in one application: the
 person presses the menu item and sees the window, and the policy installs in the background when the
-machine is free.
+machine is free. Handed the application's `SharedUpdateCheck` through `SharedCheck`, the policy's
+check and the application's join each other — a menu item pressed while the policy's tick is
+checking reads that check's answer, and the other way round — as
+[one check across several flows](#one-check-across-several-flows) describes. Without it, the policy's
+check is its own.
 
 ## Reporting the download
 
@@ -520,6 +612,8 @@ does not wait for a report to be handled.
   installer.
 - **Where the check is offered** — a menu item, the About window, both — and the thread its
   windows live on.
+- **Whether its flows share one check**, through one `SharedUpdateCheck` handed to each of them and
+  to the policy. Without it, each flow's check is joined only by its own runs.
 - **What a silent check shows.** The component shows nothing for that trigger, so the button, its
   waiting state, its label when a release is found and what it does with a failure are the
   application's.
@@ -528,6 +622,9 @@ does not wait for a report to be handled.
 - **Whether updates install with nobody asked**, and how often a check runs. Both are
   `UnattendedUpdateOptions`; the machine-free rule beneath them is the component's and cannot be
   loosened.
+- **Whether a release is worth downloading at all**, through `MayDownloadNow` — installing switched
+  off for the whole run, a metered connection. The answer is only about that moment, and the
+  release stays held without its download.
 - **Whether a particular moment suits**, through `MayInstallNow`. Why an application says no is its
   own business — a job it is running, a lid it is waiting on, a session it does not want to
   interrupt — and the answer is only about that moment.
@@ -616,8 +713,18 @@ does not wait for a report to be handled.
   path, not an install step bolted onto a check, so an application that wants a scheduled check with
   the setting off wires `UpdateScheduler` over `UpdateFlow` as well.
 - **`CheckCadence.Once` stops checking, not ticking.** The scheduler still runs every
-  `RetryInterval` after the single check, because an installer already found still needs the
-  machine-free rule, `MayInstallNow` and the launch retry applied to it on every tick.
+  `RetryInterval` after the single check, because a release already found still needs
+  `MayDownloadNow`, the machine-free rule, `MayInstallNow` and the launch retry applied to it on
+  every tick. Under `Once`, a held release is never replaced: no later check runs to find a newer one.
+- **A held installer may still start while a newer release waits for its download.** Where
+  `MayDownloadNow` refuses the newer release, the verified installer already in hand is still
+  offered, so the older version can install and the newer one is found by the next process's first
+  check. An application that would rather wait refuses the older release in `MayInstallNow`.
+- **An `IUpdateService` of the application's own removes nothing unless it implements `Discard`.**
+  The default does nothing, so a replaced installer then stays in its directory until
+  `SweepStaleDownloads` next runs.
+- **A shared check answers for one service.** Built over another service instance than the flow's,
+  it is refused with `ArgumentException` when the flow or the policy is constructed.
 - **A refusal reason is the log key, so it must not carry a number that moves.** "The machine is in
   use" writes one line for an afternoon; the same sentence with the minutes counted into it writes a
   line on every tick, which is the thing the once-per-reason rule exists to stop.
@@ -643,6 +750,13 @@ unsigned, tampered and truncated forms; the trusted-chain form runs against the 
 library where the machine trusts its signature, and is reported as skipped where it does not. The
 launcher in the tests records and starts nothing, and the sentences are read back rather than
 shown. Nothing reaches the internet, no installer runs, and no window appears on screen.
+
+Status (2026-09-28): 0.13.0's three additions each have guards, every one broken once and seen to
+fail — a refused download downloads nothing and logs once; a held release still checks on its
+cadence and finds a newer one; a held installer survives a failed check and a newer release that
+does not verify, and is replaced and removed by one that does; two flows with different prompts read
+one shared check while each speaks as its own trigger says, and the policy's check joins the same
+way; and `UpdateService.Discard` removes its own download directory and nothing else.
 
 Status (2026-09-28): `CheckCadence.Once` has a test of its own — after the single check, no later
 tick checks again, whatever that check found.

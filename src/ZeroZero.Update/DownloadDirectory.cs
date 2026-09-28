@@ -54,6 +54,17 @@ public static class DownloadDirectory
             throw new ArgumentException($"'{prefix}' is not a directory prefix: letters, digits, dots and hyphens only.", nameof(prefix));
     }
 
+    /// <summary>Whether <paramref name="directory"/> is one <see cref="Create"/> makes for the
+    /// prefix: directly under the root, named by the prefix and a fresh identifier.</summary>
+    internal static bool IsOwn(string directory, string prefix, string? root = null)
+    {
+        ValidatePrefix(prefix);
+        string full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
+        string expected = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root ?? Path.GetTempPath()));
+        return string.Equals(Path.GetDirectoryName(full), expected, StringComparison.OrdinalIgnoreCase)
+            && IsOfShape(Path.GetFileName(full), prefix);
+    }
+
     private static bool IsOfShape(string name, string prefix)
     {
         if (name.Length != prefix.Length + 1 + 32) return false;

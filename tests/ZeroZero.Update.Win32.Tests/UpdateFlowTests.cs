@@ -250,6 +250,54 @@ public class UpdateFlowTests
         Assert.Equal(2, _service.Checks);
     }
 
+    /// <summary>Two flows with prompts of their own, one shared check: a run on one joins the check
+    /// a run on the other started, both read the one result, and each still speaks only as its own
+    /// trigger says — the silent run says nothing beside a loud one. The policy's own flow joins the
+    /// same way when handed the same check.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task FlowsSharingACheck_JoinOneCheck_AndEachSpeaksAsItsOwnTrigger()
+    {
+        _service.CheckResult = new UpdateCheckResult(UpdateCheckOutcome.UpToDate, new Version(1, 0, 0, 0), FakeUpdateService.Release);
+        _service.HoldCheck = new TaskCompletionSource();
+        var shared = new SharedUpdateCheck(_service);
+        var quiet = new RecordingPrompts();
+        var loud = new RecordingPrompts();
+        var background = new UpdateFlow(_service, quiet, new UpdateFlowOptions { Shutdown = () => _shutdowns++, SharedCheck = shared, Log = _log });
+        var window = new UpdateFlow(_service, loud, new UpdateFlowOptions { Shutdown = () => _shutdowns++, SharedCheck = shared, Log = _log });
+
+        Task<UpdateFlowRun> silent = background.RunAsync(UpdateTrigger.Silent);
+        Task<UpdateFlowRun> manual = window.RunAsync(UpdateTrigger.Manual);
+
+        Assert.False(manual.IsCompleted);
+        _service.HoldCheck.SetResult();
+        UpdateFlowRun one = await silent;
+        UpdateFlowRun two = await manual;
+
+        Assert.Equal(1, _service.Checks);
+        Assert.Same(one.Check, two.Check);
+        Assert.Equal(0, quiet.Said);
+        Assert.Equal([new Version(1, 0, 0, 0)], loud.UpToDate);
+
+        _service.HoldCheck = new TaskCompletionSource();
+        using var policy = new UnattendedUpdatePolicy(_service, new UnattendedUpdateOptions
+        {
+            Enabled = true,
+            Shutdown = () => _shutdowns++,
+            SharedCheck = shared,
+            Log = _log,
+        }, new FakeMachineIdle());
+
+        Task<UpdateFlowRun> asked = window.RunAsync(UpdateTrigger.Manual);
+        Task<UnattendedTick> tick = policy.TickAsync();
+        _service.HoldCheck.SetResult();
+        await asked;
+
+        Assert.Equal(UnattendedOutcome.NothingToInstall, (await tick).Outcome);
+        Assert.Equal(2, _service.Checks);
+        Assert.Equal(2, loud.UpToDate.Count);
+    }
+
     [Fact]
     public async Task CancellationReachesTheService()
     {

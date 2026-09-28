@@ -421,6 +421,44 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
         Assert.True(File.Exists(prepared.InstallerPath));
     }
 
+    /// <summary>Removing an installer that will not run takes its own download directory and
+    /// nothing else: not a directory of the right name somewhere else, and not one in the right
+    /// place under another name. The record is public, so its path proves nothing.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void Discard_RemovesItsOwnDownloadAndNothingElse()
+    {
+        using UpdateService service = Service();
+        var release = new ReleaseInfo("v1.2.3", new Version(1, 2, 3, 0), "1.2.3", null, "", null, null, []);
+        PreparedUpdate At(string directory) => new(PrepareOutcome.Ready, release, Installer, Path.Combine(directory, Installer),
+            files.Sha256(files.SignedByExpectedPath), new VerificationResult(VerificationVerdict.Verified, "verified"), "verified");
+
+        string own = DownloadDirectory.Create(_prefix);
+        File.WriteAllText(Path.Combine(own, Installer), "verified");
+        string elsewhere = Directory.CreateTempSubdirectory("ZeroZero.Update.Tests-elsewhere-").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(elsewhere, Installer), "someone else's");
+            string sameName = Directory.CreateDirectory(Path.Combine(elsewhere, $"{_prefix}-{Guid.NewGuid():N}")).FullName;
+            File.WriteAllText(Path.Combine(sameName, Installer), "someone else's");
+
+            service.Discard(At(elsewhere));
+            service.Discard(At(sameName));
+
+            Assert.True(File.Exists(Path.Combine(elsewhere, Installer)));
+            Assert.True(File.Exists(Path.Combine(sameName, Installer)));
+
+            service.Discard(At(own));
+
+            Assert.False(Directory.Exists(own));
+        }
+        finally
+        {
+            // Guarded, so a removal that went too far fails on its assertion and not here.
+            if (Directory.Exists(elsewhere)) Directory.Delete(elsewhere, recursive: true);
+        }
+    }
+
     [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void RunningVersion_DefaultsToTheEntryAssemblyAndNeverToTheLibrary()
