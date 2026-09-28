@@ -11,7 +11,7 @@
 
     <AssemblyTitle>ZeroZero.Update.Win32</AssemblyTitle>
     <Product>ZeroZero.Update.Win32</Product>
-    <Description>The update component's orchestration: the check-ask-download-verify-launch flow that hands over to the application's own shutdown, what it asks and says as plain sentences, and the interface a surface implements to show them. Carries ZeroZero.Update with it; the shared window that shows them is ZeroZero.Update.WinUI.</Description>
+    <Description>The update component's orchestration: the check-ask-download-verify-launch flow that hands over to the application's own shutdown, what it asks and says as plain sentences, the interface a surface implements to show them, and the decision of when a check runs and when an installer may start with nobody asked. Carries ZeroZero.Update with it; the shared window that shows them is ZeroZero.Update.WinUI.</Description>
   </PropertyGroup>
 
   <ItemGroup>
