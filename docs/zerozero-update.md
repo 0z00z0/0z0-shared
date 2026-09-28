@@ -98,8 +98,9 @@ The three assemblies are versioned as `UpdateVersion` in `Versions.props` and re
   returns an `UnattendedTick` saying where the pass ended. [Below](#installing-without-being-asked)
   is the whole of what it decides.
 - **`UnattendedUpdateOptions`** — what the application supplies: whether this happens at all, how
-  often a check runs — periodically or once — the retry tick, the shutdown callback and the call
-  the component makes immediately before an installer starts. Absent, nothing of the kind happens.
+  often a check runs — periodically or once — the retry tick, the shutdown callback, the call the
+  component makes immediately before an installer starts, and the callback every tick's result is
+  reported to. Absent, nothing of the kind happens.
 - **`CheckCadence`** — `Periodic`, checking every `CheckInterval`, or `Once`, checking a single time
   after `InitialDelay` and never again for the life of the process. Governs checking only.
 - **`InstallMoment`** — the answer to that call: `InstallMoment.Now`, or `InstallMoment.NotNow`
@@ -432,6 +433,13 @@ Each tick says where it ended:
 | `LaunchFailed` | The installer did not start. The next tick downloads and verifies it again. |
 | `InstallerStarted` | The installer is running and the shutdown callback has been called. Every tick after it answers the same and does nothing, so a tick landing while the application is still on its way out starts no second installer. |
 
+**A direct call sees its own tick; a self-driven policy does not, unless it asks to.**
+`TickReported` is called with the `UnattendedTick` every pass produces, whatever the outcome — the
+same record `TickAsync` returns to a caller who awaits it directly, and otherwise something only the
+scheduler ever sees once the policy is driving itself. Null reports nothing, and the policy runs
+exactly as it does with no callback set. A callback that throws is logged and never stops the
+policy: the tick it was reporting already stands, and the schedule goes on.
+
 The policy owns its own flow, wired to prompts that answer themselves, so it cannot draw over the
 window the application shows for a check someone asked for. Both may exist in one application: the
 person presses the menu item and sees the window, and the policy installs in the background when the
@@ -502,6 +510,8 @@ does not wait for a report to be handled.
 - **Whether a particular moment suits**, through `MayInstallNow`. Why an application says no is its
   own business — a job it is running, a lid it is waiting on, a session it does not want to
   interrupt — and the answer is only about that moment.
+- **Whether every tick reaches it**, through `TickReported`. Without it, a self-driven policy's
+  ticks are visible only in the log lines it already writes on its own.
 - **The release-notes text**, where the application keeps its own rather than the release body,
   through `UpdateWindowOptions.ReleaseNotes`.
 - **The installer itself**: where it puts things, per-user or per-machine, elevation, and the
@@ -611,6 +621,10 @@ shown. Nothing reaches the internet, no installer runs, and no window appears on
 
 Status (2026-09-28): `CheckCadence.Once` has a test of its own — after the single check, no later
 tick checks again, whatever that check found.
+
+Status (2026-09-28): `TickReported` has a test of its own — a self-driven policy's tick reaches the
+callback with the same record a direct call returns, and a callback that throws is logged rather
+than stopping the tick it was reporting or the policy behind it.
 
 Status (2026-09-28): the four guards on installing without being asked each have a test of their
 own — the setting, the ten minutes, the moment an application refuses, and a check that found
