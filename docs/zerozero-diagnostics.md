@@ -20,6 +20,8 @@ retained count, the dump directory and the hive are parameters with no default, 
 applications that have this today chose differently and a default would quietly override one of
 them.
 
+This guide is complete for adoption: the component's own source and tests need not be read.
+
 ## Requirements
 
 | | |
@@ -35,15 +37,17 @@ them.
 
 - **`StartupVersionLine`** — `For(assembly)` is `Name 1.2.3+commit starting`, the version being the
   full text the assembly carries through `AssemblyVersionText.Read`, commit whole, never the About-box
-  form. `Write(sink, assembly)` sends it as one `Info`. Write it first, before anything that can
-  throw, through a sink that writes regardless of level: a log that starts with no version line is
+  form; an assembly carrying no version gives `Name starting`. `Write(sink, assembly)` sends it as
+  one `Info`. Write it first, before anything that can throw, through a sink that writes regardless of level: a log that starts with no version line is
   the origin of this component.
 - **`CrashHandlers`** — `Register(options)` wires `AppDomain.UnhandledException` and
   `TaskScheduler.UnobservedTaskException`; `Report(source, exception)` is what the host's own arm
   calls, so all three land in the one place. Each crash goes to the crash line first, because that
   never throws, and then to the host's sink, guarded, because a sink that fails while reporting a
   crash would hide it. A reported unobserved task exception is marked observed. Disposing unwires
-  both arms, which only a test host needs.
+  both arms, which only a test host needs. The two arms report under `UnhandledSource` and
+  `UnobservedTaskSource`, the event names; a faulted task holding one exception reports that
+  exception rather than the aggregate around it.
 - **`CrashHandlerOptions`** — `Sink`, the host's log, required; `CrashLine`, a `CrashLineAppender` or
   null.
 - **`CrashLineAppender`** — one stamped entry appended to a plain text file: the local time with its
@@ -51,7 +55,9 @@ them.
   inner exceptions — because the dump may never be read and the entry is then all there is.
   `Append` answers false and throws never: a locked file, a path that turns out to be a file, a drive
   that is gone, all lose the entry rather than the crash. Construction validates the path and may
-  throw. It is an `ILogSink`, so it also serves as the sink before the host's logging exists.
+  throw. It is an `ILogSink`, so it also serves as the sink before the host's logging exists:
+  `Info` and `Error` are `Append(message)` and `Append(source, exception)` with the answer
+  discarded.
 
 `ZeroZero.Diagnostics.Dumps`:
 
@@ -63,17 +69,20 @@ them.
   `Full` (the whole process memory). The values are Windows Error Reporting's own.
 - **`DumpRegistration`** — over a hive (`Registry.LocalMachine` for a process that runs elevated) and
   a log. `Arm(policy)` writes `DumpFolder`, `DumpCount` and `DumpType` under
-  `LocalDumps\<executable>`; `Disarm(name)` removes the key; `Apply(policy, armed)` does one or the
-  other according to the flag the application holds; `IsArmed` and `Read` say what is registered.
-  `RemoveResidue(names)` removes the registrations older builds left under other names — the names
-  are the application's history and arrive as parameters. Every removal ends with
-  `RemoveRootIfEmpty`: the shared `LocalDumps` key is deleted once it holds no registration and no
+  `LocalDumpsPath\<executable>` (`SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps`);
+  `Disarm(name)` removes the key; `Apply(policy, armed)` does one or the other according to the flag
+  the application holds; `IsArmed` and `Read` say what is registered, `Read` answering null where
+  there is no registration or an incomplete one. `RemoveResidue(names)` removes the registrations
+  older builds left under other names and returns how many it removed — the names are the
+  application's history and arrive as parameters. Every removal ends with `RemoveRootIfEmpty`, true
+  when it deleted: the shared `LocalDumps` key is deleted once it holds no registration and no
   value, because its mere existence turns dump collection on for every process on the machine, at
   the defaults. A registry refusal is thrown, not hidden.
 - **`DumpRetention.Prune(directory, executable, keep, log)`** — deletes the oldest `<executable>.<pid>.dmp`
-  files beyond `keep`. Windows Error Reporting bounds the count too, but only for the registration it
-  currently holds; a lowered count, a disarmed executable and an older build's name all leave files
-  it never touches again. A file that will not delete is logged and left.
+  files beyond `keep` and returns how many it deleted, zero for a missing directory. Windows Error
+  Reporting bounds the count too, but only for the registration it currently holds; a lowered count,
+  a disarmed executable and an older build's name all leave files it never touches again. A file
+  that will not delete is logged and left.
 
 ## Wire it
 

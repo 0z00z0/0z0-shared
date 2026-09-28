@@ -15,6 +15,8 @@ with notes under `docs/release-notes/config/`; [`releasing.md`](releasing.md) ha
 component that references any of the three can only release once the version it references is on the
 feed, so a change here releases first.
 
+This guide is complete for adoption: the component's own source and tests need not be read.
+
 ## Requirements
 
 | | |
@@ -37,20 +39,32 @@ edit to take effect without a restart.
 
 - **`SettingsFile<T>`** — a typed snapshot read, mutation under one lock, a write that lands whole
   or not at all, and a change event. The snapshot is what callers hold, so a reader never observes a
-  half-applied edit.
-- **`SettingsFileOptions`** — where the file lives, how it serialises, and what to do on failure.
+  half-applied edit. The constructor reads the file at once; `T`'s parameterless defaults stand for
+  a missing file. `Update` writes nothing for a mutation that changes nothing, and a mutation that
+  throws changes nothing and passes the exception on. `Save()` writes whether or not anything
+  changed — how a missing file gets its defaults on disk — and raises no `Changed`; `Reload()`
+  answers true and raises `Changed` only when the disk differs from what is held.
+- **`SettingsFileOptions`** — `Directory` and `FileName`, required, the name with no directory
+  separator; `Serialiser`, `Quarantine` and `NotificationContext` (null: events on the thread that
+  made the change) optional. `DefaultSerialiser` writes indented with enums as names and reads any
+  casing, comments and trailing commas; it is read-only, and `CreateSerialiser()` gives a writable
+  copy to add a converter to.
 - **`SettingsFileQuarantine`** — what happens to a file that cannot be parsed: it is copied aside,
   timestamped and marked `.bad`, *and* the original is overwritten with defaults immediately. That
   happens on every read of the file, so a `Reload` that finds it broken quarantines it exactly as
   construction does. The copy is the only surviving record and the three most recent are kept.
   Nothing surfaces it, so a host should: `SettingsFile<T>.LastQuarantinePath` names the copy, and a
   host that leaves it unread leaves its user without a configuration and with nothing on screen to
-  say so.
+  say so. `Keep` (3; zero keeps no copy) and `Directory` (beside the file) are optional; `Default`
+  and `Off` are the two ready-made policies.
 - **`AtomicFile`** — the write itself, usable on its own: the content goes to a temporary sibling, is
   flushed through to the disk, and only then replaces the target, so neither a crash nor a power loss
   can leave half a file where a whole one was. A replace the operating system refuses for a moment —
   a scanner, an indexer, a closing handle — is attempted five times in all, twenty milliseconds
-  apart: one try and four retries. It never throws; the exception that stopped the write is returned.
+  apart: one try and four retries. `Write` and `WriteText` (UTF-8) create the folder and return null
+  on success. **A file-system failure is returned, not thrown** — `IOException`,
+  `UnauthorizedAccessException` or `NotSupportedException`, the set `IsFileFailure` tests — and
+  anything else, a blank path included, throws.
 
 **A whole-file store is not a document preserver.** Everything the type does not declare is gone at
 its next write: comments, the file's own key order, and any member no property answers to. Reading
@@ -59,7 +73,8 @@ again, so the file after a save is the type's shape and nothing else. That is th
 this simple; where a file has to survive being edited by hand, or is shared with a component this
 build has no type for, the sectioned store below is the one that preserves it.
 - **`SettingsSaveFailedEventArgs`** and **`SettingsSaveResult`** — a failed write is reported, never
-  swallowed.
+  swallowed. A failed result's `Error` says why, and the change it carried is not kept in memory
+  either.
 
 **A file that cannot be read is not written over.** A file that is present but unreadable when the
 store is constructed — held open by another process, or access denied — reads as the declared
@@ -105,7 +120,8 @@ a key belonging in another component's own file is carried where it stands, not 
   build can read it.
 - **`SectionedSettingsOptions`** — the directory and file name, the serialiser, the quarantine
   policy, the notification context, the document version this build writes, and the order sections
-  take.
+  take. Only `Directory` and `FileName` are required; the rest default as the plain store's do,
+  `Version` to 1, and a section missing from `SectionOrder` goes last.
 - **`SettingsMigration`** with `SettingsMigrationRequest`, `SettingsSectionMove`,
   `SettingsMigrationResult` and `SettingsMigrationOutcome` — below.
 
@@ -162,8 +178,9 @@ such a document as one to repair, not one the store has damaged.
 
 A reader takes the last of two keys of the same name, so a build that writes its own spelling beside
 the file's leaves the person's value in the file with nothing reading it. **Every write that would
-create such a pair is refused**, with `SettingsKeyCaseConflictException` naming both spellings and the
-file left exactly as it was. `SaveFailed` announces it like any other refused write.
+create such a pair is refused**, with `SettingsKeyCaseConflictException` naming both spellings —
+`Wanted`, this build's, and `Found`, the document's — and the file left exactly as it was.
+`SaveFailed` announces it like any other refused write.
 
 **A refusal is returned, never raised.** `Update` and `Write` hand back a `SettingsSaveResult`
 carrying the reason and `SaveFailed` announces it; nothing is thrown out of the store. An application
@@ -307,6 +324,10 @@ whose name the old file already uses as a top-level key, or a move whose section
 one the old file carries only in case. A move naming a key the old file does not carry at all is
 ordinary and is simply absent from the result.
 
+A request's `Version` defaults to 1, and with no `Moves` every key is carried where it stands. The
+result's `Error` is set for `SourceUnreadable`, `WriteFailed`, `RequestRefused`, and a `NotProven`
+whose read-back failed.
+
 ## `ZeroZero.Config.Watch` — an edit that takes effect without a restart
 
 A settings file that can be opened in a text editor is only half a promise if the application has to
@@ -327,7 +348,11 @@ watcher.Changed += (_, e) => Reconnect(e.After);
 of the application's own — is wired through `SettingsWatcherOptions<T>`, which asks for the path, a
 way to read what the store holds, a way to tell it to read the file again, and the classifier. A
 fifth, `Obstruction`, is optional and is [below](#when-the-store-can-read-the-file-and-still-see-nothing-in-it).
-The watcher never parses the file, so it needs no knowledge of the document's shape.
+The watcher never parses the file, so it needs no knowledge of the document's shape. It starts
+watching when built and creates the file's folder if absent. `Quiet` (500 ms; a negative one
+throws), `Time` (the system clock) and `NotificationContext` (null: events on the watcher's own
+background threads) are optional on both routes. `Dispose()` stops watching and lets an
+examination already under way finish and report.
 
 ### The classifier, and which way its default falls
 
@@ -345,6 +370,9 @@ remembers to add it, which is a reload that quietly stops firing and a defect no
 - **The mechanism is general; the question is not.** The classifier carries the question it answers,
   because "did anything change?" and "must the connection be rebuilt?" have different answers over
   the same file, and one file may be watched by two classifiers asking different things.
+- The classifier's constructor takes the question, which must not be blank, the skipped names,
+  where an empty list makes every difference count, and optionally a serialiser, `DefaultSerialiser` otherwise.
+  `IsSubstantive(before, after)` compares the two `Fingerprint`s.
 
 ### The application's own writes
 
@@ -383,6 +411,8 @@ than by sleeping for it.
   for a consumer that touches a user interface. All three, because an event whose thread depends on
   why it fired is one nothing correct can be written against: a consumer that has given a context
   never has to ask which thread it is on.
+- The event's `IsSubstantive` is false both for the application's own write and for a change to
+  skipped values alone.
 
 ### When the store can read the file and still see nothing in it
 
@@ -398,7 +428,7 @@ the way, or null when nothing is, asked once per examination after the re-read. 
 carried on every `SettingsChangeEventArgs<T>.Obstruction`, and announced through `Failed` as a
 `SettingsWatchObstructedException` when it first appears and again if it changes — once, not on every
 examination, because an obstruction stands until the file is repaired. Clearing it is not announced:
-the edit that clears it reports itself as a change.
+the edit that clears it reports itself as a change. The exception's `Reason` is the store's sentence.
 
 For a section the reason comes from `SettingsSection<T>.ConflictingKey`, which names the spelling the
 document holds. A whole-file store names none, leaves the delegate unset, and nothing about it

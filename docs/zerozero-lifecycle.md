@@ -12,6 +12,8 @@ The assembly is versioned as `LifecycleVersion` in `Versions.props` and released
 [`releasing.md`](releasing.md) has the procedure. It references the primitives foundation, so it
 releases after `primitives` is on the feed at the version it references.
 
+This guide is complete for adoption: the component's own source and tests need not be read.
+
 ## Requirements
 
 | | |
@@ -51,15 +53,21 @@ releases after `primitives` is on the feed at the version it references.
   The count is on disk because the process keeping it is the one that keeps dying. A file that
   cannot be read or written allows the relaunch and logs the failure: a tray that never comes back
   costs more than one that comes back once too often. A line that does not parse is dropped.
-- **`ProcessLifecycle`** — takes the options and the command line; `IsRelaunch` says whether a
-  previous instance's exit hook started this process. `Arm()` hooks process exit and session
-  ending, once. `MarkDeliberateExit()` says the exit about to happen was asked for. On any process
+  `ProcessLifecycle` builds its own; the limits are fixed, and `TryRecordRelaunch()` records the
+  moment when one more fits.
+- **`ProcessLifecycle`** — takes the options and the command line, the process's own arguments when
+  left out; `IsRelaunch` says whether a previous instance's exit hook started this process. `Arm()`
+  hooks process exit and session ending, once. `MarkDeliberateExit()` says the exit about to happen was asked for. On any process
   exit the hook decides, in this order: a deliberate exit starts nothing; an exit while Windows is
   logging off or shutting down starts nothing; an exit past the limiter's budget starts nothing;
   anything else starts the executable again with the relaunch argument. A deliberate exit and a
   session ending each log a sentence saying so; a relaunch logs what it started, and the budget
   having run out is already the limiter's own line. The decision is the component's own: nothing
   hands it out, so an application that wants to know why it came back reads the log.
+- **`ProcessLifecycleOptions`** — `DataDirectory`, required, the folder `ProductDataPath.Root`
+  gives; `ExecutablePath`, the running executable when left out, where construction throws if the
+  process reports none; `Log`, silent when left out. `RelaunchDecision` is public, but nothing
+  public returns one.
 
 **A crash never reaches the hook.** The runtime raises no exit event for an unhandled exception,
 so relaunch covers the clean exit nobody asked for — a message loop that ended, an exit path taken

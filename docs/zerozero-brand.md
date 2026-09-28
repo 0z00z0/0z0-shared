@@ -13,6 +13,8 @@ tags, with notes under `docs/release-notes/brand/`; [`releasing.md`](releasing.m
 The entry point is `ZeroZero.Brand.WinUI`, which brings `ZeroZero.Brand.Core` with it; a console tool
 takes `ZeroZero.Brand.Core` alone.
 
+This guide is complete for adoption: the component's own source and tests need not be read.
+
 ## Requirements
 
 | | |
@@ -29,17 +31,21 @@ takes `ZeroZero.Brand.Core` alone.
   and the brand palette as hex strings (teal / blue / purple / indigo / amber / steel blue /
   terracotta / orange, plus the two background tones). Each accent is named for the colour itself
   rather than for a job it does in one application, so a second application can take it without
-  inheriting the first one's meaning.
+  inheriting the first one's meaning. Nothing in the component shows `OrgUrl`.
 - **`ExternalLibrary`** — a small record describing a third-party dependency to credit (name, author,
-  purpose, licence, optional URL).
+  purpose, licence, optional URL). With a `Url` the About control links the name; the console
+  banner leaves it out.
 - **`AboutButton`** — a button of the application's own for the About row: a label, which is also
   its accessible name, and an `Action` run on every press.
 - **`AboutInfo`** — the per-app data an About surface needs: app name, version, description, repo
   URL, the address its release notes are fetched from, its list of `ExternalLibrary` credits, and
   its own row buttons as a list of `AboutButton` in `Buttons`. `ReleaseNotesUrl` is optional: leave
   it unset and the built-in "What's new" button does not appear. `Buttons` is empty by default.
+  `AppName`, `Version` — without a `v`, which both surfaces add — and `Description` are required;
+  with no `ExternalLibraries` neither surface shows credits.
 - **`ConsoleBanner`** — prints a plain-ASCII "about" banner to the console for non-UI (CLI) tools,
-  built from an `AboutInfo`.
+  built from an `AboutInfo`: `Print` writes to `Console.Out` and leaves out `ReleaseNotesUrl`,
+  `Buttons` and each credit's `Url`.
 
 ### `ZeroZero.Brand.WinUI`
 
@@ -55,7 +61,8 @@ References `ZeroZero.Brand.Core` and `ZeroZero.Win32`.
   directly inside a host app's own in-navigation page. Call `SetInfo(AboutInfo)` after construction
   to populate it (a method, not a settable property — the WinUI XAML compiler needs a parameterless
   constructor for any type exposed as a public property on a XAML class, which `AboutInfo`'s
-  `required` members deliberately do not have).
+  `required` members deliberately do not have). `ContentResized` is raised whenever its height may
+  have changed; a page host inside a scroll viewer can ignore it.
 - **`BrandAboutWindow`** — the shared, parameterised About popup (320 px wide, Mica backdrop, centred
   on the monitor under the cursor, no title bar, always-on-top). A thin shell hosting
   `BrandAboutControl` plus the tray-app-only "Check for Updates" button. **It closes as soon as it
@@ -247,10 +254,12 @@ About surface that has to stay put is a case for hosting `BrandAboutControl` in 
   **Omit it entirely to hide the "Check for Updates" button** — a console-only tool, or a build with
   no update channel.
 - **`OnBeforeExit`** (`Func<Task<bool>>`) — run just before an update-triggered close so the app can
-  tear down cleanly; return `false` to veto the exit and keep the window open.
+  tear down cleanly; return `false` to veto the exit and keep the window open. Omitted, the window
+  closes once an update is applied; either way ending the process is the host's.
 
 The window owns only chrome and layout; each app keeps its own update-check networking and dialogue
-plumbing and wires it in through these two callbacks.
+plumbing and wires it in through these two callbacks. An exception from either goes to the debug
+output only, and the window stays open.
 
 ### Hosted in the application's own page
 
@@ -317,10 +326,10 @@ only its *rendering* moves to the shared control, not its data.
 - Never shows an update button of its own — there is no `BrandAboutOptions` and no update-flow
   concept at this layer. A page that wants a check for updates places a `BrandBracketButton` beside
   or under the control and drives it from its own update flow.
-- The control supplies the `[Ø]` studio mark, the company name and the tagline itself, from `Brand`'s
-  studio-wide constants. The row reads **Website / Donate / What's new**, then the application's own
-  buttons: Website and Donate always point at the studio's own `Brand.WebsiteUrl` /
-  `Brand.BuyMeACoffeeUrl`, What's new appears only with `ReleaseNotesUrl`, and everything after it
+- The control supplies the `[Ø]` studio mark, the company name and the tagline itself: the header
+  carries them as fixed text, and the copyright footer reads `Brand.StudioName`. The row reads
+  **Website / Donate / What's new**, then the application's own buttons: Website and Donate always
+  point at the studio's own `Brand.WebsiteUrl` / `Brand.BuyMeACoffeeUrl`, What's new appears only with `ReleaseNotesUrl`, and everything after it
   comes from `AboutInfo.Buttons`. An application with its own What's new window leaves
   `ReleaseNotesUrl` unset and supplies an `AboutButton` instead, so the row holds one What's new.
 - **The notes open in the About surface, not a browser.** Plain text, fetched only when the button is
@@ -329,6 +338,9 @@ only its *rendering* moves to the shared control, not its data.
   characters are read and the panel scrolls inside a fixed height. A page host closing or navigating
   away abandons a fetch in flight; a window host calls `CancelPendingFetch()` for the same reason.
   `RepoUrl` is still required and still feeds the console banner — it just no longer has a button.
+- **After the control's first unload, fetched notes never reach it again.** Unloading calls
+  `CancelPendingFetch()` and nothing re-arms it, so every later fetch is discarded and the panel keeps
+  saying it is fetching. A page that needs the notes on every visit builds a new control each time.
 
 ## The bracket action button
 
@@ -361,7 +373,8 @@ UpdateButton.State = available ? BrandBracketButtonState.Attention : BrandBracke
 
 The host owns three members: **`Label`**, the text after the chevron and the accessible name;
 **`State`**, a `BrandBracketButtonState`; and **`Click`**, raised by a pointer press, Enter or Space
-in every state. Both properties are dependency properties, so either can be bound.
+in every state. Both properties are dependency properties, so either can be bound. A null `Symbol`
+shows `DefaultSymbol`, `>`.
 
 | State | Shows |
 |---|---|
@@ -440,7 +453,8 @@ brackets nowhere near each other. `BrandBracketButtonColumn` measures the widest
 out at that width; each button then spreads its brackets to fill it and keeps its symbol and label
 centred between them. The column is only as wide as that widest button, so a host centres or aligns
 the whole group as one thing, and a collapsed button takes no width, no height and no spacing.
-`FillsWidth` is the switch the column throws; a button placed anywhere else never sees it.
+`FillsWidth` is the switch the column throws; a button placed anywhere else never sees it. The
+column's `Spacing` between buttons is 2 by default.
 
 Status (2026-09-18): compiles clean in 0.9.2; first rendered in ChargeKeeper 1.58.2 with brand
 0.9.1 — placement seen, states, animations, reduced motion and theme switching not yet reported.

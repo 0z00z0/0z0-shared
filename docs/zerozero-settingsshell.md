@@ -14,6 +14,8 @@ The assembly is versioned as `SettingsShellVersion` in `Versions.props` and rele
 [`releasing.md`](releasing.md) has the procedure. It references `ZeroZero.Controls.WinUI`, so it
 releases after `controls`, which releases after `win32` and `primitives`.
 
+This guide is complete for adoption: the component's own source and tests need not be read.
+
 ## Requirements
 
 | | |
@@ -43,20 +45,27 @@ client size, the pane width, the page width cap and the page padding.
   on screen; `Rebuild()` discards and builds again every page whose section is not build-once,
   `Rebuild(tag)` one page; `FitToPages()` sizes the window so the tallest page fits. The
   application manages it as a singleton: opens one, hands `Navigate` to whatever wants a section,
-  and lets go of it on `Closed`.
+  and lets go of it on `Closed`, after which `CurrentTag` is null. The constructor builds every page
+  and throws on an empty section list, a blank or repeated tag, an unknown `InitialTag` or a
+  `Build` that returns null; `Navigate` and `Rebuild(tag)` throw on an unknown tag.
 - **`SettingsWindowSetup`** — everything the window takes: `Title`, `Sections`, `InitialTag`
   (the first declared when null), `Theme` (Default follows the application; an application pinned
   to one theme passes it), `RectStore` (none opens centred on the cursor's monitor every time),
   `DefaultClientWidth` and `DefaultClientHeight` (960 × 640), `PaneWidth` (224), `PageMaxWidth`
   (unbounded), `PagePadding` (24, 20, 24, 24), `ProductMark`, `ProductName` and
-  `ProductVersion`. All in device-independent units.
+  `ProductVersion`, and `BackdropTint` (see Theming). All in device-independent units. Only `Title`
+  and `Sections` are required; an unset product field is hidden, and so is the footer when all three
+  are.
 - **`SettingsSection`** — one pane entry and its page: `Tag`, `Label`, `Icon` (an `IconSource`:
   a font glyph, a bitmap or an SVG through `ImageIconSource`), `Build`, `Enter`, `Leave` and
-  `BuildOnce`.
+  `BuildOnce`. `Tag`, `Label` and `Build` are required, and `Tag` is matched case-sensitively.
 - **`IWindowRectStore`** and **`WindowRect`** — where the outer rectangle is kept between runs,
   as four integers in physical pixels behind `Load` and `Save`. The application's own settings
   document, which the shell never sees. Anything either member throws comes back to the
   application.
+- **`BackdropTint`** and **`BackdropColour`** — `Light` and `Dark`, both required, each three bytes
+  or `BackdropColour.Parse` of six hexadecimal digits, `#` optional, no alpha, anything else a
+  `FormatException`. The colour is also the flat fill wherever Mica cannot draw.
 
 ## The lifecycle
 

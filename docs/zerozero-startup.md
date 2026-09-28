@@ -38,6 +38,8 @@ The assembly is versioned as `StartupVersion` in `Versions.props` and released u
 [`releasing.md`](releasing.md) has the procedure. It references the primitives foundation, so it
 releases after `primitives` is on the feed at the version it references.
 
+This guide is complete for adoption: the component's own source and tests need not be read.
+
 ## Requirements
 
 | | |
@@ -52,9 +54,10 @@ releases after `primitives` is on the feed at the version it references.
 - **`TaskIdentity`** — `Current()`: the account name, which the logon trigger takes, and the
   security identifier, which the principal takes. The scheduler accepts neither in the other's
   place.
-- **`StartupTaskOptions`** — `TaskName`, the task's name in the scheduler's root folder and its
-  public identity, which the installer's registration and uninstall must match; `Description`;
-  `ExecutablePath`, the running executable when null; `Arguments`; `VerifyByDemandStart`; `Log`.
+- **`StartupTaskOptions`** — `TaskName`, required, the task's name in the scheduler's root folder
+  and its public identity, which the installer's registration and uninstall must match;
+  `Description`; `ExecutablePath`, the running executable when null; `Arguments`;
+  `VerifyByDemandStart`, off by default; `Log`, silent by default.
 - **`StartupTask`** — the task by name. `IsEnabled` fetches the task directly rather than walking
   the folder, because it is read on every refresh of a tray menu. `Read()` is the whole state.
   `Register()` writes the task as defined below, replacing any of the name. `Enable()` and
@@ -62,14 +65,16 @@ releases after `primitives` is on the feed at the version it references.
   user asked, and a silent no-op would leave the menu showing a change that did not happen.
   `Delete()` removes the task and says whether there was one. `Repair()` is the repair below.
   `DemandStart(wait)` starts the task now and waits for the scheduler to report the run; what it
-  waits for is [below](#what-a-demand-start-waits-for).
+  waits for is [below](#what-a-demand-start-waits-for), and throws like `Enable()` when no task is
+  registered. The constructor opens the scheduler connection, which `Dispose()` releases, and
+  throws where no executable path is given and the process reports none.
 - **`StartupTaskState`** — `Exists`, `Enabled`, `LastRun`, `LastResult` and **`HasEverRun`**. The
   last is the one that matters: a task can exist and be enabled and never once have started the
   executable, and the first two facts say nothing about the third. The scheduler reports
   `0x41303` as the last result of a task that has never run; `StartupTask.NeverRunResult` names it,
   `StartupTask.RunningResult` names the `0x41301` it reports while a run is in flight, and
   `StartupTask.AlreadyRunningResult` names the `0x800710E0` it records when it refuses a start
-  because an instance is already alive.
+  because an instance is already alive. `Read()` of an unregistered task is `StartupTaskState.Absent`.
 - **`StartupTaskRunResult`** — what a demand start came to: whether the run ended within the wait,
   when, with what code, and whether the task was still running when the wait ended. `Succeeded` is
   either a run that ended with zero or a task still running, because a program that stays resident
@@ -81,7 +86,9 @@ releases after `primitives` is on the feed at the version it references.
   application start, where a throw would take the application down over a task it never needed to
   be running. A delegate passed as null is the one exception, and it is an argument error rather
   than a failure: nothing has run yet. `StartupTask.Repair()` keeps the same promise end to end,
-  the current identity read and the state logged afterwards included.
+  the current identity read and the state logged afterwards included. It returns
+  `StartupTaskRepairResult`: the `Outcome`, the `Deviations` found before any rewrite, and the
+  `Error` behind a failure, null otherwise.
 
 ### The definition
 
@@ -168,7 +175,9 @@ that reading would risk killing a running application.
   executable when null; `Arguments`, the relaunch argument the started process reads to tell a
   probe's start from a person's; `StartCause`, required, which is that same answer handed back;
   `Interval`, `UnlockDelay` and `ResumeDelay`, the three probes' timing; `HoldMarkerPath`, required;
-  `RegisterWhen`, the application's check on where it is installed; and `Log`.
+  `RegisterWhen`, the application's check on where it is installed; and `Log`. `TaskName` is
+  required as well; the timings default to the definition below, and a null `RegisterWhen`
+  registers wherever the application runs.
 - **`WatchdogTask`** — the task by name. `Ensure()` writes it where it is absent or has drifted and
   leaves a correct one alone, and never throws. **The constructor checks its arguments and does
   nothing else**: the scheduler connection, the executable path, the marker path and the collision
@@ -188,10 +197,12 @@ that reading would risk killing a running application.
   application against the person's choice costs more than leaving it down. Both cases are logged,
   once each.
 - **`WatchdogStartCause`** and **`WatchdogRestartLimiter`** — the bound on the probe's own restarts,
-  below.
+  below; `WatchdogTask.Restarts` builds the limiter beside the hold marker, and
+  `RecordStart(cause)` answers whether probing may go on.
 - **`WatchdogEnsure`** — the decision over delegates, so it is testable with no scheduler, and
   `WatchdogEnsureResult` with `WatchdogEnsureOutcome`: `Skipped`, `AlreadyCorrect`, `Registered`,
-  `Stopped`, `Failed`.
+  `Stopped`, `Failed`. The result carries the `Deviations` found before any write — the single
+  `WatchdogEnsure.NotRegistered` where there was no task — and the `Error` behind `Failed`.
 
 ### The watchdog definition
 

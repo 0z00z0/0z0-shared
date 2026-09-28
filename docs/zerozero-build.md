@@ -15,6 +15,8 @@ order. This repository builds under the kit itself — `Directory.Build.props`,
 `Directory.Build.targets` and `Directory.Packages.props` here import the same three files a consumer
 imports — so a file that breaks breaks the solution build before it reaches a release.
 
+This guide is complete for adoption: the component's own source and tests need not be read.
+
 ## Requirements
 
 | | |
@@ -27,9 +29,9 @@ imports — so a file that breaks breaks the solution build before it reaches a 
 
 | File | What it is |
 |---|---|
-| `Sdk/ZeroZero.Build.props` | The language settings (`LangVersion` latest, `Nullable` and `ImplicitUsings` enabled, `NeutralLanguage` en-GB) and the studio identity (`Authors`, `Company`, `Copyright`). Defaults: a value set in a project file wins. Also `ZeroZeroBuildDir`, the folder the kit's other files are reached from. |
-| `Sdk/ZeroZero.Packages.props` | Central package management switched on, `VersionOverride` switched off, and the family's pins — the table under [Third-party pins in `consuming.md`](consuming.md#third-party-pins). |
-| `Sdk/ZeroZero.WinUIApp.props` | The unpackaged WinUI application block, imported by an application project at the top of its own file: `OutputType` WinExe, the Windows target framework and minimum platform, `UseWinUI`, `WindowsPackageType` None, `EnableMsixTooling` false, `WinUISDKReferences` false, a `RuntimeIdentifier` from the process architecture, `DefaultLanguage` en-GB, and the manifest wiring below. |
+| `Sdk/ZeroZero.Build.props` | The language settings (`LangVersion` latest, `Nullable` and `ImplicitUsings` enabled, `NeutralLanguage` en-GB) and the studio identity (`Authors`, `Company`, `Copyright`). Defaults: a value set in a project file wins. Also `ZeroZeroBuildDir`, the folder the kit's other files are reached from. `AssemblyTitle`, `Product`, `Description`, repository URLs and licence are left to the project. |
+| `Sdk/ZeroZero.Packages.props` | Central package management switched on, `VersionOverride` switched off, and the family's pins — the table under [Third-party pins in `consuming.md`](consuming.md#third-party-pins), each declared as a `ZeroZeroFamilyPin` item that `ZZB006` checks. |
+| `Sdk/ZeroZero.WinUIApp.props` | The unpackaged WinUI application block, imported by an application project at the top of its own file: `OutputType` WinExe, the Windows target framework (`net10.0-windows10.0.26100.0`) and minimum platform (`10.0.17763.0`), `UseWinUI`, `WindowsPackageType` None, `EnableMsixTooling` false, `WinUISDKReferences` false, a `RuntimeIdentifier` from the process architecture, `DefaultLanguage` en-GB, and the manifest wiring below. |
 | `Sdk/ZeroZero.Build.targets` | The guards, the manifest writer and the signing step. |
 | `templates/app.manifest` | The application manifest with two tokens: `{AssemblyName}` and `{ExecutionLevel}`. It declares Windows 10 and 11 support, per-monitor-v2 DPI awareness and the common-controls-6 dependency the task dialog in `ZeroZero.Win32` needs. |
 | `templates/Directory.Build.rsp` | The family's MSBuild switches, to copy to a consuming repository's root. It carries `-nodeReuse:false`, which ends the worker nodes with the build rather than leaving each one and its console host running for the next fifteen minutes. Node reuse is the one setting here that cannot be a property: MSBuild settles it before any project file is evaluated, so a response file is the only shape it has. What the file decides and what it cannot is [below](#what-the-response-file-governs-and-what-it-does-not). |
@@ -169,10 +171,11 @@ The publish output is signed when a certificate is named, and nothing happens wh
 | Property | Meaning |
 |---|---|
 | `ZeroZeroSignThumbprint` | A certificate in `Cert:\CurrentUser\My` or `Cert:\LocalMachine\My`. |
-| `ZeroZeroSignPfx` | A PFX file instead. Its password is `ZeroZeroSignPfxPassword`, which reaches the script as the environment variable `ZEROZERO_SIGN_PFX_PASSWORD` and never as an argument. |
+| `ZeroZeroSignPfx` | A PFX file instead. Its password is `ZeroZeroSignPfxPassword`, which reaches the script as the environment variable `ZEROZERO_SIGN_PFX_PASSWORD` and never as an argument. Ignored where `ZeroZeroSignThumbprint` is also set. |
 | `ZeroZeroSignFile` | What to sign; defaults to `<PublishDir><AssemblyName>.exe`. |
 | `ZeroZeroSignTimestampServer` | Another timestamp server than the script's default. It must answer the old Authenticode timestamp protocol, which is what the signing call speaks: an authority that does not answer, or serves only RFC 3161, leaves the file signed and untimestamped, and the script then fails with `ZZS013` naming it rather than shipping that file. `ZeroZeroSignNoTimestamp` true skips timestamping, and is then the only way a build produces an untimestamped signature. |
 | `ZeroZeroSignTrust` | Installs the certificate into the current user's Root and TrustedPublisher stores before signing, so a self-signed certificate verifies as Valid on a fresh runner. |
+| `ZeroZeroSigningScript` | The script the step runs; defaults to the kit's `scripts/Sign-Executable.ps1`. |
 
 ```powershell
 $env:ZeroZeroSignPfxPassword = $env:SIGNING_PASSWORD
@@ -193,6 +196,10 @@ on either route:
 $script = dotnet msbuild App\App.csproj -getProperty:ZeroZeroSigningScript
 pwsh $script -Path .\Output\App-Setup.exe -Thumbprint $thumbprint
 ```
+
+The script takes `-Path`, one or more files, and exactly one of `-Thumbprint` or `-PfxPath`, whose
+password it reads from `ZEROZERO_SIGN_PFX_PASSWORD`; `-TimestampServer`, `-NoTimestamp` and `-Trust`
+mirror the properties above.
 
 ### What stays in the application
 
