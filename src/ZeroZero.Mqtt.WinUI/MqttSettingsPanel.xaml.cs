@@ -239,6 +239,9 @@ public sealed partial class MqttSettingsPanel : UserControl
         EncryptionCard.Header = _strings.Get("RowEncryption");
         EncryptionDescription.Text = _strings.Get("DescEncryption");
         SetInfo(EncryptionInfoIcon, _strings.Get("SubjectEncryption"), _strings.Get("InfoEncryption"));
+        TrustCard.Header = _strings.Get("RowCertificateTrust");
+        TrustDescription.Text = _strings.Get("DescCertificateTrust");
+        SetInfo(TrustInfoIcon, _strings.Get("SubjectCertificateTrust"), _strings.Get("InfoCertificateTrust"));
         UsernameCard.Header = _strings.Get("RowUsername");
         UsernameDescription.Text = _strings.Get("DescUsername");
         SetInfo(UsernameInfoIcon, _strings.Get("SubjectUsername"), _strings.Get("InfoUsername"));
@@ -481,8 +484,8 @@ public sealed partial class MqttSettingsPanel : UserControl
         PortCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("PortCustom") });
     }
 
-    /// <summary>The transport and encryption dropdowns. Their order is the enum's, so the read-back is
-    /// positional and there is no lookup table to disagree with either end.</summary>
+    /// <summary>The transport, encryption and certificate-trust dropdowns. Their order is the enum's,
+    /// so the read-back is positional and there is no lookup table to disagree with either end.</summary>
     private void BuildModeCombos()
     {
         TransportCombo.Items.Clear();
@@ -494,6 +497,12 @@ public sealed partial class MqttSettingsPanel : UserControl
         EncryptionCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("OptionAutomatic") });
         EncryptionCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("ToggleOn") });
         EncryptionCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("ToggleOff") });
+
+        TrustCombo.Items.Clear();
+        TrustCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("TrustSystem") });
+        TrustCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("TrustThumbprint") });
+        TrustCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("TrustCertificate") });
+        TrustCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("TrustAcceptAny") });
     }
 
     private int PortCustomIndex => PortCombo.Items.Count - 1;
@@ -507,9 +516,11 @@ public sealed partial class MqttSettingsPanel : UserControl
         if (PasswordBox.Password != _edits.Password) PasswordBox.Password = _edits.Password;
         SetText(PrefixBox, _edits.DiscoveryPrefix);
         SetText(PortCustomBox, _edits.TypedPort);
+        SetText(TrustValueBox, _edits.TrustValue);
 
         TransportCombo.SelectedIndex = (int)_edits.Transport;
         EncryptionCombo.SelectedIndex = (int)_edits.Encryption;
+        TrustCombo.SelectedIndex = (int)_edits.TrustMode;
         PortCombo.SelectedIndex = _edits.PortMode switch
         {
             MqttPortMode.Offered => IndexOfOfferedPort(_edits.OfferedPort) + 1,
@@ -539,10 +550,13 @@ public sealed partial class MqttSettingsPanel : UserControl
         _edits.Password = PasswordBox.Password ?? "";
         _edits.DiscoveryPrefix = PrefixBox.Text ?? "";
         _edits.TypedPort = PortCustomBox.Text ?? "";
+        _edits.TrustValue = TrustValueBox.Text ?? "";
         _edits.Transport = TransportCombo.SelectedIndex < 0
             ? MqttTransportMode.Auto : (MqttTransportMode)TransportCombo.SelectedIndex;
         _edits.Encryption = EncryptionCombo.SelectedIndex < 0
             ? MqttEncryptionMode.Auto : (MqttEncryptionMode)EncryptionCombo.SelectedIndex;
+        _edits.TrustMode = TrustCombo.SelectedIndex < 0
+            ? MqttCertificateTrustMode.System : (MqttCertificateTrustMode)TrustCombo.SelectedIndex;
 
         int index = PortCombo.SelectedIndex;
         if (index <= 0) _edits.PortMode = MqttPortMode.Automatic;
@@ -584,9 +598,13 @@ public sealed partial class MqttSettingsPanel : UserControl
         PortCustomBox.Visibility = _edits.PortMode == MqttPortMode.Custom
             ? Visibility.Visible : Visibility.Collapsed;
 
+        var port = _edits.ValidatePort();
+        PortErrorText.Text = port.Message ?? "";
+        PortErrorText.Visibility = port.Message is null ? Visibility.Collapsed : Visibility.Visible;
+
+        RefreshTrustFields();
+
         var validation = _edits.Validate();
-        PortErrorText.Text = validation.Message ?? "";
-        PortErrorText.Visibility = validation.Message is null ? Visibility.Collapsed : Visibility.Visible;
 
         // One gate, both buttons. A green test that vouched for a configuration Apply would refuse is
         // worse than no test at all.
@@ -603,6 +621,29 @@ public sealed partial class MqttSettingsPanel : UserControl
 
         TestProgress.IsActive = _probe.Busy;
         TestProgress.Visibility = _probe.Busy ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>Shows the pinned-value box only for the two entries that name a certificate, and puts
+    /// on the line below it either that box's fault or what the last entry gives up.</summary>
+    /// <remarks>One line for both, because they cannot be wanted at once: the entry that gives
+    /// something up carries no value that could be wrong, and a pinned entry gives nothing up.</remarks>
+    private void RefreshTrustFields()
+    {
+        bool pinned = _edits.TrustMode is MqttCertificateTrustMode.Thumbprint
+                                       or MqttCertificateTrustMode.Certificate;
+
+        TrustValueBox.Visibility = pinned ? Visibility.Visible : Visibility.Collapsed;
+        if (pinned)
+            TrustValueBox.PlaceholderText = _strings.Get(
+                _edits.TrustMode == MqttCertificateTrustMode.Thumbprint
+                    ? "PlaceholderThumbprint" : "PlaceholderCertificate");
+
+        string note = _edits.TrustMode == MqttCertificateTrustMode.AcceptAny
+            ? _strings.Get("TrustAcceptAnyNote")
+            : _edits.ValidateTrust().Message ?? "";
+
+        TrustNoteText.Text = note;
+        TrustNoteText.Visibility = note.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
     }
 
     /// <summary>Commits the whole staged block at once, so the connection reconnects per Apply click
@@ -817,7 +858,6 @@ public sealed partial class MqttSettingsPanel : UserControl
 
         try
         {
-            var saved = setup.Settings.Read();
             var target = new MqttProbeTarget(
                 Host: request.Host,
                 Port: request.Port,
@@ -830,8 +870,9 @@ public sealed partial class MqttSettingsPanel : UserControl
                 // the sweep order of the live connection, which is precisely what it promises not to
                 // do.
                 Memory: Memory(),
-                // Under the same trust the connection uses, or a probe passes where the link fails.
-                CertificateTrust: saved.CertificateTrust);
+                // The trust in the field rather than the saved one, like every other value here: a
+                // test that vouched for trust the connection will not use answers about nothing.
+                CertificateTrust: _edits.Trust);
 
             // The sweep's churn is the only visible evidence of several seconds of work, so every
             // candidate replaces the line and nothing is debounced. Reported from whichever thread

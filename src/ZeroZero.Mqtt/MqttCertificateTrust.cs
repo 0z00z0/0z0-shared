@@ -16,6 +16,10 @@ public enum MqttCertificateTrustMode
 
     /// <summary>One named certificate, matched byte for byte.</summary>
     Certificate,
+
+    /// <summary>Whatever the far end presents. The link is still encrypted, and no longer proves
+    /// which machine is at the other end.</summary>
+    AcceptAny,
 }
 
 /// <summary>What a broker presented, reduced to the three facts a trust decision turns on. Pure
@@ -37,9 +41,10 @@ public readonly record struct MqttPresentedCertificate(
 /// encryption forced on against a broker with a self-signed certificate cannot connect without
 /// one, and the failure otherwise reads as "the connection failed" with no route to a fix.</summary>
 /// <remarks>
-/// Pinning is deliberately exact rather than a blanket "accept anything": a link that accepts every
-/// certificate is encrypted against a passive listener and open to an active one, which is the
-/// failure mode the setting exists to close.
+/// Pinning is exact: the pinned modes accept one certificate and refuse every other, so the link
+/// proves which machine answered. <see cref="MqttCertificateTrustMode.AcceptAny"/> is the last
+/// resort for a broker whose certificate cannot be made to verify, and it gives that proof up — the
+/// traffic stays encrypted against a listener and is open to a far end that substituted itself.
 /// </remarks>
 public sealed record MqttCertificateTrust
 {
@@ -54,9 +59,12 @@ public sealed record MqttCertificateTrust
     /// <see cref="MqttCertificateTrustMode.Certificate"/>.</summary>
     public string Certificate { get; init; } = "";
 
-    /// <summary>The platform's own stores decide. The default, and the only mode that needs no
-    /// value alongside it.</summary>
+    /// <summary>The platform's own stores decide. The default.</summary>
     public static MqttCertificateTrust SystemTrust { get; } = new();
+
+    /// <summary>Every certificate is accepted. Needs no value alongside it, as
+    /// <see cref="SystemTrust"/> does not.</summary>
+    public static MqttCertificateTrust AcceptAny { get; } = new() { Mode = MqttCertificateTrustMode.AcceptAny };
 
     public static MqttCertificateTrust ForThumbprint(string thumbprint) =>
         new() { Mode = MqttCertificateTrustMode.Thumbprint, Thumbprint = thumbprint };
@@ -90,6 +98,9 @@ public sealed record MqttCertificateTrust
 
         MqttCertificateTrustMode.Certificate =>
             DecodeCertificate() is { } wanted && wanted.AsSpan().SequenceEqual(presented.RawData.Span),
+
+        // Nothing is read off the certificate, so the platform's verdict does not enter into it.
+        MqttCertificateTrustMode.AcceptAny => true,
 
         _ => presented.SystemTrusted,
     };

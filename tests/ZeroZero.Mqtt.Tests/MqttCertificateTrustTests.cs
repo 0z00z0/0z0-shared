@@ -6,8 +6,8 @@ using Xunit;
 namespace ZeroZero.Mqtt.Tests;
 
 /// <summary>Which certificate an encrypted link accepts. Pure, so the decision is pinned without a
-/// handshake — and pinning must be exact, because a trust setting that accepts anything is
-/// encryption against a passive listener and nothing against an active one.</summary>
+/// handshake. Pinning is exact — a pinned mode accepts one certificate and refuses every other —
+/// and only the mode that pins nothing takes a certificate the platform rejects.</summary>
 public class MqttCertificateTrustTests
 {
     private static X509Certificate2 SelfSigned(string name)
@@ -32,6 +32,16 @@ public class MqttCertificateTrustTests
 
         Assert.True(MqttCertificateTrust.SystemTrust.Accepts(Presented(certificate, systemTrusted: true)));
         Assert.False(MqttCertificateTrust.SystemTrust.Accepts(Presented(certificate, systemTrusted: false)));
+    }
+
+    [Fact]
+    public void AcceptingAnyCertificate_TakesOneThePlatformRejects()
+    {
+        using var certificate = SelfSigned("broker.invalid");
+
+        Assert.True(MqttCertificateTrust.AcceptAny.Accepts(Presented(certificate, systemTrusted: false)));
+        // Nothing is pinned, so there is no value whose absence could make it unusable.
+        Assert.Null(MqttCertificateTrust.AcceptAny.Validate());
     }
 
     [Fact]
@@ -104,6 +114,7 @@ public class MqttCertificateTrustTests
         using var certificate = SelfSigned("broker.invalid");
 
         Assert.Null(MqttCertificateTrust.SystemTrust.Validate());
+        Assert.Null(MqttCertificateTrust.AcceptAny.Validate());
         Assert.Null(MqttCertificateTrust.ForThumbprint(certificate.Thumbprint).Validate());
         Assert.Null(MqttCertificateTrust.ForCertificate(certificate).Validate());
     }
