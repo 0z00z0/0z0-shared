@@ -137,6 +137,24 @@ public sealed class MqttStrings
             ["ToggleOn"]         = "On",
             ["ToggleOff"]        = "Off",
 
+            // The four certificate-trust choices, in the order the dropdown lists them. Each names
+            // what is accepted rather than how it is matched, and the last sits at the bottom
+            // because it is what is reached for once nothing above it can be made to work.
+            ["TrustSystem"]      = "Certificates this machine trusts",
+            ["TrustThumbprint"]  = "One certificate, by thumbprint",
+            ["TrustCertificate"] = "One certificate, pasted in full",
+            ["TrustAcceptAny"]   = "Any certificate the broker presents",
+
+            // The line under that dropdown. The note is not a fault: it is the one choice that drops
+            // a protection, so it says which one, in the place a mistyped pin reports its own.
+            ["TrustAcceptAnyNote"]   = "The traffic stays encrypted, and nothing checks that the "
+                                  + "broker is the machine it claims to be. The last resort for a "
+                                  + "certificate that cannot be made to verify.",
+            ["TrustNotAThumbprint"]  = "A thumbprint is the certificate's fingerprint in hexadecimal "
+                                  + "— digits and the letters A to F.",
+            ["TrustNotACertificate"] = "A pasted certificate is its base64 text, as a certificate "
+                                  + "viewer exports it.",
+
             // The device-id dialogue. The acknowledgement names the mechanism rather than one
             // application's consequence of it, so it stays true for a consumer with no automations;
             // a host with a sharper consequence supplies its own line beside it.
@@ -172,6 +190,7 @@ public sealed class MqttStrings
             ["RowPort"]              = "Port",
             ["RowTransport"]         = "Transport",
             ["RowEncryption"]        = "Encrypted connection",
+            ["RowCertificateTrust"]  = "Certificate trust",
             ["RowUsername"]          = "Username",
             ["RowPassword"]          = "Password",
             ["RowDiscoveryPrefix"]   = "Discovery prefix",
@@ -184,6 +203,8 @@ public sealed class MqttStrings
             // Placeholders. A host name has to be an example rather than an address.
             ["PlaceholderHost"] = "e.g. mqtt.example.com",
             ["PlaceholderPort"] = "1-65535",
+            ["PlaceholderThumbprint"]  = "40 hexadecimal digits, any spacing",
+            ["PlaceholderCertificate"] = "The certificate as base64",
 
             // Row descriptions: the one-line consequence, never a restatement of the label. A row
             // whose description could only repeat its own header — Host — has none, because it reads
@@ -192,6 +213,7 @@ public sealed class MqttStrings
             ["DescPort"]            = "Automatic tries the standard ports.",
             ["DescTransport"]       = "TCP direct, or WebSocket through a proxy.",
             ["DescEncryption"]      = "Encrypts traffic to the broker.",
+            ["DescCertificateTrust"] = "Applies only while the connection is encrypted.",
             ["DescUsername"]        = "Leave blank for anonymous access.",
             ["DescPassword"]        = "Leave blank for anonymous access.",
             ["DescDiscoveryPrefix"] = "Prefix for discovery topics. Change only for a consumer that listens elsewhere.",
@@ -254,6 +276,13 @@ public sealed class MqttStrings
                                   + "password or an untrusted certificate ends the search instead. A choice "
                                   + "made by hand is always used, and a host typed as a wss:// address is "
                                   + "encrypted whatever this is set to.",
+            ["InfoCertificateTrust"] = "A broker carrying a certificate of its own making is refused "
+                                  + "by the certificates this machine trusts, and naming that one "
+                                  + "certificate is what connects to it. A thumbprint is the "
+                                  + "fingerprint a certificate viewer shows, matched whatever its "
+                                  + "spacing; the pasted form is the certificate's own base64. Both "
+                                  + "accept that certificate and refuse every other, so a broker "
+                                  + "that cannot present it is not connected to.",
             ["InfoUsername"]      = "Changing the username starts the search for the broker endpoint "
                                   + "again: a broker often serves a separate listener per account.",
             ["InfoPassword"]      = "Never written to the log, and never published.",
@@ -290,6 +319,7 @@ public sealed class MqttStrings
             ["SubjectPort"]            = "the broker port",
             ["SubjectTransport"]       = "the transport",
             ["SubjectEncryption"]      = "the encrypted connection",
+            ["SubjectCertificateTrust"] = "certificate trust",
             ["SubjectUsername"]        = "the broker username",
             ["SubjectPassword"]        = "the broker password",
             ["SubjectDiscoveryPrefix"] = "the discovery prefix",

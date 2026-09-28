@@ -927,11 +927,23 @@ reads as "the connection failed" with no route to a fix:
 MqttCertificateTrust.SystemTrust                    // the platform's own stores
 MqttCertificateTrust.ForThumbprint("A1 B2 C3 …")    // SHA-1, any spacing or case
 MqttCertificateTrust.ForCertificate(base64OrCert)   // byte for byte
+MqttCertificateTrust.AcceptAny                      // whatever the far end presents
 ```
 
-Pinning is exact rather than a blanket "accept anything": a link that accepts every certificate is
-encrypted against a passive listener and open to an active one. An unusable pin refuses rather than
-falling through to platform validation.
+Pinning is exact: a pinned mode accepts one certificate and refuses every other, so the link still
+proves which machine answered. An unusable pin refuses rather than falling through to platform
+validation.
+
+`AcceptAny` gives that proof up. The traffic stays encrypted against anything listening, and nothing
+checks that the broker is the machine it claims to be, so a far end that answered in its place is
+accepted too. It is the last resort for a broker whose certificate cannot be made to verify, and it
+is what other MQTT tools offer as ignoring certificate validation. Like `SystemTrust` it needs no
+value alongside it, and `Validate()` passes it as it stands.
+
+The settings panel offers all four as its **Certificate trust** row, under **Encrypted connection**.
+The two pinned modes show a box for the thumbprint or the base64 certificate, and Apply and Test are
+both refused while that box is empty. The last entry shows one line saying what choosing it gives
+up.
 
 ### The endpoint sweep
 

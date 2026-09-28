@@ -55,9 +55,10 @@ internal static class MqttClientWiring
         // certificate is expected to name.
         if (address.Transport == MqttTransport.Tcp) options.WithTargetHost(address.Host);
 
-        // A pinned certificate is checked by the handler alone, so the platform's verdict must not
-        // reject it first. Under system trust nothing is relaxed: the handler is installed only to
-        // witness the certificate, and its verdict is the platform's own answer unchanged.
+        // Every mode but system trust answers from the setting rather than from the chain, so the
+        // platform's verdict must not reject the certificate before the handler is asked. Under
+        // system trust nothing is relaxed: the handler is installed only to witness the
+        // certificate, and its verdict is the platform's own answer unchanged.
         if (trust.Mode != MqttCertificateTrustMode.System)
         {
             options.WithAllowUntrustedCertificates(true);

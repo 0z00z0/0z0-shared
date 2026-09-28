@@ -360,6 +360,30 @@
                         </StackPanel>
                     </controls:SettingsCard>
 
+                    <!-- Directly under Encryption, because it decides nothing while the link is in
+                         clear text. Shaped like Port rather than like Transport: the two entries
+                         that name a certificate need a value, so the box below the dropdown appears
+                         for those two and the line below it carries either that box's fault or what
+                         the last entry gives up. -->
+                    <controls:SettingsCard x:Name="TrustCard">
+                        <controls:SettingsCard.Description>
+                            <TextBlock x:Name="TrustDescription" Style="{StaticResource MqttHintStyle}"/>
+                        </controls:SettingsCard.Description>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <shared:InfoIcon x:Name="TrustInfoIcon"/>
+                            <StackPanel Spacing="4" HorizontalAlignment="Right">
+                                <ComboBox x:Name="TrustCombo" Style="{StaticResource MqttComboFieldStyle}"
+                                          SelectionChanged="OnBrokerSelectionChanged"/>
+                                <TextBox x:Name="TrustValueBox" Style="{StaticResource MqttTextFieldStyle}"
+                                         Visibility="Collapsed" TextChanged="OnBrokerFieldEdited"/>
+                                <TextBlock x:Name="TrustNoteText" Visibility="Collapsed"
+                                           Style="{StaticResource MqttHintStyle}"
+                                           Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                           Width="{StaticResource MqttFieldWidth}" TextAlignment="Right"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </controls:SettingsCard>
+
                     <!-- The credentials sit below the addressing: they decide whether the broker
                          accepts the session, never which door it knocks on. -->
                     <controls:SettingsCard x:Name="UsernameCard">
