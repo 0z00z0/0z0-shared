@@ -12,10 +12,11 @@ public class UnattendedUpdatePolicyTests
     private readonly RecordingLogSink _log = new();
     private int _shutdowns;
 
-    private UnattendedUpdatePolicy Policy(bool enabled = true, Func<ReleaseInfo, InstallMoment>? mayInstallNow = null) =>
+    private UnattendedUpdatePolicy Policy(bool enabled = true, Func<ReleaseInfo, InstallMoment>? mayInstallNow = null, CheckCadence cadence = CheckCadence.Periodic) =>
         new(_service, new UnattendedUpdateOptions
         {
             Enabled = enabled,
+            Cadence = cadence,
             MayInstallNow = mayInstallNow,
             Shutdown = () => _shutdowns++,
             Log = _log,
@@ -107,5 +108,23 @@ public class UnattendedUpdatePolicyTests
         Assert.Equal(0, _service.Prepares);
         Assert.Equal(0, _service.Launches);
         Assert.Equal(0, _shutdowns);
+    }
+
+    /// <summary>The guard on <see cref="CheckCadence.Once"/>: the single check is spent whatever it
+    /// finds, a failure included, so a later tick never checks again — the one thing a periodic
+    /// interval cannot express at any value.</summary>
+    [Fact]
+    public async Task CheckCadenceOnce_NoLaterTickChecksAgain_EvenAfterACheckThatFailed()
+    {
+        _service.CheckResult = new UpdateCheckResult(UpdateCheckOutcome.Unreachable, new Version(1, 0, 0, 0));
+        UnattendedUpdatePolicy policy = Policy(cadence: CheckCadence.Once);
+
+        UnattendedTick first = await policy.TickAsync();
+        Assert.Equal(UnattendedOutcome.CheckFailed, first.Outcome);
+        Assert.Equal(1, _service.Checks);
+
+        UnattendedTick second = await policy.TickAsync();
+        Assert.Equal(UnattendedOutcome.NotDue, second.Outcome);
+        Assert.Equal(1, _service.Checks);
     }
 }

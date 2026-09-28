@@ -47,7 +47,9 @@ public sealed record UnattendedTick(UnattendedOutcome Outcome, string Reason = "
 /// The scheduler ticks at <see cref="UnattendedUpdateOptions.RetryInterval"/> and each tick decides
 /// what is due, so one short tick serves both a check on its cadence and a retry of what did not
 /// finish. A verified installer is held between ticks, so a refused moment costs no second
-/// download.
+/// download. <see cref="CheckCadence"/> governs checking only: under <see cref="CheckCadence.Once"/>
+/// the ticks go on for as long as the scheduler runs, retrying a moment that was refused or an
+/// installer that could not start, and simply find no check due once the one check has run.
 /// </remarks>
 public sealed class UnattendedUpdatePolicy : IDisposable
 {
@@ -71,6 +73,10 @@ public sealed class UnattendedUpdatePolicy : IDisposable
     private PreparedUpdate? _prepared;
     private string? _refusal;
     private bool _handedOver;
+
+    // Set the moment the one check under CheckCadence.Once is attempted, before its outcome is
+    // known: "no further check, whatever happens" has to cover a failure, not just a success.
+    private bool _onceChecked;
 
     /// <param name="idle">What reads the machine; the session this process runs in when null.</param>
     /// <param name="time">Where the cadence reads the clock; the system clock when null.</param>
@@ -117,6 +123,7 @@ public sealed class UnattendedUpdatePolicy : IDisposable
             if (_release is null)
             {
                 if (!CheckDue) return new UnattendedTick(UnattendedOutcome.NotDue);
+                if (_options.Cadence == CheckCadence.Once) _onceChecked = true;
 
                 UpdateFlowRun run = await _flow.RunAsync(UpdateTrigger.Silent, cancellationToken).ConfigureAwait(false);
                 if (run.Result == UpdateFlowResult.CheckFailed)
@@ -167,7 +174,10 @@ public sealed class UnattendedUpdatePolicy : IDisposable
 
     public void Dispose() => _scheduler?.Dispose();
 
-    private bool CheckDue => _checkedAt is not { } last || _time.GetUtcNow() - last >= _options.CheckInterval;
+    private bool CheckDue =>
+        _options.Cadence == CheckCadence.Once
+            ? !_onceChecked
+            : _checkedAt is not { } last || _time.GetUtcNow() - last >= _options.CheckInterval;
 
     /// <summary>A locked screen is free at once; otherwise the machine must have gone untouched for
     /// <see cref="RequiredIdle"/>.</summary>
