@@ -15,9 +15,36 @@ namespace ZeroZero.Mqtt.WinUI;
 /// every consumer and is the module's, so no host writes what a transport is or what the discovery
 /// prefix controls. What an application publishes is the opposite — the module knows none of it,
 /// including how to describe the publish section as a whole.</para>
+/// <para>Four members describe the live connection rather than the application:
+/// <see cref="Activity"/>, <see cref="ConnectionState"/>, <see cref="RecallEndpoint"/> and
+/// <see cref="PublishNow"/>. <see cref="MqttPanelSetup(MqttConnection)"/> takes all four from the
+/// connection itself; a host with no <see cref="MqttConnection"/> to hand sets them one by one.</para>
 /// </remarks>
 public sealed class MqttPanelSetup
 {
+    /// <summary>A setup whose four connection members the host sets one by one.
+    /// <see cref="MqttSettingsPanel.Initialise"/> refuses it while <see cref="Activity"/>,
+    /// <see cref="ConnectionState"/> or <see cref="PublishNow"/> is unset.</summary>
+    public MqttPanelSetup() { }
+
+    /// <summary>A setup that reads <see cref="Activity"/>, <see cref="ConnectionState"/>,
+    /// <see cref="RecallEndpoint"/> and <see cref="PublishNow"/> from
+    /// <paramref name="connection"/> for as long as the panel lives. Any of the four set in the object
+    /// initialiser as well replaces the connection's.</summary>
+    /// <remarks>Each accessor asks the connection at the moment it is called, so the Connection row,
+    /// the Broker in use row and the closed Broker line all describe the same link. Wiring the four by
+    /// hand leaves room for one of them to describe something else — typically an endpoint accessor
+    /// left out, under which the Connection row reads connected while the other two say nothing has
+    /// been found.</remarks>
+    public MqttPanelSetup(MqttConnection connection)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        Activity = connection.Activity;
+        ConnectionState = () => connection.State;
+        RecallEndpoint = () => connection.RememberedEndpoint;
+        PublishNow = connection.PublishNowAsync;
+    }
+
     /// <summary>The module's entire storage dependency. The panel reads through it and writes through
     /// it; it never sees a settings file or a host's own settings class.</summary>
     public required IMqttSettingsStore Settings { get; init; }
@@ -30,17 +57,21 @@ public sealed class MqttPanelSetup
     /// name. The panel composes no other topic.</summary>
     public required string TopicRoot { get; init; }
 
+    // The three connection members below are not `required`: the compiler's check is all-or-nothing,
+    // so a constructor that fills them would waive the five host members above as well. Initialise
+    // makes the check instead, through EnsureConnectionMembers.
+
     /// <summary>When something last reached the broker, and what the broker last asked for. Written
     /// from the MQTT threads, read here from the UI thread; each slot is swapped atomically.</summary>
-    public required MqttActivity Activity { get; init; }
+    public MqttActivity Activity { get; init; } = null!;
 
     /// <summary>What the connection is doing. Asked rather than held: the link comes and goes on its
     /// own, so a cached answer is stale the moment the page stops looking.</summary>
-    public required Func<MqttConnectionState> ConnectionState { get; init; }
+    public Func<MqttConnectionState> ConnectionState { get; init; } = null!;
 
     /// <summary>The on-demand republish behind "Publish now". Awaited on the UI thread; the
     /// continuation resumes there. False means nothing reached the broker.</summary>
-    public required Func<Task<bool>> PublishNow { get; init; }
+    public Func<Task<bool>> PublishNow { get; init; } = null!;
 
     /// <summary>Raised when something the connection is built from has been committed — the master
     /// switch, the Apply batch, the device name, or the device id. Exactly one reconnect attempt per
@@ -59,9 +90,11 @@ public sealed class MqttPanelSetup
 
     /// <summary>Where the broker last answered, so the Status rows can say what the connection landed
     /// on. Read-only: the panel never writes endpoint memory, not even after a successful test.</summary>
-    /// <remarks>The same accessor the connection is given through
-    /// <see cref="MqttConnectionSetup.RecallEndpoint"/>. Reading it here and writing it there is what
-    /// keeps a test connection from changing the sweep order of the live one.</remarks>
+    /// <remarks>Taken from the connection's own <see cref="MqttConnection.RememberedEndpoint"/> by
+    /// <see cref="MqttPanelSetup(MqttConnection)"/>; set by hand, the same accessor the connection is
+    /// given through <see cref="MqttConnectionSetup.RecallEndpoint"/>. Either way the panel only
+    /// reads it, which is what keeps a test connection from changing the sweep order of the live
+    /// one.</remarks>
     public Func<MqttEndpointMemory?>? RecallEndpoint { get; init; }
 
     /// <summary>The display name published for this machine when the Device name box is empty, shown
@@ -106,4 +139,23 @@ public sealed class MqttPanelSetup
     /// the publisher falls back to cannot disagree.</summary>
     internal string ResolvedDefaultDeviceName =>
         DefaultDeviceName ?? $"{TopicRoot} ({Environment.MachineName})";
+
+    /// <summary>Refuses a setup built without the connection whose three non-optional connection
+    /// members are not all set, naming the first one missing. Loud at Initialise rather than a null
+    /// dereference on the first Status refresh or the first press of Publish now.</summary>
+    /// <exception cref="ArgumentException">One of the three is unset.</exception>
+    internal void EnsureConnectionMembers(string paramName)
+    {
+        string? missing =
+            Activity is null ? nameof(Activity)
+            : ConnectionState is null ? nameof(ConnectionState)
+            : PublishNow is null ? nameof(PublishNow)
+            : null;
+        if (missing is null) return;
+
+        throw new ArgumentException(
+            $"MqttPanelSetup.{missing} is not set. Construct the setup from the live connection, "
+            + "new MqttPanelSetup(connection), or set Activity, ConnectionState and PublishNow.",
+            paramName);
+    }
 }

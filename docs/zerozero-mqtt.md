@@ -552,17 +552,13 @@ with the application:
 ```
 
 ```csharp
-Mqtt.Initialise(new MqttPanelSetup
+Mqtt.Initialise(new MqttPanelSetup(connection)
 {
     Settings            = settings,
     Groups              = groups,
     TopicRoot           = "exampleapp",
-    Activity            = connection.Activity,
-    ConnectionState     = () => connection.State,
-    PublishNow          = () => connection.PublishNowAsync(),
     ConnectionChanged   = () => connection.Apply(settings.Read().Connect()),
     PublishSetChanged   = () => publisher.Republish(),
-    RecallEndpoint      = () => endpointMemory,
     DefaultDeviceName   = $"Example App ({Environment.MachineName})",
     PublishTitle        = "Publish to MQTT",
     PublishDescription  = "Publishes this application's state to an MQTT broker.",
@@ -575,10 +571,49 @@ Mqtt.Initialise(new MqttPanelSetup
 ```
 
 `Initialise` is called once, on the UI thread, from the hosting page's constructor or its `Loaded`
-handler. `Settings` through `PublishSetChanged` are required; without `RecallEndpoint` no detected
-endpoint shows, and without `CommandLabel` the rows show entity ids. **`DefaultDeviceName`, which is
-`<TopicRoot> (<machine name>)` when null, must be what `MqttConnectionSetup.DefaultDeviceName`
-produces**, or the Device name placeholder shows a name that is never published.
+handler. `Settings` through `PublishSetChanged` are required; without `CommandLabel` the rows show
+entity ids. **`DefaultDeviceName`, which is `<TopicRoot> (<machine name>)` when null, must be what
+`MqttConnectionSetup.DefaultDeviceName` produces**, or the Device name placeholder shows a name that
+is never published.
+
+**Constructed from the connection, the setup describes it with no code of the host's.** Four members
+come from the `MqttConnection` handed in, and each asks it at the moment a row is drawn:
+
+| Member | Read from the connection |
+|---|---|
+| `Activity` | `Activity`, the same instance |
+| `ConnectionState` | `State` |
+| `RecallEndpoint` | `RememberedEndpoint` |
+| `PublishNow` | `PublishNowAsync()` |
+
+The Connection row, the Broker in use row and the closed Broker line therefore always describe one
+link. Any of the four set in the object initialiser as well replaces the connection's.
+
+**A host with no `MqttConnection` to hand sets the four itself**, with the parameterless constructor —
+a panel over invented state, or over a connection the host wraps:
+
+```csharp
+Mqtt.Initialise(new MqttPanelSetup
+{
+    Settings            = settings,
+    Groups              = groups,
+    TopicRoot           = "exampleapp",
+    Activity            = activity,
+    ConnectionState     = () => link.State,
+    PublishNow          = () => link.PublishNowAsync(),
+    RecallEndpoint      = () => endpointMemory,
+    ConnectionChanged   = () => link.Reapply(),
+    PublishSetChanged   = () => publisher.Republish(),
+    // the rest as above
+});
+```
+
+`Activity`, `ConnectionState` and `PublishNow` are then needed as well: **`Initialise` throws an
+`ArgumentException` naming the first one missing.** The three are not `required`, so the compiler
+does not catch a missing one. `RecallEndpoint` stays optional; it is the same accessor the
+connection is given through `MqttConnectionSetup.RecallEndpoint`, and without it the Broker in use
+row and the closed Broker line never show a detected endpoint while the Connection row still reads
+the live state.
 
 **Two obligations the panel's own copy depends on.** `ConnectionChanged` must run the connection's
 apply path, because the device-id dialogue promises the old entities are removed and the ledger is
@@ -1013,6 +1048,14 @@ are being typed into. What is remembered leads the sweep once one runs, and deci
 A remembered endpoint never holds a password, and one that did not record its encryption is never
 read as plain; WebSocket on 443, 8084 and 8883 is always encrypted.
 
+**Apply does not repeat a test that has just passed.** When the newest test — from Test connection or
+from an earlier Apply — passed on exactly the values Apply is about to test, Apply shows that result
+again under the buttons and opens no connection. The values compared are the host, the port, the
+transport, the encryption, the username, the password, the certificate trust and the device id the
+probe connects as; any one differing, or a newest test that failed, and Apply tests afresh. The
+remembered endpoint is not compared, since it decides the order of the search and not what it
+finds. Test connection always tests.
+
 `MqttProbe.RunAsync` publishes nothing, sets no Last Will and never throws; a blank host gives an
 empty report, which reads as `Failed`. **Its progress arrives on the probing thread**, so a user
 interface marshals it. It connects as `<deviceId>_probe`, since the live client id would make the
@@ -1102,7 +1145,8 @@ expander cannot hide one.
 
 **Test connection commits nothing at all** — not the fields, and not where the broker answered. One
 validation gate serves both Apply and Test, so a green test cannot vouch for a configuration Apply
-would refuse.
+would refuse. Apply straight after a passing test of the same values shows that pass rather than
+testing again — see [The endpoint sweep](#the-endpoint-sweep).
 
 The panel never writes a settings store directly: every commit goes through `IMqttSettingsStore.Update`,
 so a host whose configuration is one document keeps its own read-modify-write.
@@ -1111,7 +1155,10 @@ A host that draws its own form keeps these rules through two plain `net10.0` typ
 `MqttBrokerEdits` stages the Broker block, certificate trust included and the device fields not: a
 typed port must fall in 1 to 65535, `Validate()` is the gate Apply and Test share, `Apply(store)`
 writes nothing when it refuses, and `Reload` moves only untouched fields to the new saved values.
-`MqttProbeSession` keeps the line under Test connection and drops anything from a superseded run.
+`MqttProbeSession` keeps the line under Test connection and drops anything from a superseded run; a
+run started with `Start(target)` is remembered when it passes, and `TryReuse(trigger, target)` is
+the question Apply asks before starting another, answering true and showing the pass again only
+for Apply on the same values.
 
 ### What a closed section says about itself
 
