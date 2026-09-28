@@ -12,7 +12,7 @@
 
     <AssemblyTitle>ZeroZero.Update</AssemblyTitle>
     <Product>ZeroZero.Update</Product>
-    <Description>The update flow without its dialogs: release discovery against the GitHub releases API, version comparison, download into a fresh private directory, verification of the downloaded installer — its Authenticode signature and publisher against the expected signer, and its SHA-256 against the hash the release publishes — the launch-or-refuse policy, stale-download sweeping and the check scheduler. The entry point of the update component is ZeroZero.Update.Win32.</Description>
+    <Description>The update flow without its dialogs: release discovery against the GitHub releases API, version comparison, download into a fresh private directory, verification of the downloaded installer — its Authenticode signature and publisher against the expected signer, and its SHA-256 against the hash the release publishes — the launch-or-refuse policy, stale-download sweeping, the check scheduler and the reading of how long the machine has gone untouched. The entry point of the update component is ZeroZero.Update.Win32.</Description>
   </PropertyGroup>
 
   <ItemGroup>

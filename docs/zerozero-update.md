@@ -62,6 +62,11 @@ The three assemblies are versioned as `UpdateVersion` in `Versions.props` and re
   being eight. A cancellation the caller asked for is no outcome at all: the check throws.
 - **`UpdateScheduler`** — runs a check after an initial delay and then at an interval, one at a
   time, counted from process start and never persisted: the component stores nothing.
+- **`MachineIdle`** — reads the machine at one moment: how long since the last keyboard or mouse
+  input in this session, and whether the session is locked. A measurement and nothing more; what
+  counts as free enough to start an installer is decided above it. A reading that does not come back
+  is no time at all and not locked, so a machine that cannot be read never looks untouched.
+  `IMachineIdle` is the seam a test supplies its own reading through.
 - **`InstallerVerifier`** — the two checks below, as one call with one verdict.
 - **`PublishedHash`** — the installer's SHA-256 read from the release body; `ReleaseNotesText`
   strips the notes for a dialog and leaves the hash line out; `VersionTag` reads a tag as a
@@ -88,6 +93,17 @@ The three assemblies are versioned as `UpdateVersion` in `Versions.props` and re
   from a release already found, without checking again. One install at a time, and one check at a
   time: a caller arriving while a check is in flight joins it and reads its result.
   `UpdateFlowOptions.Progress` is where a host's own progress goes, alongside the window's bar.
+- **`UnattendedUpdatePolicy`** — when a check happens and when an installer may start with nobody
+  asked. It drives the check, the download and the launch itself, shows nothing at any point, and
+  returns an `UnattendedTick` saying where the pass ended. [Below](#installing-without-being-asked)
+  is the whole of what it decides.
+- **`UnattendedUpdateOptions`** — what the application supplies: whether this happens at all, the
+  check cadence, the retry tick, the shutdown callback and the call the component makes immediately
+  before an installer starts. Absent, nothing of the kind happens.
+- **`InstallMoment`** — the answer to that call: `InstallMoment.Now`, or `InstallMoment.NotNow`
+  with a few words for the log. It is about the moment it was asked and is never kept.
+- **`SilentUpdatePrompts`** — prompts that answer themselves and draw nothing, for a flow that must
+  not reach a screen whatever its outcome.
 
 `ZeroZero.Update.WinUI`:
 
@@ -337,6 +353,80 @@ check ends, before any caller resumes, so a request arriving after that starts a
 surface shows its own waiting state while it waits; the component shows none. The caller that
 started the check is the one whose cancellation token is inside the request.
 
+## Installing without being asked
+
+An application may let updates install with nobody accepting anything. It switches that on, sets how
+often a check runs, and answers one question just before an installer starts. Everything else is the
+component's.
+
+```csharp
+var policy = new UnattendedUpdatePolicy(service, new UnattendedUpdateOptions
+{
+    Enabled = settings.InstallUpdatesUnattended,
+    CheckInterval = TimeSpan.FromHours(24),
+    MayInstallNow = release => busy ? InstallMoment.NotNow("a job is running") : InstallMoment.Now,
+    Shutdown = () =>
+    {
+        lifecycle.MarkDeliberateExit();
+        Exit();
+    },
+    Log = log,
+});
+policy.Start();
+```
+
+**Off unless switched on.** `Enabled` is false by default, so an absent setting installs nothing —
+and checks nothing: in that state the policy starts no scheduler at all. An application that wants
+scheduled checks without unattended installing wires `UpdateFlow` and `UpdateScheduler` as
+[above](#wiring) and leaves the policy out.
+
+**One short tick, two questions.** The scheduler runs the policy every `RetryInterval`, ten minutes
+unless the application sets it, and each tick decides what is due. A check runs once `CheckInterval`
+has passed since the last one, which is a day unless the application sets it. A check that did not
+complete does not stamp the cadence, so the next tick checks again rather than waiting for the next
+day, and an installer that could not start is retried on that same tick.
+
+**The machine has to be free, and that rule is the component's.** An installer starts only where the
+screen is locked, or nothing has touched the keyboard or the mouse for ten minutes.
+`UnattendedUpdatePolicy.RequiredIdle` is the value, and it is fixed: an application refuses a moment
+and cannot permit one.
+
+**The application is then asked, immediately before the installer starts.** `MayInstallNow` is
+called once the installer has been downloaded and verified and the machine-free rule has passed, and
+an `InstallMoment.NotNow` stops that attempt and nothing further. The answer is about that moment
+alone: it is never stored, and the next tick asks again. An application that supplies no call accepts
+every moment.
+
+**A verified installer is held between ticks**, so a refusal costs no second download: the next tick
+asks again and starts the file it already has.
+
+**A refusal is logged once per reason.** The reason a refusal carries is what the log is keyed on, so
+a machine in use all afternoon writes one line and a different cause writes its own. One wording per
+cause is what makes that work — a reason carrying a number that changes every tick writes a line
+every tick.
+
+**Nothing reaches a screen.** The check runs under `UpdateTrigger.Silent`, the flow's prompts are
+`SilentUpdatePrompts`, and the installer is started the way `Launch` starts it. There is no window to
+dismiss and no question to answer, so the tick may run on any thread.
+
+Each tick says where it ended:
+
+| `UnattendedOutcome` | What happened |
+|---|---|
+| `Disabled` | The application has not switched this on. Nothing was checked and nothing ran. |
+| `NotDue` | The next check is not due and nothing is waiting to install. |
+| `CheckFailed` | The check did not complete. The cadence is not stamped, so the next tick checks again. |
+| `NothingToInstall` | The check completed and there is nothing newer. |
+| `NotPrepared` | The release was not downloaded, or did not verify. Nothing ran, and the next check decides again. |
+| `Refused` | A verified installer is in hand and this moment was refused. `Reason` says which rule refused it. |
+| `LaunchFailed` | The installer did not start. The next tick downloads and verifies it again. |
+| `InstallerStarted` | The installer is running and the shutdown callback has been called. Every tick after it answers the same and does nothing, so a tick landing while the application is still on its way out starts no second installer. |
+
+The policy owns its own flow, wired to prompts that answer themselves, so it cannot draw over the
+window the application shows for a check someone asked for. Both may exist in one application: the
+person presses the menu item and sees the window, and the policy installs in the background when the
+machine is free.
+
 ## Reporting the download
 
 A 64 MB installer takes long enough that a window showing nothing looks stopped. **The window draws
@@ -396,6 +486,12 @@ does not wait for a report to be handled.
   application's.
 - **A second surface for the download**, where the window's own bar is not the whole of what the
   application wants shown.
+- **Whether updates install with nobody asked**, and how often a check runs. Both are
+  `UnattendedUpdateOptions`; the machine-free rule beneath them is the component's and cannot be
+  loosened.
+- **Whether a particular moment suits**, through `MayInstallNow`. Why an application says no is its
+  own business — a job it is running, a lid it is waiting on, a session it does not want to
+  interrupt — and the answer is only about that moment.
 - **The release-notes text**, where the application keeps its own rather than the release body,
   through `UpdateWindowOptions.ReleaseNotes`.
 - **The installer itself**: where it puts things, per-user or per-machine, elevation, and the
@@ -471,6 +567,15 @@ does not wait for a report to be handled.
 - **There is no path that skips the published hash.** The verifier requires one to be present in
   the release body; a release that publishes none is refused before its signature is even looked
   at.
+- **With unattended installing off, the policy checks nothing either.** It is the whole of that
+  path, not an install step bolted onto a check, so an application that wants a scheduled check with
+  the setting off wires `UpdateScheduler` over `UpdateFlow` as well.
+- **A refusal reason is the log key, so it must not carry a number that moves.** "The machine is in
+  use" writes one line for an afternoon; the same sentence with the minutes counted into it writes a
+  line on every tick, which is the thing the once-per-reason rule exists to stop.
+- **A locked screen is read from the session, and an unreadable session reads as unlocked.** Only
+  the ten-minute rule can then let an installer start, which is the safe direction: a session that
+  cannot be read never stands in for an empty chair.
 
 ## Take the reference
 
@@ -490,6 +595,11 @@ unsigned, tampered and truncated forms; the trusted-chain form runs against the 
 library where the machine trusts its signature, and is reported as skipped where it does not. The
 launcher in the tests records and starts nothing, and the sentences are read back rather than
 shown. Nothing reaches the internet, no installer runs, and no window appears on screen.
+
+Status (2026-09-28): the four guards on installing without being asked each have a test of their
+own — the setting, the ten minutes, the moment an application refuses, and a check that found
+nothing. **The locked-screen reading has no test behind it**, because a test would have to lock the
+session; everything above it runs against `IMachineIdle`, so no test touches a real one.
 
 Status (2026-09-20): 0.11.0's window is proved by the harness and by the fourteen pictures above,
 not by tests. Three things were measured rather than reasoned about: the silent trigger over a

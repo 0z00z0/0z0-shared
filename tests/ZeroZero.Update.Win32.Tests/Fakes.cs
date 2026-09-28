@@ -148,3 +148,17 @@ internal sealed class RecordingPrompts : IUpdatePrompts
 
     public int Said => UpToDate.Count + NothingReleased + CheckFailed.Count + CannotInstall.Count + LaunchFailed.Count;
 }
+
+/// <summary>A machine that reads whatever the test set. No session and no input are touched.</summary>
+internal sealed class FakeMachineIdle : IMachineIdle
+{
+    public TimeSpan SinceLastInput { get; set; }
+    public bool ScreenLocked { get; set; }
+    public int Reads { get; private set; }
+
+    public MachineIdleReading Read()
+    {
+        Reads++;
+        return new MachineIdleReading(SinceLastInput, ScreenLocked);
+    }
+}
