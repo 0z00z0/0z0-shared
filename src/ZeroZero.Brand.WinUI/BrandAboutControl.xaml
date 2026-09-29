@@ -19,10 +19,10 @@
             </Style>
 
             <!--
-                The Donate button's mark, drawn rather than typed. The hot-beverage character it
-                replaced is not in the brand face, so Windows drew it from whatever face it fell
-                back to: a colour emoji of a fixed design beside labels in the studio's own face.
-                A path scales with the display, takes the theme, and stays the studio's to change.
+                The Donate button's mark, drawn rather than typed. A character missing from Cascadia
+                Mono is drawn from a fallback face in a different shape and weight — for a cup, a
+                colour emoji of a fixed design beside labels in the studio's own face. A path
+                scales with the display, takes the theme, and stays the studio's to change.
 
                 Read as a cup at a glance: a tapered body, a handle on the right, a saucer under
                 it. Sized in the template at 17 effective pixels, twice the label's cap height
@@ -166,20 +166,19 @@
             <!-- ── Body (inherits the host's theme via ThemeResource brushes) ─────────────────── -->
             <StackPanel Padding="16,12,16,16" Spacing="10">
 
-                <!-- Studio wordmark: teal→purple gradient text. Plain (non-interactive) text, not a
-                     button — the "Website" link below already covers that action; making the wordmark
-                     clickable too would just be a second control doing the exact same thing. -->
+                <!-- Studio wordmark: teal→purple gradient text, plain and non-interactive; the
+                     "Website" button below opens the studio's site. Name and tagline are set from
+                     Brand.StudioName and Brand.Tagline in code-behind. -->
                 <StackPanel Spacing="2">
-                    <TextBlock FontSize="12" FontWeight="SemiBold">
+                    <TextBlock x:Name="StudioNameText" FontSize="12" FontWeight="SemiBold">
                         <TextBlock.Foreground>
                             <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
                                 <GradientStop Color="#27E0C8" Offset="0"/>
                                 <GradientStop Color="#7B8CFF" Offset="1"/>
                             </LinearGradientBrush>
                         </TextBlock.Foreground>
-                        ZeroZero Software
                     </TextBlock>
-                    <TextBlock Text="Small tools. Zero bloat."
+                    <TextBlock x:Name="TaglineText"
                                FontSize="10"
                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
                 </StackPanel>

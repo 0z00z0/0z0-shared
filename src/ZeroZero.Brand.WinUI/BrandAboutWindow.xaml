@@ -38,9 +38,9 @@
 
         <!-- Close button: window-only chrome, overlaid on the header band's top-right corner
              (Margin approximates the band's own 16,12,16,12 padding so the two line up).
-             U+00D7, the multiplication sign, because the brand face carries it: U+2715, the cross
-             this used, is not in Cascadia Mono and Windows drew it from whatever face it fell back
-             to — a different shape and weight in a window that is otherwise one face throughout. -->
+             U+00D7, the multiplication sign, because Cascadia Mono carries it. A character missing
+             from Cascadia Mono is drawn from a fallback face in a different shape and weight, in a
+             window that is otherwise one face throughout. -->
         <Button x:Name="CloseBtn"
                 Content="&#x00D7;" Width="32" Height="32"
                 Padding="0" FontSize="11"

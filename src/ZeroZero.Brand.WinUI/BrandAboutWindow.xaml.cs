@@ -21,8 +21,8 @@ namespace ZeroZero.Brand.WinUI;
 /// centring, dismissal — plus the tray-app-only "Check for Updates" flow, so a full windowed app
 /// (no popup, no update concept) can host <see cref="BrandAboutControl"/> directly instead.
 ///
-/// It dismisses itself the moment it loses focus, with no exception for what is on screen at the
-/// time: one rule, so nothing has to be explained to whoever is looking at it.
+/// It dismisses itself the moment it loses focus, except while a transient window of this
+/// application is open (see <see cref="TransientWindows"/>).
 /// </summary>
 public sealed partial class BrandAboutWindow : Window
 {
@@ -200,7 +200,7 @@ public sealed partial class BrandAboutWindow : Window
     {
         // The height comes from the layout the window actually has, not from a measure run ahead of
         // one: a pass taken before the content is arranged answers with the fallback face's metrics
-        // and, the first time, with nothing at all — which is what a constant used to stand in for.
+        // and, the first time, with nothing at all.
         // Rounded up, because a client area a pixel short of its content clips the last row.
         Root.InvalidateMeasure();
         Root.UpdateLayout();
