@@ -16,8 +16,7 @@ public sealed class BackdropTint
 
     /// <summary>
     /// The colour a window opens with, or null to leave the backdrop as Windows tints it. Nothing
-    /// supplied is null for either theme: an application that says nothing keeps the behaviour it
-    /// had.
+    /// supplied is null for either theme.
     /// </summary>
     public static BackdropColour? Resolve(BackdropTint? tint, bool dark) =>
         tint is null ? null : dark ? tint.Dark : tint.Light;

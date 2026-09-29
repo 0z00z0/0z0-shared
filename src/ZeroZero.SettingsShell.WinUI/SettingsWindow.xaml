@@ -8,7 +8,7 @@
         <MicaBackdrop Kind="BaseAlt"/>
     </Window.SystemBackdrop>
 
-    <!-- The chrome both applications arrived at: a system title bar over Mica, a left pane that
+    <!-- The chrome: a system title bar over Mica, a left pane that
          never collapses and carries no toggle, no settings item and no back button, the product
          footer beneath the pane, and one scroll viewer over the pages. Every page sits in the same
          grid, all but the current one collapsed, so a page that leaves the screen keeps its state

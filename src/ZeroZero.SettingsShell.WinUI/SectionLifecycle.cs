@@ -1,14 +1,14 @@
 namespace ZeroZero.SettingsShell.WinUI;
 
 /// <summary>
-/// The two contract points the plan measures the settings window on, held in one place: the
-/// enter and leave hooks around every change of section, and the per-section build-once flag
-/// that a rebuild honours. Framework-free — pages are whatever the host says they are — so the
-/// order of every call can be pinned by a test with no XAML runtime.
+/// The section lifecycle of the settings window, held in one place: the enter and leave hooks
+/// around every change of section, and the per-section build-once flag that a rebuild honours.
+/// Framework-free — pages are whatever the host says they are — so the order of every call can
+/// be pinned by a test with no XAML runtime.
 /// </summary>
 /// <remarks>
-/// Every page is built up front by <see cref="BuildAll"/>, the way both applications build
-/// theirs, and stays in the host hidden while another is current. Leaving a section hides its
+/// Every page is built up front by <see cref="BuildAll"/> and stays in the host hidden while
+/// another is current. Leaving a section hides its
 /// page and never discards it, so a staged edit survives a visit elsewhere. Only
 /// <see cref="Rebuild()"/> discards, and it leaves a build-once section alone; asking for that
 /// section by name is refused rather than obeyed, because the flag exists to protect a page whose
@@ -120,9 +120,14 @@ internal sealed class SectionLifecycle<TPage> where TPage : class
             _host.Remove(old);
         }
 
+        // The section has left and its page is gone, so a build that throws leaves nothing current
+        // rather than a section with no page for the next selection to leave and hide.
+        if (current) Current = null;
+
         var page = Build(plan);
         if (current)
         {
+            Current = plan.Tag;
             _host.Show(page);
             plan.Enter?.Invoke();
         }

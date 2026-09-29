@@ -4,8 +4,8 @@ using ZeroZero.SettingsShell.WinUI;
 namespace ZeroZero.SettingsShell.Tests;
 
 /// <summary>
-/// The two contract points the plan measures the shell on, pinned in order: the enter and leave
-/// hooks around every change of section, and the build-once flag a rebuild honours. Pages are
+/// The section lifecycle pinned in order: the enter and leave hooks around every change of
+/// section, and the build-once flag a rebuild honours. Pages are
 /// strings naming the section and the build that made them, so a rebuilt page is told apart from
 /// the one it replaced.
 /// </summary>
@@ -179,6 +179,34 @@ public class SectionLifecycleTests
             rig.Host.Log);
         Assert.Equal("b", lifecycle.Current);
         Assert.Equal(["b#2"], rig.Host.Visible);
+    }
+
+    [Fact]
+    public void ARebuildOfTheCurrentSectionThatThrows_LeavesNothingCurrent_AndTheNextSelectionWorks()
+    {
+        // A failed build must not leave the section current with no page: the next selection
+        // would run its leave hook a second time and then find no page to hide.
+        var rig = new Rig();
+        bool fail = false;
+        var failing = new SectionPlan<string>(
+            "b",
+            () => fail ? throw new InvalidOperationException("build failed") : "b#1",
+            null,
+            () => rig.Host.Log.Add("leave b"),
+            false);
+        var lifecycle = rig.Lifecycle(rig.Plan("a"), failing);
+        lifecycle.BuildAll();
+        lifecycle.Select("b");
+        fail = true;
+
+        Assert.Throws<InvalidOperationException>(() => lifecycle.Rebuild("b"));
+        Assert.Null(lifecycle.Current);
+        rig.Host.Log.Clear();
+
+        lifecycle.Select("a");
+
+        Assert.Equal(["show a#1", "enter a"], rig.Host.Log);
+        Assert.Equal("a", lifecycle.Current);
     }
 
     [Fact]

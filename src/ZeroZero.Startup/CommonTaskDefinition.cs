@@ -9,9 +9,10 @@ namespace ZeroZero.Startup;
 /// to one copy of a duplicated list is missed by the other.</summary>
 internal static class CommonTaskDefinition
 {
-    /// <summary>The scheduler's defaults are for a maintenance job, not a resident application: a
-    /// machine booting on battery never got the application while the scheduler reported success,
-    /// and the silent execution limit killed it after three days.</summary>
+    /// <summary>The scheduler's defaults are for a maintenance job, not a resident application: they
+    /// refuse a start on battery while reporting success, and stop the task after 72 hours. These
+    /// settings allow a start on battery, keep the task running when the machine goes onto battery,
+    /// and remove the time limit.</summary>
     internal static void ApplyPowerSafeSettings(TaskSettings settings)
     {
         settings.DisallowStartIfOnBatteries = false;

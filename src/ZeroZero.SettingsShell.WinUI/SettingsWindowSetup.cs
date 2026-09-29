@@ -6,7 +6,7 @@ namespace ZeroZero.SettingsShell.WinUI;
 /// <summary>
 /// Everything the settings window takes from the application: the sections and their pages,
 /// the product identity for the pane footer, where the rectangle is kept, the theme, and the
-/// few measurements the two applications choose differently. The window never reaches past it.
+/// few measurements an application chooses for itself. The window never reaches past it.
 /// </summary>
 public sealed class SettingsWindowSetup
 {
