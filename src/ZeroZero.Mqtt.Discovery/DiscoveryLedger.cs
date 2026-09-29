@@ -18,8 +18,7 @@ public sealed class PublishedEntity
 
     /// <summary>Whether the entity was announced unavailable rather than published. The disposition,
     /// not a topic: it is what an announcement falls back to when the capability behind the entity
-    /// cannot be read, so one unanswered call does not decide it afresh. False on a record written
-    /// before this was stored, which is what such a record meant.</summary>
+    /// cannot be read, so one unanswered call does not decide it afresh.</summary>
     public bool Withheld { get; set; }
 }
 
@@ -90,18 +89,14 @@ public sealed class DiscoveryLedger
     public PublishedDevice? Find(string deviceId) =>
         Devices.FirstOrDefault(d => string.Equals(d.DeviceId, deviceId, StringComparison.Ordinal));
 
-    /// <summary>A detached copy, so a caller reading the ledger never holds what a writer mutates. A
-    /// record written before the device id was stored alongside the topic has it derived from the
-    /// topic, so an existing installation keeps its identity rather than looking like a new one.</summary>
+    /// <summary>A detached copy, so a caller reading the ledger never holds what a writer mutates.</summary>
     public DiscoveryLedger Copy() => new()
     {
         Devices =
         [
             .. Devices.Select(d => new PublishedDevice
             {
-                DeviceId = d.DeviceId is { Length: > 0 } id
-                    ? id
-                    : DiscoveryTopics.DeviceIdOf(d.ConfigTopic) ?? "",
+                DeviceId = d.DeviceId,
                 ConfigTopic = d.ConfigTopic,
                 AvailabilityTopic = d.AvailabilityTopic,
                 WithheldTopic = d.WithheldTopic,

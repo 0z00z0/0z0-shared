@@ -300,16 +300,36 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
 
     /// <summary>A receiver that has come back. Its own will lands on the same topic and means the
     /// opposite, so only the birth payload is answered.</summary>
-    private async Task OnBirthMessageAsync(MqttInboundMessage message, CancellationToken ct)
+    private Task OnBirthMessageAsync(MqttInboundMessage message, CancellationToken ct)
     {
-        if (!string.Equals(message.Payload, _setup.BirthPayload, StringComparison.Ordinal)) return;
+        if (!string.Equals(message.Payload, _setup.BirthPayload, StringComparison.Ordinal))
+            return Task.CompletedTask;
 
         var delay = _setup.BirthRepublishDelay;
-        if (delay > TimeSpan.Zero)
-            await Task.Delay(Random.Shared.NextDouble() * delay, ct).ConfigureAwait(false);
+        if (delay <= TimeSpan.Zero) return ReannounceAsync(ct);
 
+        // The wait runs on its own. This handler runs on the connection's command worker, which has
+        // one reader, so waiting here would hold every command queued behind it for as long. The
+        // worker's token ends with the connection, and so does the wait.
+        _ = ReannounceAfterAsync(Random.Shared.NextDouble() * delay, ct);
+        return Task.CompletedTask;
+    }
+
+    private async Task ReannounceAfterAsync(TimeSpan delay, CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(delay, ct).ConfigureAwait(false);
+            await ReannounceAsync(ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+        catch (Exception ex) { _log.Error($"{nameof(DiscoveryPublisher)}.BirthMessage", Sanitise(ex)); }
+    }
+
+    private Task ReannounceAsync(CancellationToken ct)
+    {
         _log.Info("MQTT: the receiver announced itself; re-announcing the device.");
-        await AnnounceAsync(force: true, ct).ConfigureAwait(false);
+        return AnnounceAsync(force: true, ct);
     }
 
     private void OnGroupsChanged() => Republish();

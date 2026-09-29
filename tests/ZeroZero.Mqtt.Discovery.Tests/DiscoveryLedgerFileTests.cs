@@ -131,7 +131,8 @@ public class TransientLedgerStoreTests
     public void ItRemembersWithinTheProcess()
     {
         var store = new TransientLedgerStore();
-        store.Update(ledger => ledger.Devices.Add(new PublishedDevice { ConfigTopic = Sample.ConfigTopic }));
+        store.Update(ledger => ledger.Devices.Add(
+            new PublishedDevice { DeviceId = Sample.DeviceId, ConfigTopic = Sample.ConfigTopic }));
 
         Assert.NotNull(store.Read().Find(Sample.DeviceId));
     }

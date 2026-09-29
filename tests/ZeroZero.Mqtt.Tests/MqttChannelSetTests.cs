@@ -57,16 +57,6 @@ public class MqttChannelSetTests
     }
 
     [Fact]
-    public void HasPublished_IsFalseUntilSomethingTakesTheSlot()
-    {
-        var set = new MqttChannelSet([Channel("cpu_load")]);
-
-        Assert.False(set.HasPublished("cpu_load"));
-        set.Accept("cpu_load", "42");
-        Assert.True(set.HasPublished("cpu_load"));
-    }
-
-    [Fact]
     public void Replace_ReportsTheChannelsThatHaveGoneAndTheOnesThatHaveArrived()
     {
         // Both halves are acted on: the ones that have gone leave a retained value to empty, and the

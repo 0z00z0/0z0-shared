@@ -196,8 +196,8 @@ public sealed class MqttBrokerEdits
 
     /// <summary>Re-reads the store without discarding what is being typed: a field that has been
     /// edited keeps the edit, a field that has not takes whatever the store now says.</summary>
-    /// <remarks>The overwrite this replaces is how a settings window re-shown while already open
-    /// threw away a typed host with nothing on screen having warned about it.</remarks>
+    /// <remarks>What a settings window re-shown while already open comes through, so a typed host
+    /// survives it.</remarks>
     public void Reload(MqttSettings saved)
     {
         var previous = _saved;

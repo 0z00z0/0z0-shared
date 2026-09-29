@@ -676,6 +676,35 @@ public class DiscoveryPublisherTests
         Assert.Empty(harness.Broker.Messages);
     }
 
+    /// <summary>The birth handler runs on the connection's command worker, which has one reader, so it
+    /// returns at once and leaves the randomised wait to run on its own. Held there, it delays every
+    /// command queued behind it by up to the whole wait.</summary>
+    [Fact]
+    public async Task ABirthMessageDoesNotHoldTheCommandWorkerForItsDelay()
+    {
+        using var publisher = new DiscoveryPublisher(new DiscoveryPublisherSetup
+        {
+            IsConnected = () => true,
+            TopicRoot = Sample.TopicRoot,
+            Device = Sample.Device,
+            Origin = Sample.Origin,
+            Entities = new MqttEntitySet([Sample.Sensor()]),
+            Groups = null,
+            Ledger = new RecordingLedgerStore(),
+            SetChannelsAsync = DiscoveryWiring.NoChannelHandover,
+            SetCommandTargets = DiscoveryWiring.NoCommandHandover,
+            BirthRepublishDelay = TimeSpan.FromHours(1),
+        });
+        var subscription = publisher.BirthMessage(Sample.Prefix);
+        using var connection = new CancellationTokenSource();
+
+        var handled = subscription.Handler(
+            new MqttInboundMessage(subscription.TopicFilter, "online", false), connection.Token);
+
+        Assert.True(handled.IsCompleted, "the birth handler held the command worker for its delay");
+        await connection.CancelAsync();
+    }
+
     [Fact]
     public async Task ASelectsChannelNeverCarriesAnEmptyPayload()
     {

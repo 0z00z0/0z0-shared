@@ -166,13 +166,6 @@ public sealed class MqttChannelSet
         lock (_lock) return _lastPayload.GetValueOrDefault(key);
     }
 
-    /// <summary>Whether anything has been published on a channel yet. What decides whether a channel
-    /// with no current reading needs its topic emptied or has nothing standing to contradict.</summary>
-    public bool HasPublished(string key)
-    {
-        lock (_lock) return _lastPayload.ContainsKey(key);
-    }
-
     /// <summary>Empties the whole cache, so the next pass re-sends every channel.</summary>
     public void Forget()
     {

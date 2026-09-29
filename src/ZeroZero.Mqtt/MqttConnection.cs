@@ -230,9 +230,11 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             }
             else
             {
-                // Options changed while running — bounce the socket so the loop reconnects with them.
-                try { await DropOwnSessionAsync().ConfigureAwait(false); }
-                catch { /* the loop retries */ }
+                // Options changed while running. The loop drops the socket and reconnects with them at
+                // once: a backoff earned under the old values says nothing about the new ones, and with
+                // the link already down a drop alone would leave the loop waiting that backoff out.
+                _reconnectRequested = true;
+                Wake();
             }
         }
         // Apply discards this task, so an unhandled throw would silently disable the feature.
@@ -275,17 +277,25 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             // Whether the far end offered encryption at all, which is what decides if the plain
             // candidate behind this one may be tried.
             var witness = address.Encrypted ? new MqttHandshakeWitness() : null;
+
+            // MQTTnet applies its own connect timeout only to a token that cannot be cancelled, so the
+            // handshake carries its budget in the token it is given.
+            using var handshake = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            handshake.CancelAfter(ConnectTimeout);
             try
             {
                 // MQTTnet hands a refused CONNACK back as a result code rather than throwing, so the
                 // code has to be read — otherwise a rejection looks like a live connection until the
                 // first publish fails.
                 var connack = await _client
-                    .ConnectAsync(BuildOptions(parameters, address, witness), ct).ConfigureAwait(false);
+                    .ConnectAsync(BuildOptions(parameters, address, witness), handshake.Token)
+                    .ConfigureAwait(false);
                 result = MqttProbe.ClassifyConnack(
                     MqttClientWiring.ConnackCode(connack), connack?.ReasonString);
             }
-            catch (OperationCanceledException) { throw; }
+            // Only the loop's own cancellation ends the loop. An expired budget, or a cancellation
+            // MQTTnet raises itself, is a failed attempt like any other.
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
                 result = MqttProbe.ClassifyConnectException(ex, ct, witness?.Verdict);
@@ -404,8 +414,9 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             // MQTTnet pings within this period on an idle link, so the broker will not drop a quiet
             // connection and a silently dead one surfaces rather than lingering "connected".
             .WithKeepAlivePeriod(KeepAlive)
-            // Pinned rather than left to the library default: this is what a dead candidate costs
-            // before the next is tried, so it has to be a known number.
+            // Bounds what MQTTnet sends with no cancellable token, such as the disconnect, and the
+            // socket's send timeout. It does not bound the connect, which is given a cancellable
+            // token and carries its own budget in it.
             .WithTimeout(ConnectTimeout)
             .WithWillTopic(_availabilityTopic)
             .WithWillPayload(_setup.OfflinePayload)
@@ -442,8 +453,9 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
 
         while (!ct.IsCancellationRequested && _enabled)
         {
-            // Modern standby suspends the NIC, so after a resume the socket is often half-dead while
-            // the client still reads as connected. A resume is not a flap — reset the backoff.
+            // A resume from standby or a settings change. Modern standby suspends the NIC, so after a
+            // resume the socket is often half-dead while the client still reads as connected. Neither
+            // is a flap, so the backoff resets.
             if (_reconnectRequested)
             {
                 _reconnectRequested = false;
@@ -494,7 +506,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
                     backoff.SettleIfStable(DateTimeOffset.UtcNow);
                 }
             }
-            catch (OperationCanceledException) { break; }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
             catch (Exception ex)
             {
                 // A sequence that failed because the link dropped under it was reported as the loss.

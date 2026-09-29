@@ -82,7 +82,7 @@ public sealed class MqttProbeSession
 
     /// <summary>Shows the newest verdict again, and answers true, when <paramref name="trigger"/> is
     /// Apply and that verdict was a pass on exactly <paramref name="target"/>'s values. False, with
-    /// nothing changed, otherwise — the caller then probes as it always did.</summary>
+    /// nothing changed, otherwise — the caller then probes.</summary>
     /// <remarks>
     /// <para>The values compared are everything a connection is made from: host, port, username,
     /// password, client id, transport, encryption and certificate trust. Any one differing is a new

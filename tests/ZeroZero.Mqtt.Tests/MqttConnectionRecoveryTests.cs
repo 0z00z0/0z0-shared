@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using Xunit;
 
 namespace ZeroZero.Mqtt.Tests;
@@ -64,7 +66,7 @@ public class MqttConnectionRecoveryTests
         // so the loop takes neither branch again and the broker never hears from it twice.
         Assert.True(await FakeBroker.WaitAsync(() => broker.Connects >= 2),
             "a half-built session was left standing");
-        Assert.Null(broker.LastPayload(Availability));   // and it was never announced online
+        Assert.Null(broker.Retained(Availability));   // and it was never announced online
         Assert.True(Volatile.Read(ref listener.Calls) >= 2);
     }
 
@@ -72,8 +74,8 @@ public class MqttConnectionRecoveryTests
     /// itself when the connect sequence throws, MQTTnet raises that as a disconnect with the "was
     /// connected" flag set, and a wake armed on it cancels the wait the failed round had just
     /// earned — every round, so the retry rate is whatever a loopback socket costs rather than the
-    /// escalating delay. Measured at 111 CONNECTs in three seconds before the fix, against a design
-    /// that intends at most one.</summary>
+    /// escalating delay, over a hundred CONNECTs in three seconds against a design that intends at
+    /// most one.</summary>
     /// <remarks>Counted at the broker rather than read off the connection: the state oscillates far
     /// faster than anything can sample it, so a flag or a status line says nothing. The window is
     /// wall-clock and the count is monotonic, so a slow machine only ever lowers it.</remarks>
@@ -100,6 +102,67 @@ public class MqttConnectionRecoveryTests
             "the loop stopped retrying altogether");
     }
 
+    /// <summary>A listener that accepts every socket and never sends a byte: a far end that takes the
+    /// connection and then stalls the TLS handshake.</summary>
+    private sealed class SilentListener : IDisposable
+    {
+        private readonly TcpListener _listener = new(IPAddress.Loopback, 0);
+        private readonly List<TcpClient> _held = [];
+        private int _accepts;
+
+        public SilentListener()
+        {
+            _listener.Start();
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    while (true)
+                    {
+                        var client = await _listener.AcceptTcpClientAsync();
+                        lock (_held) _held.Add(client);
+                        Interlocked.Increment(ref _accepts);
+                    }
+                }
+                catch { /* stopped */ }
+            });
+        }
+
+        public int Port => ((IPEndPoint)_listener.LocalEndpoint).Port;
+
+        public int Accepts => Volatile.Read(ref _accepts);
+
+        public void Dispose()
+        {
+            _listener.Stop();
+            lock (_held) foreach (var client in _held) client.Dispose();
+        }
+    }
+
+    /// <summary>A far end that accepts the socket and then stalls the handshake costs one connect
+    /// budget, not the connection. The connect carries its own timeout, and the cancellation that ends
+    /// it is a failed attempt rather than the end of the maintain loop, so the next round opens
+    /// another socket. A handshake with no budget holds the loop for ever; a loop that ends on any
+    /// cancellation stops after the first round.</summary>
+    /// <remarks>A stall in the TLS stage, because that is where the client library reports the
+    /// expired budget as a cancellation. A stall waiting for CONNACK reaches here as the library's
+    /// own connect failure instead, and would not tell the two kinds of cancellation apart.</remarks>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task AStalledHandshakeIsTriedAgainRatherThanWaitedOnForEver()
+    {
+        using var listener = new SilentListener();
+        using var connection = new MqttConnection(Setup());
+
+        await connection.ApplyAsync(
+            Parameters(listener.Port) with { EncryptionMode = MqttEncryptionMode.On });
+
+        // A round opens two sockets, the listener check and the handshake, so a third is the next round.
+        Assert.True(await FakeBroker.WaitAsync(() => listener.Accepts >= 3, TimeSpan.FromSeconds(40)),
+            "a stalled handshake held the maintain loop");
+        Assert.False(connection.IsConnected);
+    }
+
     /// <summary>The status callback runs inside the connect sequence, so a host whose handler throws
     /// once — a disposed control, a marshalling error — would otherwise have its own exception read as
     /// a connect failure and its socket dropped, on every pass, for ever.</summary>
@@ -113,7 +176,7 @@ public class MqttConnectionRecoveryTests
         connection.StateChanged += _ => throw new InvalidOperationException("the host's status line is gone");
         await connection.ApplyAsync(Parameters(broker.Port));
 
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == "online"));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Availability) == "online"));
         Assert.Equal(MqttConnectionState.Connected, connection.State);
         Assert.Equal(1, broker.Connects);   // not a connect/throw/disconnect cycle
     }
@@ -128,7 +191,7 @@ public class MqttConnectionRecoveryTests
         using var broker = new FakeBroker();
         using var connection = new MqttConnection(Setup());
         await connection.ApplyAsync(Parameters(broker.Port));
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == "online"));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Availability) == "online"));
 
         connection.OnPowerResume();
 
