@@ -91,6 +91,6 @@ public sealed partial class SettingsSectionHeader : UserControl
         string info = Info ?? "";
         Bubble.Info = info;
         Bubble.Subject = string.IsNullOrEmpty(InfoSubject) ? Heading ?? "" : InfoSubject;
-        Bubble.Visibility = info.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        Bubble.Visibility = !string.IsNullOrWhiteSpace(info) ? Visibility.Visible : Visibility.Collapsed;
     }
 }

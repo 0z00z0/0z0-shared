@@ -99,7 +99,7 @@ public sealed partial class MqttPanelWindow : Window
 
     /// <summary>
     /// Edits the panel's own host box, so the unapplied marker can be seen while the group holding
-    /// the field is closed — the state a staged edit used to be lost in. The rig reaches into the
+    /// the field is closed. The rig reaches into the
     /// realised tree rather than the panel growing an entry point for it: nothing an application
     /// would call belongs on the panel for a screenshot's sake.
     /// </summary>

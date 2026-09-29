@@ -58,9 +58,10 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// the card to drop its field beneath the header; <c>--probe &lt;path&gt;</c> works here too.
 /// </para>
 /// <para>
-/// <c>--titlebar</c> opens four Mica windows with the system title bar: a dark page with the bar
+/// <c>--titlebar</c> opens five Mica windows with the system title bar: a dark page with the bar
 /// untreated, so the light caption strip is on screen; the same page with the bar following its
-/// theme; a light page following its theme; and a light page with the bar pinned dark.
+/// theme; a light page following its theme; a light page with the bar pinned dark; and a light
+/// page with the bar painted dark and then light again, what a live switch back leaves behind.
 /// </para>
 /// <para>
 /// <c>--settings</c> opens the settings window shell, one per theme, with four fabricated
@@ -316,12 +317,12 @@ public partial class App : Application
             // Present so the "Check for Updates" button is visible and clickable for the test —
             // omit this to verify the button hides itself instead (see BrandAboutWindow.xaml.cs).
             // Returns false (no update applied) so the window stays open for inspection rather than
-            // driving the new exit flow.
+            // driving the exit flow.
             OnCheckForUpdates = async () => { await Task.Delay(500); return false; },
         };
 
         _aboutWindow = new BrandAboutWindow(options);
-        // A recognizable title so the capture script finds the window even though BrandAboutWindow
+        // A recognisable title so the capture script finds the window even though BrandAboutWindow
         // hides its own title bar (the AppWindow title is still set).
         _aboutWindow.Title = "Window Mode";
         ApplyTheme(_aboutWindow, theme);
@@ -334,9 +335,8 @@ public partial class App : Application
     /// <summary>
     /// A window with one button that opens the About popup, which is what a tray menu item or an
     /// application's own About command amounts to. It exists so the dismissal can be driven rather
-    /// than reasoned about: a fast double-click on that button is the gesture that opened the window
-    /// and closed it again in one go before the window learned to ignore a deactivation arriving
-    /// ahead of its first activation.
+    /// than reasoned about: a fast double-click on that button delivers a deactivation before the
+    /// window's first activation, and the window ignores it.
     /// </summary>
     private void ShowOpener(string[] commandLine)
     {
@@ -844,9 +844,11 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Title-bar theming on screen, four Mica windows: a dark page with its bar untreated (the
+    /// Title-bar theming on screen, five Mica windows: a dark page with its bar untreated (the
     /// light caption strip), the same page with the bar following its theme, a light page
-    /// following its theme (the bar stays stock), and a light page with the bar pinned dark.
+    /// following its theme (the bar stays stock), a light page with the bar pinned dark, and a
+    /// light page with the bar painted dark and then light again (the bar a live switch back
+    /// leaves behind).
     /// </summary>
     private void ShowTitleBars()
     {
@@ -961,8 +963,8 @@ public partial class App : Application
         }
         string? result = await window.Result;
         File.WriteAllText(Path.Combine(Path.GetTempPath(), "text-prompt-result.txt"), result ?? "<null>");
-        // No Exit(): the prompt was the last window, so the rig is already shutting down, and an
-        // Exit() on top of that shutdown took the process down with an access violation.
+        // No Exit(): the prompt was the last window, so the rig is already shutting down, and
+        // calling Exit() during the last-window shutdown crashes the process.
     }
 
     private static Button? FindButton(DependencyObject root, string content)

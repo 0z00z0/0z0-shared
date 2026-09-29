@@ -64,10 +64,7 @@ public sealed partial class TextPromptWindow : Window
         RefreshConfirm();
 
         ConfigureChrome();
-        // Cancel and Confirm resolve before they close; this covers every other way out. Not
-        // AppWindow.Closing: with a handler on it the process stayed alive after the prompt, its
-        // last window, had closed (measured through the harness).
-        Closed += (_, _) => _completion.TrySetResult(null);
+        Closed += OnClosed;
         Root.Loaded += (_, _) =>
         {
             ResizeToContent();
@@ -104,24 +101,24 @@ public sealed partial class TextPromptWindow : Window
     {
         // Set before Close, whose handler resolves null for every other way out.
         _completion.TrySetResult(Field.Text);
-        CloseSettled();
+        Close();
     }
 
     private void Cancel()
     {
         _completion.TrySetResult(null);
-        CloseSettled();
+        Close();
     }
 
-    // Closing while the field still holds its opening selection took the process down with an
-    // access violation inside the XAML runtime some ten seconds after the last window went,
-    // measured through the harness: cancel with the text untouched crashed every time, cancel
-    // after an edit and confirm never did. Collapsing the selection first is what separates the
-    // two, so the prompt does it on every way out it controls.
-    private void CloseSettled()
+    // Closing while the field holds its opening selection crashes the process with an access
+    // violation in the XAML runtime, so the selection is collapsed here, on every way out: Cancel,
+    // Confirm, Alt+F4 and any other close. Cancel and Confirm resolve before they close; this
+    // resolves null for the rest. Not AppWindow.Closing: a handler on it keeps the process alive
+    // after this window, its last, closes.
+    private void OnClosed(object sender, WindowEventArgs args)
     {
         Field.Select(Field.Text.Length, 0);
-        Close();
+        _completion.TrySetResult(null);
     }
 
     private void RefreshConfirm() =>
@@ -148,17 +145,24 @@ public sealed partial class TextPromptWindow : Window
 
     private void ResizeToContent()
     {
+        // Measured from the layout the window has, and rounded up, because a client area a pixel
+        // short of its content clips the last row.
+        Root.InvalidateMeasure();
+        Root.UpdateLayout();
         Root.Measure(new Size(ContentWidth, double.PositiveInfinity));
-        int width = (int)Math.Round(ContentWidth * _scale);
-        int height = (int)Math.Round((Root.DesiredSize.Height > 0 ? Root.DesiredSize.Height : 200) * _scale);
+        int width = (int)Math.Ceiling(ContentWidth * _scale);
+        int height = (int)Math.Ceiling((Root.DesiredSize.Height > 0 ? Root.DesiredSize.Height : 200) * _scale);
 
         // The frame this presenter actually has, read from the window, so the client fills with
-        // the content exactly at any scaling; centred with the outer size that results.
+        // the content exactly at any scaling. Nothing in the prompt scrolls, so the outer height
+        // stops at the work area and an over-tall prompt sits against its top.
         var (ncWidth, ncHeight) = MonitorMetrics.NonClientSize(Win32Interop.GetWindowFromWindowId(AppWindow.Id));
-        AppWindow.Resize(new SizeInt32(width + ncWidth, height + ncHeight));
+        int outerHeight = height + ncHeight;
+        if (_workArea.Height > 0 && outerHeight > _workArea.Height) outerHeight = _workArea.Height;
+        AppWindow.Resize(new SizeInt32(width + ncWidth, outerHeight));
         var outer = AppWindow.Size;
         AppWindow.Move(new PointInt32(
             _workArea.Left + (_workArea.Width - outer.Width) / 2,
-            _workArea.Top + (_workArea.Height - outer.Height) / 2));
+            _workArea.Top + Math.Max(0, (_workArea.Height - outer.Height) / 2)));
     }
 }

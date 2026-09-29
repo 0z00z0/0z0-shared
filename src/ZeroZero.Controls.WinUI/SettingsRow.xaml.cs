@@ -104,6 +104,6 @@ public sealed partial class SettingsRow : UserControl
         Bubble.Info = info;
         string subject = InfoSubject;
         Bubble.Subject = !string.IsNullOrEmpty(subject) ? subject : (Header as string) ?? "";
-        Bubble.Visibility = info.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        Bubble.Visibility = !string.IsNullOrWhiteSpace(info) ? Visibility.Visible : Visibility.Collapsed;
     }
 }
