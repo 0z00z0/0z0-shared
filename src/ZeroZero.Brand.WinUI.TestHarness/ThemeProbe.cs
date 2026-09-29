@@ -112,10 +112,10 @@ internal static class ThemeProbe
 
     /// <summary>Composites every background above the element until one is opaque — a card ground
     /// is itself translucent over the page, so the colour a reader sees is the stack, not the card.</summary>
-    private static Color Ground(DependencyObject? node)
+    private static Color Ground(FrameworkElement element)
     {
         var stack = new List<Color>();
-        node = VisualTreeHelper.GetParent(node);
+        DependencyObject? node = VisualTreeHelper.GetParent(element);
         while (node is not null)
         {
             Brush? background = node switch
@@ -135,8 +135,12 @@ internal static class ThemeProbe
             node = VisualTreeHelper.GetParent(node);
         }
 
-        // Bottom-up: the last one found is furthest back.
-        Color ground = Color.FromArgb(255, 0, 0, 0);
+        // Bottom-up: the last one found is furthest back. With no opaque background in the tree the
+        // page sits on its Mica backdrop, which WinUI clamps hard to the theme's base colour: that
+        // colour stands in for the backdrop, within 0.06 of any ratio measured over the real one.
+        Color ground = element.ActualTheme == ElementTheme.Dark
+            ? Color.FromArgb(255, 0x20, 0x20, 0x20)
+            : Color.FromArgb(255, 0xF3, 0xF3, 0xF3);
         for (int i = stack.Count - 1; i >= 0; i--) ground = Over(stack[i], ground);
         return ground;
     }
