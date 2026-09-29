@@ -63,8 +63,7 @@ public sealed record SettingsMigrationResult(SettingsMigrationOutcome Outcome)
 
     /// <summary>Every top-level key of the old document that landed in the new one, in the old
     /// document's order. <c>ConfigVersion</c> is not among them: it is the one value a migration
-    /// replaces. A key that is merely about a version — a document's own <c>Version</c>, or the
-    /// lower-case <c>version</c> an earlier build of this store wrote — is a different word and is
+    /// replaces. A document's own <c>Version</c> or <c>version</c> key is a different word and is
     /// carried like any other, with <c>ConfigVersion</c> stamped ahead of it.</summary>
     public IReadOnlyList<string> Carried { get; init; } = [];
 
@@ -153,7 +152,6 @@ public static class SettingsMigration
         if (RefuseAgainst(request, root) is { } mismatch) return mismatch;
 
         var layout = JsonLayout.Detect(source);
-        var comments = Comments(source, root);
         var plan = Plan.Build(root, request.Moves);
 
         var target = Compose(source, layout, plan, request.Version);

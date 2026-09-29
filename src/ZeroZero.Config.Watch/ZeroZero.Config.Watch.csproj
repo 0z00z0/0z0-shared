@@ -12,8 +12,7 @@
 
   <ItemGroup>
     <!-- The debounce is mechanism, not surface: a general debouncer published from a settings
-         package would be misfiled the way the coalescing gate was misfiled in the MQTT package.
-         The tests drive it directly so its collapsing can be shown to fail. -->
+         package would be misfiled. The tests drive it directly so its collapsing can be shown to fail. -->
     <InternalsVisibleTo Include="ZeroZero.Config.Watch.Tests" />
   </ItemGroup>
 

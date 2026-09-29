@@ -49,7 +49,7 @@ public sealed class CrashHandlers : IDisposable
         // One faulted task is one aggregate around one exception; the inner one is what a reader wants.
         Exception reported = e.Exception.InnerExceptions.Count == 1 ? e.Exception.InnerExceptions[0] : e.Exception;
         Report(UnobservedTaskSource, reported);
-        // Reported is observed. The runtime no longer ends a process over an unobserved task
+        // Reported is observed. The runtime does not end a process over an unobserved task
         // exception whatever its configuration says (measured on .NET 10), so this only tells a
         // later subscriber that the exception has been dealt with.
         e.SetObserved();

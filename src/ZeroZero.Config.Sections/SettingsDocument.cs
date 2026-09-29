@@ -331,8 +331,11 @@ internal sealed class SettingsDocument
 
         if (_root.Members.Count == 0)
         {
-            var only = $"{Layout.NewLine}{Layout.Unit}\"{JsonEncodedText.Encode(name)}\": {body}{Layout.NewLine}";
-            return new JsonEdit(_root.Start + 1, _root.CloseBrace, Encoding.UTF8.GetBytes(only));
+            // Inserted in front of the closing brace, never over what sits between the braces: an
+            // object with no keys can still hold a hand-written comment.
+            var lead = _content[_root.CloseBrace - 1] == (byte)'\n' ? string.Empty : Layout.NewLine;
+            var only = $"{lead}{Layout.Unit}\"{JsonEncodedText.Encode(name)}\": {body}{Layout.NewLine}";
+            return JsonEdit.Insert(_root.CloseBrace, Encoding.UTF8.GetBytes(only));
         }
 
         var last = _root.Members[^1];

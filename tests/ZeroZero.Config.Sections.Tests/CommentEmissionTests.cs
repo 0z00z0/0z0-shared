@@ -88,6 +88,22 @@ public sealed class CommentEmissionTests : SectionedTestBase
         Assert.Contains("\"Retries\": 9", OnDisk(), StringComparison.Ordinal);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void A_document_holding_nothing_but_a_comment_keeps_it_when_a_section_is_added()
+    {
+        Given("""
+            {
+              /* the only thing in here */
+            }
+            """);
+
+        Assert.True(Create().Section<CounterSection>("general").Update(c => c.Retries = 9).Saved);
+
+        Assert.Equal([" the only thing in here "], CommentsIn(OnDiskBytes()));
+        Assert.Equal(9, Create().Section<CounterSection>("general").Read().Retries);
+    }
+
     [Fact]
     public void An_empty_section_still_gains_its_members()
     {

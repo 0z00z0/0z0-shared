@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace ZeroZero.Config;
 
@@ -28,6 +29,9 @@ public sealed class SettingsFile<T> where T : class, new()
 {
     private const string QuarantineMarker = ".bad";
     private const string StampFormat = "yyyy-MM-dd-HHmmss";
+
+    // The stamp StampFormat writes, and the attempt number a second copy in the same second takes.
+    private const string CopyStampPattern = @"\A[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}(-[0-9]+)?\z";
 
     private readonly Lock _gate = new();
     private readonly SettingsFileOptions _options;
@@ -257,6 +261,7 @@ public sealed class SettingsFile<T> where T : class, new()
     {
         // The stamp sorts chronologically, so the newest copies are the last by ordinal name.
         var copies = Directory.EnumerateFiles(folder, $"{stem}.*{QuarantineMarker}{extension}")
+            .Where(path => IsCopyOf(path, stem, extension))
             .OrderDescending(StringComparer.Ordinal)
             .Skip(keep);
 
@@ -271,5 +276,20 @@ public sealed class SettingsFile<T> where T : class, new()
                 // One copy too many costs nothing; failing the load would cost the settings.
             }
         }
+    }
+
+    // A copy of this file and no other: the stem, a dot, a stamp, the marker and the extension. The
+    // search pattern alone also takes in the copies of a file whose name starts with this stem and a
+    // dot — app.local.json beside app.json — and the prune would delete them.
+    private static bool IsCopyOf(string path, string stem, string extension)
+    {
+        var name = Path.GetFileName(path);
+        var head = stem.Length + 1;
+        var tail = QuarantineMarker.Length + extension.Length;
+
+        return name.Length > head + tail
+            && name.StartsWith(stem + ".", StringComparison.Ordinal)
+            && name.EndsWith(QuarantineMarker + extension, StringComparison.Ordinal)
+            && Regex.IsMatch(name.AsSpan(head, name.Length - head - tail), CopyStampPattern);
     }
 }
