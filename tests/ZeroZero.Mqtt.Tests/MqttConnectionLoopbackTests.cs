@@ -77,7 +77,7 @@ public class MqttConnectionLoopbackTests
         using var broker = new FakeBroker();
         using var connection = await ConnectAsync(broker, Setup());
 
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == "online"));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Availability) == "online"));
         Assert.True(await FakeBroker.WaitAsync(
             () => broker.Subscriptions.Contains(MqttTopics.CommandFilter(Root, Device))));
         Assert.Equal(MqttConnectionState.Connected, connection.State);
@@ -93,9 +93,9 @@ public class MqttConnectionLoopbackTests
             new("quiet_mode", () => "ON"),
         ]));
 
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("quiet_mode")) is not null));
-        Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
-        Assert.Equal("ON", broker.LastPayload(Topic("quiet_mode")));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Topic("quiet_mode")) is not null));
+        Assert.Equal("42", broker.Retained(Topic("cpu_load")));
+        Assert.Equal("ON", broker.Retained(Topic("quiet_mode")));
         Assert.All(broker.Published.Where(p => p.Topic.StartsWith(Root, StringComparison.Ordinal)),
             p => Assert.True(p.Retained));
     }
@@ -244,7 +244,7 @@ public class MqttConnectionLoopbackTests
         reading = null;
         connection.RequestPublish("cpu_load");
         Assert.True(await FakeBroker.WaitAsync(
-            () => broker.LastPayload(Topic("cpu_load")) == MqttChannelPayload.None));
+            () => broker.Retained(Topic("cpu_load")) == MqttChannelPayload.None));
 
         connection.RequestPublish("cpu_load");
         await Task.Delay(300);
@@ -267,7 +267,7 @@ public class MqttConnectionLoopbackTests
         reading = null;
         connection.RequestPublish("cpu_load");
 
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("cpu_load")) == ""));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Topic("cpu_load")) == ""));
     }
 
     /// <summary>A channel whose producer has a first reading to wait for keeps what it last published
@@ -288,7 +288,7 @@ public class MqttConnectionLoopbackTests
         await Task.Delay(300);
 
         Assert.Equal(1, broker.CountOn(Topic("cpu_load")));
-        Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
+        Assert.Equal("42", broker.Retained(Topic("cpu_load")));
 
         // A changed parameter set reconnects, which is the only way this channel is asked again while
         // its reading is still absent.
@@ -296,7 +296,7 @@ public class MqttConnectionLoopbackTests
 
         Assert.True(await FakeBroker.WaitAsync(
             () => broker.CountOn(Topic("cpu_load")) == 2, TimeSpan.FromSeconds(30)));
-        Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
+        Assert.Equal("42", broker.Retained(Topic("cpu_load")));
     }
 
     /// <summary>A reader that threw says nothing about the current value, so what stands, stands.
@@ -316,7 +316,7 @@ public class MqttConnectionLoopbackTests
         await Task.Delay(300);
 
         Assert.Equal(1, broker.CountOn(Topic("cpu_load")));
-        Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
+        Assert.Equal("42", broker.Retained(Topic("cpu_load")));
     }
 
     [Fact]
@@ -359,7 +359,7 @@ public class MqttConnectionLoopbackTests
 
         await connection.SetChannelsAsync([new("cpu_load", () => "42")]);
 
-        Assert.All(withheld, channel => Assert.Equal("", broker.LastPayload(Topic(channel.Key))));
+        Assert.All(withheld, channel => Assert.Equal("", broker.Retained(Topic(channel.Key))));
         Assert.Equal(1, broker.CountOn(Topic("cpu_load")));
     }
 
@@ -387,7 +387,7 @@ public class MqttConnectionLoopbackTests
         connection.RequestPublish("cpu_load");
 
         Assert.True(await FakeBroker.WaitAsync(
-            () => broker.LastPayload(Topic("cpu_load")) == "43", TimeSpan.FromSeconds(30)));
+            () => broker.Retained(Topic("cpu_load")) == "43", TimeSpan.FromSeconds(30)));
         Assert.Equal(2, broker.Connects);
     }
 
@@ -451,8 +451,8 @@ public class MqttConnectionLoopbackTests
 
         await connection.ApplyAsync(Parameters(broker) with { Enabled = false });
 
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == "offline"));
-        Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Availability) == "offline"));
+        Assert.Equal("42", broker.Retained(Topic("cpu_load")));
         Assert.Equal(MqttConnectionState.Disabled, connection.State);
     }
 
@@ -467,8 +467,8 @@ public class MqttConnectionLoopbackTests
 
         await connection.ApplyAsync(Parameters(broker) with { Host = "" });
 
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == "offline"));
-        Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Availability) == "offline"));
+        Assert.Equal("42", broker.Retained(Topic("cpu_load")));
     }
 
     [Fact]
@@ -484,7 +484,7 @@ public class MqttConnectionLoopbackTests
         await connection.SetChannelsAsync([new("cpu_load", () => "42")]);
         await connection.ApplyAsync(Parameters(broker));
 
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("gpu_load")) == ""));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Topic("gpu_load")) == ""));
     }
 
     /// <summary>An eviction batch the token cancelled loses exactly what a refused one does: the
@@ -500,7 +500,7 @@ public class MqttConnectionLoopbackTests
             new("cpu_load", () => "42"),
             new("gpu_load", () => "7"),
         ]));
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("gpu_load")) == "7"));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Topic("gpu_load")) == "7"));
 
         using var cancelled = new CancellationTokenSource();
         await cancelled.CancelAsync();
@@ -510,7 +510,7 @@ public class MqttConnectionLoopbackTests
         // Any later pass over the pending set is what has to find it still there.
         await connection.SetChannelsAsync([new("cpu_load", () => "42")]);
 
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("gpu_load")) == ""),
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Topic("gpu_load")) == ""),
             "a cancelled eviction was dropped rather than retried");
     }
 
@@ -554,7 +554,7 @@ public class MqttConnectionLoopbackTests
         await connection.SetChannelsAsync(
             [new("cpu_load", () => "42"), new("gpu_load", () => "7")]);
 
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Topic("gpu_load")) == "7"));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Topic("gpu_load")) == "7"));
     }
 
     [Trait(Guard.Category, Guard.Value)]
@@ -567,8 +567,8 @@ public class MqttConnectionLoopbackTests
 
         Assert.True(await connection.RemoveDeviceAsync());
 
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == ""));
-        Assert.Equal("", broker.LastPayload(Topic("cpu_load")));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Availability) == ""));
+        Assert.Equal("", broker.Retained(Topic("cpu_load")));
         Assert.Equal(MqttConnectionState.Disabled, connection.State);
     }
 
@@ -586,7 +586,7 @@ public class MqttConnectionLoopbackTests
 
         await connection.RemoveDeviceAsync();
 
-        Assert.Equal("", broker.LastPayload(MqttTopics.Command(Root, Device, "quiet_mode")));
+        Assert.Equal("", broker.Retained(MqttTopics.Command(Root, Device, "quiet_mode")));
     }
 
     [Fact]
@@ -605,7 +605,7 @@ public class MqttConnectionLoopbackTests
         string topic = MqttTopics.Command(Root, Device, "quiet_mode");
         await broker.SendAsync(topic, "ON", retained: true);
 
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(topic) == ""));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(topic) == ""));
         Assert.Equal(0, applied);
         lock (refusals) Assert.Contains(refusals, r => r.Outcome == MqttCommandOutcome.Retained);
     }
@@ -627,7 +627,7 @@ public class MqttConnectionLoopbackTests
         await SubscribedAsync(broker);
 
         await broker.SendAsync(topic, "hello", retained: true);
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(topic) == ""));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(topic) == ""));
         await Task.Delay(300);   // the echo is on its way back before the next command is sent
 
         // A genuine command behind it. The socket delivers in order and the queue has one reader, so
@@ -653,7 +653,7 @@ public class MqttConnectionLoopbackTests
         await SubscribedAsync(broker);
 
         await broker.SendAsync(topic, "hello", retained: true);
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(topic) == ""));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(topic) == ""));
         await Task.Delay(300);   // and the echo it earned has come and gone
 
         await broker.SendAsync(topic, "");
@@ -690,23 +690,22 @@ public class MqttConnectionLoopbackTests
     {
         using var broker = new FakeBroker();
         var connection = await ConnectAsync(broker, Setup([new("cpu_load", () => "42")]));
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == "online"));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Availability) == "online"));
 
         connection.Dispose();
 
-        Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == "offline"));
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Availability) == "offline"));
         // The payload topics keep their values, so the device persists across a restart.
-        Assert.Equal("42", broker.LastPayload(Topic("cpu_load")));
+        Assert.Equal("42", broker.Retained(Topic("cpu_load")));
     }
 
     [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AutomaticEncryptionAgainstAPlainBroker_ConnectsInClearText()
     {
-        // The publisher, not only the connection check: what the defect cost was the live link to an
-        // ordinary internal broker, so the live link is what has to reach one. The broker hangs up on
-        // the encrypted attempt, and the plain candidate behind it is only tried if that hang-up is
-        // read as "nothing secure was on offer".
+        // The publisher, not only the connection check: the live link is what has to reach an
+        // ordinary internal broker. The broker hangs up on the encrypted attempt, and the plain
+        // candidate behind it is only tried if that hang-up is read as "nothing secure was on offer".
         using var broker = new FakeBroker();
         var parameters = Parameters(broker) with { EncryptionMode = MqttEncryptionMode.Auto };
         MqttEndpointMemory? remembered = null;
@@ -727,7 +726,7 @@ public class MqttConnectionLoopbackTests
     [Fact]
     public async Task EveryCandidateOpensASocketBeforeAnyMqttIsSpoken()
     {
-        // Plain TCP, pinned: the shape the check used to skip entirely.
+        // Plain TCP, pinned: a candidate with no encryption to ask about still gets the check.
         using var broker = new FakeBroker();
         using var connection = await ConnectAsync(broker, Setup());
 
@@ -757,7 +756,7 @@ public class MqttConnectionLoopbackTests
         Assert.True(await connection.RemoveDeviceAsync());
 
         // The clears landed, so whatever they would have been handed back has had its chance.
-        Assert.Equal("", broker.LastPayload(MqttTopics.Command(Root, Device, "quiet_mode_7")));
+        Assert.Equal("", broker.Retained(MqttTopics.Command(Root, Device, "quiet_mode_7")));
         await Task.Delay(300);
         lock (refusals) Assert.Empty(refusals);
     }
@@ -784,7 +783,7 @@ public class MqttConnectionLoopbackTests
     public void DisposingTwiceIsHarmless()
     {
         // IDisposable requires it, and a host that tears down explicitly and then disposes on exit
-        // does it. The second call used to cancel an already-disposed cancellation source.
+        // does it. The second call must not cancel an already-disposed cancellation source.
         using var broker = new FakeBroker();
         var connection = new MqttConnection(Setup());
         connection.Apply(Parameters(broker));

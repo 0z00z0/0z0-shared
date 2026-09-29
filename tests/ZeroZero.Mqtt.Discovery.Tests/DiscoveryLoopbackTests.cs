@@ -61,7 +61,7 @@ public class DiscoveryLoopbackTests
     }
 
     private static JsonObject Components(FakeBroker broker) =>
-        (JsonObject)JsonNode.Parse(broker.LastPayload(ConfigTopic)!)!["cmps"]!;
+        (JsonObject)JsonNode.Parse(broker.Retained(ConfigTopic)!)!["cmps"]!;
 
     [Fact]
     public async Task TheDeviceIsAnnouncedBeforeItIsDeclaredOnline()
@@ -72,7 +72,7 @@ public class DiscoveryLoopbackTests
             broker, new MqttEntitySet([Sample.Sensor(), Sample.Switch(), Sample.Button()]));
         using (connection) using (publisher)
         {
-            Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(Availability) == "online"));
+            Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Availability) == "online"));
 
             var order = broker.Published.Select(p => p.Topic).ToList();
             Assert.True(order.IndexOf(ConfigTopic) >= 0, "the document never reached the broker");
@@ -88,7 +88,7 @@ public class DiscoveryLoopbackTests
             broker, new MqttEntitySet([Sample.Sensor(), Sample.Switch(), Sample.Button()]));
         using (connection) using (publisher)
         {
-            Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(ConfigTopic) is not null));
+            Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(ConfigTopic) is not null));
 
             Assert.True(broker.Published.Single(p => p.Topic == ConfigTopic).Retained);
             Assert.Equal(["cpu_load", "quiet_mode", "restart"], Components(broker).Select(p => p.Key));
@@ -109,12 +109,12 @@ public class DiscoveryLoopbackTests
         ]));
         using (connection) using (publisher)
         {
-            Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(State("profile")) is not null));
+            Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(State("profile")) is not null));
 
-            Assert.Equal("42", broker.LastPayload(State("cpu_load")));
-            Assert.Equal("ON", broker.LastPayload(State("quiet_mode")));
-            Assert.Equal("12.5", broker.LastPayload(State("poll_interval")));
-            Assert.Equal("Home", broker.LastPayload(State("profile")));
+            Assert.Equal("42", broker.Retained(State("cpu_load")));
+            Assert.Equal("ON", broker.Retained(State("quiet_mode")));
+            Assert.Equal("12.5", broker.Retained(State("poll_interval")));
+            Assert.Equal("Home", broker.Retained(State("profile")));
 
             // A button is command-only: nothing is published on its behalf at all.
             Assert.Equal(0, broker.CountOn(State("restart")));
@@ -149,11 +149,11 @@ public class DiscoveryLoopbackTests
             broker, new MqttEntitySet([Sample.Sensor("vm_alpha"), Sample.Sensor("vm_beta")]));
         using (connection) using (publisher)
         {
-            Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(State("vm_beta")) is not null));
+            Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(State("vm_beta")) is not null));
 
             await publisher.SetEntitiesAsync(new MqttEntitySet([Sample.Sensor("vm_alpha")]));
 
-            Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(State("vm_beta")) == ""));
+            Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(State("vm_beta")) == ""));
             Assert.Equal(["p"], ((JsonObject)Components(broker)["vm_beta"]!).Select(p => p.Key));
         }
     }
@@ -168,15 +168,15 @@ public class DiscoveryLoopbackTests
             broker, new MqttEntitySet([Sample.Sensor(), Sample.Button()]));
         using (publisher)
         {
-            Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(State("cpu_load")) == "12"));
-            string document = broker.LastPayload(ConfigTopic)!;
+            Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(State("cpu_load")) == "12"));
+            string document = broker.Retained(ConfigTopic)!;
 
             await connection.ApplyAsync(new MqttConnectParameters { Enabled = false });
             connection.Dispose();
 
-            Assert.Equal(document, broker.LastPayload(ConfigTopic));
-            Assert.Equal("12", broker.LastPayload(State("cpu_load")));
-            Assert.Equal("offline", broker.LastPayload(Availability));
+            Assert.Equal(document, broker.Retained(ConfigTopic));
+            Assert.Equal("12", broker.Retained(State("cpu_load")));
+            Assert.Equal("offline", broker.Retained(Availability));
         }
     }
 
@@ -188,15 +188,15 @@ public class DiscoveryLoopbackTests
             broker, new MqttEntitySet([Sample.Sensor(), Sample.Button()]));
         using (publisher)
         {
-            Assert.True(await FakeBroker.WaitAsync(() => broker.LastPayload(State("cpu_load")) == "12"));
+            Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(State("cpu_load")) == "12"));
 
             Assert.True(await connection.RemoveDeviceAsync());
             connection.Dispose();
 
-            Assert.Equal("", broker.LastPayload(ConfigTopic));
-            Assert.Equal("", broker.LastPayload(State("cpu_load")));
-            Assert.Equal("", broker.LastPayload(Availability));
-            Assert.Equal("", broker.LastPayload(MqttTopics.Command(Root, Device, "restart")));
+            Assert.Equal("", broker.Retained(ConfigTopic));
+            Assert.Equal("", broker.Retained(State("cpu_load")));
+            Assert.Equal("", broker.Retained(Availability));
+            Assert.Equal("", broker.Retained(MqttTopics.Command(Root, Device, "restart")));
         }
     }
 }

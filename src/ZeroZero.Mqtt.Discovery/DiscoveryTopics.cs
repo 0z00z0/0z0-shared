@@ -130,25 +130,6 @@ public static class DiscoveryTopics
     public static string Device(string prefix, string deviceId) =>
         $"{prefix}/{DeviceSegment}/{deviceId}/config";
 
-    /// <summary>The device id a recorded document topic was published under, or null when the topic is
-    /// not one of these. What lets a record written before the id was stored alongside the topic be
-    /// read without losing the identity it carries.</summary>
-    public static string? DeviceIdOf(string? configTopic)
-    {
-        const string tail = "/config";
-        if (configTopic is null || !configTopic.EndsWith(tail, StringComparison.Ordinal)) return null;
-
-        var body = configTopic.AsSpan(0, configTopic.Length - tail.Length);
-        int slash = body.LastIndexOf('/');
-        if (slash <= 0 || body.Length <= slash + 1) return null;
-
-        var head = body[..slash];
-        return head.Equals(DeviceSegment, StringComparison.Ordinal)
-            || head.EndsWith($"/{DeviceSegment}", StringComparison.Ordinal)
-            ? body[(slash + 1)..].ToString()
-            : null;
-    }
-
     /// <summary>One component's own retained config, at
     /// <c>&lt;prefix&gt;/&lt;component&gt;/&lt;deviceId&gt;/&lt;entityId&gt;/config</c>. The layer
     /// publishes no configuration here; it empties these paths for the entities a consumer declares

@@ -37,12 +37,6 @@ public static class MqttEndpointPlan
     public static bool Answered(MqttProbeOutcome outcome) => outcome
         is MqttProbeOutcome.Success or MqttProbeOutcome.AuthRejected or MqttProbeOutcome.Rejected;
 
-    /// <summary>Provenance shown once the endpoint in force was found rather than chosen.</summary>
-    public const string AutomaticallyDetected = "Automatically detected";
-
-    /// <summary>Provenance shown when both halves were pinned by hand, so nothing was probed.</summary>
-    public const string SetManually = "Set manually";
-
     /// <summary>The ports a broker is commonly reached on over one transport, most likely first.</summary>
     /// <remarks>
     /// TCP: 1883 is IANA's <c>mqtt</c> and 8883 its <c>secure-mqtt</c>, which is the whole of what a
@@ -237,23 +231,6 @@ public static class MqttEndpointPlan
         request.Port is not null
         && request.Transport != MqttTransportMode.Auto
         && request.Encryption != MqttEncryptionMode.Auto;
-
-    /// <summary>How the endpoint in force came to be what it is, and whether it is in clear text.
-    /// Pure.</summary>
-    /// <remarks>The encryption clause is not decoration. Automatic falls back to plain on its own, so
-    /// a link can be downgraded with no user action at all, and nothing else on a settings page would
-    /// say so.</remarks>
-    public static string DescribeProvenance(MqttEndpointRequest request, MqttEndpointMemory? memory)
-    {
-        string source = Pinned(request) ? SetManually : AutomaticallyDetected;
-
-        return EncryptionInForce(request, memory) switch
-        {
-            true  => $"{source} — encrypted",
-            false => $"{source} — not encrypted",
-            _     => source,
-        };
-    }
 
     /// <summary>A pinned port, transport or encryption is honoured exactly, remembered entry
     /// included — an explicit choice must not be reached around by something that happened to work

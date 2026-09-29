@@ -31,8 +31,10 @@ public sealed class MqttText : MqttCommandEntity
 
     public MqttTextMode Mode { get; init; }
 
-    /// <summary>A regular expression the receiver validates against before sending. Never the only
-    /// guard: <see cref="Accept"/> still judges what arrives.</summary>
+    /// <summary>A regular expression the receiver validates against before sending.
+    /// <see cref="Accept"/> does not apply it: only the length is checked here, so a payload the
+    /// pattern would refuse reaches <see cref="Apply"/> when it comes from anywhere but the
+    /// receiver.</summary>
     public string? Pattern { get; init; }
 
     public override MqttCommandVerdict Accept(string payload) =>

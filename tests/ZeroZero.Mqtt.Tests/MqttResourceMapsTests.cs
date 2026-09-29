@@ -80,8 +80,8 @@ public class MqttResourceMapsTests
     private static Dictionary<string, Dictionary<string, string>> LibraryOwnIndex() =>
         Index((Map, "ButtonApply", "Apply"), (Map, "ButtonTest", "Test connection"));
 
-    /// <summary>The two indexes the loader opens, and the order it opens them in — the pair of lines
-    /// that used to sit in the loader itself, where nothing could run them.</summary>
+    /// <summary>The two indexes the loader opens, and the order it opens them in: the application's
+    /// own first, so its entries outrank the library's.</summary>
     [Fact]
     public void TheApplicationsIndexIsOpenedBeforeTheLibrarysOwnFile() =>
         Assert.Equal(new[] { ApplicationIndex, LibraryIndex }, MqttResourceMaps.Indexes(Library));

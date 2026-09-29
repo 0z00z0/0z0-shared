@@ -118,7 +118,7 @@ the Windows App SDK nowhere still meets it, and the one alternative to this meta
 [`consume-build-kit.md`](consume-build-kit.md#a-process-wide-self-contained-property-fails-every-library-in-the-graph).
 
 **A consuming app that ships its own language-folder resources declares `DefaultLanguage` itself.**
-The panel declares `en-GB` for its own `.resw`, so nothing in the module warns any more. An app that
+The panel declares `en-GB` for its own `.resw`, so nothing in the module raises the warning. An app that
 generates a merged PRI from resources of its own still has MakePRI comparing them against its
 `en-US` assumption, which is `PRI257`, and no library can declare that on the app's behalf:
 
@@ -240,7 +240,7 @@ whether the receiver keeps the existing entities or announces a parallel set of 
 [Identity, and what it guarantees](#identity-and-what-it-guarantees).
 
 **This is a different obligation from the entity migration in
-[Differences from an earlier shape](#differences-from-an-earlier-shape).** That one hands retained
+[Taking over a per-component installation](#taking-over-a-per-component-installation).** That one hands retained
 discovery topics over on the wire and is declared to the module; this one moves the stored broker
 block into the module's file and the module never sees it. A consumer needs both, and doing the
 declared one does not cover this.
@@ -530,8 +530,9 @@ remembered for the process's life alone, and without a `Listener` nothing is ann
 nothing answered. `ApplyAsync` logs a failure rather than throwing. A channel's `Payload` is read on
 a background thread, and one that throws leaves the last value standing; an empty, shared or
 `availability` key, or one carrying `/`, `+` or `#`, throws. A subscription's handler runs on the
-command worker, one message at a time. A receiver's birth message is answered within
-`BirthRepublishDelay`, 30 seconds.
+command worker, one message at a time, so a handler that waits holds every command behind it. A
+receiver's birth message is answered within `BirthRepublishDelay`, 30 seconds; that wait runs off
+the worker.
 
 ### 6. Host the panel
 
@@ -1092,7 +1093,11 @@ Three rules move it:
 - **A session that outlives thirty seconds is stable**, and drops the ladder back to the floor, so
   one bad minute does not leave a healthy link reconnecting a minute late for the rest of the
   session. A resume from standby does the same, because the suspend killed the socket and the
-  session that ended with it was not the broker's doing.
+  session that ended with it was not the broker's doing. So does a changed parameter set, because a
+  wait earned under the old values says nothing about the new ones: the loop reconnects with them
+  at once, link up or down. `ApplyAsync` returns before that reconnect has happened.
+- **A handshake that goes unanswered** costs the connect budget, ten seconds, and is a failed
+  attempt like any other. A broker that accepts the socket and then stalls does not hold the loop.
 
 **A disconnect the connection caused itself never shortens the wait.** The maintain loop drops its
 own socket whenever the connect sequence throws — a listener, the subscription, an eviction — and the
@@ -1376,10 +1381,10 @@ panel as it actually renders rather than what the XAML claims. The same script's
 writes the two captures under an extreme palette that
 [What a host's branding reaches](consume-mqtt-settings-panel.md#what-a-hosts-branding-reaches) links.
 
-## Differences from an earlier shape
+## Taking over a per-component installation
 
-A consumer with code written against a per-component, shared-payload implementation meets the
-following. Each is a compile error or a topic move, not a silent behaviour change.
+An installation that already publishes under a per-component, shared-payload implementation has
+retained topics on the broker that the module takes over.
 
 **This chapter covers the wire only — the retained topics an existing installation already
 publishes.** It does not carry the consumer's stored broker settings into the module's own file;
@@ -1389,8 +1394,7 @@ without a word. See
 
 ### Declaring the migration
 
-The tables below are the compile-time half. The wire half is one declaration: **for an installation
-that already publishes under a per-component implementation, declaring every current entity as a
+It is one declaration: **for an installation that already publishes under a per-component implementation, declaring every current entity as a
 `MigratingEntity` is the migration.** Nothing else carries an existing entity across. An entity left
 undeclared is announced in the device document as a new one while its old single-component config
 stays retained beside it — two entries for one thing, and everything the user set attached to the
@@ -1455,70 +1459,6 @@ correctly. It establishes nothing about one installation's accumulated customisa
 months ago, entities moved between areas, ones hidden or disabled, entity ids chosen by hand. A test
 device's entities are entities on a test device; they are not the population a first migration puts
 at risk, and the backup is what stands in for that difference.
-
-### The compile-time differences
-
-**Assemblies and namespaces**
-
-| Was | Is |
-|---|---|
-| `ZeroZero.Mqtt.HomeAssistant` | `ZeroZero.Mqtt.Discovery` |
-| `Microsoft.Extensions.Logging` abstractions | `ILogSink` in `ZeroZero.Primitives`, two members, with `NullLogSink.Instance` as the default |
-| — | `ZeroZero.Primitives` and `ZeroZero.Config` at the base of the graph |
-
-**The entity model**
-
-| Was | Is |
-|---|---|
-| `HaEntity`, `HaSensor`, `HaBinarySensor`, `HaSwitch`, `HaButton`, `HaNumber`, `HaSelect`, `HaText` | `MqttEntity`, `MqttSensor`, `MqttBinarySensor`, `MqttSwitch`, `MqttButton`, `MqttNumber`, `MqttSelect`, `MqttText` |
-| `ObjectId` | `EntityId` |
-| `Role` (`HaEntityRole`) | `Category` (`MqttEntityCategory`) |
-| `UnitOfMeasurement` | `Unit` |
-| `StateClass` as a string | `MqttStateClass` |
-| `State` | `Read`, required on every component but the button |
-| `Apply(value, ct)` returning a task | `Apply(value)` returning an `MqttCommandVerdict` that carries the work |
-| `ValueTemplate` | removed — one bare topic per entity, and no templates anywhere |
-| `Options` as a fixed list | `Func<IReadOnlyList<string>>`, read on every announcement pass |
-| A writable entity with no state provider | not expressible — every component but the button has a required reader |
-| `Include` defaulting to `() => true` | `Include` nullable, null meaning true, and a throw meaning "could not be read" |
-| `HaEntitySet.Channels()` / `CommandTargets(logger)` | `MqttEntitySet.Channels(published)` / `CommandTargets(published)`, static; or `DiscoveryPublisher.Channels()` / `CommandTargets()` |
-| `HaNode` | `MqttDeviceIdentity` plus `DiscoveryPublisher` |
-
-**The wire**
-
-| Was | Is |
-|---|---|
-| One retained config per component, at `<prefix>/<component>/<node>/<object>/config` | One retained device document, at `<prefix>/device/<deviceId>/config` |
-| `object_id` and `default_entity_id` | neither — `unique_id` is the only identity |
-| A shared payload plus `value_template` per entity | one bare topic per entity, carrying a plain value |
-| A withheld entity's config topic emptied | the entity kept in the document, pointed at the withheld availability topic |
-| An absent reading emptying the topic | `MqttPayload.None` on every platform but text |
-| No record of what was published | `IDiscoveryLedgerStore`, required, with no default |
-
-**The core**
-
-| Was | Is |
-|---|---|
-| `MqttOptions` | `MqttSettings` (persisted) and `MqttConnectParameters` (projected, and carrying no password, group state or endpoint memory) |
-| `MqttOptionsValidator` | `MqttIdentity`, `MqttEntityId` and `MqttBrokerEdits.Validate` |
-| `IMqttCredentialStore` | removed — `MqttConnectParameters.Password` is a fetch delegate and `CredentialRef` a fingerprint |
-| `MqttConnectionPlan` | `MqttEndpointPlan` |
-| `MqttTransportSetting`, `MqttEncryptionSetting` | `MqttTransportMode`, `MqttEncryptionMode` |
-| `UseTls` as a boolean | `MqttEncryptionMode`, three-valued, plus `MqttCertificateTrust` |
-| `MqttDetectStage`, `MqttDetectProgress` | `MqttSearchStage`, `MqttSearchProgress` |
-| `LastGoodEndpoint` stored in the options | `RecallEndpoint` and `RememberEndpoint` callbacks on the connection setup |
-| `NodeId` | `DeviceId` |
-
-**The panel**
-
-| Was | Is |
-|---|---|
-| `MqttPanelOptions`, `MqttPanelSnapshot` | `MqttPanelSetup` |
-| `MqttPublishCategory` | `PublishGroup`, declared on `PublishGroupSet` |
-| `MqttSettingsDraft` | `MqttBrokerEdits` |
-| `MqttPanelGates` | `MqttBrokerEdits.Validate`, one gate for Apply and Test |
-| `MqttStatusFormatter` in the WinUI assembly | `MqttStatusText` and `MqttPanelText` in the core |
-| Callbacks per edited field (`OnEnabledChanged`, `OnBrokerApplied`, `OnNodeIdChanged`, …) | `ConnectionChanged` and `PublishSetChanged` |
 
 ---
 

@@ -32,9 +32,7 @@ public sealed class DiscoveryLedgerFile : IDiscoveryLedgerStore
 
     public string FilePath => _file.FilePath;
 
-    // Through Copy, which is where a record written before the device id was stored beside the topic
-    // has it derived — so an existing installation keeps its identity rather than reading as a new one.
-    public DiscoveryLedger Read() => _file.Read().Copy();
+    public DiscoveryLedger Read() => _file.Read();
 
     public void Update(Action<DiscoveryLedger> mutate) => _file.Update(mutate);
 }

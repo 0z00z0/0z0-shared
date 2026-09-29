@@ -70,9 +70,9 @@ public class MqttPanelSetupTests
         Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(topic) == 2));
     }
 
-    /// <summary>The three connection members a panel cannot run without are no longer enforced by the
-    /// compiler, so Initialise refuses a setup missing one, naming it — rather than a null
-    /// dereference on the first Status refresh or the first press of Publish now.</summary>
+    /// <summary>The compiler does not enforce the three connection members a panel cannot run without,
+    /// so Initialise refuses a setup missing one, naming it — rather than a null dereference on the
+    /// first Status refresh or the first press of Publish now.</summary>
     [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void ASetupWithoutTheConnectionIsRefusedForEachMemberItLacks()

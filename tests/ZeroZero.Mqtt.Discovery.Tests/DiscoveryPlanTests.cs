@@ -239,24 +239,6 @@ public class DiscoveryPlanTests
         Assert.Null(pass.Ledger.Find("exampleapp_old"));
     }
 
-    [Trait(Guard.Category, Guard.Value)]
-    [Fact]
-    public void ARecordWrittenBeforeTheDeviceIdWasStoredKeepsItsIdentity()
-    {
-        // Only the topic was recorded. Read as a different device it would abandon the live one:
-        // empty its document, its availability and every value under it, and then rebuild it.
-        var ledger = new DiscoveryLedger
-        {
-            Devices = [new PublishedDevice { ConfigTopic = Sample.ConfigTopic, Entities = [Recorded("cpu_load")] }],
-        };
-
-        var pass = Announce(ledger, [Sample.Sensor()]);
-
-        Assert.Empty(pass.Evictions);
-        Assert.Single(pass.Ledger.Devices);
-        Assert.Equal(Sample.DeviceId, pass.Ledger.Devices[0].DeviceId);
-    }
-
     [Fact]
     public void AMovedDiscoveryPrefixIsTheSameDeviceAtANewAddress()
     {

@@ -33,6 +33,7 @@ public sealed class FakeBroker : IDisposable
     private readonly CancellationTokenSource _stop = new();
     private readonly ConcurrentQueue<BrokerPublish> _published = new();
     private readonly ConcurrentQueue<string> _subscriptions = new();
+    private readonly ConcurrentDictionary<string, string> _retained = new(StringComparer.Ordinal);
 
     // What the current session is subscribed to, as against the cumulative record above: delivery is
     // about what stands now, and an unsubscribe has to be able to take a filter back out.
@@ -73,9 +74,10 @@ public sealed class FakeBroker : IDisposable
     /// second and not out of this.</summary>
     public IReadOnlyList<string> Subscriptions => [.. _subscriptions];
 
-    /// <summary>The last payload retained on a topic, or null if nothing was published to it.</summary>
-    public string? LastPayload(string topic) =>
-        _published.Where(p => p.Topic == topic).Select(p => p.Payload).LastOrDefault();
+    /// <summary>What the broker holds retained on a topic: the payload of the last publish that carried
+    /// the retain flag, empty when that publish was a clear, and null when nothing retained was ever
+    /// published there. A publish without the flag leaves it as it was, whatever its payload.</summary>
+    public string? Retained(string topic) => _retained.GetValueOrDefault(topic);
 
     public int CountOn(string topic) => _published.Count(p => p.Topic == topic);
 
@@ -195,6 +197,7 @@ public sealed class FakeBroker : IDisposable
 
         string payload = Encoding.UTF8.GetString(body, i, body.Length - i);
         _published.Enqueue(new(topic, payload, retained, qos));
+        if (retained) _retained[topic] = payload;
 
         if (qos != MqttQos.AtMostOnce)
         {
