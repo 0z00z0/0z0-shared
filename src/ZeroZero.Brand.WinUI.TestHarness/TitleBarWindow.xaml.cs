@@ -9,7 +9,8 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// <summary>
 /// Title-bar theming on screen: a dark Mica page with its bar untreated, the same page with the
 /// bar painted for its theme, a light page painted for its theme (which leaves the bar stock),
-/// and a light page whose bar is pinned dark, the fixed override an application pinned dark uses.
+/// a light page whose bar is pinned dark, the fixed override an application pinned dark uses, and
+/// a light page whose bar is painted dark and then light again, what a live switch back leaves.
 /// The caption strip is the thing to look at; the page is only there to be dark or light.
 /// </summary>
 public sealed partial class TitleBarWindow : Window

@@ -123,6 +123,23 @@ public class UnattendedUpdatePolicyTests
         Assert.Equal(0, _shutdowns);
     }
 
+    /// <summary>An installer that will not start is removed, so the next tick's fresh download
+    /// leaves no copy of it behind.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task ALaunchThatFails_DiscardsTheInstaller()
+    {
+        ReleaseIsWaiting();
+        _idle.ScreenLocked = true;
+        _service.LaunchResult = new LaunchResult(false, "the installer could not be started");
+
+        UnattendedTick tick = await Policy().TickAsync();
+
+        Assert.Equal(UnattendedOutcome.LaunchFailed, tick.Outcome);
+        Assert.Same(_service.Prepared, Assert.Single(_service.Discarded));
+        Assert.Equal(0, _shutdowns);
+    }
+
     /// <summary>The gate before the download: a refusal keeps the release found and downloads
     /// nothing, the refusal writes one line however many ticks repeat it, and the gate before the
     /// launch is never reached.</summary>

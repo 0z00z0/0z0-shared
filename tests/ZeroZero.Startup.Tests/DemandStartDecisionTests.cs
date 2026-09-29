@@ -16,8 +16,8 @@ public class DemandStartDecisionTests
     public void ARunningTaskWhoseRunTimeMovedStartedItsProgram() =>
         Assert.True(StartupTask.StartedAndStillRunning(TaskState.Running, Moved, Before));
 
-    /// <summary>The defect 0.7.2 closed: a run that is only queued has moved the run time on
-    /// without starting anything, and must not count as a start.</summary>
+    /// <summary>A run that is only queued has moved the run time on without starting anything,
+    /// and must not count as a start.</summary>
     [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public void AQueuedRunHasNotStartedItsProgram() =>

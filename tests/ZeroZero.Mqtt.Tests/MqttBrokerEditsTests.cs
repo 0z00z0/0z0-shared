@@ -211,8 +211,8 @@ public class MqttBrokerEditsTests
     [Fact]
     public void AnInvalidPortIsRefusedRatherThanCollapsingToAutomatic()
     {
-        // The defect this replaces: Apply refused the port while Test silently swept every
-        // candidate, so a green result vouched for a configuration that could not be applied.
+        // Apply and Test refuse the same port. A Test that swept every candidate instead would give a
+        // green result for a configuration that cannot be applied.
         var (edits, store) = Staged();
         edits.Host = "broker.invalid";
         edits.PortMode = MqttPortMode.Custom;

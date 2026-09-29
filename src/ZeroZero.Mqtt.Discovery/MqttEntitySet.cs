@@ -51,18 +51,6 @@ public sealed class MqttEntitySet
     public IReadOnlyList<MqttEntity> Published(PublishGroupSnapshot? groups) =>
         [.. _all.Where(e => e.IsPublished(groups) == true)];
 
-    /// <summary>The complement of <see cref="Published"/>: switched off, or gated out by
-    /// <see cref="MqttEntity.Include"/>.</summary>
-    /// <remarks>A reversible state, and the announcement pass needs it as an input: an entity here has
-    /// stopped publishing but has not stopped existing, so one already announced stays in the document
-    /// and is shown unavailable rather than removed. Without it, a group toggle and a deletion are the
-    /// same thing to a receiver — and a group toggle is a settings checkbox that commits at once.</remarks>
-    /// <remarks>An entity whose capability could not be read counts as withheld here, because this
-    /// is the plain complement and has no record to consult. A pass uses <see cref="Resolve"/>
-    /// instead, which does.</remarks>
-    public IReadOnlyList<MqttEntity> Withheld(PublishGroupSnapshot? groups) =>
-        [.. _all.Where(e => e.IsPublished(groups) != true)];
-
     /// <summary>The two lists one announcement pass works from, with an unreadable capability resolved
     /// against what was published last time rather than guessed.</summary>
     /// <param name="recorded">What this identity last put on the broker, or null when nothing has

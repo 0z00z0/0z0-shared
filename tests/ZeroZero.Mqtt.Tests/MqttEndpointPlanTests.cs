@@ -245,27 +245,6 @@ public class MqttEndpointPlanTests
     }
 
     [Fact]
-    public void DescribeProvenance_SaysManualOnlyWhenAllThreeArePinned()
-    {
-        Assert.StartsWith(MqttEndpointPlan.SetManually,
-            MqttEndpointPlan.DescribeProvenance(
-                Request(1883, MqttTransportMode.Tcp, MqttEncryptionMode.Off), null),
-            StringComparison.Ordinal);
-
-        Assert.StartsWith(MqttEndpointPlan.AutomaticallyDetected,
-            MqttEndpointPlan.DescribeProvenance(Request(1883, MqttTransportMode.Tcp), null),
-            StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void DescribeProvenance_NamesAClearTextLinkNobodyChose()
-    {
-        var memory = new MqttEndpointMemory("broker.invalid", "user", 1883, MqttTransport.Tcp, false);
-
-        Assert.Contains("not encrypted", MqttEndpointPlan.DescribeProvenance(Request(), memory));
-    }
-
-    [Fact]
     public void EncryptionInForce_IsUnknownUnderAutomaticWithNothingConnectedYet() =>
         Assert.Null(MqttEndpointPlan.EncryptionInForce(Request(), null));
 

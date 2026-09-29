@@ -94,7 +94,9 @@ the XAML runtime is up.
   and each re-reads the request: a changed slot or theme is a new render, an unchanged one is a
   push of the current icon, which repairs an icon the shell dropped without saying so — the push
   is refused, and the icon is added afresh from the state the library still holds. A refresh the
-  host started on its own that throws raises `Failed` rather than the application's crash handler.
+  host started on its own that throws raises `Failed` rather than the application's crash handler;
+  a refresh or placement call the application made, and a refused add inside it, throws to the
+  caller.
 - **The cache.** A render's frames are composed into one icon file with `IcoFile` and written
   only when the bytes differ from the last write, so a state change that draws the same picture
   costs no disk write and no reload. The frame of the slot's own size is what reaches the shell,

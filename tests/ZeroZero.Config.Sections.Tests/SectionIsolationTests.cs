@@ -101,6 +101,21 @@ public sealed class SectionIsolationTests : SectionedTestBase
         Assert.Equal(copies[0], store.LastQuarantinePath);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void Pruning_copies_leaves_those_of_a_file_whose_name_extends_this_one_alone()
+    {
+        // settings.local.json's copies answer the same search as this document's own, and sort first.
+        var sibling = Path.Combine(Root, "settings.local.2026-01-01-000000.bad.json");
+        File.WriteAllText(sibling, "{}");
+        Given("{ \"general\": ");
+
+        var store = Create(new SettingsFileQuarantine(Keep: 1));
+
+        Assert.True(File.Exists(store.LastQuarantinePath));
+        Assert.True(File.Exists(sibling));
+    }
+
     [Fact]
     public void A_section_the_document_lacks_reads_as_defaults_and_is_not_a_failure()
     {

@@ -17,7 +17,7 @@
   </PropertyGroup>
 
   <!--
-    Component: the window both applications converged on, with every page left to the application.
+    Component: the settings window, with every page left to the application.
     The two versions are the family's pins in the build kit's ZeroZero.Packages.props, which
     Directory.Packages.props imports; a pin moves there and nowhere else.
   -->

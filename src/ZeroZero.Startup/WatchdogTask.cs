@@ -44,8 +44,9 @@ public sealed class WatchdogTask : IDisposable
     public string TaskName => _options.TaskName;
 
     /// <summary>The record of a deliberate exit, at the path the options name. Made on first use, so
-    /// a path the file system refuses is a failed <see cref="Ensure"/> rather than a constructor
-    /// that throws.</summary>
+    /// a blank path is a failed <see cref="Ensure"/> rather than a constructor that throws. Only a
+    /// blank path is refused there: a path the file system will not write to shows only when
+    /// <see cref="WatchdogHold.Hold"/> returns false.</summary>
     public WatchdogHold Hold => _hold ??= new WatchdogHold(_options.HoldMarkerPath, _log);
 
     /// <summary>The bound on the probe's own restarts, counted beside the hold marker.</summary>
@@ -137,8 +138,9 @@ public sealed class WatchdogTask : IDisposable
             ?? Environment.ProcessPath
             ?? throw new InvalidOperationException("The executable the watchdog should start is unknown: no path was given and the process reports none.");
 
-        // Touched so a marker path the file system refuses fails here rather than at the exit that
-        // wanted to record itself.
+        // Touched so a blank marker path fails here rather than at the exit that wanted to record
+        // itself. The file system is not asked: a path it will not write to shows only when
+        // Hold() returns false.
         _ = Hold;
         _ = Restarts;
         _ = Service;

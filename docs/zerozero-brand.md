@@ -327,7 +327,7 @@ only its *rendering* moves to the shared control, not its data.
   concept at this layer. A page that wants a check for updates places a `BrandBracketButton` beside
   or under the control and drives it from its own update flow.
 - The control supplies the `[Ø]` studio mark, the company name and the tagline itself: the header
-  carries them as fixed text, and the copyright footer reads `Brand.StudioName`. The row reads
+  reads `Brand.StudioName` and `Brand.Tagline`, and the copyright footer reads `Brand.StudioName`. The row reads
   **Website / Donate / What's new**, then the application's own buttons: Website and Donate always
   point at the studio's own `Brand.WebsiteUrl` / `Brand.BuyMeACoffeeUrl`, What's new appears only with `ReleaseNotesUrl`, and everything after it
   comes from `AboutInfo.Buttons`. An application with its own What's new window leaves
@@ -337,10 +337,7 @@ only its *rendering* moves to the shared control, not its data.
   fetch that does not answer leaves one sentence saying so. Roughly the first four thousand
   characters are read and the panel scrolls inside a fixed height. A page host closing or navigating
   away abandons a fetch in flight; a window host calls `CancelPendingFetch()` for the same reason.
-  `RepoUrl` is still required and still feeds the console banner — it just no longer has a button.
-- **After the control's first unload, fetched notes never reach it again.** Unloading calls
-  `CancelPendingFetch()` and nothing re-arms it, so every later fetch is discarded and the panel keeps
-  saying it is fetching. A page that needs the notes on every visit builds a new control each time.
+  `RepoUrl` is required and feeds the console banner; the row carries no button for it.
 
 ## The bracket action button
 

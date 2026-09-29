@@ -55,8 +55,8 @@ public class MqttProbeClassifierTests
 
     /// <summary>Stands in for the client library's own communication exception: an ordinary wrapper
     /// carrying neither a socket error nor an authentication failure. No client-library type is
-    /// referenced here on purpose — the module's types stand in front of that library, and what the
-    /// classifier can see of the wrapper is only that it is neither of the two it used to require.</summary>
+    /// referenced here on purpose — the module's types stand in front of that library, and all the
+    /// classifier can see of the wrapper is that it is neither of those two.</summary>
     private sealed class CommunicationException(string message, Exception inner)
         : Exception(message, inner);
 

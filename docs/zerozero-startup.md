@@ -182,7 +182,8 @@ that reading would risk killing a running application.
   leaves a correct one alone, and never throws. **The constructor checks its arguments and does
   nothing else**: the scheduler connection, the executable path, the marker path and the collision
   check all happen inside `Ensure()`, where a refusal is the `Failed` outcome rather than a throw
-  out of an application's start-up path. `Delete()` removes the task and says whether there was
+  out of an application's start-up path. Of the marker path only a blank one is refused there; a
+  path the file system will not write to shows only when `Hold()` returns false. `Delete()` removes the task and says whether there was
   one; the installer's uninstall owns that, and nothing in a running application removes its own
   backstop. `Hold` is the record below, `Restarts` the bound below that.
 - **`WatchdogHold`** — `Hold()` records a deliberate exit, `Release()` clears it, `IsHeld` reads it.

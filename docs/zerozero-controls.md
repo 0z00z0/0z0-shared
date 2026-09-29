@@ -79,8 +79,9 @@ This guide is complete for adoption: the component's own source and tests need n
   confirm and null on cancel, Escape or any other way out; Enter confirms from the field; the
   confirm button waits for text unless `AllowEmpty` is set. Every string is the caller's —
   `Confirm` says what the answer does, "Rename", not "OK" — and so is the theme, so an application
-  pinned dark passes it. The prompt collapses the field's selection before it closes: closing with
-  the opening selection still in place crashed the process inside the XAML runtime, measured.
+  pinned dark passes it. The prompt collapses the field's selection on every way out, Alt+F4
+  included: closing while the field holds its opening selection crashes the process with an access
+  violation in the XAML runtime.
   The text comes back untrimmed. `Title`, `Message` and `Confirm` are required; `Cancel` defaults to
   "Cancel", `MaxLength` to 0 (no limit), and without `AllowEmpty` whitespace alone does not enable
   the confirm.

@@ -95,14 +95,13 @@ public class MqttEntitySetTests
         Assert.Single(new MqttEntitySet([Number(MqttNumber.MinimumStep)]).All);
 
     [Fact]
-    public void PublishedAndWithheldAreComplements()
+    public void AnEntityInASwitchedOffGroupIsNotPublished()
     {
         var set = new MqttEntitySet(
             [Sample.Sensor("cpu_load"), Sample.Sensor("gpu_load", group: "metrics"), Sample.Button()]);
         var groups = Groups(new PublishGroup("metrics", "Metrics", DefaultOn: false));
 
         Assert.Equal(["cpu_load", "restart"], set.Published(groups).Select(e => e.EntityId));
-        Assert.Equal(["gpu_load"], set.Withheld(groups).Select(e => e.EntityId));
     }
 
     [Fact]

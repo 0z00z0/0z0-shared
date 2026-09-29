@@ -52,11 +52,10 @@ public sealed partial class BrandAboutControl : UserControl
     private AboutInfo? _info;
 
     /// <summary>The fetch in flight, if any. One at a time: a second press while it runs is
-    /// ignored rather than starting a parallel request.</summary>
+    /// ignored rather than starting a parallel request. A reply is applied only while its own fetch
+    /// is still this one, so a fetch abandoned by <see cref="CancelPendingFetch"/> touches nothing
+    /// and the next press starts a fresh one.</summary>
     private CancellationTokenSource? _fetch;
-
-    /// <summary>Set once the host is going away, so a reply landing after that touches nothing.</summary>
-    private bool _dismissed;
 
     /// <summary>The notes as fetched, so reopening the panel costs no second request.</summary>
     private string? _notes;
@@ -80,10 +79,13 @@ public sealed partial class BrandAboutControl : UserControl
     {
         InitializeComponent();
 
-        // Named as the markup named them, so a probe that finds a row button by name still does.
+        StudioNameText.Text = CoreBrand.StudioName;
+        TaglineText.Text    = CoreBrand.Tagline;
+
+        // Named so a probe can find a row button by name.
         var siteButton   = CreateRowButton("Website", "SiteBtn");
         var donateButton = CreateRowButton(DonateContent(), "DonateBtn");
-        // The content is a panel now, not a string, so the name is stated rather than inferred.
+        // The content is a panel rather than a string, so the accessible name is stated explicitly.
         AutomationProperties.SetName(donateButton, "Donate");
         _newsButton      = CreateRowButton("What's new", "NewsBtn");
         _buttonRow.Children.Add(siteButton);
@@ -112,8 +114,9 @@ public sealed partial class BrandAboutControl : UserControl
     /// </summary>
     public void CancelPendingFetch()
     {
-        _dismissed = true;
-        try { _fetch?.Cancel(); }
+        var fetch = _fetch;
+        _fetch = null;
+        try { fetch?.Cancel(); }
         catch (ObjectDisposedException) { /* the fetch already finished and disposed its source */ }
     }
 
@@ -136,9 +139,7 @@ public sealed partial class BrandAboutControl : UserControl
         AppNameText.Text     = info.AppName;
         VersionText.Text     = $"v{info.Version}";
         DescriptionText.Text = info.Description;
-        // "Licence" (noun) per the studio's British-English house style (design-language.md).
-        // Year is computed, not a literal, so this doesn't go stale like a hard-coded one would.
-        FooterText.Text      = $"Copyright © {DateTime.UtcNow.Year} {CoreBrand.StudioName} · MIT Licence";
+        FooterText.Text     = $"Copyright © {DateTime.UtcNow.Year} {CoreBrand.StudioName} · MIT Licence";
 
         // A repopulate is a different application's data, so notes fetched for the previous one are
         // not shown against it. An address that changed also drops whatever is on screen.
@@ -198,8 +199,7 @@ public sealed partial class BrandAboutControl : UserControl
     /// </summary>
     /// <remarks>
     /// The button reads as one thing to a screen reader: the mark is out of the accessibility tree
-    /// and the button is named by the label alone, as it was when the label carried a character in
-    /// front of it.
+    /// and the button is named by the label alone.
     /// </remarks>
     private StackPanel DonateContent()
     {
@@ -255,7 +255,7 @@ public sealed partial class BrandAboutControl : UserControl
         try
         {
             string text = await FetchNotesAsync(url, fetch.Token);
-            if (_dismissed) return;
+            if (_fetch != fetch) return;
             _notes = text;
             NewsText.Text = text;
         }
@@ -264,16 +264,17 @@ public sealed partial class BrandAboutControl : UserControl
             // Every failure reads the same to the reader — unreachable, refused, timed out, not
             // found. Nothing is retried: the sentence stays until the panel is closed and reopened,
             // which is the reader's decision rather than this control's.
-            if (_dismissed) return;
+            if (_fetch != fetch) return;
             Debug.WriteLine($"BrandAboutControl: release notes fetch failed: {ex}");
             NewsText.Text = FetchFailed;
         }
         finally
         {
-            _fetch = null;
+            bool current = _fetch == fetch;
+            if (current) _fetch = null;
             fetch.Dispose();
             // The panel's height settled either way, so the host resizes to what is now in it.
-            if (!_dismissed)
+            if (current)
             {
                 try { ContentResized?.Invoke(this, EventArgs.Empty); }
                 catch (Exception ex) { Debug.WriteLine($"BrandAboutControl: resize after fetch: {ex}"); }
@@ -309,15 +310,9 @@ public sealed partial class BrandAboutControl : UserControl
         // Cleared before every repopulate, for the same reason the link handlers attach once: a
         // consumer with a cached in-navigation About page calls SetInfo on every navigation, and
         // appending to a panel that still holds the previous lines renders the whole credit list
-        // once per visit. Cleared ahead of the empty-list exit too, so a later info without
-        // libraries leaves no stale lines behind.
+        // once per visit. The group's visibility follows this call's list, in either direction.
         LibrariesPanel.Children.Clear();
-
-        if (libraries.Count == 0)
-        {
-            LibrariesGroup.Visibility = Visibility.Collapsed;
-            return;
-        }
+        LibrariesGroup.Visibility = libraries.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
 
         foreach (var lib in libraries)
         {
@@ -328,10 +323,6 @@ public sealed partial class BrandAboutControl : UserControl
                 Opacity       = 0.85,
             };
 
-            // Credits the Author alongside Name/Purpose/License — a consumer with a bespoke
-            // Library/Author/Purpose/License table (e.g. M365Migrator) can render ExternalLibrary
-            // itself instead, but this shared flowing-line rendering shouldn't silently drop the
-            // author it already has on hand.
             if (lib.Url is { } url)
             {
                 var link = new Hyperlink();

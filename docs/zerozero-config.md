@@ -116,7 +116,8 @@ a key belonging in another component's own file is carried where it stands, not 
   report the version, `HasLoaded` says whether a read has ever succeeded — false is the latch below,
   with every write refused — and `SaveFailed` reports a write that did not land.
 - **`SettingsSection<T>`** — the store: `Read()`, `Update(Action<T>)`, `Write(T)` and a `Changed`
-  event. `IsPresent` and `IsUnreadable` say whether the document carries the section and whether this
+  event, raised whenever the section's held bytes move: its own write, a `Reload`, or another
+  section's write taking in a hand edit to this one. `IsPresent` and `IsUnreadable` say whether the document carries the section and whether this
   build can read it.
 - **`SectionedSettingsOptions`** — the directory and file name, the serialiser, the quarantine
   policy, the notification context, the document version this build writes, and the order sections
@@ -143,7 +144,8 @@ construction:
   document does not yet carry is inserted.
 - **Hand edits survive.** Comments, trailing commas, the file's own indent, its line ending and its
   byte-order mark are read off the file and kept. An unknown member inside a section this build does
-  own survives too, and so does a comment that is the only thing inside a section.
+  own survives too, and so does a comment that is the only thing inside a section or inside a
+  document with no keys.
 - **A member is matched the way the reader matches it.** With a case-insensitive serialiser, a write
   finds the file's own spelling and replaces its value rather than adding the declared spelling
   beside it.

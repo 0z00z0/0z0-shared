@@ -12,6 +12,10 @@ public enum VerificationVerdict
 
     FileMissing,
 
+    /// <summary>The file is there and could not be opened to be hashed — held by another process,
+    /// an antivirus scan among them, or refused by its permissions.</summary>
+    FileUnreadable,
+
     /// <summary>The bytes are not the bytes the release published: truncated, corrupted, or another
     /// file. Checked first, before the signature is looked at.</summary>
     HashMismatch,
@@ -63,7 +67,16 @@ public static class InstallerVerifier
         if (!File.Exists(path))
             return new VerificationResult(VerificationVerdict.FileMissing, $"there is no file at {path}");
 
-        string actual = Sha256Of(path);
+        string actual;
+        try
+        {
+            actual = Sha256Of(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new VerificationResult(VerificationVerdict.FileUnreadable, $"the file could not be read: {ex.Message}");
+        }
+
         if (!string.Equals(actual, expected, StringComparison.Ordinal))
             return new VerificationResult(VerificationVerdict.HashMismatch,
                 $"the file hashes to {actual}; the release publishes {expected}", ActualSha256: actual);

@@ -86,6 +86,8 @@ public sealed class BrandFontPathTests(PackedBrand brand)
         (Path.Combine("src", "ZeroZero.Brand.WinUI", "BrandAboutControl.xaml"), 1),
         (Path.Combine("src", "ZeroZero.Brand.WinUI", "BrandAboutWindow.xaml"), 1),
         (Path.Combine("src", "ZeroZero.Brand.WinUI", "Themes", "BrandResources.xaml"), 1),
+        (Path.Combine("src", "ZeroZero.Brand.WinUI", "BrandBracketButton.xaml"), 1),
+        (Path.Combine("src", "ZeroZero.Update.WinUI", "UpdateWindow.xaml"), 1),
     ];
 
     [Trait(Guard.Category, Guard.Value)]

@@ -19,8 +19,8 @@ internal static partial class NativeMethods
     }
 
     /// <summary>Sets the theme the process's Win32 menus are drawn in, and returns what it was.
-    /// Exported by ordinal only, which is the only way to reach it; absent before Windows 10
-    /// 1903.</summary>
+    /// Exported by ordinal only, which is the only way to reach it, and undocumented, so no Windows
+    /// build is guaranteed to carry it.</summary>
     [LibraryImport("uxtheme.dll", EntryPoint = "#135")]
     internal static partial PreferredAppMode SetPreferredAppMode(PreferredAppMode mode);
 

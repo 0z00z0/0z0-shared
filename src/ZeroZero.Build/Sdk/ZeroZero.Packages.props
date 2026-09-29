@@ -2,9 +2,8 @@
 
   <!-- The family's third-party pins, under central package management. A repository imports this
        from its Directory.Packages.props and adds its own packages below the import; every
-       repository that does so resolves one version per package here. The drift this stops was
-       measured before it existed: a test SDK a minor apart and two platform packages a patch apart
-       between two applications with no pin file at all. -->
+       repository that does so resolves one version per package here. A repository that does not
+       import it resolves its own versions, and two applications drift apart. -->
 
   <PropertyGroup>
     <ZeroZeroPackagesImported>true</ZeroZeroPackagesImported>
