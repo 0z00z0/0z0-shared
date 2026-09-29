@@ -3,9 +3,10 @@ using MQTTnet.Protocol;
 
 namespace ZeroZero.Mqtt;
 
-/// <summary>Whether one encrypted attempt ever saw a certificate. A far end that presented one speaks
-/// TLS and something is wrong with its certificate; a far end that presented none does not speak TLS
-/// on that port at all, and only the second may be retried in clear text.</summary>
+/// <summary>What one encrypted attempt's trust setting made of the certificate the far end presented,
+/// if it presented one. None presented means no TLS on that port, and only that may be retried in
+/// clear text; a refused one is a trust problem; an accepted one means whatever failed afterwards was
+/// something else.</summary>
 /// <remarks>Recorded rather than inferred from the exception: a broker with no TLS on its port hangs
 /// up on the ClientHello and one with a bad certificate fails the handshake, and both reach the
 /// client as an ordinary communication failure carrying an end of stream, a reset or a stall. The
@@ -13,11 +14,12 @@ namespace ZeroZero.Mqtt;
 /// validation callback, which runs on the handshake's thread.</remarks>
 internal sealed class MqttHandshakeWitness
 {
-    private int _presented;
+    private int _verdict = (int)MqttCertificateVerdict.NotPresented;
 
-    public bool CertificatePresented => Volatile.Read(ref _presented) != 0;
+    public MqttCertificateVerdict Verdict => (MqttCertificateVerdict)Volatile.Read(ref _verdict);
 
-    public void Saw() => Volatile.Write(ref _presented, 1);
+    public void Saw(bool accepted) => Volatile.Write(
+        ref _verdict, (int)(accepted ? MqttCertificateVerdict.Accepted : MqttCertificateVerdict.Rejected));
 }
 
 /// <summary>Everything that touches MQTTnet, in one place. Internal, so no client-library type
@@ -28,8 +30,8 @@ internal static class MqttClientWiring
     /// <summary>Applies a resolved endpoint and its certificate trust to a client options builder.
     /// The one place either transport is wired, so the live publisher and the probe configure the
     /// client identically.</summary>
-    /// <param name="witness">Told when the far end presents a certificate. Null for a caller with no
-    /// downgrade decision to make.</param>
+    /// <param name="witness">Told when the far end presents a certificate, and whether the trust
+    /// setting accepted it. Null for a caller with no downgrade decision to make.</param>
     internal static MqttClientOptionsBuilder WithEndpoint(
         this MqttClientOptionsBuilder builder, MqttEndpointAddress address, MqttCertificateTrust trust,
         MqttHandshakeWitness? witness = null)
@@ -55,7 +57,7 @@ internal static class MqttClientWiring
         // certificate is expected to name.
         if (address.Transport == MqttTransport.Tcp) options.WithTargetHost(address.Host);
 
-        // Every mode but system trust answers from the setting rather than from the chain, so the
+        // Accepting any certificate answers from the setting rather than from the chain, so the
         // platform's verdict must not reject the certificate before the handler is asked. Under
         // system trust nothing is relaxed: the handler is installed only to witness the
         // certificate, and its verdict is the platform's own answer unchanged.
@@ -67,9 +69,10 @@ internal static class MqttClientWiring
 
         options.WithCertificateValidationHandler(args =>
         {
-            var presented = MqttPresentedCertificate.From(args.Certificate, args.SslPolicyErrors);
-            if (args.Certificate is not null) witness?.Saw();
-            return trust.Accepts(presented);
+            bool accepted = trust.Accepts(
+                MqttPresentedCertificate.From(args.Certificate, args.SslPolicyErrors));
+            if (args.Certificate is not null) witness?.Saw(accepted);
+            return accepted;
         });
     }
 
@@ -97,7 +100,7 @@ internal static class MqttClientWiring
             return MqttProbe.ClassifyConnack(ConnackCode(result), result?.ReasonString);
         }
         catch (OperationCanceledException) { return MqttProbe.Cancelled(ct); }
-        catch (Exception ex) { return MqttProbe.ClassifyConnectException(ex, ct, witness?.CertificatePresented); }
+        catch (Exception ex) { return MqttProbe.ClassifyConnectException(ex, ct, witness?.Verdict); }
         finally
         {
             // Not on the budget token: a cancelled budget must still let the throwaway session close

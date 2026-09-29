@@ -55,6 +55,7 @@ public class MqttProbeLoopbackTests
     /// read the other way, the clear-text candidate behind it is never tried and the broker is
     /// unreachable. Against a listener rather than a constructed exception, because the shape of the
     /// failure is exactly what was got wrong.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task AutomaticEncryptionAgainstAPlainBroker_RetriesInClearTextAndConnects()
     {

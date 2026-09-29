@@ -51,7 +51,7 @@ public class MqttSettingsFileTests : IDisposable
                 s.Port = 8883;
                 s.TransportMode = MqttTransportMode.WebSocket;
                 s.EncryptionMode = MqttEncryptionMode.On;
-                s.CertificateTrust = MqttCertificateTrust.ForThumbprint("AA BB CC");
+                s.CertificateTrust = MqttCertificateTrust.AcceptAny;
                 s.Username = "user";
                 s.DeviceId = "desk01";
                 s.DeviceName = "Desk";
@@ -67,7 +67,7 @@ public class MqttSettingsFileTests : IDisposable
         Assert.Equal(8883, settings.Port);
         Assert.Equal(MqttTransportMode.WebSocket, settings.TransportMode);
         Assert.Equal(MqttEncryptionMode.On, settings.EncryptionMode);
-        Assert.Equal(MqttCertificateTrustMode.Thumbprint, settings.CertificateTrust.Mode);
+        Assert.Equal(MqttCertificateTrustMode.AcceptAny, settings.CertificateTrust.Mode);
         Assert.Equal("elsewhere", settings.DiscoveryPrefix);
         Assert.False(settings.Groups["metrics"]);
     }

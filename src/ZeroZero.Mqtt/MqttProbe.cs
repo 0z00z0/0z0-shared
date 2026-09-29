@@ -23,8 +23,8 @@ public enum MqttProbeOutcome
     /// <summary>CONNACK: refused for some other reason — client id, protocol, banned.</summary>
     Rejected,
 
-    /// <summary>A socket opened, the far end presented a certificate, and the link still failed: the
-    /// certificate is not trusted, or the protocols do not meet. Encryption <b>was</b> on offer, so a
+    /// <summary>A socket opened, the far end presented a certificate, and the certificate trust
+    /// setting refused it, or the handshake itself failed. Encryption <b>was</b> on offer, so a
     /// clear-text retry would send the password to a broker that could have taken it in cipher — this
     /// is the outcome that must never be downgraded, and certificate trust is what resolves it.</summary>
     TlsUntrusted,
@@ -37,6 +37,21 @@ public enum MqttProbeOutcome
 
     /// <summary>Protocol error, or anything else.</summary>
     Failed,
+}
+
+/// <summary>What the certificate trust setting made of the certificate an encrypted attempt was
+/// shown, recorded during the handshake.</summary>
+public enum MqttCertificateVerdict
+{
+    /// <summary>No certificate arrived: the far end does not speak TLS on that port.</summary>
+    NotPresented,
+
+    /// <summary>A certificate arrived and the trust setting took it, so a later failure is not
+    /// about the certificate.</summary>
+    Accepted,
+
+    /// <summary>A certificate arrived and the trust setting refused it.</summary>
+    Rejected,
 }
 
 /// <summary><see cref="MqttProbeOutcome"/> plus a short broker or OS-supplied reason. Never carries
@@ -253,22 +268,24 @@ public static class MqttProbe
     };
 
     /// <summary>Classifies a failed connect attempt from what the exception chain carries.</summary>
-    /// <param name="certificatePresented">Whether the far end presented a certificate during this
-    /// attempt, or null when the attempt was not an encrypted one and the question does not arise.
-    /// It is what separates the two TLS failures, and the separation cannot be made from the
-    /// exception: the same close, reset or stall carries both, and the wording that would tell them
-    /// apart is the platform's and is translated.</param>
+    /// <param name="certificate">What the trust setting made of the certificate during this attempt,
+    /// or null when the attempt was not an encrypted one and the question does not arise. It is what
+    /// separates the two TLS failures, and the separation cannot be made from the exception: the same
+    /// close, reset or stall carries both, and the wording that would tell them apart is the
+    /// platform's and is translated.</param>
     /// <remarks>
-    /// On an encrypted attempt the certificate is the whole verdict and the exception type carries
-    /// no weight. A broker that does not speak TLS on its port reads a ClientHello as a malformed
-    /// packet and closes the socket, and that arrives as a client-library communication exception
-    /// wrapping an end of stream — no <see cref="SocketException"/> and no authentication failure
-    /// anywhere in the chain. A reset, an abort and a stalled handshake reach here in as many other
-    /// shapes. Deciding on any of those types would leave the ordinary internal broker on 1883
-    /// unreachable under Automatic, which is what the witness exists to prevent.
+    /// A certificate that was refused, or none at all, is the whole verdict and the exception type
+    /// carries no weight. A broker that does not speak TLS on its port reads a ClientHello as a
+    /// malformed packet and closes the socket, and that arrives as a client-library communication
+    /// exception wrapping an end of stream — no <see cref="SocketException"/> and no authentication
+    /// failure anywhere in the chain. A reset, an abort and a stalled handshake reach here in as many
+    /// other shapes. Deciding on any of those types would leave the ordinary internal broker on 1883
+    /// unreachable under Automatic, which is what the witness exists to prevent. A certificate that
+    /// was accepted says nothing about what failed next — a proxy's HTTP refusal of the WebSocket
+    /// upgrade arrives after it — so that failure is read from the exception like a plain one.
     /// </remarks>
     public static MqttProbeResult ClassifyConnectException(
-        Exception ex, CancellationToken ct, bool? certificatePresented = null)
+        Exception ex, CancellationToken ct, MqttCertificateVerdict? certificate = null)
     {
         SocketException? socket = null;
         bool cancelled = false;
@@ -294,15 +311,16 @@ public static class MqttProbe
                { Outcome: MqttProbeOutcome.Unreachable or MqttProbeOutcome.TimedOut } reached)
             return reached;
 
-        // What is left of an encrypted attempt is a handshake that began and did not finish, and the
-        // certificate settles it: one that arrived means encryption was on offer and something is
-        // wrong with it; none means nothing secure was ever offered and no credential left the
-        // machine, so the plain retry behind this candidate is safe.
-        if (certificatePresented is { } presented)
-            return new(
-                presented ? MqttProbeOutcome.TlsUntrusted : MqttProbeOutcome.TlsUnsupported,
-                Describe(ex));
+        // A refused certificate means encryption was on offer and the trust setting said no; none
+        // means nothing secure was ever offered and no credential left the machine, so the plain
+        // retry behind this candidate is safe. An accepted one settles nothing and falls through.
+        if (certificate == MqttCertificateVerdict.Rejected)
+            return new(MqttProbeOutcome.TlsUntrusted, Describe(ex));
+        if (certificate == MqttCertificateVerdict.NotPresented)
+            return new(MqttProbeOutcome.TlsUnsupported, Describe(ex));
 
+        // None of these is downgrade-safe, so a failure after an accepted certificate still keeps the
+        // clear-text retry closed.
         if (handshake) return new(MqttProbeOutcome.TlsUntrusted, Describe(ex));
         if (socket is not null) return ClassifySocketError(socket.SocketErrorCode);
         return new(MqttProbeOutcome.Failed, Describe(ex));

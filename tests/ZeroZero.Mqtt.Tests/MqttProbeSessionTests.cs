@@ -236,7 +236,7 @@ public class MqttProbeSessionTests
         Host: "broker.example.com", Port: 8883, Username: "desk", Password: "secret-one",
         ClientId: "desk01_probe", Transport: MqttTransportMode.Tcp, Encryption: MqttEncryptionMode.On,
         Memory: new MqttEndpointMemory("broker.example.com", "desk", 1883, MqttTransport.Tcp, false),
-        CertificateTrust: MqttCertificateTrust.ForThumbprint("AB12"));
+        CertificateTrust: MqttCertificateTrust.AcceptAny);
 
     private static MqttProbeSession PassedOn(MqttProbeTarget target)
     {
@@ -286,7 +286,6 @@ public class MqttProbeSessionTests
             ("username", Tested with { Username = "desk2" }),
             ("password", Tested with { Password = "secret-two" }),
             ("certificate trust mode", Tested with { CertificateTrust = MqttCertificateTrust.SystemTrust }),
-            ("pinned certificate", Tested with { CertificateTrust = MqttCertificateTrust.ForThumbprint("CD34") }),
             ("client id", Tested with { ClientId = "desk02_probe" }),
         };
 

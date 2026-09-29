@@ -361,10 +361,8 @@
                     </controls:SettingsCard>
 
                     <!-- Directly under Encryption, because it decides nothing while the link is in
-                         clear text. Shaped like Port rather than like Transport: the two entries
-                         that name a certificate need a value, so the box below the dropdown appears
-                         for those two and the line below it carries either that box's fault or what
-                         the last entry gives up. -->
+                         clear text. The line below the dropdown says what accepting any
+                         certificate gives up. -->
                     <controls:SettingsCard x:Name="TrustCard">
                         <controls:SettingsCard.Description>
                             <TextBlock x:Name="TrustDescription" Style="{StaticResource MqttHintStyle}"/>
@@ -374,8 +372,6 @@
                             <StackPanel Spacing="4" HorizontalAlignment="Right">
                                 <ComboBox x:Name="TrustCombo" Style="{StaticResource MqttComboFieldStyle}"
                                           SelectionChanged="OnBrokerSelectionChanged"/>
-                                <TextBox x:Name="TrustValueBox" Style="{StaticResource MqttTextFieldStyle}"
-                                         Visibility="Collapsed" TextChanged="OnBrokerFieldEdited"/>
                                 <TextBlock x:Name="TrustNoteText" Visibility="Collapsed"
                                            Style="{StaticResource MqttHintStyle}"
                                            Foreground="{ThemeResource SystemFillColorCriticalBrush}"

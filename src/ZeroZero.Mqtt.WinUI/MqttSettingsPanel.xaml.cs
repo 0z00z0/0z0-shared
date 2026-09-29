@@ -505,8 +505,6 @@ public sealed partial class MqttSettingsPanel : UserControl
 
         TrustCombo.Items.Clear();
         TrustCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("TrustSystem") });
-        TrustCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("TrustThumbprint") });
-        TrustCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("TrustCertificate") });
         TrustCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("TrustAcceptAny") });
     }
 
@@ -521,7 +519,6 @@ public sealed partial class MqttSettingsPanel : UserControl
         if (PasswordBox.Password != _edits.Password) PasswordBox.Password = _edits.Password;
         SetText(PrefixBox, _edits.DiscoveryPrefix);
         SetText(PortCustomBox, _edits.TypedPort);
-        SetText(TrustValueBox, _edits.TrustValue);
 
         TransportCombo.SelectedIndex = (int)_edits.Transport;
         EncryptionCombo.SelectedIndex = (int)_edits.Encryption;
@@ -555,7 +552,6 @@ public sealed partial class MqttSettingsPanel : UserControl
         _edits.Password = PasswordBox.Password ?? "";
         _edits.DiscoveryPrefix = PrefixBox.Text ?? "";
         _edits.TypedPort = PortCustomBox.Text ?? "";
-        _edits.TrustValue = TrustValueBox.Text ?? "";
         _edits.Transport = TransportCombo.SelectedIndex < 0
             ? MqttTransportMode.Auto : (MqttTransportMode)TransportCombo.SelectedIndex;
         _edits.Encryption = EncryptionCombo.SelectedIndex < 0
@@ -628,27 +624,13 @@ public sealed partial class MqttSettingsPanel : UserControl
         TestProgress.Visibility = _probe.Busy ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    /// <summary>Shows the pinned-value box only for the two entries that name a certificate, and puts
-    /// on the line below it either that box's fault or what the last entry gives up.</summary>
-    /// <remarks>One line for both, because they cannot be wanted at once: the entry that gives
-    /// something up carries no value that could be wrong, and a pinned entry gives nothing up.</remarks>
+    /// <summary>Puts what accepting any certificate gives up on the line below the dropdown, and
+    /// nothing there otherwise.</summary>
     private void RefreshTrustFields()
     {
-        bool pinned = _edits.TrustMode is MqttCertificateTrustMode.Thumbprint
-                                       or MqttCertificateTrustMode.Certificate;
-
-        TrustValueBox.Visibility = pinned ? Visibility.Visible : Visibility.Collapsed;
-        if (pinned)
-            TrustValueBox.PlaceholderText = _strings.Get(
-                _edits.TrustMode == MqttCertificateTrustMode.Thumbprint
-                    ? "PlaceholderThumbprint" : "PlaceholderCertificate");
-
-        string note = _edits.TrustMode == MqttCertificateTrustMode.AcceptAny
-            ? _strings.Get("TrustAcceptAnyNote")
-            : _edits.ValidateTrust().Message ?? "";
-
-        TrustNoteText.Text = note;
-        TrustNoteText.Visibility = note.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+        bool acceptAny = _edits.TrustMode == MqttCertificateTrustMode.AcceptAny;
+        TrustNoteText.Text = acceptAny ? _strings.Get("TrustAcceptAnyNote") : "";
+        TrustNoteText.Visibility = acceptAny ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>Commits the whole staged block at once, so the connection reconnects per Apply click
