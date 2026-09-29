@@ -143,6 +143,22 @@ public class InstallerVerifierTests(SignedFileFactory files) : IClassFixture<Sig
         Assert.False(result.IsVerified);
     }
 
+    /// <summary>A file another process holds open ends in a verdict, and Verify returns.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void Verify_ReportsAFileItCannotRead()
+    {
+        string path = Path.Combine(files.Root, "held.exe");
+        File.Copy(files.SignedByExpectedPath, path, overwrite: true);
+        using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            VerificationResult result = InstallerVerifier.Verify(path, files.Sha256(files.SignedByExpectedPath), files.Signer);
+
+            Assert.Equal(VerificationVerdict.FileUnreadable, result.Verdict);
+            Assert.False(result.IsVerified);
+        }
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("abc")]

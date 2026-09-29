@@ -109,8 +109,7 @@ public sealed partial class UpdateWindow : Window
 
     /// <summary>
     /// Asks whether to install and completes when the person has chosen. Closing the window any
-    /// other way answers <see cref="InstallChoice.Later"/>, which is what the cross on a question
-    /// has always meant.
+    /// other way answers <see cref="InstallChoice.Later"/>: the cross on a question means not now.
     /// </summary>
     public Task<InstallChoice> AskAsync(ReleaseInfo release, Version runningVersion)
     {

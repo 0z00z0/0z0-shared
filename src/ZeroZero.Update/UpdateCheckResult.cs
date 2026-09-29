@@ -25,9 +25,6 @@ public enum UpdateCheckOutcome
     /// JSON, not a release object, no tag, or a tag that is not a version.</summary>
     InvalidResponse,
 
-    // The two below are appended rather than filed beside the outcomes they split from, so the
-    // members above keep the numbers they already had.
-
     /// <summary>Something is at that address and it did not answer within
     /// <see cref="UpdateOptions.RequestTimeout"/>. A cancellation the caller asked for is never
     /// this: it leaves the check as an <see cref="OperationCanceledException"/> and no outcome.</summary>

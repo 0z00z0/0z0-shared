@@ -298,8 +298,50 @@ public class UpdateFlowTests
         Assert.Equal(2, loud.UpToDate.Count);
     }
 
+    /// <summary>A joined run keeps waiting under its own token when the run that started the check
+    /// is cancelled, and reads the check's answer.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
-    public async Task CancellationReachesTheService()
+    public async Task AJoinedRun_OutlivesTheCancelledRunThatStartedTheCheck()
+    {
+        _service.CheckResult = new UpdateCheckResult(UpdateCheckOutcome.UpToDate, new Version(1, 0, 0, 0), FakeUpdateService.Release);
+        _service.HoldCheck = new TaskCompletionSource();
+        UpdateFlow flow = Flow();
+        using var cancel = new CancellationTokenSource();
+
+        Task<UpdateFlowRun> first = flow.RunAsync(UpdateTrigger.Scheduled, cancel.Token);
+        Task<UpdateFlowRun> second = flow.RunAsync(UpdateTrigger.Silent);
+        cancel.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first);
+        _service.HoldCheck.SetResult();
+        UpdateFlowRun joined = await second;
+
+        Assert.Equal(UpdateFlowResult.UpToDate, joined.Result);
+        Assert.Equal(1, _service.Checks);
+    }
+
+    /// <summary>A stop that lands once the download is complete, while the file is being verified,
+    /// still keeps the installer from starting, and the verified file is removed.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task AStopDuringVerification_LaunchesNothing()
+    {
+        _service.CheckResult = Available();
+        using var stop = new CancellationTokenSource();
+        stop.Cancel();
+        _prompts.StopDownload = stop;
+
+        UpdateFlowRun run = await Flow().RunAsync(UpdateTrigger.Manual);
+
+        Assert.Equal(UpdateFlowResult.DownloadCancelled, run.Result);
+        Assert.Equal(0, _service.Launches);
+        Assert.Equal(0, _shutdowns);
+        Assert.Single(_service.Discarded);
+    }
+
+    [Fact]
+    public async Task Cancellation_EndsTheRunWithNothingStarted()
     {
         _service.HoldCheck = new TaskCompletionSource();
         using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
