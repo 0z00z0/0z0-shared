@@ -13,8 +13,7 @@ using ZeroZero.Win32;
 namespace ZeroZero.SettingsShell.WinUI;
 
 /// <summary>
-/// The settings window both applications converged on, with every page left to the
-/// application. Mica chrome with the title bar painted for the theme, a navigation pane with a
+/// The settings window, with every page left to the application. Mica chrome with the title bar painted for the theme, a navigation pane with a
 /// product footer, one scroll viewer over the pages, placement against the application's saved
 /// rectangle, and Escape to close. Each section is a <see cref="SettingsSection"/>: the shell
 /// builds its page, shows and hides it, and calls the enter and leave hooks around every change.

@@ -98,7 +98,8 @@ public sealed class TrayHost : IDisposable
 
     /// <summary>Raised on the UI thread when a refresh the host started on its own — after a
     /// theme, display or shell change — throws, which is the application's icon delegate or its
-    /// tooltip composer failing. A refresh the application asked for throws to the caller.</summary>
+    /// tooltip composer failing, or the shell refusing to add the icon again. A refresh or a
+    /// placement call the application made throws to the caller.</summary>
     public event EventHandler<Exception>? Failed;
 
     /// <summary>Whether <see cref="Start"/> has run.</summary>
@@ -228,16 +229,16 @@ public sealed class TrayHost : IDisposable
     private void Reregister()
     {
         if (_icon is not { IsCreated: true } icon) return;
+        AddAgain(icon);
+    }
 
-        try
-        {
-            icon.TrayIcon.TryRemove();
-            icon.TrayIcon.Create();
-        }
-        catch (InvalidOperationException ex)
-        {
-            Failed?.Invoke(this, ex);
-        }
+    /// <summary>Removes the icon from the shell and adds it again from the state the library holds.
+    /// A refused add throws: to the caller where the application made the call, and into
+    /// <see cref="Failed"/> through the guard every change the host starts on its own runs in.</summary>
+    private static void AddAgain(TaskbarIcon icon)
+    {
+        icon.TrayIcon.TryRemove();
+        icon.TrayIcon.Create();
     }
 
     private static TimeSpan Now => TimeSpan.FromMilliseconds(Environment.TickCount64);
@@ -275,8 +276,9 @@ public sealed class TrayHost : IDisposable
         }
         catch (Exception ex) when (ex is EntryPointNotFoundException or DllNotFoundException)
         {
-            // Before Windows 10 1903 there is no such export, and the menu then stays as Windows
-            // draws it — which is what a host that never asked would have had.
+            // The export is undocumented and reached by ordinal, so a Windows build without it is
+            // not ruled out; the menu then stays as Windows draws it — which is what a host that
+            // never asked would have had.
         }
     }
 
@@ -331,16 +333,7 @@ public sealed class TrayHost : IDisposable
     {
         if (_icon is null || _loaded is null || !_icon.IsCreated) return;
         if (_icon.TrayIcon.UpdateIcon(_loaded.Handle)) return;
-
-        try
-        {
-            _icon.TrayIcon.TryRemove();
-            _icon.TrayIcon.Create();
-        }
-        catch (InvalidOperationException ex)
-        {
-            Failed?.Invoke(this, ex);
-        }
+        AddAgain(_icon);
     }
 
     private void ApplyTooltip()
