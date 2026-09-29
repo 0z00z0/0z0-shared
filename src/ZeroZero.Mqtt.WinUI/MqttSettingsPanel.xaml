@@ -169,7 +169,7 @@
                  single writer (SetStatusValue) puts on text, tooltip and colour together so nothing
                  can change a size.
 
-                 The rows are Auto and the block has a floor rather than a fixed height, so a large
+                 The rows are Auto and the block has no fixed height, so a large
                  Windows text size grows the block instead of clipping four lines inside it. The
                  width cap is what stops the trap; the height never needed to be part of it.
 

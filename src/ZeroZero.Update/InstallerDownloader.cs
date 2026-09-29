@@ -67,8 +67,6 @@ public sealed class InstallerDownloader
 
             long? total = response.Content.Headers.ContentLength ?? (asset.Size > 0 ? asset.Size : null);
             long received = 0;
-            // Read only where a reporter is attached, so a download with none is the download it
-            // was before the interval existed.
             long reportedAt = progress is null ? 0 : Stopwatch.GetTimestamp();
 
             await using (var file = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1 << 16, useAsync: true))

@@ -12,9 +12,6 @@ public enum UpdateTrigger
     Manual,
     Scheduled,
 
-    // Appended rather than filed beside the triggers it sits between, so the two above keep the
-    // numbers they already had.
-
     /// <summary>Nothing reaches the screen, whatever the outcome, a release included. The caller
     /// reads the run and drives its own button; an update starts from
     /// <see cref="UpdateFlow.InstallAsync"/> with the release the run carries.</summary>
@@ -38,8 +35,6 @@ public enum UpdateFlowResult
 
     /// <summary>The installer is running and the shutdown callback has been called.</summary>
     InstallerStarted,
-
-    // Appended, so the members above keep the numbers they already had.
 
     /// <summary>A release newer than the running version was found and nothing was shown, because
     /// the trigger was <see cref="UpdateTrigger.Silent"/>. The run carries the release.</summary>
@@ -210,6 +205,16 @@ public sealed class UpdateFlow
         {
             await _prompts.SayCannotInstallAsync(prepared);
             return new UpdateFlowRun(UpdateFlowResult.CannotInstall, Release: release);
+        }
+
+        // The stop button stays on screen through verification, so a stop that lands after the
+        // download completes still keeps the installer from starting.
+        if (stopping.IsCancellationRequested)
+        {
+            _service.Discard(prepared);
+            cancellationToken.ThrowIfCancellationRequested();
+            _log.Info($"Download of {release.TagName} stopped by the person; nothing was kept.");
+            return new UpdateFlowRun(UpdateFlowResult.DownloadCancelled, Release: release);
         }
 
         LaunchResult launch = _service.Launch(prepared);

@@ -37,8 +37,6 @@ public enum UnattendedOutcome
     /// after it answers the same and does nothing, so no second installer is started.</summary>
     InstallerStarted,
 
-    // Appended, so the members above keep the numbers they already had.
-
     /// <summary>A release is held and <see cref="UnattendedUpdateOptions.MayDownloadNow"/> refused
     /// its download at this moment. Nothing was downloaded; the next tick asks again.</summary>
     DownloadRefused,
@@ -216,8 +214,10 @@ public sealed class UnattendedUpdatePolicy : IDisposable
         if (!launch.Started)
         {
             // A verified file that would not start is downloaded and verified again by the next tick,
-            // unless a newer release is already waiting to take its place.
+            // unless a newer release is already waiting to take its place. The file is removed, since
+            // the service leaves it in place where the launcher throws.
             _prepared = null;
+            _service.Discard(ready);
             _release ??= release;
             _log.Info($"The installer for {release.TagName} did not start: {launch.Detail}.");
             return new UnattendedTick(UnattendedOutcome.LaunchFailed, launch.Detail, release);

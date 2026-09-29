@@ -893,9 +893,8 @@ public sealed partial class MqttSettingsPanel : UserControl
         catch (Exception ex) { Log("MqttSettingsPanel.RunProbe", ex); }
         finally
         {
-            // Unconditional, and keyed on nothing. The identity check this replaces did not run for a
-            // cancelled probe with no successor, which left the button disabled and the spinner
-            // turning until the window closed.
+            // Unconditional, and keyed on nothing: a cancelled probe with no successor still frees
+            // the button and stops the spinner here.
             _probe.Finish(token);
             if (ReferenceEquals(_probeCts, cts)) _probeCts = null;
             cts.Dispose();

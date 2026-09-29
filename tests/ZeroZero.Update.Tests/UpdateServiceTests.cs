@@ -132,8 +132,8 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
         Assert.NotNull(result.Error);
     }
 
-    /// <summary>Against the test above: something is listening and never answers. The two used to
-    /// be one outcome, and a caller told them apart by the type of the exception carried with it.</summary>
+    /// <summary>Against the test above: something is listening and never answers. The outcome
+    /// alone tells the two apart.</summary>
     [Fact]
     public async Task Check_ReportsAServiceThatNeverAnswersAsTimedOut()
     {
@@ -172,7 +172,7 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
     }
 
     /// <summary>Against the test above: a success status carrying something that is not a release.
-    /// The two used to be one outcome, and a caller told them apart by the detail's wording.</summary>
+    /// The outcome alone tells the two apart.</summary>
     [Fact]
     public async Task Check_ReportsAnAnswerThatIsNotAReleaseAsInvalid()
     {
