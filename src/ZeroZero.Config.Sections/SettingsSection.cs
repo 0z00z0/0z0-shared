@@ -64,7 +64,7 @@ public sealed class SettingsSection<T> : ISectionNotification where T : class, n
     {
         ArgumentNullException.ThrowIfNull(mutate);
 
-        return _document.WriteSection<T>(Name, draft => { mutate(draft); return draft; }, this);
+        return _document.WriteSection<T>(Name, draft => { mutate(draft); return draft; });
     }
 
     /// <summary>Writes <paramref name="value"/> as this section, whatever the document currently
@@ -73,7 +73,7 @@ public sealed class SettingsSection<T> : ISectionNotification where T : class, n
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        return _document.WriteSection<T>(Name, _ => value, this);
+        return _document.WriteSection<T>(Name, _ => value);
     }
 
     void ISectionNotification.RaiseChanged() => Changed?.Invoke(this, EventArgs.Empty);

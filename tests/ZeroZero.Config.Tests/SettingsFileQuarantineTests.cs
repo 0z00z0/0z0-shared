@@ -57,6 +57,21 @@ public class SettingsFileQuarantineTests : SettingsFileTestBase
         Assert.All(QuarantineCopies(), copy => Assert.Equal(Malformed, File.ReadAllText(copy)));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void Quarantine_LeavesTheCopiesOfAFileWhoseNameExtendsThisOne()
+    {
+        // sample.local.json's copies answer the same search as this file's own, and sort first.
+        var sibling = Path.Combine(Root, "sample.local.2026-01-01-000000.bad.json");
+        File.WriteAllText(sibling, Malformed);
+        File.WriteAllText(FilePath, Malformed);
+
+        var file = Create(new SettingsFileQuarantine(Keep: 1));
+
+        Assert.True(File.Exists(file.LastQuarantinePath));
+        Assert.True(File.Exists(sibling));
+    }
+
     [Fact]
     public void Quarantine_Off_ReplacesTheFileWithoutKeepingACopy()
     {

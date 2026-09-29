@@ -144,6 +144,27 @@ public sealed class SectionVersionAndReloadTests : SectionedTestBase
 
     [Trait(Guard.Category, Guard.Value)]
     [Fact]
+    public void A_write_announces_a_sibling_section_a_hand_edit_moved()
+    {
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 7 }, "graph": { "Span": "P7D" } }""");
+
+        var store = Create();
+        var general = store.Section<GeneralSection>("general");
+        var graph = store.Section<GraphSection>("graph");
+
+        var graphChanged = 0;
+        graph.Changed += (_, _) => graphChanged++;
+
+        // The write takes this edit into memory, so a reload afterwards has nothing left to announce.
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 7 }, "graph": { "Span": "P30D" } }""");
+
+        Assert.True(general.Update(g => g.Retries = 8).Saved);
+
+        Assert.Equal(1, graphChanged);
+    }
+
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
     public void A_write_builds_on_an_edit_made_out_of_band_rather_than_on_what_memory_holds()
     {
         Given("""

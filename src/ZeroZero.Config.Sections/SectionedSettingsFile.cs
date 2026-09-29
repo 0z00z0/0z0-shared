@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace ZeroZero.Config.Sections;
 
@@ -31,6 +32,9 @@ public sealed class SectionedSettingsFile
 {
     private const string QuarantineMarker = ".bad";
     private const string StampFormat = "yyyy-MM-dd-HHmmss";
+
+    // The stamp StampFormat writes, and the attempt number a second copy in the same second takes.
+    private const string CopyStampPattern = @"\A[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}(-[0-9]+)?\z";
 
     private readonly Lock _gate = new();
     private readonly SectionedSettingsOptions _options;
@@ -157,8 +161,7 @@ public sealed class SectionedSettingsFile
         {
             if (Load() is not { } loaded) return false;
 
-            changed = [.. _sections.Where(section => Differs(_document, loaded.Document, section.Name))];
-            _document = loaded.Document;
+            changed = Hold(loaded.Document);
             _hasLoaded = true;
             _isFromNewerVersion = loaded.IsFromNewerVersion;
         }
@@ -186,24 +189,27 @@ public sealed class SectionedSettingsFile
         }
     }
 
-    internal SettingsSaveResult WriteSection<T>(string name, Func<T, T> produce, ISectionNotification section)
-        where T : class, new()
+    internal SettingsSaveResult WriteSection<T>(string name, Func<T, T> produce) where T : class, new()
     {
         Exception? error;
-        bool changed;
+        List<ISectionNotification> changed;
 
         lock (_gate) error = Apply(name, produce, out changed);
 
-        if (changed) Notify(section.RaiseChanged);
+        foreach (var moved in changed) Notify(moved.RaiseChanged);
         if (error is null) return SettingsSaveResult.Success;
 
         Notify(() => SaveFailed?.Invoke(this, new SettingsSaveFailedEventArgs(FilePath, error)));
         return SettingsSaveResult.Failed(error);
     }
 
-    private Exception? Apply<T>(string name, Func<T, T> produce, out bool changed) where T : class, new()
+    // Every path that takes a new document in announces each section it moved, whichever section the
+    // write was for: a hand edit to a sibling lands in memory here, and a later reload or watcher
+    // comparing against memory would find nothing left to announce.
+    private Exception? Apply<T>(string name, Func<T, T> produce, out List<ISectionNotification> changed)
+        where T : class, new()
     {
-        changed = false;
+        changed = [];
 
         if (!_hasLoaded)
         {
@@ -224,7 +230,7 @@ public sealed class SectionedSettingsFile
 
         if (document.Version > _options.Version)
         {
-            _document = document;
+            changed = Hold(document);
             _isFromNewerVersion = true;
             return new InvalidOperationException(
                 $"The document declares version {document.Version?.ToString(CultureInfo.InvariantCulture)}, above the {_options.Version.ToString(CultureInfo.InvariantCulture)} this build writes, so it is neither read nor written.");
@@ -247,23 +253,30 @@ public sealed class SectionedSettingsFile
         catch (SettingsKeyCaseConflictException conflict)
         {
             // Nothing is written: a key differing only in case would retire the one already there.
-            _document = document;
+            changed = Hold(document);
             return conflict;
         }
 
         if (written is null)
         {
             // Nothing of this section changed, but the document on disk may have moved on.
-            _document = document;
+            changed = Hold(document);
             return null;
         }
 
         if (AtomicFile.Write(FilePath, written) is { } failure) return failure;
 
-        _document = SettingsDocument.TryParse(written)
-            ?? throw new InvalidOperationException("The document this store just wrote does not parse as one.");
-        changed = true;
+        changed = Hold(SettingsDocument.TryParse(written)
+            ?? throw new InvalidOperationException("The document this store just wrote does not parse as one."));
         return null;
+    }
+
+    // Takes a new document as the one held, and returns every section whose bytes it moved.
+    private List<ISectionNotification> Hold(SettingsDocument document)
+    {
+        List<ISectionNotification> changed = [.. _sections.Where(section => Differs(_document, document, section.Name))];
+        _document = document;
+        return changed;
     }
 
     // What a write builds on: the document on disk when it is usable, a fresh one when it is not.
@@ -362,10 +375,26 @@ public sealed class SectionedSettingsFile
     {
         // The stamp sorts chronologically, so the newest copies are the last by ordinal name.
         var copies = Directory.EnumerateFiles(folder, $"{stem}.*{QuarantineMarker}{extension}")
+            .Where(path => IsCopyOf(path, stem, extension))
             .OrderDescending(StringComparer.Ordinal)
             .Skip(keep);
 
         foreach (var stale in copies) AtomicFile.TryDelete(stale);
+    }
+
+    // A copy of this document and no other: the stem, a dot, a stamp, the marker and the extension.
+    // The search pattern alone also takes in the copies of a file whose name starts with this stem
+    // and a dot — app.local.json beside app.json — and the prune would delete them.
+    private static bool IsCopyOf(string path, string stem, string extension)
+    {
+        var name = Path.GetFileName(path);
+        var head = stem.Length + 1;
+        var tail = QuarantineMarker.Length + extension.Length;
+
+        return name.Length > head + tail
+            && name.StartsWith(stem + ".", StringComparison.Ordinal)
+            && name.EndsWith(QuarantineMarker + extension, StringComparison.Ordinal)
+            && Regex.IsMatch(name.AsSpan(head, name.Length - head - tail), CopyStampPattern);
     }
 
     private void Notify(Action raise)
