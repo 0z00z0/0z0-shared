@@ -40,22 +40,19 @@ public class MqttSummaryTextTests
         Assert.Equal("No broker set",
                      Summary(Request(host: "   "), Memory(), trust: MqttCertificateTrustMode.AcceptAny));
 
-    [Theory]
-    [InlineData(MqttCertificateTrustMode.System)]
-    [InlineData(MqttCertificateTrustMode.Thumbprint)]
-    [InlineData(MqttCertificateTrustMode.Certificate)]
-    public void TheThreeModesThatProveTheBrokerLeaveTheLineExactlyAsItReadsToday(
-        MqttCertificateTrustMode trust)
+    [Fact]
+    public void ThePlatformsOwnTrustLeavesTheLineWithoutAWarning()
     {
         var request = Request(port: 8883, transport: MqttTransportMode.Tcp,
                               encryption: MqttEncryptionMode.On);
 
-        Assert.Equal("broker.invalid · 8883 · TCP · encrypted", Summary(request, Memory(), trust: trust));
+        Assert.Equal("broker.invalid · 8883 · TCP · encrypted",
+                     Summary(request, Memory(), trust: MqttCertificateTrustMode.System));
     }
 
     [Trait(Guard.Category, Guard.Value)]
     [Fact]
-    public void AcceptingAnyCertificateAppendsTheOneWarningTheOtherThreeModesNeverShow()
+    public void AcceptingAnyCertificateAppendsTheOneWarning()
     {
         var request = Request(port: 8883, transport: MqttTransportMode.Tcp,
                               encryption: MqttEncryptionMode.On);

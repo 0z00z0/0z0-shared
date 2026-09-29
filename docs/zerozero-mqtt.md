@@ -991,37 +991,35 @@ classification of what the encrypted attempt found:
 for the same reason: nothing was sent. A timeout and an unclassified failure block it, because
 neither says what was on offer.
 
-The two TLS outcomes are separated by whether a certificate arrived during the handshake, recorded
-as the handshake happens. They cannot be told apart from the exception: a broker with no TLS on its
-port reads a ClientHello as a malformed packet and closes the socket, and a broker with an untrusted
-certificate fails the handshake, and both reach the client as an ordinary communication failure.
+The two TLS outcomes are separated by what the certificate trust setting made of the certificate,
+recorded as the handshake happens: none presented, accepted, or refused. They cannot be told apart
+from the exception: a broker with no TLS on its port reads a ClientHello as a malformed packet and
+closes the socket, and a broker with an untrusted certificate fails the handshake, and both reach the
+client as an ordinary communication failure.
+
+**A failure after an accepted certificate is not a trust verdict.** A proxy refusing the WebSocket
+upgrade with an HTTP status, or a socket closed once TLS is up, is classified from the exception
+itself — `Failed` with the exception's type and message, `TlsUntrusted` only where the chain carries
+an authentication failure — and the clear-text retry stays blocked either way, because encryption
+was on offer.
 
 **Certificate trust** is a setting rather than a hook, because encryption forced on against a broker
 with a self-signed certificate cannot connect under system trust alone, and the failure otherwise
-reads as "the connection failed" with no route to a fix:
+reads as "the connection failed" with no route to a fix. `MqttCertificateTrustMode` has two values:
 
 ```csharp
-MqttCertificateTrust.SystemTrust                    // the platform's own stores
-MqttCertificateTrust.ForThumbprint("A1 B2 C3 …")    // SHA-1, any spacing or case
-MqttCertificateTrust.ForCertificate(base64OrCert)   // byte for byte
-MqttCertificateTrust.AcceptAny                      // whatever the far end presents
+MqttCertificateTrust.SystemTrust   // System: the platform's own stores. The default.
+MqttCertificateTrust.AcceptAny     // AcceptAny: whatever the far end presents
 ```
 
-Pinning is exact: a pinned mode accepts one certificate and refuses every other, so the link still
-proves which machine answered. An unusable pin refuses rather than falling through to platform
-validation.
+`SystemTrust` proves which machine answered. `AcceptAny` gives that proof up: the traffic stays
+encrypted against anything listening, and nothing checks that the broker is the machine it claims to
+be, so a far end that answered in its place is accepted too. It is the override for a broker whose
+certificate cannot be made to verify, and it is what other MQTT tools offer as ignoring certificate
+validation. Neither needs a value alongside it.
 
-`AcceptAny` gives that proof up. The traffic stays encrypted against anything listening, and nothing
-checks that the broker is the machine it claims to be, so a far end that answered in its place is
-accepted too. It is the last resort for a broker whose certificate cannot be made to verify, and it
-is what other MQTT tools offer as ignoring certificate validation. Like `SystemTrust` it needs no
-value alongside it, and `Validate()` passes it as it stands.
-
-The settings panel offers all four as its **Certificate trust** row, under **Encrypted connection**.
-The two pinned modes show a box for the thumbprint or the base64 certificate, and Apply and Test are
-both refused while that box is empty. The last entry shows one line saying what choosing it gives
-up. A host that writes a pin through the store itself checks `Validate()` first, since the
-connection refuses every certificate under an unusable pin.
+The settings panel offers both as its **Certificate trust** row, under **Encrypted connection**.
+Choosing `AcceptAny` shows one line saying what it gives up.
 
 ### The endpoint sweep
 
@@ -1118,8 +1116,9 @@ sequence that threw — is not a loss and writes no line for the drop.
 certificate the connection does not trust, is not fixed by retrying, so it is logged as an Error
 when first seen and not again until the reason changes or a connect has succeeded. A refusal is
 told from an unreachable broker by what the round recorded, never by exception wording: the CONNACK
-reason code the broker answered with, and whether the far end presented a certificate before the
-handshake failed.
+reason code the broker answered with, and whether the certificate trust setting refused the
+certificate the far end presented. A failure after an accepted certificate with no authentication
+failure in it is logged as the link being down, with the exception's type and message as the reason.
 
 **No connection or send failure hands an exception to the log sink.** Each is one line with the
 reason in words — the operating system's or the broker's text, or an exception's type and message —

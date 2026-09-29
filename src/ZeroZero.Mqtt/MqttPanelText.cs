@@ -141,9 +141,9 @@ public sealed class MqttPanelText
     /// error the marking exists to prevent, reached by another route; the field falls back to the
     /// bare instruction instead.</para>
     /// <para><paramref name="trust"/> only ever adds the one clause that says the link accepts
-    /// whatever certificate the broker presents — the other three modes leave the line exactly as it
-    /// reads without this parameter, because each of them still proves which machine answered and a
-    /// summary that grew for them would be crying wolf.</para>
+    /// whatever certificate the broker presents — the platform's own trust leaves the line exactly as
+    /// it reads without this parameter, because it still proves which machine answered and a summary
+    /// that grew for it would be crying wolf.</para>
     /// </remarks>
     public string SummariseBroker(
         MqttEndpointRequest request, MqttEndpointMemory? memory, MqttConnectionState state,
@@ -191,7 +191,7 @@ public sealed class MqttPanelText
 
         // The one mode that gives up proving which machine answered, so it is the one mode this line
         // says anything about. Wrapping the finished line rather than adding a fifth argument keeps
-        // the other three modes byte-for-byte what they were.
+        // the platform's own trust byte-for-byte what it reads without it.
         return trust == MqttCertificateTrustMode.AcceptAny
             ? _text.Format("SummaryBrokerTrustAny", summary)
             : summary;

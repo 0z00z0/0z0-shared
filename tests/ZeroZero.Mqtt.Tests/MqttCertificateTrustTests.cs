@@ -6,8 +6,7 @@ using Xunit;
 namespace ZeroZero.Mqtt.Tests;
 
 /// <summary>Which certificate an encrypted link accepts. Pure, so the decision is pinned without a
-/// handshake. Pinning is exact — a pinned mode accepts one certificate and refuses every other —
-/// and only the mode that pins nothing takes a certificate the platform rejects.</summary>
+/// handshake. Only accepting any certificate takes one the platform rejects.</summary>
 public class MqttCertificateTrustTests
 {
     private static X509Certificate2 SelfSigned(string name)
@@ -41,84 +40,5 @@ public class MqttCertificateTrustTests
         using var certificate = SelfSigned("broker.invalid");
 
         Assert.True(MqttCertificateTrust.AcceptAny.Accepts(Presented(certificate, systemTrusted: false)));
-        // Nothing is pinned, so there is no value whose absence could make it unusable.
-        Assert.Null(MqttCertificateTrust.AcceptAny.Validate());
-    }
-
-    [Fact]
-    public void APinnedThumbprint_AcceptsThatCertificateThoughThePlatformWouldNot()
-    {
-        using var certificate = SelfSigned("broker.invalid");
-        var trust = MqttCertificateTrust.ForThumbprint(certificate.Thumbprint);
-
-        Assert.True(trust.Accepts(Presented(certificate, systemTrusted: false)));
-    }
-
-    [Trait(Guard.Category, Guard.Value)]
-    [Fact]
-    public void APinnedThumbprint_RefusesEveryOtherCertificate()
-    {
-        using var pinned = SelfSigned("broker.invalid");
-        using var other = SelfSigned("broker.invalid");
-        var trust = MqttCertificateTrust.ForThumbprint(pinned.Thumbprint);
-
-        Assert.False(trust.Accepts(Presented(other, systemTrusted: true)));
-    }
-
-    [Theory]
-    [InlineData("{0}")]
-    [InlineData("{0} ")]
-    public void APinnedThumbprint_IgnoresTheSpacingAndCaseAViewerRenders(string format)
-    {
-        using var certificate = SelfSigned("broker.invalid");
-        string typed = string.Format(format, Spaced(certificate.Thumbprint.ToLowerInvariant()));
-
-        Assert.True(MqttCertificateTrust.ForThumbprint(typed).Accepts(Presented(certificate, false)));
-
-        static string Spaced(string hex) =>
-            string.Join(' ', Enumerable.Range(0, hex.Length / 2).Select(i => hex.Substring(i * 2, 2)));
-    }
-
-    [Fact]
-    public void APinnedCertificate_MatchesByteForByte()
-    {
-        using var pinned = SelfSigned("broker.invalid");
-        using var other = SelfSigned("broker.invalid");
-        var trust = MqttCertificateTrust.ForCertificate(pinned);
-
-        Assert.True(trust.Accepts(Presented(pinned, systemTrusted: false)));
-        Assert.False(trust.Accepts(Presented(other, systemTrusted: true)));
-    }
-
-    [Trait(Guard.Category, Guard.Value)]
-    [Fact]
-    public void AnUnusableThumbprintRefusesRatherThanFallingBackToThePlatform()
-    {
-        using var certificate = SelfSigned("broker.invalid");
-        var trust = MqttCertificateTrust.ForThumbprint("   ");
-
-        Assert.NotNull(trust.Validate());
-        Assert.False(trust.Accepts(Presented(certificate, systemTrusted: true)));
-    }
-
-    [Fact]
-    public void AnUnusableCertificateRefusesRatherThanFallingBackToThePlatform()
-    {
-        using var certificate = SelfSigned("broker.invalid");
-        var trust = MqttCertificateTrust.ForCertificate("not base64 at all!!");
-
-        Assert.NotNull(trust.Validate());
-        Assert.False(trust.Accepts(Presented(certificate, systemTrusted: true)));
-    }
-
-    [Fact]
-    public void Validate_PassesForASettingThatCanBeApplied()
-    {
-        using var certificate = SelfSigned("broker.invalid");
-
-        Assert.Null(MqttCertificateTrust.SystemTrust.Validate());
-        Assert.Null(MqttCertificateTrust.AcceptAny.Validate());
-        Assert.Null(MqttCertificateTrust.ForThumbprint(certificate.Thumbprint).Validate());
-        Assert.Null(MqttCertificateTrust.ForCertificate(certificate).Validate());
     }
 }

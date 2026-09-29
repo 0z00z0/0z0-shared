@@ -201,7 +201,7 @@ Leaving the box empty falls back to the name derived from this machine.</value>
     <value>The address the live connection is using — the saved settings, not any unapplied edit in the fields below.</value>
   </data>
   <data name="InfoCertificateTrust" xml:space="preserve">
-    <value>A broker carrying a certificate of its own making is refused by the certificates this machine trusts, and naming that one certificate is what connects to it. A thumbprint is the fingerprint a certificate viewer shows, matched whatever its spacing; the pasted form is the certificate&apos;s own base64. Both accept that certificate and refuse every other, so a broker that cannot present it is not connected to.</value>
+    <value>A broker carrying a certificate of its own making is refused by the certificates this machine trusts, and accepting any certificate is what connects to it.</value>
   </data>
   <data name="InfoConnection" xml:space="preserve">
     <value>Where the broker settings in force came from, and whether the live link is encrypted — a setting left on Automatic can land on either.</value>
@@ -260,17 +260,11 @@ Leaving the box empty falls back to the name derived from this machine.</value>
   <data name="OptionAutomatic" xml:space="preserve">
     <value>Automatic</value>
   </data>
-  <data name="PlaceholderCertificate" xml:space="preserve">
-    <value>The certificate as base64</value>
-  </data>
   <data name="PlaceholderHost" xml:space="preserve">
     <value>e.g. mqtt.example.com</value>
   </data>
   <data name="PlaceholderPort" xml:space="preserve">
     <value>1-65535</value>
-  </data>
-  <data name="PlaceholderThumbprint" xml:space="preserve">
-    <value>40 hexadecimal digits, any spacing</value>
   </data>
   <data name="PortCustom" xml:space="preserve">
     <value>Other…</value>
@@ -548,19 +542,7 @@ Leaving the box empty falls back to the name derived from this machine.</value>
   <data name="TrustAcceptAnyNote" xml:space="preserve">
     <value>The traffic stays encrypted, and nothing checks that the broker is the machine it claims to be. The last resort for a certificate that cannot be made to verify.</value>
   </data>
-  <data name="TrustCertificate" xml:space="preserve">
-    <value>One certificate, pasted in full</value>
-  </data>
-  <data name="TrustNotACertificate" xml:space="preserve">
-    <value>A pasted certificate is its base64 text, as a certificate viewer exports it.</value>
-  </data>
-  <data name="TrustNotAThumbprint" xml:space="preserve">
-    <value>A thumbprint is the certificate&apos;s fingerprint in hexadecimal — digits and the letters A to F.</value>
-  </data>
   <data name="TrustSystem" xml:space="preserve">
     <value>Certificates this machine trusts</value>
-  </data>
-  <data name="TrustThumbprint" xml:space="preserve">
-    <value>One certificate, by thumbprint</value>
   </data>
 </root>

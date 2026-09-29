@@ -86,11 +86,6 @@ public sealed class MqttBrokerEdits
 
     public MqttCertificateTrustMode TrustMode { get; set; } = MqttCertificateTrustMode.System;
 
-    /// <summary>The thumbprint or the base64 certificate the two pinned modes need. Held as text so
-    /// a half-pasted value is a state rather than a parse failure, exactly as the typed port is, and
-    /// as one box because only the chosen mode's value is ever committed.</summary>
-    public string TrustValue { get; set; } = "";
-
     public string Username { get; set; } = "";
 
     public string Password { get; set; } = "";
@@ -117,18 +112,12 @@ public sealed class MqttBrokerEdits
     public MqttEndpointRequest Request =>
         new(Host.Trim(), Username.Trim(), Port, Transport, Encryption);
 
-    /// <summary>The staged certificate trust, as a connection reads it. Never read without
-    /// <see cref="Validate"/> having gated the action first, or a pinned mode with nothing pinned
-    /// reaches the handshake as a refused certificate rather than a message beside the box.</summary>
-    public MqttCertificateTrust Trust => StagedTrust(TrustMode, TrustValue);
+    /// <summary>The staged certificate trust, as a connection reads it.</summary>
+    public MqttCertificateTrust Trust => new() { Mode = TrustMode };
 
     /// <summary>Why the block cannot be committed, and whether it can be. One answer for Apply and
-    /// for Test, and the message is the first field at fault in the order the fields are read.</summary>
-    public MqttEditValidation Validate()
-    {
-        var port = ValidatePort();
-        return port.Usable ? ValidateTrust() : port;
-    }
+    /// for Test.</summary>
+    public MqttEditValidation Validate() => ValidatePort();
 
     /// <summary>The typed port's own answer, for the message that belongs beside that box.</summary>
     public MqttEditValidation ValidatePort()
@@ -146,47 +135,6 @@ public sealed class MqttBrokerEdits
                     : _text.Format("PortNotANumber", PortMin, PortMax),
                   false);
     }
-
-    /// <summary>The staged trust's own answer, for the message that belongs beside its box. Only the
-    /// two pinned modes can be unusable; the platform's own trust and accepting any certificate need
-    /// no value and are always ready to apply.</summary>
-    public MqttEditValidation ValidateTrust()
-    {
-        if (TrustMode is not (MqttCertificateTrustMode.Thumbprint or MqttCertificateTrustMode.Certificate))
-            return new(null, true);
-
-        // Same rule as the typed port: a box not yet typed into is not a mistake, and is not a pin
-        // either, so nothing may run on it.
-        if (string.IsNullOrWhiteSpace(TrustValue)) return new(null, false);
-
-        if (Trust.Validate() is null) return new(null, true);
-
-        // The trust setting's own reason is the module's internal answer and is never shown; the
-        // message beside the box comes from the string table, as every other one does.
-        return new(_text.Get(TrustMode == MqttCertificateTrustMode.Thumbprint
-                                ? "TrustNotAThumbprint" : "TrustNotACertificate"),
-                   false);
-    }
-
-    // Only the value belonging to the chosen mode is carried, so a value left behind by a mode that
-    // is no longer selected is neither committed nor counted as an unapplied edit.
-    private static MqttCertificateTrust StagedTrust(MqttCertificateTrustMode mode, string value) => mode switch
-    {
-        MqttCertificateTrustMode.Thumbprint  => MqttCertificateTrust.ForThumbprint(value),
-        MqttCertificateTrustMode.Certificate => MqttCertificateTrust.ForCertificate(value),
-        MqttCertificateTrustMode.AcceptAny   => MqttCertificateTrust.AcceptAny,
-        _ => MqttCertificateTrust.SystemTrust,
-    };
-
-    private static MqttCertificateTrust StagedTrust(MqttCertificateTrust trust) =>
-        StagedTrust(trust.Mode, TrustValueOf(trust));
-
-    private static string TrustValueOf(MqttCertificateTrust trust) => trust.Mode switch
-    {
-        MqttCertificateTrustMode.Thumbprint  => trust.Thumbprint,
-        MqttCertificateTrustMode.Certificate => trust.Certificate,
-        _ => "",
-    };
 
     // NumberStyles.None and InvariantCulture together, so no thousands separator, sign or whitespace
     // can slip a value past the range check on a culture that allows one.
@@ -208,7 +156,7 @@ public sealed class MqttBrokerEdits
         || Port != _saved.Port
         || Transport != _saved.TransportMode
         || Encryption != _saved.EncryptionMode
-        || Trust != StagedTrust(_saved.CertificateTrust)
+        || TrustMode != _saved.CertificateTrust.Mode
         || Username.Trim() != _saved.Username
         || Password != _saved.Password
         || DiscoveryPrefix.Trim() != _saved.DiscoveryPrefix;
@@ -242,7 +190,7 @@ public sealed class MqttBrokerEdits
         Password        = _saved.Password;
         DiscoveryPrefix = _saved.DiscoveryPrefix;
         SelectPort(_saved.Port);
-        SelectTrust(_saved.CertificateTrust);
+        TrustMode       = _saved.CertificateTrust.Mode;
         State = MqttEditState.Clean;
     }
 
@@ -259,7 +207,7 @@ public sealed class MqttBrokerEdits
         if (Port == previous.Port) SelectPort(_saved.Port);
         if (Transport == previous.TransportMode) Transport = _saved.TransportMode;
         if (Encryption == previous.EncryptionMode) Encryption = _saved.EncryptionMode;
-        if (Trust == StagedTrust(previous.CertificateTrust)) SelectTrust(_saved.CertificateTrust);
+        if (TrustMode == previous.CertificateTrust.Mode) TrustMode = _saved.CertificateTrust.Mode;
         if (Username.Trim() == previous.Username) Username = _saved.Username;
         if (Password == previous.Password) Password = _saved.Password;
         if (DiscoveryPrefix.Trim() == previous.DiscoveryPrefix) DiscoveryPrefix = _saved.DiscoveryPrefix;
@@ -293,20 +241,11 @@ public sealed class MqttBrokerEdits
         TypedPort = value.ToString(CultureInfo.InvariantCulture);
     }
 
-    /// <summary>Puts a saved trust setting on the staged mode and its one box: the pinned value for
-    /// a pinned mode, and an empty box for the two modes that pin nothing.</summary>
-    public void SelectTrust(MqttCertificateTrust trust)
-    {
-        TrustMode = trust.Mode;
-        TrustValue = TrustValueOf(trust);
-    }
-
     /// <summary>Writes the whole staged block onto a settings record, and takes it as the new
     /// baseline. One mutation, so the connection is remade once for the batch.</summary>
     /// <remarks>Refuses rather than rounding when <see cref="Validate"/> says the block is unusable:
     /// an out-of-range port must never be quietly saved as something else, and must never collapse to
-    /// Automatic behind the user's back, and a pinned mode with nothing pinned must never be saved as
-    /// the platform's own trust.</remarks>
+    /// Automatic behind the user's back.</remarks>
     public bool Apply(IMqttSettingsStore store)
     {
         if (!Validate().Usable) return false;

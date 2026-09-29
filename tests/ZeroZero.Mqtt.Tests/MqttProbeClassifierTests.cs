@@ -83,14 +83,14 @@ public class MqttProbeClassifierTests
     [Fact]
     public void ClassifyConnectException_SeparatesTheTwoTlsFailuresOnTheCertificateAlone()
     {
-        // The same failure both ways round: what separates them is whether the far end ever
-        // presented a certificate, which the exception cannot say and the handshake can.
+        // The same failure both ways round: what separates them is whether the far end presented a
+        // certificate that was refused, which the exception cannot say and the handshake can.
         var hangUp = HungUpOnTheClientHello();
 
         Assert.Equal(MqttProbeOutcome.TlsUntrusted,
-            MqttProbe.ClassifyConnectException(hangUp, CancellationToken.None, certificatePresented: true).Outcome);
+            MqttProbe.ClassifyConnectException(hangUp, CancellationToken.None, certificate: MqttCertificateVerdict.Rejected).Outcome);
         Assert.Equal(MqttProbeOutcome.TlsUnsupported,
-            MqttProbe.ClassifyConnectException(hangUp, CancellationToken.None, certificatePresented: false).Outcome);
+            MqttProbe.ClassifyConnectException(hangUp, CancellationToken.None, certificate: MqttCertificateVerdict.NotPresented).Outcome);
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class MqttProbeClassifierTests
         // either type falls through to a generic failure and blocks the clear-text retry.
         Assert.Equal(MqttProbeOutcome.TlsUnsupported,
             MqttProbe.ClassifyConnectException(
-                HungUpOnTheClientHello(), CancellationToken.None, certificatePresented: false).Outcome);
+                HungUpOnTheClientHello(), CancellationToken.None, certificate: MqttCertificateVerdict.NotPresented).Outcome);
     }
 
     [Theory]
@@ -114,7 +114,7 @@ public class MqttProbeClassifierTests
         var torn = new CommunicationException("connect failed", new SocketException((int)error));
 
         Assert.Equal(MqttProbeOutcome.TlsUnsupported,
-            MqttProbe.ClassifyConnectException(torn, CancellationToken.None, certificatePresented: false).Outcome);
+            MqttProbe.ClassifyConnectException(torn, CancellationToken.None, certificate: MqttCertificateVerdict.NotPresented).Outcome);
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class MqttProbeClassifierTests
             "connect failed", new TimeoutException("The operation has timed out."));
 
         Assert.Equal(MqttProbeOutcome.TlsUnsupported,
-            MqttProbe.ClassifyConnectException(stalled, CancellationToken.None, certificatePresented: false).Outcome);
+            MqttProbe.ClassifyConnectException(stalled, CancellationToken.None, certificate: MqttCertificateVerdict.NotPresented).Outcome);
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public class MqttProbeClassifierTests
         var os = new CommunicationException("connect failed", new SocketException((int)error));
 
         Assert.Equal(expected,
-            MqttProbe.ClassifyConnectException(os, CancellationToken.None, certificatePresented: false).Outcome);
+            MqttProbe.ClassifyConnectException(os, CancellationToken.None, certificate: MqttCertificateVerdict.NotPresented).Outcome);
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public class MqttProbeClassifierTests
         // verdict — which blocks the downgrade, the safe side of an unanswerable question.
         Assert.Equal(MqttProbeOutcome.TimedOut,
             MqttProbe.ClassifyConnectException(
-                new OperationCanceledException(), CancellationToken.None, certificatePresented: false).Outcome);
+                new OperationCanceledException(), CancellationToken.None, certificate: MqttCertificateVerdict.NotPresented).Outcome);
     }
 
     [Fact]

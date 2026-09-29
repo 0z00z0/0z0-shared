@@ -288,7 +288,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                result = MqttProbe.ClassifyConnectException(ex, ct, witness?.CertificatePresented);
+                result = MqttProbe.ClassifyConnectException(ex, ct, witness?.Verdict);
             }
 
             if (result.Outcome == MqttProbeOutcome.Success)

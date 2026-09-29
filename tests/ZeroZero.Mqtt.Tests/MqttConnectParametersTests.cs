@@ -115,7 +115,7 @@ public class MqttConnectParametersTests
             case "Enabled": settings.Enabled = false; break;
             case "TransportMode": settings.TransportMode = MqttTransportMode.WebSocket; break;
             case "EncryptionMode": settings.EncryptionMode = MqttEncryptionMode.On; break;
-            case "CertificateTrust": settings.CertificateTrust = MqttCertificateTrust.ForThumbprint("ABCD"); break;
+            case "CertificateTrust": settings.CertificateTrust = MqttCertificateTrust.AcceptAny; break;
             default: throw new ArgumentOutOfRangeException(nameof(property), property, "unknown setting");
         }
     }
