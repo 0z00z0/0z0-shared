@@ -17,7 +17,7 @@
     <BuildVersion>0.9.1</BuildVersion>
     <ConfigVersion>0.8.1</ConfigVersion>
     <ControlsVersion>0.8.1</ControlsVersion>
-    <DiagnosticsVersion>0.7.1</DiagnosticsVersion>
+    <DiagnosticsVersion>0.8.0</DiagnosticsVersion>
     <LifecycleVersion>0.7.1</LifecycleVersion>
     <MqttVersion>0.11.0</MqttVersion>
     <PrimitivesVersion>0.7.0</PrimitivesVersion>

@@ -11,6 +11,7 @@ public static class Program
 {
     public const string UnhandledMessage = "provoked unhandled exception 7f3c1a";
     public const string UnobservedMessage = "provoked unobserved task exception 9b2e4d";
+    public const string StartupMessage = "provoked startup exception 4d81e0";
 
     public static int Main(string[] args)
     {
@@ -19,9 +20,11 @@ public static class Program
             case "crash-unhandled":
                 return CrashUnhandled(sinkFile: args[1], crashLineFile: args[2], variant: args.Length > 3 ? args[3] : "");
             case "drop-task":
-                return DropTask(crashLineFile: args[1]);
+                return DropTask(crashLineFile: args[1], variant: args.Length > 2 ? args[2] : "");
+            case "report":
+                return ReportFromHost(crashLineFile: args[1], cleanupFile: args[2], variant: args[3]);
             default:
-                Console.Error.WriteLine("crash victim: crash-unhandled <sink> <crashline> [sink-throws|after-dispose] | drop-task <crashline>");
+                Console.Error.WriteLine("crash victim: crash-unhandled <sink> <crashline> [sink-throws|after-dispose|startup-window] | drop-task <crashline> [startup-window] | report <crashline> <cleanup> in-window|after-complete|no-window");
                 return 2;
         }
     }
@@ -33,18 +36,33 @@ public static class Program
         {
             Sink = sink,
             CrashLine = new CrashLineAppender(crashLineFile),
+            OnStartupFailure = variant == "startup-window" ? () => { } : null,
         });
         if (variant == "after-dispose") handlers.Dispose();
 
         throw new InvalidOperationException(UnhandledMessage);
     }
 
-    private static int DropTask(string crashLineFile)
+    private static int ReportFromHost(string crashLineFile, string cleanupFile, string variant)
+    {
+        var handlers = CrashHandlers.Register(new CrashHandlerOptions
+        {
+            Sink = new CrashLineAppender(crashLineFile),
+            OnStartupFailure = variant == "no-window" ? null : () => File.WriteAllText(cleanupFile, "cleaned"),
+        });
+        if (variant == "after-complete") handlers.MarkStartupComplete();
+
+        handlers.Report("Application.UnhandledException", new InvalidOperationException(StartupMessage));
+        return 0;
+    }
+
+    private static int DropTask(string crashLineFile, string variant)
     {
         CrashHandlers.Register(new CrashHandlerOptions
         {
             Sink = new CrashLineAppender(crashLineFile),
             CrashLine = null,
+            OnStartupFailure = variant == "startup-window" ? () => { } : null,
         });
 
         FaultAndDrop();

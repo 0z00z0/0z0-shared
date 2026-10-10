@@ -47,9 +47,10 @@ This guide is complete for adoption: the component's own source and tests need n
   crash would hide it. A reported unobserved task exception is marked observed. Disposing unwires
   both arms, which only a test host needs. The two arms report under `UnhandledSource` and
   `UnobservedTaskSource`, the event names; a faulted task holding one exception reports that
-  exception rather than the aggregate around it.
+  exception rather than the aggregate around it. `MarkStartupComplete()` closes the startup window,
+  below.
 - **`CrashHandlerOptions`** — `Sink`, the host's log, required; `CrashLine`, a `CrashLineAppender` or
-  null.
+  null; `OnStartupFailure`, the cleanup that opts in to the startup window, null by default.
 - **`CrashLineAppender`** — one stamped entry appended to a plain text file: the local time with its
   offset, the source, the exception's type and message, then the whole exception beneath — stack and
   inner exceptions — because the dump may never be read and the entry is then all there is.
@@ -94,7 +95,8 @@ In this order, at the top of the application's entry point:
    holding the result for the life of the process. The crash-line path is under the application's
    own data directory; the appender creates the directory on first write.
 3. **The UI arm.** In the framework's unhandled-exception handler call `handlers.Report("Application.UnhandledException", e.Exception)`,
-   then decide `Handled` as the application always has.
+   then decide `Handled` as the application always has. With the startup window configured,
+   `Report` ends the process instead while startup is still running.
 4. **The dumps**, in an elevated process only: `new DumpRegistration(Registry.LocalMachine, sink)`,
    then `RemoveResidue` with the names of older builds, then `Apply(policy, armed)` with the
    application's own policy and its own flag. An unelevated process skips this step; disarming and
@@ -105,6 +107,39 @@ In this order, at the top of the application's entry point:
 The two-member sink has no level. The version line survives level settings because the sink the
 application hands to step 1 is one that writes unconditionally; the component cannot make that
 choice for it.
+
+### Ending a failed start
+
+An application started at sign-in can throw before it has finished starting: a window opened before
+the shell is ready, a tray icon the shell refused. Marked handled, that exception leaves a process
+with no window and no icon that holds its single-instance lock, so every later launch is refused
+until the process is killed. The startup window ends such a process instead:
+
+```csharp
+var crash = CrashHandlers.Register(new CrashHandlerOptions
+{
+    Sink = sink,
+    CrashLine = new CrashLineAppender(path),
+    OnStartupFailure = () => { },   // the application's own cleanup; empty is allowed
+});
+// ... the lock, the tray icon, the first window ...
+crash.MarkStartupComplete();
+```
+
+- **Until `MarkStartupComplete()`, `Report` ends the process.** It logs the exception as always,
+  runs `OnStartupFailure`, then calls `Environment.Exit(StartupFailureExitCode)`, which is 1. It does
+  not return, so the `Handled` line after it in the host's handler never runs.
+- **Mark completion once the application is fully up**: the tray icon created and the first window,
+  if any, opened.
+- **The cleanup cannot stop the exit.** An exception from it is logged under `StartupFailureSource`
+  and the process ends anyway. Ending the process is what releases `SingleInstanceLock`.
+- **With `ProcessLifecycle` armed, the exit is relaunched** within its limit of three in ten minutes,
+  which gives a start that raced the shell a second try. `MarkDeliberateExit()` in the cleanup
+  prevents the relaunch.
+- **It never applies to the two process-wide arms.** An unhandled exception still ends the process
+  the runtime's way, dump included, and an unobserved task exception is still only logged.
+- **Left null, nothing changes**: `Report` only logs for the life of the process, and
+  `MarkStartupComplete()` has no effect.
 
 ## Take the reference
 
