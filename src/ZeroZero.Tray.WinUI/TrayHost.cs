@@ -116,9 +116,16 @@ public sealed class TrayHost : IDisposable
 
     /// <summary>
     /// Creates the icon. On the UI thread, once, after the XAML runtime is up: the listeners are
-    /// marshalled to the dispatcher queue of the thread that calls this.
+    /// marshalled to the dispatcher queue of the thread that calls this. A refusal by the shell
+    /// throws and leaves the host unusable; <see cref="TrayStartup.StartAsync"/> reports instead.
     /// </summary>
     public void Start()
+    {
+        Prepare();
+        CreateIcon();
+    }
+
+    internal void Prepare()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_icon is not null) throw new InvalidOperationException("The host has already started.");
@@ -146,6 +153,13 @@ public sealed class TrayHost : IDisposable
         Render();
         ApplyTooltip();
         RebuildMenu();
+    }
+
+    // A refusal throws before any listener is attached, and the library deletes a half-added icon first.
+    internal void CreateIcon()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        var icon = _icon ?? throw new InvalidOperationException("The host has not been prepared.");
 
         // The library's default arms efficiency mode for the whole process: idle priority class
         // and power throttling, applied here and never restored. Refused, and a test measures the
@@ -221,6 +235,16 @@ public sealed class TrayHost : IDisposable
 
         _loaded?.Dispose();
         _loaded = null;
+    }
+
+    // A refused icon left in place adds itself at the next TaskbarCreated without this host's listeners.
+    internal void Abandon()
+    {
+        _icon?.Dispose();
+        _icon = null;
+        _loaded?.Dispose();
+        _loaded = null;
+        _request = null;
     }
 
     /// <summary>Removes the icon and adds it again, so the shell reads the per-icon settings

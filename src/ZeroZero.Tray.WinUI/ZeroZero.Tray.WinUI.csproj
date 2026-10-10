@@ -11,7 +11,7 @@
          apps, so it must not pull in packaging tooling itself. -->
     <UseWinUI>true</UseWinUI>
     <WinUISDKReferences>false</WinUISDKReferences>
-    <!-- The double-click time is one user32 import, source-generated. -->
+    <!-- The user32 imports are source-generated. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
     <AssemblyTitle>ZeroZero.Tray.WinUI</AssemblyTitle>

@@ -23,7 +23,7 @@
     <PrimitivesVersion>0.7.0</PrimitivesVersion>
     <SettingsShellVersion>0.8.1</SettingsShellVersion>
     <StartupVersion>0.8.2</StartupVersion>
-    <TrayVersion>0.9.1</TrayVersion>
+    <TrayVersion>0.10.0</TrayVersion>
     <UpdateVersion>0.13.1</UpdateVersion>
     <Win32Version>0.9.1</Win32Version>
   </PropertyGroup>

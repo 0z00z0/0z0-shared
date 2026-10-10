@@ -35,6 +35,9 @@
     <Compile Include="..\..\src\ZeroZero.Tray.WinUI\TrayMenuItem.cs" Link="Linked\TrayMenuItem.cs" />
     <Compile Include="..\..\src\ZeroZero.Tray.WinUI\TrayTooltip.cs" Link="Linked\TrayTooltip.cs" />
     <Compile Include="..\..\src\ZeroZero.Tray.WinUI\TrayTooltipLine.cs" Link="Linked\TrayTooltipLine.cs" />
+    <Compile Include="..\..\src\ZeroZero.Tray.WinUI\TrayStartupOptions.cs" Link="Linked\TrayStartupOptions.cs" />
+    <Compile Include="..\..\src\ZeroZero.Tray.WinUI\TrayStartupOutcome.cs" Link="Linked\TrayStartupOutcome.cs" />
+    <Compile Include="..\..\src\ZeroZero.Tray.WinUI\TrayStartupSequence.cs" Link="Linked\TrayStartupSequence.cs" />
   </ItemGroup>
 
   <ItemGroup>
