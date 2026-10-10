@@ -9,9 +9,14 @@ public sealed class CrashHandlers : IDisposable
 {
     public const string UnhandledSource = "AppDomain.UnhandledException";
     public const string UnobservedTaskSource = "TaskScheduler.UnobservedTaskException";
+    public const string StartupFailureSource = "CrashHandlers.OnStartupFailure";
+
+    /// <summary>The exit code of a process ended by a report inside the startup window.</summary>
+    public const int StartupFailureExitCode = 1;
 
     private readonly CrashHandlerOptions _options;
     private int _disposed;
+    private volatile bool _startupComplete;
 
     private CrashHandlers(CrashHandlerOptions options) => _options = options;
 
@@ -26,9 +31,28 @@ public sealed class CrashHandlers : IDisposable
         return handlers;
     }
 
-    /// <summary>Reports a crash from any arm: the crash line first, because it never throws, then
-    /// the host's sink, guarded, because a sink that fails here would hide the crash.</summary>
+    /// <summary>Ends the startup window: from here on a report only logs.</summary>
+    public void MarkStartupComplete() => _startupComplete = true;
+
+    /// <summary>The host's arm; inside the startup window it logs, then ends the process.</summary>
     public void Report(string source, Exception? ex)
+    {
+        Log(source, ex);
+        if (_options.OnStartupFailure is not { } cleanup || _startupComplete) return;
+        try
+        {
+            cleanup();
+        }
+        catch (Exception cleanupFailure)
+        {
+            Log(StartupFailureSource, cleanupFailure);
+        }
+        Environment.Exit(StartupFailureExitCode);
+    }
+
+    /// <summary>The crash line first, because it never throws, then the host's sink, guarded,
+    /// because a sink that fails here would hide the crash.</summary>
+    private void Log(string source, Exception? ex)
     {
         _options.CrashLine?.Append(source, ex);
         try
@@ -42,13 +66,13 @@ public sealed class CrashHandlers : IDisposable
     }
 
     private void OnUnhandled(object sender, UnhandledExceptionEventArgs e) =>
-        Report(UnhandledSource, e.ExceptionObject as Exception);
+        Log(UnhandledSource, e.ExceptionObject as Exception);
 
     private void OnUnobservedTask(object? sender, UnobservedTaskExceptionEventArgs e)
     {
         // One faulted task is one aggregate around one exception; the inner one is what a reader wants.
         Exception reported = e.Exception.InnerExceptions.Count == 1 ? e.Exception.InnerExceptions[0] : e.Exception;
-        Report(UnobservedTaskSource, reported);
+        Log(UnobservedTaskSource, reported);
         // Reported is observed. The runtime does not end a process over an unobserved task
         // exception whatever its configuration says (measured on .NET 10), so this only tells a
         // later subscriber that the exception has been dealt with.

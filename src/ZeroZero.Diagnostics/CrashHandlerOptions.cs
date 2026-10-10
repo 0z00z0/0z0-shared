@@ -12,4 +12,7 @@ public sealed record CrashHandlerOptions
     /// <summary>The never-throws file the crash reaches before the sink, and reaches even when the
     /// sink is what failed. Null when the host writes no such file.</summary>
     public CrashLineAppender? CrashLine { get; init; }
+
+    /// <summary>Set, a report before startup completes runs this and ends the process; null, Report only logs.</summary>
+    public Action? OnStartupFailure { get; init; }
 }

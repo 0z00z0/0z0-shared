@@ -118,6 +118,49 @@ public class CrashHandlersTests : IDisposable
 
     [Trait(Guard.Category, Guard.Value)]
     [Fact]
+    public void AReportInsideTheStartupWindowIsLoggedThenCleansUpAndEndsTheProcess()
+    {
+        string crashLine = _scratch.File("crash.log");
+        string cleanup = _scratch.File("cleanup.txt");
+
+        var result = ChildProcess.Run(Victim, "report", crashLine, cleanup, "in-window");
+
+        Assert.Equal(CrashHandlers.StartupFailureExitCode, result.ExitCode);
+        Assert.True(File.Exists(cleanup), "the host's cleanup did not run before the process ended");
+        Assert.Contains($"  Application.UnhandledException  System.InvalidOperationException: {Program.StartupMessage}", File.ReadAllText(crashLine));
+    }
+
+    [Trait(Guard.Category, Guard.Value)]
+    [Theory]
+    [InlineData("after-complete")]
+    [InlineData("no-window")]
+    public void AReportOutsideTheStartupWindowOnlyLogs(string variant)
+    {
+        string crashLine = _scratch.File("crash.log");
+        string cleanup = _scratch.File("cleanup.txt");
+
+        var result = ChildProcess.Run(Victim, "report", crashLine, cleanup, variant);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.False(File.Exists(cleanup), "the cleanup ran outside the startup window");
+        Assert.Contains(Program.StartupMessage, File.ReadAllText(crashLine));
+    }
+
+    [Fact]
+    public void TheProcessWideArmsKeepTheirOwnEndingInsideTheStartupWindow()
+    {
+        string dropped = _scratch.File("dropped.log");
+
+        var crashed = ChildProcess.Run(Victim, "crash-unhandled", _scratch.File("sink.log"), _scratch.File("crash.log"), "startup-window");
+        var survived = ChildProcess.Run(Victim, "drop-task", dropped, "startup-window");
+
+        Assert.Equal(UnhandledExceptionExitCode, crashed.ExitCode);
+        Assert.Equal(0, survived.ExitCode);
+        Assert.Contains(Program.UnobservedMessage, File.ReadAllText(dropped));
+    }
+
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
     public void AnUnobservedTaskReachesALiveRegistrationAndNotADisposedOne()
     {
         var disposedSink = new RecordingSink();
