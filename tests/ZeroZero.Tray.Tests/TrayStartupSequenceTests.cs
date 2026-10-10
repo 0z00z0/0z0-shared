@@ -67,4 +67,25 @@ public class TrayStartupSequenceTests
         Assert.Equal(TrayStartupOutcome.Created, result.Outcome);
         Assert.Equal((1, 3, 0), (rig.Prepared, result.Attempts, rig.Abandoned));
     }
+
+    // The callback-based TrayStartup.StartAsync(create, abandon, options) overload wires in a
+    // genuine no-op for prepare, not a counted stub; this exercises that exact shape.
+    [Fact]
+    [Trait(Guard.Category, Guard.Value)]
+    public async Task ANoOpPrepareStillLetsCreationSucceedAndSkipsAbandon()
+    {
+        int attempts = 0, abandoned = 0;
+
+        var result = await TrayStartupSequence.RunAsync(
+            new TrayStartupOptions(),
+            () => true,
+            static () => { },
+            () => attempts++,
+            () => abandoned++,
+            _ => Task.CompletedTask,
+            () => TimeSpan.Zero).WaitAsync(HangLimit);
+
+        Assert.Equal(TrayStartupOutcome.Created, result.Outcome);
+        Assert.Equal((1, 0), (attempts, abandoned));
+    }
 }

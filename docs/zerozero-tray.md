@@ -194,6 +194,12 @@ if (!started.IsCreated)
 as a refused icon. The About, text prompt and update windows in this family set it as they open.
 Open no window until `StartAsync` has returned `Created`.
 
+**A host that is not a `TrayHost`** — its own `TaskbarIcon`, several icons, a menu `TrayHost`
+cannot express — gets the same wait and retry from `TrayStartup.StartAsync(create, abandon,
+options)`. `create` offers the icon, `abandon` removes whatever `create` left behind after the
+attempts run out; both run on the UI thread, same as the `TrayHost` overload. There is no
+`prepare` step: a caller with preparation work does it inside `create`.
+
 ### The menu on screen
 
 | Taskbar light | Taskbar dark |
