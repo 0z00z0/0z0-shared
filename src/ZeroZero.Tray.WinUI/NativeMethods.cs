@@ -8,6 +8,9 @@ internal static partial class NativeMethods
     [LibraryImport("user32.dll")]
     internal static partial uint GetDoubleClickTime();
 
+    [LibraryImport("user32.dll", EntryPoint = "FindWindowW", StringMarshalling = StringMarshalling.Utf16)]
+    internal static partial IntPtr FindWindow(string? className, string? windowName);
+
     /// <summary>Which theme the process's own Win32 menus are drawn in: 0 leaves it to Windows,
     /// 1 allows dark where a window asks for it, 2 forces dark and 3 forces light.</summary>
     internal enum PreferredAppMode

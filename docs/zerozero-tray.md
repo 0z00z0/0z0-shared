@@ -142,11 +142,57 @@ the XAML runtime is up.
   whether anything was written; `RestorePlacement()` puts back what the first write replaced. The
   rules are under the settings key below.
 
-- **Refusals.** `Start()` throws when called twice or on a thread with no dispatcher queue; the
+- **Refusals.** `Start()` throws when called twice or on a thread with no dispatcher queue, and
+  when the shell refuses the icon, after which the host cannot be started again; the
   refresh, menu and placement calls throw before `Start()` and after `Dispose()`, and `IsStarted`
   says which. `FromFrames` refuses an empty list and `Command` and `Toggle` a blank label; `FromFile`
   does not check that the file exists, and it must when the host loads it. `TrayClickPolicy`,
   `TrayClick` and `TrayIconFileCache` are the click rules and the cache on their own, for a test.
+
+### Starting at sign-in
+
+An application started by a logon task can run before Explorer has a taskbar. `Start()` then
+throws with "TryCreate failed." and the host is spent. A process that carries on holds its
+single-instance lock with no icon, and every later launch is refused until it is killed.
+`await TrayStartup.StartAsync(host, options)` takes the place of `Start()`:
+
+- **It waits for the taskbar.** It polls for the taskbar window (`Shell_TrayWnd`) every 250 ms,
+  for up to `ShellWait` (15 s). The icon is rendered only once the taskbar exists, so it is drawn
+  at the taskbar's own scale.
+- **It retries the icon.** A taskbar that exists can still refuse the icon for a moment. The icon
+  is offered up to `CreateAttempts` times (5), `RetryDelay` (1 s) apart.
+- **It reports.** The `TrayStartupResult` carries `Outcome`, `IsCreated`, `Attempts`, `Elapsed`
+  and `LastError`, the shell's last refusal, for the log.
+- **It never throws for the shell.** It throws only what `Start()` throws for the application's
+  own mistakes: off the UI thread, started twice, disposed, a delegate in the options throwing, or
+  an option out of range.
+- **It never decides what happens next.** It does not exit, log or try again after its bounds.
+
+| Outcome | The host afterwards |
+|---|---|
+| `Created` | Started, as after `Start()`. |
+| `ShellNeverAppeared` | Never started; `StartAsync` can be called on it again. |
+| `CreationFailed` | Back to not started, its refused icon removed; `StartAsync` can be called on it again. |
+
+Call it on the UI thread, from an `async` `OnLaunched`; the continuations resume there through
+the dispatcher's own synchronisation context. A start that fails has to end the process, because
+`SingleInstanceLock` is released only when the process ends:
+
+```csharp
+var started = await TrayStartup.StartAsync(_tray);
+if (!started.IsCreated)
+{
+    _log.Info($"Tray icon not created: {started.Outcome}, {started.Attempts} attempts in {started.Elapsed}.");
+    _log.Error("tray", started.LastError);
+    _lifecycle.MarkDeliberateExit(); // Left out, ProcessLifecycle relaunches the process within its limit.
+    Environment.Exit(1);
+}
+```
+
+**A window opened before the shell is ready can throw from WinUI itself.** Setting
+`AppWindow.IsShownInSwitchers` has thrown `NotImplementedException` at sign-in, in the same start
+as a refused icon. The About, text prompt and update windows in this family set it as they open.
+Open no window until `StartAsync` has returned `Created`.
 
 ### The menu on screen
 
@@ -241,9 +287,10 @@ and keeps the file current itself.
 `tests/ZeroZero.Tray.Tests` is plain `net10.0` and references no WinUI assembly: a WinUI-coupled
 test assembly hangs a runner with no desktop session rather than failing it (issue #13). The
 plain half is tested directly. The host's framework-free files — the tooltip discipline, the
-click policy, the file cache and the descriptors — are compiled in as linked source and pinned
-there: the cut before a suffix, the surrogate guard, the stop after a dropped line, the guard
-window and the double-click window, the write-or-skip decision.
+click policy, the file cache, the descriptors and the startup sequence — are compiled in as linked
+source and pinned there: the cut before a suffix, the surrogate guard, the stop after a dropped
+line, the guard window and the double-click window, the write-or-skip decision, and the startup's
+two bounds on a simulated clock, which fail as a timeout rather than hang if a bound is lost.
 
 The host itself is measured through a child process. Three facts start the interactive harness in
 its tray mode and wait for the probe it writes once the icon is created. One of them then reads the
