@@ -272,9 +272,11 @@ public sealed partial class MqttSettingsPanel : UserControl
     /// cannot write, including how to describe the publish section as a whole.</summary>
     private void ApplyHostText(MqttPanelSetup setup)
     {
-        if (setup.PublishTitle is { Length: > 0 } title) PublishCard.Header = title;
-        if (setup.PublishDescription is { Length: > 0 } description) PublishDescriptionText.Text = description;
-        if (setup.PublishInfo is { Length: > 0 } info)
+        // A blank host string keeps the module's text: blanks on screen help nobody.
+        if (setup.PublishTitle is { } title && !string.IsNullOrWhiteSpace(title)) PublishCard.Header = title;
+        if (setup.PublishDescription is { } description && !string.IsNullOrWhiteSpace(description))
+            PublishDescriptionText.Text = description;
+        if (setup.PublishInfo is { } info && !string.IsNullOrWhiteSpace(info))
             SetInfo(PublishInfoIcon, _strings.Get("SubjectPublishSwitch"), WithModuleVersion(info));
 
         // No fallback here on purpose: an icon opening on nothing is worse than no icon.

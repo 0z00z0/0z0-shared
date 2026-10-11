@@ -1257,6 +1257,9 @@ icon rather than an empty one:
 | `PublishGroupsInfo` | The "What to publish" heading's icon. No fallback. |
 | `DeviceIdConsequence` | An application-specific consequence, shown in the device-id dialogue under the module's own |
 
+A blank or whitespace-only `PublishTitle`, `PublishDescription` or `PublishInfo` keeps the module's own
+text, and so does a blank translation from an `IMqttStringSource`.
+
 ### Theming
 
 Six keys, declared in the application's own resources to override: five brushes —
