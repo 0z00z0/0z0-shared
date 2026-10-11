@@ -104,6 +104,7 @@ public partial class App : Application
 
         if (Has(commandLine, "--mqtt"))
         {
+            if (Has(commandLine, "--anchor")) ShowAnchor();
             _mqtt = new MqttPanelScenario();
             _mqtt.Show(commandLine);
             return;
