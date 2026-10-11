@@ -93,7 +93,9 @@ In this order, at the top of the application's entry point:
    writes regardless of level, before anything that can throw.
 2. **The handlers.** `CrashHandlers.Register(new CrashHandlerOptions { Sink = sink, CrashLine = new CrashLineAppender(path) })`,
    holding the result for the life of the process. The crash-line path is under the application's
-   own data directory; the appender creates the directory on first write.
+   own data directory; the appender creates the directory on first write. In a tray application
+   the single-instance lock and the restart mechanism come first
+   ([the startup rule](zerozero-tray.md#the-startup-rule)).
 3. **The UI arm.** In the framework's unhandled-exception handler call `handlers.Report("Application.UnhandledException", e.Exception)`,
    then decide `Handled` as the application always has. With the startup window configured,
    `Report` ends the process instead while startup is still running.
@@ -122,7 +124,7 @@ var crash = CrashHandlers.Register(new CrashHandlerOptions
     CrashLine = new CrashLineAppender(path),
     OnStartupFailure = () => { },   // the application's own cleanup; empty is allowed
 });
-// ... the lock, the tray icon, the first window ...
+// ... the tray icon, then the first window ...
 crash.MarkStartupComplete();
 ```
 
@@ -133,13 +135,37 @@ crash.MarkStartupComplete();
   if any, opened.
 - **The cleanup cannot stop the exit.** An exception from it is logged under `StartupFailureSource`
   and the process ends anyway. Ending the process is what releases `SingleInstanceLock`.
-- **With `ProcessLifecycle` armed, the exit is relaunched** within its limit of three in ten minutes,
-  which gives a start that raced the shell a second try. `MarkDeliberateExit()` in the cleanup
-  prevents the relaunch.
+- **The exit is not deliberate**, so whatever restart mechanism the application uses brings the
+  process back: the next section is the rule.
 - **It never applies to the two process-wide arms.** An unhandled exception still ends the process
   the runtime's way, dump included, and an unobserved task exception is still only logged.
 - **Left null, nothing changes**: `Report` only logs for the life of the process, and
   `MarkStartupComplete()` has no effect.
+
+### A failed start is not a deliberate exit
+
+**`OnStartupFailure` never marks the exit as deliberate**, under whichever restart mechanism the
+application uses. That mark is exactly what tells the mechanism to leave the process down, so a start
+that lost the race with the shell would stay down until someone starts it by hand. The cleanup
+releases the application's own state and nothing more.
+
+The two mechanisms in this library, either of which an application may use:
+
+- **`ZeroZero.Lifecycle`'s `ProcessLifecycle`** starts the executable again on any clean exit — the
+  `Environment.Exit` of a failed start is one — unless `MarkDeliberateExit()` was called, the session
+  is ending, or three relaunches already happened in the last ten minutes. A crash raises no exit
+  event, so it is never relaunched from here.
+- **`ZeroZero.Startup`'s watchdog task** starts the executable every five minutes by default, and the
+  copy it starts stays down while `WatchdogHold.Hold()` has a deliberate exit on record. An
+  application's own hold marker of the same kind is the same case.
+
+An application using neither has nothing that brings a failed start back; it wires its own
+equivalent or accepts that the start stays down.
+
+**The mechanism is armed before the crash handlers are registered**, so a failed start always
+reaches it: `ProcessLifecycle.Arm()` once the single-instance lock is taken, or the watchdog's
+`Ensure()` with `Hold.Release()` on a start the person asked for. The whole order is in
+[`zerozero-tray.md`](zerozero-tray.md#the-startup-rule).
 
 ## Take the reference
 

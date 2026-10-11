@@ -176,29 +176,61 @@ single-instance lock with no icon, and every later launch is refused until it is
 
 Call it on the UI thread, from an `async` `OnLaunched`; the continuations resume there through
 the dispatcher's own synchronisation context. A start that fails has to end the process, because
-`SingleInstanceLock` is released only when the process ends:
-
-```csharp
-var started = await TrayStartup.StartAsync(_tray);
-if (!started.IsCreated)
-{
-    _log.Info($"Tray icon not created: {started.Outcome}, {started.Attempts} attempts in {started.Elapsed}.");
-    _log.Error("tray", started.LastError);
-    _lifecycle.MarkDeliberateExit(); // Left out, ProcessLifecycle relaunches the process within its limit.
-    Environment.Exit(1);
-}
-```
-
-**A window opened before the shell is ready can throw from WinUI itself.** Setting
-`AppWindow.IsShownInSwitchers` has thrown `NotImplementedException` at sign-in, in the same start
-as a refused icon. The About, text prompt and update windows in this family set it as they open.
-Open no window until `StartAsync` has returned `Created`.
+`SingleInstanceLock` is released only when the process ends; [the startup rule](#the-startup-rule)
+has the whole sequence.
 
 **A host that is not a `TrayHost`** — its own `TaskbarIcon`, several icons, a menu `TrayHost`
 cannot express — gets the same wait and retry from `TrayStartup.StartAsync(create, abandon,
 options)`. `create` offers the icon, `abandon` removes whatever `create` left behind after the
 attempts run out; both run on the UI thread, same as the `TrayHost` overload. There is no
 `prepare` step: a caller with preparation work does it inside `create`.
+
+### The startup rule
+
+**No window opens before the tray icon exists, for the whole life of the process.** The icon exists
+once `StartAsync` has returned `Created`. The rule covers every window, not only the first ones: a
+window raised later — a screen cover after a resumed session, a window opened by a Home Assistant
+trigger — opens only in a process whose start reached `Created`.
+
+The reason is WinUI's own window setup. `AppWindow.IsShownInSwitchers` throws
+`NotImplementedException` while no taskbar window exists (measured on Windows App SDK 2.4.0 and
+2.5.1), and a throw from a window's constructor ends the process. The controls foundation assembly's
+`SwitcherVisibility.TrySet` sets it without throwing
+([`zerozero-controls.md`](zerozero-controls.md)), and the About, text prompt and update windows use
+it. It removes that one throw; the rule still applies.
+
+The sequence, for either `StartAsync` overload and either restart mechanism:
+
+1. **Take the single-instance lock**; a refused lock returns and arms nothing
+   ([`zerozero-lifecycle.md`](zerozero-lifecycle.md)).
+2. **Arm the restart mechanism** the application uses: `ProcessLifecycle.Arm()`, or the watchdog's
+   `Ensure()`.
+3. **Register the crash handlers** with `OnStartupFailure` set. The cleanup never marks the exit
+   deliberate ([`zerozero-diagnostics.md`](zerozero-diagnostics.md#a-failed-start-is-not-a-deliberate-exit)).
+4. **`await TrayStartup.StartAsync`.**
+5. **On `Created`**, open the windows, then call `MarkStartupComplete()`.
+6. **On any other outcome**, report it through the crash handlers, which run the cleanup and end the
+   process. The exit is not deliberate, so the restart mechanism brings the process back.
+
+```csharp
+// The lock is taken and the restart mechanism armed.
+var crash = CrashHandlers.Register(new CrashHandlerOptions
+{
+    Sink = sink,
+    CrashLine = new CrashLineAppender(path),
+    OnStartupFailure = () => { },   // the application's own state only; never a deliberate-exit mark
+});
+
+var started = await TrayStartup.StartAsync(_tray);   // or StartAsync(create, abandon)
+if (!started.IsCreated)
+{
+    sink.Info($"Tray icon not created: {started.Outcome}, {started.Attempts} attempts in {started.Elapsed}.");
+    crash.Report("tray", started.LastError);   // logs, cleans up, ends the process; does not return
+}
+
+// Windows open from here on, and only here.
+crash.MarkStartupComplete();
+```
 
 ### The menu on screen
 
