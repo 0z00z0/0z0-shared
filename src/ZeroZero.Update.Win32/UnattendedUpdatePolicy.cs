@@ -22,7 +22,9 @@ public enum UnattendedOutcome
     NothingToInstall,
 
     /// <summary>The release was not downloaded, or did not verify, and no verified installer is
-    /// held. Nothing ran, and the next check decides again.</summary>
+    /// held. Nothing ran, the release is let go, and the next check decides again: under
+    /// <see cref="CheckCadence.Once"/> there is none, so nothing installs for the rest of the
+    /// process.</summary>
     NotPrepared,
 
     /// <summary>A verified installer is in hand and this moment was refused. Nothing ran; the next

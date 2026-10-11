@@ -476,7 +476,8 @@ never again for the life of the process, whatever that check finds — something
 cannot express at any value, since even the longest one checks again eventually. The cadence governs
 checking only: a release already found keeps following `MayDownloadNow`, the machine-free rule,
 `MayInstallNow` and the retry when it could not start, so the ticks go on for as long as the
-scheduler runs and simply find no check due once the one check has run.
+scheduler runs and simply find no check due once the one check has run. A download that fails or
+does not verify lets the release go, so under `Once` nothing installs for the rest of the process.
 
 **The application is asked before anything is downloaded.** `MayDownloadNow` is called once a check
 has found a release and before a byte of it is fetched. An `InstallMoment.NotNow` keeps the release
@@ -539,7 +540,7 @@ Each tick says where it ended:
 | `CheckFailed` | The check did not complete and nothing is held. The cadence is not stamped, so the next tick checks again. With something held, the tick carries on with it instead. |
 | `NothingToInstall` | The check completed, there is nothing newer, and nothing is held. |
 | `DownloadRefused` | A release is held and `MayDownloadNow` refused its download at this moment. Nothing was downloaded, and the next tick asks again. |
-| `NotPrepared` | The release was not downloaded, or did not verify, and no verified installer is held. Nothing ran, and the next check decides again. |
+| `NotPrepared` | The release was not downloaded, or did not verify, and no verified installer is held. Nothing ran, the release is let go, and the next check decides again: under `CheckCadence.Once` there is none. |
 | `Refused` | A verified installer is in hand and this moment was refused. `Reason` says which rule refused it. |
 | `LaunchFailed` | The installer did not start. The next tick downloads and verifies it again, or the newer release already waiting where a check found one. |
 | `InstallerStarted` | The installer is running and the shutdown callback has been called. Every tick after it answers the same and does nothing, so a tick landing while the application is still on its way out starts no second installer. |
