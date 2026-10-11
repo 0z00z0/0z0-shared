@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 
 namespace ZeroZero.Config.Sections.Tests;
 
@@ -57,6 +58,60 @@ public abstract class SectionedTestBase : IDisposable
 
     protected string[] QuarantineCopies() =>
         [.. Directory.EnumerateFiles(Root, "settings.*.bad.json").Order(StringComparer.Ordinal)];
+
+    /// <summary>The reader a consuming application uses: a comment fails the whole file.</summary>
+    protected static readonly JsonReaderOptions Strict = new() { CommentHandling = JsonCommentHandling.Disallow };
+
+    /// <summary>Every comment in the bytes, in file order. Only a comment-allowing reader can tell one
+    /// from the same characters inside a string.</summary>
+    protected static List<string> CommentsIn(byte[] content)
+    {
+        var reader = new Utf8JsonReader(content, new JsonReaderOptions { CommentHandling = JsonCommentHandling.Allow, AllowTrailingCommas = true });
+        var found = new List<string>();
+
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.Comment) found.Add(reader.GetComment());
+        }
+
+        return found;
+    }
+
+    protected static bool Parses(byte[] content, JsonReaderOptions options)
+    {
+        try
+        {
+            var reader = new Utf8JsonReader(content, options);
+            while (reader.Read())
+            {
+                // Reading to the end is the check: the reader throws on what it will not accept.
+            }
+
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>A value with the whitespace between its tokens taken out, the only thing a carry
+    /// across is allowed to change.</summary>
+    protected static string Compact(byte[] content, int start, int end)
+    {
+        var text = new StringBuilder();
+        var reader = new Utf8JsonReader(content.AsSpan(start..end), JsonObjectSpans.ReaderOptions);
+        while (reader.Read()) text.Append(reader.TokenType).Append(Encoding.UTF8.GetString(reader.ValueSpan)).Append('|');
+        return text.ToString();
+    }
+
+    /// <summary>The reader shape the consuming application uses: the declared spelling and nothing else.</summary>
+    protected static JsonSerializerOptions CaseSensitive()
+    {
+        var options = SettingsFileOptions.CreateSerialiser();
+        options.PropertyNameCaseInsensitive = false;
+        return options;
+    }
 
     public void Dispose()
     {

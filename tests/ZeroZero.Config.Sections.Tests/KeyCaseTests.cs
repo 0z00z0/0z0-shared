@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Xunit;
 
 namespace ZeroZero.Config.Sections.Tests;
@@ -14,14 +13,6 @@ namespace ZeroZero.Config.Sections.Tests;
 /// </remarks>
 public sealed class KeyCaseTests : SectionedTestBase
 {
-    // The reader shape the consuming application uses: the declared spelling and nothing else.
-    private static JsonSerializerOptions CaseSensitive()
-    {
-        var options = SettingsFileOptions.CreateSerialiser();
-        options.PropertyNameCaseInsensitive = false;
-        return options;
-    }
-
     [Fact]
     public void A_section_the_file_spells_differently_reads_as_defaults_and_names_the_files_own_spelling()
     {

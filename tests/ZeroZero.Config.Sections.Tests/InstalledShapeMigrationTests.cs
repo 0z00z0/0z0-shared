@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using Xunit;
 
 namespace ZeroZero.Config.Sections.Tests;
@@ -35,8 +34,6 @@ public sealed class InstalledShapeMigrationTests : SectionedTestBase
         "general", "graph", "smart_charge", "network", "keep_awake",
         "lid_close", "notifications", "mqtt", "diagnostics", "window",
     ];
-
-    private static readonly JsonReaderOptions Strict = new() { CommentHandling = JsonCommentHandling.Disallow };
 
     private string SourcePath => Path.Combine(Root, "installed-settings.json");
 
@@ -215,56 +212,9 @@ public sealed class InstalledShapeMigrationTests : SectionedTestBase
         Assert.Contains("\"Width\": 1000", OnDisk(), StringComparison.Ordinal);
     }
 
-    private static JsonSerializerOptions CaseSensitive()
-    {
-        var options = SettingsFileOptions.CreateSerialiser();
-        options.PropertyNameCaseInsensitive = false;
-        return options;
-    }
-
     private SectionedSettingsOptions InstalledOptions(int version = 1) =>
         new(Root, FileName) { Version = version, SectionOrder = Sections };
 
     private SettingsMigrationResult Run(int version = 1) =>
         SettingsMigration.Run(new SettingsMigrationRequest(SourcePath, FilePath) { Version = version });
-
-    private static List<string> CommentsIn(byte[] content)
-    {
-        var options = new JsonReaderOptions { CommentHandling = JsonCommentHandling.Allow, AllowTrailingCommas = true };
-        var reader = new Utf8JsonReader(content, options);
-        var found = new List<string>();
-
-        while (reader.Read())
-        {
-            if (reader.TokenType == JsonTokenType.Comment) found.Add(reader.GetComment());
-        }
-
-        return found;
-    }
-
-    private static bool Parses(byte[] content, JsonReaderOptions options)
-    {
-        try
-        {
-            var reader = new Utf8JsonReader(content, options);
-            while (reader.Read())
-            {
-                // Reading to the end is the check: the reader throws on what it will not accept.
-            }
-
-            return true;
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
-    }
-
-    private static string Compact(byte[] content, int start, int end)
-    {
-        var text = new StringBuilder();
-        var reader = new Utf8JsonReader(content.AsSpan(start..end), JsonObjectSpans.ReaderOptions);
-        while (reader.Read()) text.Append(reader.TokenType).Append(Encoding.UTF8.GetString(reader.ValueSpan)).Append('|');
-        return text.ToString();
-    }
 }

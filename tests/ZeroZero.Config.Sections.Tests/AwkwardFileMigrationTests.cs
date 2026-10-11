@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using Xunit;
 
 namespace ZeroZero.Config.Sections.Tests;
@@ -313,15 +312,5 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
     {
         var member = root.Find(name)!.Value;
         return member.ValueStart..member.ValueEnd;
-    }
-
-    // The same value with the whitespace between its tokens taken out, which is the only thing a
-    // carry across is allowed to change.
-    private static string Compact(byte[] content, int start, int end)
-    {
-        var text = new StringBuilder();
-        var reader = new Utf8JsonReader(content.AsSpan(start..end), JsonObjectSpans.ReaderOptions);
-        while (reader.Read()) text.Append(reader.TokenType).Append(Encoding.UTF8.GetString(reader.ValueSpan)).Append('|');
-        return text.ToString();
     }
 }

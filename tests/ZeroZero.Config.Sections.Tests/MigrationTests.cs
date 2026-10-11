@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using Xunit;
 
 namespace ZeroZero.Config.Sections.Tests;
@@ -216,9 +215,8 @@ public sealed class MigrationTests : SectionedTestBase
 
         // The reader the application uses disallows comments, so this is the check that matters: the
         // new file parses under those settings, where the old one would not have.
-        var strict = new JsonReaderOptions { CommentHandling = JsonCommentHandling.Disallow };
-        Assert.True(Parses(OnDiskBytes(), strict));
-        Assert.False(Parses(File.ReadAllBytes(SourcePath), strict));
+        Assert.True(Parses(OnDiskBytes(), Strict));
+        Assert.False(Parses(File.ReadAllBytes(SourcePath), Strict));
     }
 
     [Fact]
@@ -239,24 +237,6 @@ public sealed class MigrationTests : SectionedTestBase
         Assert.Equal(["/* nobody remembers what this did */"], result.CommentsInsideValues);
         Assert.Empty(result.CommentsNotCarried);
         Assert.Contains("/* nobody remembers what this did */", OnDisk(), StringComparison.Ordinal);
-    }
-
-    private static bool Parses(byte[] content, JsonReaderOptions options)
-    {
-        try
-        {
-            var reader = new Utf8JsonReader(content, options);
-            while (reader.Read())
-            {
-                // Reading to the end is the whole check: the reader throws on what it will not accept.
-            }
-
-            return true;
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
     }
 
     [Fact]
