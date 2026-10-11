@@ -288,29 +288,19 @@ public sealed class SectionedSettingsFile
 
         if (SettingsDocument.TryParse(content!) is { } document) return document;
 
-        // Unusable content, and the latch is set, so this is the self-heal: the copy is taken from the
-        // bytes in hand and a whole document is written in place of the broken one.
+        // Unusable content: the copy is taken from the bytes in hand, and a write puts a whole document
+        // in place of the broken one.
         return Quarantine(content!) ? SettingsDocument.Empty(JsonLayout.Detect(content!)) : null;
     }
 
-    private LoadedDocument? Load()
+    // Opening writes nothing, so a document whose copy failed still reads as empty here.
+    private (SettingsDocument Document, bool IsFromNewerVersion)? Load()
     {
         var outcome = ReadFile(out var content);
         if (outcome == FileOutcome.Unreadable) return null;
 
-        if (outcome is FileOutcome.Missing or FileOutcome.Blank)
-        {
-            var empty = SettingsDocument.Empty(content is null ? JsonLayout.Default : JsonLayout.Detect(content));
-            return new LoadedDocument(empty, false);
-        }
-
-        if (SettingsDocument.TryParse(content!) is not { } parsed)
-        {
-            Quarantine(content!);
-            return new LoadedDocument(SettingsDocument.Empty(JsonLayout.Detect(content!)), false);
-        }
-
-        return new LoadedDocument(parsed, parsed.Version > _options.Version);
+        var document = Rebase(content, outcome) ?? SettingsDocument.Empty(JsonLayout.Detect(content!));
+        return (document, document.Version > _options.Version);
     }
 
     private FileOutcome ReadFile(out byte[]? content)
@@ -356,8 +346,6 @@ public sealed class SectionedSettingsFile
         if (context is null) raise();
         else context.Post(static state => ((Action)state!)(), raise);
     }
-
-    private readonly record struct LoadedDocument(SettingsDocument Document, bool IsFromNewerVersion);
 
     private enum FileOutcome
     {
