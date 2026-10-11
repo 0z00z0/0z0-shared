@@ -368,10 +368,13 @@ UpdateButton.Label = available ? "Update to 1.58.0" : "Up to date";
 UpdateButton.State = available ? BrandBracketButtonState.Attention : BrandBracketButtonState.Success;
 ```
 
-The host owns three members: **`Label`**, the text after the chevron and the accessible name;
-**`State`**, a `BrandBracketButtonState`; and **`Click`**, raised by a pointer press, Enter or Space
-in every state. Both properties are dependency properties, so either can be bound. A null `Symbol`
-shows `DefaultSymbol`, `>`.
+The host sets **`Label`**, the text after the chevron and the accessible name, and **`State`**, a
+`BrandBracketButtonState`, and handles **`Click`**, raised by a pointer press, Enter or Space in
+every state. `Symbol` is described below, and `FillsWidth` belongs to the column. Every property is
+a dependency property. **`State` is written by the button itself** when `Success` returns to
+`Rest`: that write replaces a one-way `{Binding}` and leaves a one-way `x:Bind` holding a value the
+button no longer shows, so a host sets `State` from code, as above. `Label` binds either way. A null
+`Symbol` shows `DefaultSymbol`, `>`.
 
 | State | Shows |
 |---|---|
