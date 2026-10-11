@@ -107,8 +107,7 @@ public sealed partial class BrandAboutControl : UserControl
     {
         var fetch = _fetch;
         _fetch = null;
-        try { fetch?.Cancel(); }
-        catch (ObjectDisposedException) { /* the fetch already finished and disposed its source */ }
+        fetch?.Cancel();
     }
 
     /// <summary>
@@ -210,7 +209,7 @@ public sealed partial class BrandAboutControl : UserControl
         if (NewsPanel.Visibility == Visibility.Visible)
         {
             NewsPanel.Visibility = Visibility.Collapsed;
-            ContentResized?.Invoke(this, EventArgs.Empty);
+            RaiseContentResized();
             return;
         }
 
@@ -221,7 +220,7 @@ public sealed partial class BrandAboutControl : UserControl
         if (_notes is { } already)
         {
             NewsText.Text = already;
-            ContentResized?.Invoke(this, EventArgs.Empty);
+            RaiseContentResized();
             return;
         }
 
@@ -229,12 +228,12 @@ public sealed partial class BrandAboutControl : UserControl
         // waits with it rather than queueing another.
         if (_fetch is not null)
         {
-            ContentResized?.Invoke(this, EventArgs.Empty);
+            RaiseContentResized();
             return;
         }
 
         NewsText.Text = Fetching;
-        ContentResized?.Invoke(this, EventArgs.Empty);
+        RaiseContentResized();
 
         var fetch = new CancellationTokenSource(FetchTimeout);
         _fetch = fetch;
@@ -260,11 +259,7 @@ public sealed partial class BrandAboutControl : UserControl
             if (current) _fetch = null;
             fetch.Dispose();
             // The panel's height settled either way, so the host resizes to what is now in it.
-            if (current)
-            {
-                try { ContentResized?.Invoke(this, EventArgs.Empty); }
-                catch (Exception ex) { Debug.WriteLine($"BrandAboutControl: resize after fetch: {ex}"); }
-            }
+            if (current) RaiseContentResized();
         }
     }
 
@@ -305,7 +300,15 @@ public sealed partial class BrandAboutControl : UserControl
         bool expanded = LibrariesPanel.Visibility == Visibility.Visible;
         LibrariesPanel.Visibility  = expanded ? Visibility.Collapsed : Visibility.Visible;
         LibrariesToggleBtn.Content = expanded ? "External libraries ▾" : "External libraries ▴";
-        ContentResized?.Invoke(this, EventArgs.Empty);
+        RaiseContentResized();
+    }
+
+    /// <summary>Every raise goes through here: a host's throwing handler is logged, never let out of a
+    /// click handler or lost in the fetch's unobserved task.</summary>
+    private void RaiseContentResized()
+    {
+        try { ContentResized?.Invoke(this, EventArgs.Empty); }
+        catch (Exception ex) { Debug.WriteLine($"BrandAboutControl: a ContentResized handler threw: {ex}"); }
     }
 
     /// <summary>Opens a link in the default browser. A machine with no handler for the address throws

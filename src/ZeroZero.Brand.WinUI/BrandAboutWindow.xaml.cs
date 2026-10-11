@@ -117,9 +117,7 @@ public sealed partial class BrandAboutWindow : Window
         if (_dismissing) return;
         _dismissing = true;
 
-        try { AboutControl.CancelPendingFetch(); }
-        catch (Exception ex) { Debug.WriteLine($"BrandAboutWindow: cancelling the notes fetch: {ex}"); }
-
+        AboutControl.CancelPendingFetch();
         Close();
     }
 
