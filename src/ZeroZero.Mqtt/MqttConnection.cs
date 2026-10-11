@@ -42,8 +42,10 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         MqttDeviceIdentity Identity, IReadOnlyList<string> Channels, IReadOnlyList<string> Commands);
 
     // Held rather than evicted inline because the change can land while disconnected: best-effort now,
-    // guaranteed on the next connect. Written under _gate, taken with Interlocked.Exchange.
-    private RetiredIdentity? _retiredIdentity;
+    // guaranteed on the next connect. Keyed by device id, so A → B → C while disconnected keeps both A
+    // and B; the identity in force is never held, so A → B → A cannot evict the live device.
+    private readonly Lock _retiredLock = new();
+    private readonly Dictionary<string, RetiredIdentity> _retired = new(StringComparer.Ordinal);
 
     // Channel keys whose retained topics could not be emptied when they were dropped, because there
     // was no link. Kept rather than lost: the replace has already forgotten them, so without this the
@@ -212,7 +214,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             if (previousIdentity.DeviceId.Length > 0 && previousIdentity.DeviceId != deviceId)
             {
                 _log.Info($"MQTT: device id '{previousIdentity.DeviceId}' → '{deviceId}'; evicting the old device.");
-                _retiredIdentity = new(previousIdentity, _channels.Keys, _router.EntityIds);
+                HoldRetired(new(previousIdentity, _channels.Keys, _router.EntityIds));
             }
             await ClearRetiredIdentityAsync(CancellationToken.None).ConfigureAwait(false);
 
@@ -909,7 +911,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         }
     }
 
-    /// <summary>Empties every retained topic a superseded identity owned, so a consumer deletes the
+    /// <summary>Empties every retained topic each superseded identity owned, so a consumer deletes the
     /// old device rather than leaving a ghost. No-op while disconnected: the next connect runs it.</summary>
     /// <remarks>An eviction that did not land is put back rather than discarded. The old id is gone
     /// from everything else by this point, so dropping it here leaves a ghost device on the receiver
@@ -917,28 +919,55 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     private async Task ClearRetiredIdentityAsync(CancellationToken ct)
     {
         if (!_client.IsConnected) return;
-        if (Interlocked.Exchange(ref _retiredIdentity, null) is not { } retired) return;
 
-        bool landed;
-        try
+        List<RetiredIdentity> retired;
+        lock (_retiredLock)
         {
-            if (_setup.Listener is { } listener)
-                await listener.OnIdentityRetiredAsync(this, retired.Identity, ct).ConfigureAwait(false);
-
-            landed = await PublishAsync(
-                    OwnTopics(retired.Identity.DeviceId, retired.Channels, retired.Commands)
-                        .Select(MqttMessage.Empty),
-                    ct)
-                .ConfigureAwait(false);
+            if (_retired.Count == 0) return;
+            retired = [.. _retired.Values];
+            _retired.Clear();
         }
-        catch { Restore(retired); throw; }
 
-        if (!landed) Restore(retired);
+        for (int i = 0; i < retired.Count; i++)
+        {
+            bool landed;
+            try
+            {
+                if (_setup.Listener is { } listener)
+                    await listener.OnIdentityRetiredAsync(this, retired[i].Identity, ct).ConfigureAwait(false);
 
-        // Only into an empty slot. A retirement recorded while this one was in flight supersedes it,
-        // exactly as the apply that recorded it superseded the identity before it.
-        void Restore(RetiredIdentity identity) =>
-            Interlocked.CompareExchange(ref _retiredIdentity, identity, null);
+                landed = await PublishAsync(
+                        OwnTopics(retired[i].Identity.DeviceId, retired[i].Channels, retired[i].Commands)
+                            .Select(MqttMessage.Empty),
+                        ct)
+                    .ConfigureAwait(false);
+            }
+            catch
+            {
+                foreach (var left in retired.Skip(i)) HoldRetired(left);
+                throw;
+            }
+
+            if (!landed) HoldRetired(retired[i]);
+        }
+    }
+
+    /// <summary>Records a superseded identity for eviction. A repeat of an id already held merges its
+    /// keys, and the identity in force is dropped rather than held: evicting it would empty the live
+    /// device's topics.</summary>
+    private void HoldRetired(RetiredIdentity retired)
+    {
+        lock (_retiredLock)
+        {
+            string id = retired.Identity.DeviceId;
+            if (_retired.TryGetValue(id, out var held))
+                retired = new(
+                    retired.Identity,
+                    [.. held.Channels.Union(retired.Channels, StringComparer.Ordinal)],
+                    [.. held.Commands.Union(retired.Commands, StringComparer.Ordinal)]);
+            _retired[id] = retired;
+            _retired.Remove(_identity.DeviceId);
+        }
     }
 
     /// <summary>Every topic this layer owns under one device id: the two availability topics, each

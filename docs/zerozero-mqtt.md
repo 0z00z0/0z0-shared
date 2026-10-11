@@ -795,6 +795,8 @@ Nothing local can check that, so a host offering the field says so where the use
 machine-name default is unique by construction. `MqttIdentity` keeps `a-z` and `0-9`, turns anything
 else into an underscore and stops at 48 characters; a machine name with neither gives
 `<topicRoot>_device`, and a typed id that is blank or has neither falls back to the default.
+A changed id empties the old id's retained topics on the next connect; every id superseded while
+there was no link is emptied, and an id that comes back into force is never emptied.
 
 ### Commands
 

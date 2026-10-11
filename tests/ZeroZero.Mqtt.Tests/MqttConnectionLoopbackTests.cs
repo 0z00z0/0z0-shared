@@ -541,6 +541,48 @@ public class MqttConnectionLoopbackTests
             "a refused eviction of the old device id was recorded as done");
     }
 
+    /// <summary>Two id changes while there is no link evict both superseded ids on the next connect.
+    /// Holding only the latest leaves the first id's retained topics on the broker as a ghost device
+    /// that nothing in the process knows about.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task EverySupersededDeviceIdIsEvictedNotOnlyTheLatest()
+    {
+        using var broker = new FakeBroker();
+        using var connection = new MqttConnection(Setup([new("cpu_load", () => "42")]));
+        int closed = FakeBroker.ClosedPort();
+
+        await connection.ApplyAsync(Parameters(broker) with { Port = closed });
+        await connection.ApplyAsync(Parameters(broker) with { Port = closed, DeviceId = "desk02" });
+        await connection.ApplyAsync(Parameters(broker) with { DeviceId = "desk03" });
+
+        Assert.True(await FakeBroker.WaitAsync(
+            () => broker.Retained(MqttTopics.Availability(Root, "desk02")) == ""), "the latest id was not evicted");
+        Assert.True(await FakeBroker.WaitAsync(
+            () => broker.Retained(MqttTopics.Availability(Root, Device)) == ""), "the first id was lost");
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Topic("cpu_load")) == ""));
+    }
+
+    /// <summary>An id that comes back is the live device again, so it is never evicted: emptying its
+    /// topics on the connect that announces it takes the device off the receiver.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task AnIdThatComesBackIsNotEvicted()
+    {
+        using var broker = new FakeBroker();
+        using var connection = new MqttConnection(Setup([new("cpu_load", () => "42")]));
+        int closed = FakeBroker.ClosedPort();
+
+        await connection.ApplyAsync(Parameters(broker) with { Port = closed });
+        await connection.ApplyAsync(Parameters(broker) with { Port = closed, DeviceId = "desk02" });
+        await connection.ApplyAsync(Parameters(broker));
+
+        Assert.True(await FakeBroker.WaitAsync(
+            () => broker.Retained(MqttTopics.Availability(Root, "desk02")) == ""), "the departed id was not evicted");
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Topic("cpu_load")) == "42"));
+        Assert.DoesNotContain(broker.Published, p => p.Topic == Availability && p.Payload.Length == 0);
+    }
+
     [Fact]
     public async Task AChannelThatArrivesIsAskedForItsValueAtOnce()
     {
