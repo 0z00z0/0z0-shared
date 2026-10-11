@@ -9,15 +9,8 @@ internal static class StartupTaskDefinition
 {
     internal static TaskDefinition Build(TaskService service, StartupTaskOptions options, TaskIdentity identity, string executablePath, bool enabled)
     {
-        TaskDefinition definition = service.NewTask();
-        definition.RegistrationInfo.Description = options.Description;
-
-        CommonTaskDefinition.ApplyPrincipal(definition.Principal, identity);
-
+        TaskDefinition definition = CommonTaskDefinition.NewDefinition(service, options.Description, identity, executablePath, options.Arguments);
         definition.Triggers.Add(new LogonTrigger { UserId = identity.AccountName });
-        definition.Actions.Add(CommonTaskDefinition.Action(executablePath, options.Arguments));
-
-        CommonTaskDefinition.ApplyPowerSafeSettings(definition.Settings);
         definition.Settings.Enabled = enabled;
         return definition;
     }

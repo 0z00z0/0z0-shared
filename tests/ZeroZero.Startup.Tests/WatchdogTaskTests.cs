@@ -17,7 +17,7 @@ public sealed class WatchdogTaskTests : IDisposable
     /// first use, and the two classes run in parallel.</summary>
     private const string Prefix = "ZeroZero.Watchdog.Tests.";
 
-    static WatchdogTaskTests() => Sweep();
+    static WatchdogTaskTests() => DisposableTask.Sweep(Prefix);
 
     private readonly string _name = Prefix + Guid.NewGuid().ToString("N");
     private readonly string _folder = Path.Combine(Path.GetTempPath(), "ZeroZero.Startup.Tests.Watchdog." + Guid.NewGuid().ToString("N"));
@@ -48,22 +48,6 @@ public sealed class WatchdogTaskTests : IDisposable
 
         try { Directory.Delete(_folder, recursive: true); }
         catch (DirectoryNotFoundException) { }
-    }
-
-    /// <summary>Removes what a run that died left behind.</summary>
-    private static void Sweep()
-    {
-        try
-        {
-            using var service = new TaskService();
-            List<string> leftovers = service.RootFolder.Tasks
-                .Where(task => task.Name.StartsWith(Prefix, StringComparison.Ordinal))
-                .Select(task => task.Name)
-                .ToList();
-            foreach (string name in leftovers)
-                service.RootFolder.DeleteTask(name, exceptionOnNotExists: false);
-        }
-        catch (UnauthorizedAccessException) { }
     }
 
     /// <summary>A reading through a scheduler connection of its own, so what a test asserts was not

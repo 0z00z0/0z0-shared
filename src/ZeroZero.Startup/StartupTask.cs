@@ -88,7 +88,7 @@ public sealed class StartupTask : IDisposable
     {
         TaskIdentity identity = Identity();
         using TaskDefinition definition = StartupTaskDefinition.Build(_service, _options, identity, _executablePath, enabled: true);
-        RegisterDefinition(definition, identity);
+        CommonTaskDefinition.Register(_service, TaskName, definition, identity);
         // No account name: this line goes out at information level on an ordinary start, and who is
         // signed in is not the log's business.
         _log.Info($"Startup task '{TaskName}' registered.");
@@ -141,7 +141,7 @@ public sealed class StartupTask : IDisposable
                 TaskIdentity identity = Identity();
 
                 using TaskDefinition definition = StartupTaskDefinition.Build(_service, _options, identity, _executablePath, enabled);
-                RegisterDefinition(definition, identity);
+                CommonTaskDefinition.Register(_service, TaskName, definition, identity);
             },
             verify: _options.VerifyByDemandStart ? () => DemandStart(VerificationWait).Succeeded : null,
             _log);
@@ -219,11 +219,8 @@ public sealed class StartupTask : IDisposable
         bool stillRunning = false;
         int? reported = settled;
 
-        // Nothing settled inside the wait. One further reading decides, taken now rather than kept
-        // from the last poll, so a run that ended with zero inside the final settle still reports as
-        // a run that had not ended. There is no early return while the task runs: a program that ran
-        // six seconds and then exited with a failure reads exactly like one that was about to exit
-        // with zero, and only the end of the wait tells the two apart.
+        // No early return while the task runs: a run about to fail reads exactly like one about to
+        // exit with zero, and only the end of the wait tells them apart.
         if (settled is null)
         {
             DateTime run = task.LastRunTime;
@@ -269,10 +266,6 @@ public sealed class StartupTask : IDisposable
             _log.Error(nameof(StartupTask), ex);
         }
     }
-
-    private void RegisterDefinition(TaskDefinition definition, TaskIdentity identity) =>
-        _service.RootFolder.RegisterTaskDefinition(TaskName, definition, TaskCreation.CreateOrUpdate,
-                                                   identity.Sid, null, TaskLogonType.InteractiveToken);
 
     private void SetEnabled(bool enabled)
     {
