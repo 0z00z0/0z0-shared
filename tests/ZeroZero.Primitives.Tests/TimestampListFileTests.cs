@@ -22,7 +22,7 @@ public sealed class TimestampListFileTests : IDisposable
     {
         DateTimeOffset[] written =
         [
-            new(2026, 10, 11, 14, 3, 5, TimeSpan.Zero).AddTicks(1234567),
+            new DateTimeOffset(2026, 10, 11, 14, 3, 5, TimeSpan.Zero).AddTicks(1234567),
             new(2026, 10, 11, 16, 3, 5, TimeSpan.FromHours(2)),
         ];
         TimestampListFile.Write(FilePath, written);
