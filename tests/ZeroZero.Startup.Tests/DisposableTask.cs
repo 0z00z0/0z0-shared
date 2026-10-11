@@ -70,16 +70,21 @@ internal sealed class DisposableTask : IDisposable
         task.RegisterChanges();
     }
 
-    /// <summary>Removes what a run that died left behind.</summary>
-    public static void Sweep()
+    /// <summary>Removes the tasks under a prefix that a run that died left behind; a refused
+    /// deletion leaves them.</summary>
+    public static void Sweep(string prefix = Prefix)
     {
-        using var service = new TaskService();
-        List<string> leftovers = service.RootFolder.Tasks
-            .Where(task => task.Name.StartsWith(Prefix, StringComparison.Ordinal))
-            .Select(task => task.Name)
-            .ToList();
-        foreach (string name in leftovers)
-            service.RootFolder.DeleteTask(name, exceptionOnNotExists: false);
+        try
+        {
+            using var service = new TaskService();
+            List<string> leftovers = service.RootFolder.Tasks
+                .Where(task => task.Name.StartsWith(prefix, StringComparison.Ordinal))
+                .Select(task => task.Name)
+                .ToList();
+            foreach (string name in leftovers)
+                service.RootFolder.DeleteTask(name, exceptionOnNotExists: false);
+        }
+        catch (UnauthorizedAccessException) { }
     }
 
     public void Dispose()

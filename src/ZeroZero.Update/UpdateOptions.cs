@@ -36,11 +36,11 @@ public sealed class UpdateOptions
     public string InstallerArguments { get; init; } = "";
 
     /// <summary>How long after <see cref="UpdateScheduler.Start"/> the first check runs.</summary>
-    public TimeSpan InitialDelay { get; init; } = TimeSpan.FromSeconds(30);
+    public TimeSpan InitialDelay { get; init; } = UpdateScheduler.DefaultInitialDelay;
 
     /// <summary>The time between one check finishing and the next starting. Counted from process
     /// start, never persisted: the component stores nothing.</summary>
-    public TimeSpan CheckInterval { get; init; } = TimeSpan.FromHours(24);
+    public TimeSpan CheckInterval { get; init; } = UpdateScheduler.DefaultCheckInterval;
 
     /// <summary>The whole of one API request, headers to body.</summary>
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(30);

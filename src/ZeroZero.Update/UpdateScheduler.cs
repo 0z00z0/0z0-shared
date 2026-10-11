@@ -7,6 +7,12 @@ namespace ZeroZero.Update;
 /// up for a day checks once a day, and one restarted every hour checks once an hour.</summary>
 public sealed class UpdateScheduler : IDisposable
 {
+    /// <summary>The delay before the first check where an application sets none: 30 seconds.</summary>
+    public static readonly TimeSpan DefaultInitialDelay = TimeSpan.FromSeconds(30);
+
+    /// <summary>The time between checks where an application sets none: 24 hours.</summary>
+    public static readonly TimeSpan DefaultCheckInterval = TimeSpan.FromHours(24);
+
     private readonly TimeSpan _initialDelay;
     private readonly TimeSpan _interval;
     private readonly Func<CancellationToken, Task> _check;

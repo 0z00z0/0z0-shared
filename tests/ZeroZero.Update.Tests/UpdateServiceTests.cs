@@ -108,6 +108,7 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
 
         Assert.Equal(UpdateCheckOutcome.RateLimited, result.Outcome);
         Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1788388349), result.RateLimitResetsAt);
+        Assert.Contains(_log.Infos, line => line.Contains("rate limit") && line.Contains("2026-09-02 22:32:29"));
     }
 
     [Fact]
@@ -194,7 +195,7 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
         UpdateCheckResult check = await service.CheckAsync();
         var progress = new List<DownloadProgress>();
 
-        PreparedUpdate prepared = await service.PrepareAsync(check.Release!, new SynchronousProgress(progress.Add));
+        PreparedUpdate prepared = await service.PrepareAsync(check.Release!, new SynchronousProgress<DownloadProgress>(progress.Add));
 
         Assert.Equal(PrepareOutcome.Ready, prepared.Outcome);
         Assert.True(prepared.IsReady);
@@ -541,10 +542,5 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
             if (Fail) throw new Win32Exception(2, "The system cannot find the file specified.");
             Started.Add((path, arguments));
         }
-    }
-
-    private sealed class SynchronousProgress(Action<DownloadProgress> report) : IProgress<DownloadProgress>
-    {
-        public void Report(DownloadProgress value) => report(value);
     }
 }

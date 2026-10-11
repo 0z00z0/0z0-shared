@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using Microsoft.UI.Dispatching;
 
 namespace ZeroZero.Tray.WinUI;
 
@@ -27,8 +26,7 @@ public static class TrayStartup
     {
         options ??= new TrayStartupOptions();
         options.Validate();
-        if (DispatcherQueue.GetForCurrentThread() is null)
-            throw new InvalidOperationException("Start the host on the UI thread: its listeners are marshalled to that thread's dispatcher queue.");
+        _ = UiThread.Dispatcher();
 
         var clock = Stopwatch.StartNew();
         return TrayStartupSequence.RunAsync(

@@ -97,6 +97,42 @@ public class SettingsFileQuarantineTests : SettingsFileTestBase
         Assert.StartsWith(aside, file.LastQuarantinePath);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void MalformedFile_WhoseCopyFails_IsNotWrittenOver()
+    {
+        File.WriteAllText(FilePath, Malformed);
+        var file = Create(UnusableFolder());
+
+        Assert.False(file.Save().Saved);
+        Assert.Null(file.LastQuarantinePath);
+        Assert.Equal(Malformed, File.ReadAllText(FilePath));
+    }
+
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void Reload_OfAFileGoneBadWhoseCopyFails_RefusesTheNextWrite()
+    {
+        var file = Create(UnusableFolder());
+        file.Update(s => s.Label = "desk");
+        File.WriteAllText(FilePath, Malformed);
+
+        Assert.False(file.Reload());
+
+        var result = file.Update(s => s.Retries = 9);
+        Assert.False(result.Saved);
+        Assert.IsType<IOException>(result.Error);
+        Assert.Equal(Malformed, File.ReadAllText(FilePath));
+    }
+
+    // A folder under a file cannot be created, so every quarantine copy fails.
+    private SettingsFileQuarantine UnusableFolder()
+    {
+        var blocker = Path.Combine(Root, "blocker");
+        File.WriteAllText(blocker, string.Empty);
+        return new SettingsFileQuarantine(Keep: 3, Directory: Path.Combine(blocker, "quarantine"));
+    }
+
     [Fact]
     public void Reload_QuarantinesAFileThatHasGoneBadSinceItWasLoaded()
     {

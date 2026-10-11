@@ -49,7 +49,9 @@ and the gap is specific:
 - **Modules that were not selected did not run.** Selection follows where a file lives, not who uses
   it. A change to `ZeroZero.Primitives` runs the primitives guards and not the MQTT tests that drive
   the coalescing gate under every retained channel; a change to `ZeroZero.Win32` runs nothing of
-  the tray or the settings shell, which build on it.
+  the tray or the settings shell, which build on it. A file at the root of `tests/`, such as
+  `Guard.cs`, or in `tests/Shared`, selects only `releaseverification`, and a file linked as source into another module's
+  test project selects only the module whose folder holds it: neither runs the projects that compile it.
 - **Most tests in a selected module did not run.** Left out by design: extra rows of a parameterised
   test, wording checks beyond a few that carry a warning, and any path a guard already covers end to
   end. Some behaviours have no guard at all, among them the limit on how many quarantine copies the

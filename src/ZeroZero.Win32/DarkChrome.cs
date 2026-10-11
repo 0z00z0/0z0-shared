@@ -7,8 +7,8 @@ namespace ZeroZero.Win32;
 /// </summary>
 public static class DarkChrome
 {
-    /// <returns>False on a Windows build without the entry points (before 10.0.18362), where
-    /// native chrome stays light and nothing else changes.</returns>
+    /// <returns>False on a Windows build without the entry points (before 10.0.18362) or without
+    /// uxtheme.dll, where native chrome stays light and nothing else changes.</returns>
     public static bool Apply(DarkChromeMode mode)
     {
         try
@@ -18,7 +18,7 @@ public static class DarkChrome
             NativeMethods.FlushMenuThemes();
             return true;
         }
-        catch (EntryPointNotFoundException)
+        catch (Exception ex) when (ex is EntryPointNotFoundException or DllNotFoundException)
         {
             return false;
         }

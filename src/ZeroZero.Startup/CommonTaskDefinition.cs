@@ -9,6 +9,24 @@ namespace ZeroZero.Startup;
 /// to one copy of a duplicated list is missed by the other.</summary>
 internal static class CommonTaskDefinition
 {
+    /// <summary>A definition holding everything both tasks share; the caller adds its triggers and
+    /// its enabled flag.</summary>
+    internal static TaskDefinition NewDefinition(TaskService service, string description, TaskIdentity identity,
+                                                 string executablePath, string arguments)
+    {
+        TaskDefinition definition = service.NewTask();
+        definition.RegistrationInfo.Description = description;
+        ApplyPrincipal(definition.Principal, identity);
+        definition.Actions.Add(Action(executablePath, arguments));
+        ApplyPowerSafeSettings(definition.Settings);
+        return definition;
+    }
+
+    /// <summary>Writes the task to the root folder, replacing any task of the name.</summary>
+    internal static void Register(TaskService service, string taskName, TaskDefinition definition, TaskIdentity identity) =>
+        service.RootFolder.RegisterTaskDefinition(taskName, definition, TaskCreation.CreateOrUpdate,
+                                                  identity.Sid, null, TaskLogonType.InteractiveToken);
+
     /// <summary>The scheduler's defaults are for a maintenance job, not a resident application: they
     /// refuse a start on battery while reporting success, and stop the task after 72 hours. These
     /// settings allow a start on battery, keep the task running when the machine goes onto battery,

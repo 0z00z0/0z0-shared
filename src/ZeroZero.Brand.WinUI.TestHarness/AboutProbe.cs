@@ -1,7 +1,6 @@
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Windows.Foundation;
 using ZeroZero.Win32;
 
@@ -15,9 +14,6 @@ namespace ZeroZero.Brand.WinUI.TestHarness;
 /// </summary>
 internal static class AboutProbe
 {
-    /// <summary>The width the About window lays its content out at, in device-independent units.</summary>
-    private const double ContentWidth = 320;
-
     public static void Dump(string path, string label, Window window)
     {
         var lines = new List<string>();
@@ -28,12 +24,13 @@ internal static class AboutProbe
 
         // Three measures in a row, because the difference between them is the whole question: the
         // first repeats the call the window's own resize makes, the second forces the pass, and the
-        // third reads what the live layout settled on.
+        // third reads what the live layout settled on. All at the width the root is laid out at.
+        double rootWidth = root.ActualWidth;
         double cached = root.DesiredSize.Height;
-        root.Measure(new Size(ContentWidth, double.PositiveInfinity));
+        root.Measure(new Size(rootWidth, double.PositiveInfinity));
         double remeasured = root.DesiredSize.Height;
         root.InvalidateMeasure();
-        root.Measure(new Size(ContentWidth, double.PositiveInfinity));
+        root.Measure(new Size(rootWidth, double.PositiveInfinity));
         double invalidated = root.DesiredSize.Height;
         root.UpdateLayout();
 
@@ -44,7 +41,7 @@ internal static class AboutProbe
 
         // The direct statement of the question "does this have to be scrolled to": anything above
         // zero means the content is taller than the window gives it.
-        foreach (var viewer in Scrollers(root))
+        foreach (var viewer in HarnessTree.Descendants(root).OfType<ScrollViewer>())
         {
             lines.Add($"scroller\textent={viewer.ExtentHeight:0.##}\tviewport={viewer.ViewportHeight:0.##}" +
                       $"\tscrollable={viewer.ScrollableHeight:0.##}");
@@ -52,7 +49,7 @@ internal static class AboutProbe
 
         // The control's own height at two widths, because a host that measures at one width and lays
         // out at another gets a height the layout never has.
-        if (Find<BrandAboutControl>(root, "AboutControl") is { } about)
+        if (HarnessTree.FindNamed<BrandAboutControl>(root, "AboutControl") is { } about)
         {
             lines.Add($"about-actual\twidth={about.ActualWidth:0.##}\theight={about.ActualHeight:0.##}");
             foreach (double width in new[] { 320.0, 480.0, 640.0 })
@@ -72,39 +69,23 @@ internal static class AboutProbe
         lines.Add($"non-client\t{ncWidth}x{ncHeight}");
         lines.Add($"client-height-dip\t{clientHeight:0.##}");
 
-        foreach (var (name, element) in Named(root))
+        foreach (var element in HarnessTree.Descendants(root).OfType<FrameworkElement>().Where(node => node.Name.Length > 0))
         {
             try
             {
                 var point = element.TransformToVisual(root).TransformPoint(new Point(0, 0));
                 double bottom = point.Y + element.ActualHeight;
-                lines.Add($"element\t{name}\ttop={point.Y:0.##}\theight={element.ActualHeight:0.##}" +
+                lines.Add($"element\t{element.Name}\ttop={point.Y:0.##}\theight={element.ActualHeight:0.##}" +
                           $"\tbottom={bottom:0.##}\tvisible={element.Visibility}" +
                           $"\tinside-client={(bottom <= clientHeight ? "yes" : "NO")}\t{Says(element)}");
             }
             catch (Exception ex)
             {
-                lines.Add($"element\t{name}\tno-transform\t{ex.GetType().Name}");
+                lines.Add($"element\t{element.Name}\tno-transform\t{ex.GetType().Name}");
             }
         }
 
         File.AppendAllLines(path, lines.Select(line => $"{label}\t{line}"));
-    }
-
-    /// <summary>Every scroll viewer in the tree, in the order the walk meets them.</summary>
-    private static List<ScrollViewer> Scrollers(DependencyObject node)
-    {
-        var found = new List<ScrollViewer>();
-        CollectScrollers(node, found);
-        return found;
-    }
-
-    private static void CollectScrollers(DependencyObject node, List<ScrollViewer> found)
-    {
-        if (node is ScrollViewer viewer) found.Add(viewer);
-
-        int count = VisualTreeHelper.GetChildrenCount(node);
-        for (int i = 0; i < count; i++) CollectScrollers(VisualTreeHelper.GetChild(node, i), found);
     }
 
     /// <summary>What an element says, where it says anything — a row's position is worth little
@@ -120,34 +101,5 @@ internal static class AboutProbe
     {
         text = (text ?? "").Replace('\t', ' ').Replace('\r', ' ').Replace('\n', ' ');
         return text.Length > 80 ? text[..80] : text;
-    }
-
-    /// <summary>Every named element in the tree, so a row is found by the name the markup gave it.</summary>
-    private static List<(string Name, FrameworkElement Element)> Named(DependencyObject node)
-    {
-        var found = new List<(string, FrameworkElement)>();
-        Collect(node, found);
-        return found;
-    }
-
-    private static void Collect(DependencyObject node, List<(string, FrameworkElement)> found)
-    {
-        if (node is FrameworkElement { Name.Length: > 0 } element) found.Add((element.Name, element));
-
-        int count = VisualTreeHelper.GetChildrenCount(node);
-        for (int i = 0; i < count; i++) Collect(VisualTreeHelper.GetChild(node, i), found);
-    }
-
-    /// <summary>The first element in the tree carrying this name, for a scripted click.</summary>
-    public static T? Find<T>(DependencyObject node, string name) where T : FrameworkElement
-    {
-        if (node is T match && match.Name == name) return match;
-
-        int count = VisualTreeHelper.GetChildrenCount(node);
-        for (int i = 0; i < count; i++)
-        {
-            if (Find<T>(VisualTreeHelper.GetChild(node, i), name) is { } found) return found;
-        }
-        return null;
     }
 }

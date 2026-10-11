@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Xunit;
 
 namespace ZeroZero.ReleaseVerification.Tests;
 
@@ -83,6 +84,32 @@ internal static class Artefacts
         edit?.Invoke(record);
         File.WriteAllText(target, record.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
         return target;
+    }
+
+    /// <summary>One file published to a folder feed under <paramref name="root"/>, with a record that
+    /// lists it at its real hash.</summary>
+    public static (string Feed, string Record) Publish(string root, string file, string name, string tag, string commit)
+    {
+        var feed = Path.Combine(root, "feed");
+        Directory.CreateDirectory(feed);
+        File.Copy(file, Path.Combine(feed, name));
+        var record = Path.Combine(root, "release-artefacts.json");
+        File.WriteAllText(record, JsonSerializer.Serialize(new
+        {
+            tag,
+            version = "1.0.0",
+            commit,
+            artefacts = new[] { new { name, sha256 = PackedRelease.Sha256(file) } },
+        }));
+        return (feed, record);
+    }
+
+    /// <summary>The subject of the certificate that signed <paramref name="file"/>.</summary>
+    public static string SignerSubjectOf(string file)
+    {
+        var result = Scripts.Command($"(Get-AuthenticodeSignature -LiteralPath {Scripts.Quote(file)}).SignerCertificate.Subject");
+        Assert.True(result.Passed, result.ToString());
+        return result.Output.Trim();
     }
 
     public static string RecordedHash(string recordPath) =>

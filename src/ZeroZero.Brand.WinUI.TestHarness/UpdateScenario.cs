@@ -10,7 +10,6 @@ using ZeroZero.Update;
 using ZeroZero.Update.Win32;
 using ZeroZero.Update.WinUI;
 using ZeroZero.Win32;
-using CoreBrand = ZeroZero.Brand.Core.Brand;
 
 namespace ZeroZero.Brand.WinUI.TestHarness;
 
@@ -188,9 +187,8 @@ internal static class UpdateScenario
 
         UpdateFlowRun run = await flow.RunAsync(UpdateTrigger.Silent);
 
-        await File.WriteAllTextAsync(probePath,
-            $"result\t{run.Result}{Environment.NewLine}release\t{run.Release?.TagName ?? "<none>"}{Environment.NewLine}");
-        await File.WriteAllTextAsync(probePath + ".done", "");
+        ProbeFile.Write(probePath, staging => File.WriteAllText(staging,
+            $"result\t{run.Result}{Environment.NewLine}release\t{run.Release?.TagName ?? "<none>"}{Environment.NewLine}"));
 
         // Long enough for the script to enumerate this process's windows, and no longer.
         await Task.Delay(TimeSpan.FromSeconds(6));
@@ -208,13 +206,7 @@ internal static class UpdateScenario
     {
         var about = new BrandAboutWindow(new BrandAboutOptions
         {
-            Info = new AboutInfo
-            {
-                AppName = ApplicationName,
-                Version = "0.0.0-dev",
-                Description = "A window that dismisses itself the moment it loses focus.",
-                RepoUrl = $"{CoreBrand.OrgUrl}/0z0-shared",
-            },
+            Info = SampleInfo.Create("A window that dismisses itself the moment it loses focus."),
         })
         {
             Title = "About Beneath",
@@ -233,9 +225,8 @@ internal static class UpdateScenario
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        await File.WriteAllTextAsync(logPath,
-            $"mode\t{mode}{Environment.NewLine}about-closed\t{aboutClosed}{Environment.NewLine}");
-        await File.WriteAllTextAsync(logPath + ".done", "");
+        ProbeFile.Write(logPath, staging => File.WriteAllText(staging,
+            $"mode\t{mode}{Environment.NewLine}about-closed\t{aboutClosed}{Environment.NewLine}"));
 
         await Task.Delay(TimeSpan.FromSeconds(3));
         exit();

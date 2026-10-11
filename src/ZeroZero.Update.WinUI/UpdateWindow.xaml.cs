@@ -1,11 +1,5 @@
 using System.Diagnostics;
-using Microsoft.UI;
-using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Input;
-using Windows.Foundation;
-using Windows.Graphics;
-using Windows.System;
 using ZeroZero.Brand.WinUI;
 using ZeroZero.Controls.WinUI;
 using ZeroZero.Update.Win32;
@@ -19,24 +13,12 @@ namespace ZeroZero.Update.WinUI;
 /// — a refusal, a failure, or the notice that nothing newer exists.
 /// </summary>
 /// <remarks>
-/// One window rather than several, because the question, the download and the answer are one act:
-/// pressing "Install now" leaves the window where it is and starts the download in it, so nothing
-/// disappears and reappears in the middle of a gesture.
-/// <para>
-/// Frameless on a Mica backdrop, always on top, centred on the monitor under the cursor, sized to
-/// its own content at whatever scaling that monitor has. It counts itself among the application's
-/// transient windows for as long as it is open, so a window beneath it that dismisses itself on
-/// focus loss stays where it is — see <see cref="TransientWindows"/>.
-/// </para>
-/// <para>
-/// The window owns no wording: every sentence comes from <see cref="UpdateMessages"/>, so a
-/// surface written outside this repository words an outcome the same way.
-/// </para>
+/// One window, so "Install now" starts the download where the question was. It owns no wording:
+/// every sentence comes from <see cref="UpdateMessages"/>. docs/zerozero-update.md describes the window.
 /// </remarks>
 public sealed partial class UpdateWindow : Window
 {
-    /// <summary>Client width in device-independent units. The content is both measured against and
-    /// laid out at this width, so the measured height is the height that renders.</summary>
+    /// <summary>Client width in device-independent units.</summary>
     private const double ContentWidth = 380;
 
     private enum Stage
@@ -48,11 +30,7 @@ public sealed partial class UpdateWindow : Window
 
     private readonly UpdateWindowOptions _options;
     private readonly IDisposable _transient;
-
-    // Cached from ConfigureChrome so every resize recentres on the monitor the window opened on,
-    // rather than on whichever one the cursor has since moved to.
-    private NativeRect _workArea;
-    private double _scale;
+    private readonly ContentSizedPopup _popup;
 
     private TaskCompletionSource<InstallChoice>? _answer;
     private TaskCompletionSource<bool>? _read;
@@ -91,21 +69,11 @@ public sealed partial class UpdateWindow : Window
         CancelButton.Click += (_, _) => StopDownload();
         DismissButton.Click += (_, _) => Escape();
 
-        // Escape is the same act as pressing the way out this stage offers, so it takes the same
-        // path. On the root element, so it fires whichever child holds focus.
-        var escape = new KeyboardAccelerator { Key = VirtualKey.Escape };
-        escape.Invoked += (_, args) => { args.Handled = true; Escape(); };
-        Root.KeyboardAccelerators.Add(escape);
-
         _transient = TransientWindows.Enter();
         Closed += OnClosed;
 
-        ConfigureChrome();
-
-        // The pass in ConfigureChrome runs before the content is in the live visual tree, where
-        // text measures with the fallback face's metrics rather than the brand face's. Size again
-        // once the content is loaded, where the layout is the one on screen.
-        Root.Loaded += (_, _) => ResizeToContent();
+        // Escape is the same act as pressing the way out this stage offers, so it takes the same path.
+        _popup = ContentSizedPopup.Attach(this, Root, ContentWidth, Escape);
     }
 
     /// <summary>
@@ -256,7 +224,7 @@ public sealed partial class UpdateWindow : Window
             Activate();
         }
 
-        ResizeToContent();
+        _popup.Fit();
     }
 
     private static Visibility Show(bool visible) => visible ? Visibility.Visible : Visibility.Collapsed;
@@ -296,62 +264,6 @@ public sealed partial class UpdateWindow : Window
             // touching a closed window raises RO_E_CLOSED. A missed report is not worth a crash.
             Debug.WriteLine($"UpdateWindow: reporting progress: {ex}");
         }
-    }
-
-    private void ConfigureChrome()
-    {
-        SwitcherVisibility.TrySet(AppWindow, shown: false);
-
-        var presenter = OverlappedPresenter.Create();
-        presenter.SetBorderAndTitleBar(hasBorder: true, hasTitleBar: false);
-        presenter.IsResizable = false;
-        presenter.IsMaximizable = false;
-        presenter.IsMinimizable = false;
-        presenter.IsAlwaysOnTop = true;
-        AppWindow.SetPresenter(presenter);
-
-        Root.Width = ContentWidth;
-        (_workArea, _scale) = MonitorMetrics.ForCursor();
-
-        ResizeToContent();
-    }
-
-    /// <summary>
-    /// Sizes and places the window to fit the stage's content, and recentres on the monitor it
-    /// opened on so growing and shrinking stay symmetric about the same point.
-    /// </summary>
-    private void ResizeToContent()
-    {
-        if (_closed) return;
-
-        // The height comes from the layout the window actually has, not from a measure taken ahead
-        // of one: a pass before the content is arranged answers with the fallback face's metrics.
-        // Rounded up, because a client area a pixel short of its content clips the last row.
-        Root.InvalidateMeasure();
-        Root.UpdateLayout();
-        Root.Measure(new Size(ContentWidth, double.PositiveInfinity));
-
-        int clientWidth = (int)Math.Ceiling(ContentWidth * _scale);
-        int clientHeight = (int)Math.Ceiling(Root.DesiredSize.Height * _scale);
-
-        // The client area has to end up exactly the content's size: the content stacks from the
-        // top, so any surplus shows as an empty band under the last row. ResizeClient derives the
-        // outer size from a frame that still counts a title bar this presenter does not draw, which
-        // is some 52 physical pixels of it at 175% scaling. Add the frame the window actually has,
-        // read from its own rectangles, and size the outer window to that.
-        var (frameWidth, frameHeight) = MonitorMetrics.NonClientSize(Win32Interop.GetWindowFromWindowId(AppWindow.Id));
-
-        // Nothing outside the notes panel scrolls, so whatever falls past the screen's edge is
-        // unreachable rather than merely out of sight. Cap at the work area.
-        int workHeight = _workArea.Bottom - _workArea.Top;
-        int outerHeight = clientHeight + frameHeight;
-        if (workHeight > 0 && outerHeight > workHeight) outerHeight = workHeight;
-
-        AppWindow.Resize(new SizeInt32(clientWidth + frameWidth, outerHeight));
-        var outer = AppWindow.Size;
-        AppWindow.Move(new PointInt32(
-            _workArea.Left + (_workArea.Right - _workArea.Left - outer.Width) / 2,
-            _workArea.Top + Math.Max(0, (workHeight - outer.Height) / 2)));
     }
 
     /// <summary>A reporter that hands every report to the window's own thread. The download runs on

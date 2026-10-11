@@ -64,6 +64,14 @@ public sealed partial class InfoIcon : UserControl
         new PropertyMetadata(DefaultGlyph, (d, e) => ((InfoIcon)d).Glyph.Glyph =
             (string?)e.NewValue is { Length: > 0 } glyph ? glyph : DefaultGlyph));
 
+    /// <summary>A row's or header's bubble: hidden while the text is blank. A bare bubble never hides itself.</summary>
+    internal void ShowFor(string? info, string subject)
+    {
+        Info = info ?? "";
+        Subject = subject;
+        Visibility = string.IsNullOrWhiteSpace(info) ? Visibility.Collapsed : Visibility.Visible;
+    }
+
     // The name is composed here rather than at each call site, so one control decides how an info
     // button introduces itself whatever a row calls its subject.
     private void ApplyAutomationName() =>

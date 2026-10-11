@@ -1,7 +1,6 @@
 using Xunit;
 using System.Diagnostics;
 using System.Security.Cryptography;
-using System.Xml.Linq;
 
 namespace ZeroZero.ReleaseVerification.Tests;
 
@@ -31,7 +30,7 @@ public sealed class PackedRelease : IDisposable
     {
         Root = Path.Combine(Path.GetTempPath(), "zz-release-" + Guid.NewGuid().ToString("n"));
         Directory.CreateDirectory(Root);
-        Version = ReadDeclaredVersion();
+        Version = Repository.Components[Key].Version;
         Commit = Git("rev-parse", "HEAD");
         BuildDirectory = Path.Combine(Root, "build");
         PackResult = Pack(BuildDirectory);
@@ -82,13 +81,6 @@ public sealed class PackedRelease : IDisposable
     {
         using var stream = File.OpenRead(path);
         return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
-    }
-
-    private static string ReadDeclaredVersion()
-    {
-        var props = XDocument.Load(Path.Combine(Scripts.RepoRoot, "Versions.props"));
-        var value = props.Root?.Elements("PropertyGroup").Elements("PrimitivesVersion").FirstOrDefault()?.Value.Trim();
-        return value ?? throw new InvalidOperationException("Versions.props declares no PrimitivesVersion.");
     }
 
     private static string Git(params string[] arguments)

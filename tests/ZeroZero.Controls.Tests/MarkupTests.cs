@@ -91,7 +91,7 @@ public class MarkupTests
     }
 
     [Fact]
-    public void PromptDrawsNoTitleBarOfItsOwnAndKeepsTheNoteHidden()
+    public void PromptHasAMicaBackdropAndKeepsTheNoteHidden()
     {
         var doc = Load("TextPromptWindow.xaml");
         var note = Named(doc, P + "TextBlock", "NoteText");

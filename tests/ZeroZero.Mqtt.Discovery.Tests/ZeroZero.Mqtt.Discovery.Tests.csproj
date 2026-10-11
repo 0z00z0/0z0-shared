@@ -17,6 +17,7 @@
          server that can hold a session already exists next door. Linked rather than copied: two of
          them would drift, and the wire is the one thing both suites are asserting about. -->
     <Compile Include="..\ZeroZero.Mqtt.Tests\FakeBroker.cs" Link="FakeBroker.cs" />
+    <Compile Include="..\ZeroZero.Mqtt.Tests\RecordingSettingsStore.cs" Link="RecordingSettingsStore.cs" />
   </ItemGroup>
 
   <ItemGroup>

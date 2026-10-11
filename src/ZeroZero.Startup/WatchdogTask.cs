@@ -85,8 +85,7 @@ public sealed class WatchdogTask : IDisposable
             {
                 TaskIdentity identity = Identity();
                 using TaskDefinition definition = WatchdogTaskDefinition.Build(Service, _options, identity, _executablePath!);
-                Service.RootFolder.RegisterTaskDefinition(TaskName, definition, TaskCreation.CreateOrUpdate,
-                                                          identity.Sid, null, TaskLogonType.InteractiveToken);
+                CommonTaskDefinition.Register(Service, TaskName, definition, identity);
             },
             stopProbing: StopProbing,
             _log);

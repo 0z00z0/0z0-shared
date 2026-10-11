@@ -59,13 +59,13 @@ public class MqttConnectionLoopbackTests
             RememberEndpoint = remember,
         };
 
-    /// <summary>A command entity that takes only the two payloads its kind has, as a real one does.
-    /// What makes an empty payload a refusal rather than something quietly accepted.</summary>
     /// <summary>A command entity that takes any payload, as a text one does — including the empty
     /// string, which is a value there and not an absence.</summary>
     private static MqttCommandTarget Text(string entityId, Action<string> applied) =>
         new(entityId, payload => MqttCommandVerdict.Accept(() => applied(payload)));
 
+    /// <summary>A command entity that takes only the two payloads its kind has, as a real one does.
+    /// What makes an empty payload a refusal rather than something quietly accepted.</summary>
     private static MqttCommandTarget Switch(string entityId, Action<string>? applied = null) =>
         new(entityId, payload => payload is "ON" or "OFF"
             ? MqttCommandVerdict.Accept(() => applied?.Invoke(payload))
@@ -539,6 +539,86 @@ public class MqttConnectionLoopbackTests
 
         Assert.True(await FakeBroker.WaitAsync(() => Evictions() >= 2),
             "a refused eviction of the old device id was recorded as done");
+    }
+
+    /// <summary>Two id changes while there is no link evict both superseded ids on the next connect.
+    /// Holding only the latest leaves the first id's retained topics on the broker as a ghost device
+    /// that nothing in the process knows about.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task EverySupersededDeviceIdIsEvictedNotOnlyTheLatest()
+    {
+        using var broker = new FakeBroker();
+        using var connection = new MqttConnection(Setup([new("cpu_load", () => "42")]));
+        int closed = FakeBroker.ClosedPort();
+
+        await connection.ApplyAsync(Parameters(broker) with { Port = closed });
+        await connection.ApplyAsync(Parameters(broker) with { Port = closed, DeviceId = "desk02" });
+        await connection.ApplyAsync(Parameters(broker) with { DeviceId = "desk03" });
+
+        Assert.True(await FakeBroker.WaitAsync(
+            () => broker.Retained(MqttTopics.Availability(Root, "desk02")) == ""), "the latest id was not evicted");
+        Assert.True(await FakeBroker.WaitAsync(
+            () => broker.Retained(MqttTopics.Availability(Root, Device)) == ""), "the first id was lost");
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Topic("cpu_load")) == ""));
+    }
+
+    /// <summary>An id that comes back is the live device again, so it is never evicted: emptying its
+    /// topics on the connect that announces it takes the device off the receiver.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task AnIdThatComesBackIsNotEvicted()
+    {
+        using var broker = new FakeBroker();
+        using var connection = new MqttConnection(Setup([new("cpu_load", () => "42")]));
+        int closed = FakeBroker.ClosedPort();
+
+        await connection.ApplyAsync(Parameters(broker) with { Port = closed });
+        await connection.ApplyAsync(Parameters(broker) with { Port = closed, DeviceId = "desk02" });
+        await connection.ApplyAsync(Parameters(broker));
+
+        Assert.True(await FakeBroker.WaitAsync(
+            () => broker.Retained(MqttTopics.Availability(Root, "desk02")) == ""), "the departed id was not evicted");
+        Assert.True(await FakeBroker.WaitAsync(() => broker.Retained(Topic("cpu_load")) == "42"));
+        Assert.DoesNotContain(broker.Published, p => p.Topic == Availability && p.Payload.Length == 0);
+    }
+
+    /// <summary>An apply arriving during a removal waits for it. Run inside it, the apply switches
+    /// publishing back on while the removal is still emptying the device's topics.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task AnApplyArrivingDuringARemovalWaitsForIt()
+    {
+        using var broker = new FakeBroker();
+        var listener = new RemovalListener();
+        using var connection = await ConnectAsync(broker, Setup() with { Listener = listener });
+        Task? apply = null;
+        bool appliedInside = true;
+        listener.During = async () =>
+        {
+            apply = connection.ApplyAsync(Parameters(broker) with { DeviceName = "Workshop" });
+            await Task.Delay(300);
+            appliedInside = apply.IsCompleted;
+        };
+
+        Assert.True(await connection.RemoveDeviceAsync());
+
+        Assert.False(appliedInside, "an apply ran inside the removal");
+        await apply!;
+    }
+
+    private sealed class RemovalListener : IMqttConnectionListener
+    {
+        public Func<Task> During { get; set; } = () => Task.CompletedTask;
+
+        public Task OnConnectedAsync(IMqttPublisher publisher, MqttDeviceIdentity identity, CancellationToken ct) =>
+            Task.CompletedTask;
+
+        public Task OnRemovingAsync(IMqttPublisher publisher, MqttDeviceIdentity identity, CancellationToken ct) =>
+            During();
+
+        public Task OnIdentityRetiredAsync(IMqttPublisher publisher, MqttDeviceIdentity retired, CancellationToken ct) =>
+            Task.CompletedTask;
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 namespace ZeroZero.Update.Win32;
 
-/// <summary>What the person chose when told an update exists.</summary>
+/// <summary>What the person chose when told an update exists. A value outside these declines, as
+/// <see cref="Later"/> does.</summary>
 public enum InstallChoice
 {
     Install,

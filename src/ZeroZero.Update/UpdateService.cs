@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Reflection;
 using ZeroZero.Primitives;
@@ -131,6 +132,7 @@ public sealed class UpdateService : IUpdateService, IDisposable
                 _log.Info("Update check: no release has been published.");
                 return new UpdateCheckResult(UpdateCheckOutcome.NoReleases, RunningVersion, Detail: lookup.Detail);
             case ReleaseLookupOutcome.RateLimited:
+                _log.Info($"Update check refused by the rate limit; it lifts at {lookup.RateLimitResetsAt?.ToString("u", CultureInfo.InvariantCulture) ?? "an unknown time"}.");
                 return new UpdateCheckResult(UpdateCheckOutcome.RateLimited, RunningVersion, RateLimitResetsAt: lookup.RateLimitResetsAt, Detail: lookup.Detail);
             case ReleaseLookupOutcome.Unreachable:
                 _log.Info($"Update check did not complete: {lookup.Detail}.");

@@ -1,13 +1,7 @@
-using Microsoft.UI;
-using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Automation.Peers;
-using Microsoft.UI.Xaml.Automation.Provider;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
-using Windows.Graphics;
 using ZeroZero.Controls.WinUI;
-using ZeroZero.Win32;
 
 namespace ZeroZero.Brand.WinUI.TestHarness;
 
@@ -65,10 +59,7 @@ public sealed partial class MqttPanelWindow : Window
         string report = Path.Combine(Path.GetTempPath(), "mqtt-harness-dialogue.txt");
         try
         {
-            if (FindDescendant(Panel, "ChangeDeviceIdBtn") is Button button &&
-                FrameworkElementAutomationPeer.CreatePeerForElement(button) is IInvokeProvider invoke)
-                invoke.Invoke();
-            else
+            if (!HarnessTree.Press(Panel, button => button.Name == "ChangeDeviceIdBtn"))
                 File.WriteAllText(report, "Change-ID button or its invoke provider not found.");
         }
         catch (Exception ex)
@@ -85,8 +76,8 @@ public sealed partial class MqttPanelWindow : Window
         string report = Path.Combine(Path.GetTempPath(), "mqtt-harness-info.txt");
         try
         {
-            if (FindDescendant<InfoIcon>(Panel) is { } bubble &&
-                FindDescendant<Button>(bubble) is { Flyout: { } flyout } button)
+            if (HarnessTree.Find<InfoIcon>(Panel) is { } bubble &&
+                HarnessTree.Find<Button>(bubble) is { Flyout: { } flyout } button)
                 flyout.ShowAt(button);
             else
                 File.WriteAllText(report, "No info bubble with a flyout found.");
@@ -113,7 +104,7 @@ public sealed partial class MqttPanelWindow : Window
         Panel.BrokerExpanded = true;
         Panel.UpdateLayout();
 
-        if (FindDescendant(Panel, "HostBox") is TextBox host) host.Text = "";
+        if (HarnessTree.FindNamed<TextBox>(Panel, "HostBox") is { } host) host.Text = "";
 
         Panel.BrokerExpanded = wasExpanded;
     }
@@ -128,60 +119,13 @@ public sealed partial class MqttPanelWindow : Window
         Panel.UpdateLayout();
 
         // The custom entry is the last one; the typed box only appears once it is selected.
-        if (FindDescendant(Panel, "PortCombo") is ComboBox { Items.Count: > 0 } combo)
+        if (HarnessTree.FindNamed<ComboBox>(Panel, "PortCombo") is ComboBox { Items.Count: > 0 } combo)
             combo.SelectedIndex = combo.Items.Count - 1;
         Panel.UpdateLayout();
 
-        if (FindDescendant(Panel, "PortCustomBox") is TextBox box) box.Text = "70000";
+        if (HarnessTree.FindNamed<TextBox>(Panel, "PortCustomBox") is { } box) box.Text = "70000";
     }
 
-    /// <summary>The first descendant carrying a given name. The compiled-XAML namescope is not
-    /// reachable from outside the control, but the realised tree is, and every named element keeps
-    /// its name on the element itself.</summary>
-    private static FrameworkElement? FindDescendant(DependencyObject root, string name)
-    {
-        int count = VisualTreeHelper.GetChildrenCount(root);
-        for (int i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is FrameworkElement { } element && element.Name == name) return element;
-            if (FindDescendant(child, name) is { } found) return found;
-        }
-        return null;
-    }
-
-    /// <summary>The first descendant of a given type, in tree order.</summary>
-    private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
-    {
-        int count = VisualTreeHelper.GetChildrenCount(root);
-        for (int i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is T match) return match;
-            if (FindDescendant<T>(child) is { } found) return found;
-        }
-        return null;
-    }
-
-    private void Resize(int offset)
-    {
-        // Measure the content at the width it will be displayed at: measuring narrower wraps the
-        // descriptions into extra lines and reports a height the rendered layout never needs.
-        Scroller.Measure(new Windows.Foundation.Size(ClientWidth, double.PositiveInfinity));
-        double contentHeight = Scroller.DesiredSize.Height;
-
-        IntPtr window = Win32Interop.GetWindowFromWindowId(AppWindow.Id);
-        double scale = MonitorMetrics.ScaleForWindow(window);
-        var (chromeWidth, chromeHeight) = MonitorMetrics.NonClientSize(window);
-
-        int workAreaHeight = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary)
-                                        .WorkArea.Height;
-        int wanted = (int)Math.Ceiling(contentHeight * scale) + chromeHeight;
-        int height = Math.Min(wanted, (int)(workAreaHeight * MaxWorkAreaFraction));
-
-        AppWindow.Resize(new SizeInt32((int)Math.Ceiling(ClientWidth * scale) + chromeWidth, height));
-        // Cascaded rather than stacked, so each window's title bar stays reachable and the capture
-        // script can bring one forward at a time.
-        AppWindow.Move(new PointInt32(offset, 0));
-    }
+    private void Resize(int offset) =>
+        WindowSizing.FitToContent(this, Scroller, ClientWidth, offset, MaxWorkAreaFraction);
 }

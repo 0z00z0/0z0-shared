@@ -107,9 +107,7 @@ internal static class JsonObjectSpans
                 if (reader.TokenType != JsonTokenType.PropertyName) return null;
 
                 var nameStart = offset + (int)reader.TokenStartIndex;
-                var name = reader.GetString();
-                if (name is null) return null;
-
+                var name = NameOf(ref reader);
                 var nameEnd = offset + (int)reader.BytesConsumed;
 
                 if (!reader.Read()) return null;
@@ -129,6 +127,20 @@ internal static class JsonObjectSpans
         catch (JsonException)
         {
             return null;
+        }
+    }
+
+    // A name that is not valid UTF-8 (a file saved in a legacy code page) makes GetString throw. It
+    // must not fail the walk: the name's raw bytes are carried across, so only matching sees U+FFFD.
+    private static string NameOf(ref Utf8JsonReader reader)
+    {
+        try
+        {
+            return reader.GetString()!;
+        }
+        catch (InvalidOperationException)
+        {
+            return Encoding.UTF8.GetString(reader.ValueSpan);
         }
     }
 

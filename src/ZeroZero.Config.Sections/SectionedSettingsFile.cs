@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.RegularExpressions;
 
 namespace ZeroZero.Config.Sections;
 
@@ -17,7 +16,7 @@ namespace ZeroZero.Config.Sections;
 /// the intended repair and stays allowed.</para>
 /// <para>A document this build cannot read is copied aside from the bytes already in hand, never by
 /// reading the file a second time — the copy has to work for the file whose second read would fail
-/// too.</para>
+/// too. When the policy keeps copies and the copy fails, the document is not written over.</para>
 /// <para>A refused write is returned, never raised: <see cref="SettingsSaveResult"/> carries the
 /// reason and <see cref="SaveFailed"/> announces it. A caller that reads neither loses every write
 /// in silence, and a refusal that stands — a key differing only in case — refuses every later write
@@ -30,12 +29,6 @@ namespace ZeroZero.Config.Sections;
 /// </remarks>
 public sealed class SectionedSettingsFile
 {
-    private const string QuarantineMarker = ".bad";
-    private const string StampFormat = "yyyy-MM-dd-HHmmss";
-
-    // The stamp StampFormat writes, and the attempt number a second copy in the same second takes.
-    private const string CopyStampPattern = @"\A[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}(-[0-9]+)?\z";
-
     private readonly Lock _gate = new();
     private readonly SectionedSettingsOptions _options;
     private readonly List<ISectionNotification> _sections = [];
@@ -226,7 +219,7 @@ public sealed class SectionedSettingsFile
                 "The document could not be read, so it is not written over: what is on disk may be intact.");
         }
 
-        var document = Rebase(content, outcome);
+        if (Rebase(content, outcome) is not { } document) return Uncopied();
 
         if (document.Version > _options.Version)
         {
@@ -238,9 +231,11 @@ public sealed class SectionedSettingsFile
 
         _isFromNewerVersion = false;
 
-        if (document.TryReadSection<T>(name, _options.Serialiser, out var draft) == SectionOutcome.Unparseable)
+        if (document.TryReadSection<T>(name, _options.Serialiser, out var draft) == SectionOutcome.Unparseable
+            && !Quarantine(document.Content))
         {
-            Quarantine(document.Content);
+            changed = Hold(document);
+            return Uncopied();
         }
 
         var value = produce(draft);
@@ -279,8 +274,12 @@ public sealed class SectionedSettingsFile
         return changed;
     }
 
+    private static IOException Uncopied() => new(
+        "The document cannot be read by this build and its quarantine copy could not be written, so it is not written over.");
+
     // What a write builds on: the document on disk when it is usable, a fresh one when it is not.
-    private SettingsDocument Rebase(byte[]? content, FileOutcome outcome)
+    // Null when it is unusable and its copy could not be taken.
+    private SettingsDocument? Rebase(byte[]? content, FileOutcome outcome)
     {
         if (outcome is FileOutcome.Missing or FileOutcome.Blank)
         {
@@ -289,30 +288,19 @@ public sealed class SectionedSettingsFile
 
         if (SettingsDocument.TryParse(content!) is { } document) return document;
 
-        // Unusable content, and the latch is set, so this is the self-heal: the copy is taken from the
-        // bytes in hand and a whole document is written in place of the broken one.
-        Quarantine(content!);
-        return SettingsDocument.Empty(JsonLayout.Detect(content!));
+        // Unusable content: the copy is taken from the bytes in hand, and a write puts a whole document
+        // in place of the broken one.
+        return Quarantine(content!) ? SettingsDocument.Empty(JsonLayout.Detect(content!)) : null;
     }
 
-    private LoadedDocument? Load()
+    // Opening writes nothing, so a document whose copy failed still reads as empty here.
+    private (SettingsDocument Document, bool IsFromNewerVersion)? Load()
     {
         var outcome = ReadFile(out var content);
         if (outcome == FileOutcome.Unreadable) return null;
 
-        if (outcome is FileOutcome.Missing or FileOutcome.Blank)
-        {
-            var empty = SettingsDocument.Empty(content is null ? JsonLayout.Default : JsonLayout.Detect(content));
-            return new LoadedDocument(empty, false);
-        }
-
-        if (SettingsDocument.TryParse(content!) is not { } parsed)
-        {
-            Quarantine(content!);
-            return new LoadedDocument(SettingsDocument.Empty(JsonLayout.Detect(content!)), false);
-        }
-
-        return new LoadedDocument(parsed, parsed.Version > _options.Version);
+        var document = Rebase(content, outcome) ?? SettingsDocument.Empty(JsonLayout.Detect(content!));
+        return (document, document.Version > _options.Version);
     }
 
     private FileOutcome ReadFile(out byte[]? content)
@@ -336,65 +324,20 @@ public sealed class SectionedSettingsFile
     private static bool Differs(SettingsDocument before, SettingsDocument after, string name) =>
         !before.SectionContent(name).SequenceEqual(after.SectionContent(name));
 
-    // The copy is written from the bytes already read. Copying the file instead would fail for
-    // exactly the file whose second read fails, which is the case a copy is most needed for.
-    private void Quarantine(byte[] content)
+    // Whether the content may be written over: copied now or already, or the policy keeps no copies.
+    private bool Quarantine(byte[] content)
     {
-        var policy = _options.Quarantine;
-        if (policy.Keep <= 0) return;
-        if (_quarantined is not null && _quarantined.AsSpan().SequenceEqual(content)) return;
+        if (_options.Quarantine.Keep <= 0) return true;
+        if (_quarantined is not null && _quarantined.AsSpan().SequenceEqual(content)) return true;
 
-        var folder = policy.Directory ?? _options.Directory;
-        var stem = Path.GetFileNameWithoutExtension(_options.FileName);
-        var extension = Path.GetExtension(_options.FileName);
-
-        try
+        if (QuarantineCopy.TryWrite(_options.Quarantine, _options.Directory, _options.FileName, content) is not { } copy)
         {
-            Directory.CreateDirectory(folder);
-
-            var stamp = DateTime.Now.ToString(StampFormat, CultureInfo.InvariantCulture);
-            var copy = Path.Combine(folder, $"{stem}.{stamp}{QuarantineMarker}{extension}");
-            for (var attempt = 2; File.Exists(copy); attempt++)
-            {
-                copy = Path.Combine(folder, $"{stem}.{stamp}-{attempt}{QuarantineMarker}{extension}");
-            }
-
-            if (AtomicFile.Write(copy, content) is not null) return;
-
-            _quarantinePath = copy;
-            _quarantined = content;
-            Prune(folder, stem, extension, policy.Keep);
+            return false;
         }
-        catch (Exception ex) when (AtomicFile.IsFileFailure(ex))
-        {
-            // Preserving the document is best effort; nothing about the read depends on it.
-        }
-    }
 
-    private static void Prune(string folder, string stem, string extension, int keep)
-    {
-        // The stamp sorts chronologically, so the newest copies are the last by ordinal name.
-        var copies = Directory.EnumerateFiles(folder, $"{stem}.*{QuarantineMarker}{extension}")
-            .Where(path => IsCopyOf(path, stem, extension))
-            .OrderDescending(StringComparer.Ordinal)
-            .Skip(keep);
-
-        foreach (var stale in copies) AtomicFile.TryDelete(stale);
-    }
-
-    // A copy of this document and no other: the stem, a dot, a stamp, the marker and the extension.
-    // The search pattern alone also takes in the copies of a file whose name starts with this stem
-    // and a dot — app.local.json beside app.json — and the prune would delete them.
-    private static bool IsCopyOf(string path, string stem, string extension)
-    {
-        var name = Path.GetFileName(path);
-        var head = stem.Length + 1;
-        var tail = QuarantineMarker.Length + extension.Length;
-
-        return name.Length > head + tail
-            && name.StartsWith(stem + ".", StringComparison.Ordinal)
-            && name.EndsWith(QuarantineMarker + extension, StringComparison.Ordinal)
-            && Regex.IsMatch(name.AsSpan(head, name.Length - head - tail), CopyStampPattern);
+        _quarantinePath = copy;
+        _quarantined = content;
+        return true;
     }
 
     private void Notify(Action raise)
@@ -403,8 +346,6 @@ public sealed class SectionedSettingsFile
         if (context is null) raise();
         else context.Post(static state => ((Action)state!)(), raise);
     }
-
-    private readonly record struct LoadedDocument(SettingsDocument Document, bool IsFromNewerVersion);
 
     private enum FileOutcome
     {

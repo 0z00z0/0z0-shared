@@ -269,7 +269,7 @@ public class MqttPanelTextTests
     [Fact]
     public void ATranslatedPanelComposesTheSameFactsFromItsOwnStrings()
     {
-        var strings = new MqttStrings(new Fixed(new()
+        var strings = new MqttStrings(new FixedStringSource(new()
         {
             ["ProvenanceAutomatic"] = "Funnet automatisk",
             ["ProvenanceEncrypted"] = "{0} — kryptert",
@@ -283,8 +283,123 @@ public class MqttPanelTextTests
         Assert.Equal("Nothing published yet", translated.DescribeLastPublish(null, Now));
     }
 
-    private sealed class Fixed(Dictionary<string, string> entries) : IMqttStringSource
+    // ------------------------------------------------------------------------------------------
+    // Edges of each line.
+    // ------------------------------------------------------------------------------------------
+
+    [Fact]
+    public void Relative_SaysSoWhenThereIsNothingToRender() =>
+        Assert.Equal("never", Text.Relative(null, Now, never: "never"));
+
+    [Fact]
+    public void Relative_ReadsAFutureStampAsJustNowRatherThanANegativeAge() =>
+        Assert.Equal("just now", Text.Relative(Now.AddHours(1), Now, "never"));
+
+    [Fact]
+    public void DescribeBroker_SaysNotSetWithNoHost() =>
+        Assert.Equal("Not set", Text.DescribeBroker(
+            new("  ", "user", null, MqttTransportMode.Auto), null));
+
+    [Fact]
+    public void DescribeBroker_IgnoresAnEndpointFoundSomewhereElse()
     {
-        public string? Find(string key) => entries.GetValueOrDefault(key);
+        var request = new MqttEndpointRequest("broker.invalid", "user", null, MqttTransportMode.Auto);
+        var elsewhere = new MqttEndpointMemory("other.invalid", "user", 8883, MqttTransport.Tcp, true);
+
+        Assert.Equal("broker.invalid — not connected yet", Text.DescribeBroker(request, elsewhere));
+    }
+
+    [Fact]
+    public void DescribeLastCommand_FallsBackToTheEntityIdTheWireCarried()
+    {
+        var record = new MqttCommandRecord(Now.AddMinutes(-5), "quiet_mode");
+
+        Assert.Equal("quiet_mode — 5 min ago", Text.DescribeLastCommand(record, Now));
+        Assert.Equal("Quiet mode — 5 min ago",
+            Text.DescribeLastCommand(record, Now, _ => "Quiet mode"));
+    }
+
+    [Fact]
+    public void Describe_NamesTheTransportInEveryVerdict()
+    {
+        foreach (var outcome in Enum.GetValues<MqttProbeOutcome>())
+        {
+            string sentence = Text.Describe(new(outcome, "why"), MqttTransport.WebSocket);
+
+            Assert.Contains("WebSocket", sentence);
+        }
+    }
+
+    [Fact]
+    public void Describe_OfACertificateFailurePointsAtNoControlThePanelDoesNotCarry()
+    {
+        string sentence = Text.Describe(
+            new(MqttProbeOutcome.TlsUntrusted, "the remote certificate is invalid"), MqttTransport.Tcp);
+
+        // The reason the far end gave, and nothing sending a reader to look for a certificate-trust
+        // field: the panel has none, and trust is configured by the host in code.
+        Assert.Contains("the remote certificate is invalid", sentence);
+        Assert.DoesNotContain("credentials", sentence);
+        Assert.DoesNotContain("setting", sentence, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Describe_OfAProgressLineTellsTheTwoStagesApart()
+    {
+        string port = Text.Describe(
+            new MqttSearchProgress(MqttSearchStage.Port, 1883, MqttTransport.Tcp));
+        string transport = Text.Describe(
+            new MqttSearchProgress(MqttSearchStage.Transport, 1883, MqttTransport.Tcp));
+
+        Assert.Equal("Trying TCP on port 1883…", port);
+        Assert.NotEqual(port, transport);
+        Assert.Contains("asking the broker", transport);
+    }
+
+    [Fact]
+    public void Describe_OfAFinishedStageWithNoResultDoesNotReadAsASuccess()
+    {
+        string sentence = Text.Describe(
+            new MqttSearchProgress(MqttSearchStage.Finished, 1883, MqttTransport.Tcp));
+
+        Assert.DoesNotContain("connected", sentence);
+    }
+
+    [Fact]
+    public void Describe_OfAnEmptyRunSaysThereWasNothingToTry() =>
+        Assert.Equal("No broker host set.", Text.Describe(new MqttProbeReport([])));
+
+    [Fact]
+    public void Describe_OfAFailedRunListsWhatWasTriedWithoutRepeatingItself()
+    {
+        MqttProbeReport report = new([
+            new(new(1883, MqttTransport.Tcp), MqttProbeOutcome.TimedOut),
+            new(new(8883, MqttTransport.Tcp), MqttProbeOutcome.TimedOut),
+            new(new(443, MqttTransport.WebSocket), MqttProbeOutcome.TimedOut),
+        ]);
+
+        string sentence = Text.Describe(report);
+
+        // Nothing answered anywhere, which is the one case where what was tried is the finding.
+        Assert.Equal("The broker was not reached. TCP did not answer; WebSocket did not answer.",
+            sentence);
+    }
+
+    [Fact]
+    public void IsFailure_IsTrueForAnythingButASuccessfulRun()
+    {
+        Assert.False(MqttPanelText.IsFailure(
+            new([new(new(1883, MqttTransport.Tcp), MqttProbeOutcome.Success)])));
+        Assert.True(MqttPanelText.IsFailure(
+            new([new(new(1883, MqttTransport.Tcp), MqttProbeOutcome.TlsUntrusted)])));
+    }
+
+    [Fact]
+    public void Name_GivesEveryConnectionStateItsOwnWording()
+    {
+        var wordings = Enum.GetValues<MqttConnectionState>().Select(Text.Name).ToList();
+
+        Assert.All(wordings, w => Assert.False(string.IsNullOrWhiteSpace(w)));
+        Assert.Equal(wordings.Count, wordings.Distinct(StringComparer.Ordinal).Count());
     }
 }

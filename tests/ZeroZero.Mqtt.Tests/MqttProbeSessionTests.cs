@@ -308,10 +308,60 @@ public class MqttProbeSessionTests
         Assert.True(failedSince.IsFailure);
     }
 
+    // ------------------------------------------------------------------------------------------
+    // What a press comes to, and in which order.
+    // ------------------------------------------------------------------------------------------
+
+    private static readonly MqttEditValidation Usable = new(null, true);
+
+    private static readonly MqttEditValidation BadPort = new("Port must be between 1 and 65535.", false);
+
+    /// <summary>Unusable fields answer before anything else, and only Test connection says so on the
+    /// line. Asked in another order, Test reports a missing host for a port it never got as far as.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void UnusableFieldsAnswerFirstAndOnlyTestConnectionSaysWhy()
+    {
+        var session = PassedOn(Tested);
+        session.Clear();
+        var noHost = Tested with { Host = "" };
+
+        Assert.Equal(MqttProbeDecision.Unusable,
+            session.Decide(MqttProbeTrigger.Apply, BadPort, publishingEnabled: true, noHost));
+        Assert.False(session.HasLine, "Apply refused out loud");
+
+        Assert.Equal(MqttProbeDecision.Unusable,
+            session.Decide(MqttProbeTrigger.TestConnection, BadPort, publishingEnabled: true, noHost));
+        Assert.Equal(BadPort.Message, session.Line);
+    }
+
+    /// <summary>Nothing to probe answers before a pass is shown again: with publishing off, Apply on
+    /// the values that passed must not report a connection.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void NothingToProbeAnswersBeforeAPassIsShownAgain()
+    {
+        var session = PassedOn(Tested);
+        session.Clear();
+
+        Assert.Equal(MqttProbeDecision.NothingToProbe,
+            session.Decide(MqttProbeTrigger.Apply, Usable, publishingEnabled: false, Tested));
+        Assert.False(session.HasLine);
+
+        Assert.Equal(MqttProbeDecision.NothingToProbe,
+            session.Decide(MqttProbeTrigger.TestConnection, Usable, publishingEnabled: true, Tested with { Host = "" }));
+        Assert.Equal("No broker host set.", session.Line);
+
+        Assert.Equal(MqttProbeDecision.Run,
+            session.Decide(MqttProbeTrigger.TestConnection, Usable, publishingEnabled: true, Tested));
+        Assert.Equal(MqttProbeDecision.Reused,
+            session.Decide(MqttProbeTrigger.Apply, Usable, publishingEnabled: true, Tested));
+    }
+
     [Fact]
     public void ATranslatedSessionComposesItsLinesFromItsOwnStrings()
     {
-        var session = new MqttProbeSession(new MqttPanelText(new MqttStrings(new Fixed(new()
+        var session = new MqttProbeSession(new MqttPanelText(new MqttStrings(new FixedStringSource(new()
         {
             ["TestRunning"] = "Tester…",
         }))));
@@ -319,10 +369,5 @@ public class MqttProbeSessionTests
         session.Start();
 
         Assert.Equal("Tester…", session.Line);
-    }
-
-    private sealed class Fixed(Dictionary<string, string> entries) : IMqttStringSource
-    {
-        public string? Find(string key) => entries.GetValueOrDefault(key);
     }
 }

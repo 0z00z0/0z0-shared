@@ -148,7 +148,10 @@ foreach ($file in $Path) {
     }
 
     $stamp = if ($null -eq $timestamper) { "no timestamp was asked for" } else { "timestamped by $($timestamper.Subject)" }
-    $untrustedRoot = $signature.Status -eq "UnknownError" -and $signature.StatusMessage -match "not trusted"
+    # No status names an untrusted root and the message is localised, so it is compared with the
+    # system's own text for CERT_E_UNTRUSTEDROOT (0x800B0109), the text the status message carries.
+    $untrustedRootMessage = ([System.ComponentModel.Win32Exception]::new(0x800B0109)).Message
+    $untrustedRoot = $signature.Status -eq "UnknownError" -and $signature.StatusMessage -eq $untrustedRootMessage
     if ($signature.Status -eq "Valid") {
         Write-Host "Signed '$file' with $($certificate.Subject) ($($certificate.Thumbprint)): Valid, $stamp."
     }

@@ -77,7 +77,8 @@ This guide is complete for adoption: the component's own source and tests need n
 - **`TextPromptWindow`** — `ShowAsync(TextPromptOptions)`: a frameless Mica window centred on the
   monitor under the cursor, with a title, a message, one field, an optional note beneath it, and
   an equal-width cancel-and-confirm row with the confirm on the right. Resolves with the text on
-  confirm and null on cancel, Escape or any other way out; Enter confirms from the field; the
+  confirm and null on cancel, Escape from any control, or any other way out; Enter confirms from
+  the field; the
   confirm button waits for text unless `AllowEmpty` is set. Every string is the caller's —
   `Confirm` says what the answer does, "Rename", not "OK" — and so is the theme, so an application
   pinned dark passes it. The prompt collapses the field's selection on every way out, Alt+F4
@@ -103,6 +104,17 @@ This guide is complete for adoption: the component's own source and tests need n
   needed. The arithmetic itself is `ZeroZero.Win32`'s `WindowFit`, which a caller sizing something
   other than a popup uses directly. `Width` and `MinimumHeight` are required; `ScrollerPadding`
   (none), `HeightFraction` (0.8), `Name` ("Popup") and `Log` (silent) are optional.
+- **`ContentSizedPopup`** — a fixed-width popup sized to content that does not scroll; content that
+  scrolls takes `PopupWindowFit`. `Attach(window, root, contentWidth, escape)` is called from the
+  window's constructor after `InitializeComponent`. It hides the window from the taskbar and
+  Alt+Tab through `SwitcherVisibility`, makes it frameless, not resizable and always on top, sets
+  the root's width, and binds Escape on the root to `escape`, so Escape works from whichever control
+  has focus. It fits the window at once and again when the root loads, because a measure before
+  then uses the fallback face's metrics. `Fit()` fits again after the content changed height. A fit
+  measures the root at that width, rounds up, adds the frame the window actually has, stops at the
+  work area's height and centres on the monitor that was under the cursor at `Attach`; a window
+  taller than the work area keeps its top on screen. A measure of zero counts as 200 units. After
+  the window closes, `Fit` does nothing.
 - **`SwitcherVisibility`** — `TrySet(appWindow, shown, log)` sets `AppWindow.IsShownInSwitchers`,
   whether the window appears on the taskbar and in Alt+Tab. **The plain setter throws
   `NotImplementedException` ("SetShownInSwitchers failed") while no taskbar window exists** —
@@ -112,8 +124,9 @@ This guide is complete for adoption: the component's own source and tests need n
   process; any other exception propagates. Nothing retries the call later: a window that must be
   hidden from the switchers either opens only once the taskbar exists
   ([the startup rule](zerozero-tray.md#the-startup-rule)) or calls `TrySet` again itself. `log` is
-  optional, and without one nothing is written and the once-per-process line stays unspent. The
-  About window, the update window and the text prompt all set it this way.
+  optional, and without one nothing is written and the once-per-process line stays unspent.
+  `ContentSizedPopup` sets it this way, and the About window, the update window and the text prompt
+  are built on it.
 
 Not here, by design: anything carrying the studio's face or palette. Those are the brand component's
 ([`zerozero-brand.md`](zerozero-brand.md)), which a component takes when it needs them and says so.
@@ -193,7 +206,9 @@ the title-bar enum and palette, compiled in as linked source and pinned — opaq
 grounds the window colour, glyph and fill ordering, no value shared between the two sets — and
 the controls' markup read as data beside the panel's, so the section header keeps the panel's
 sub-header typography and rule, the row keeps its bubble before its field, and the prompt keeps
-its confirm on the right of two equal columns. `PopupWindowFit` is not covered there: it needs a
+its confirm on the right of two equal columns. `ContentSizedPopup`'s arithmetic — rounding up, the
+200-unit fallback, the work-area cap and the centring — is linked in and tested; its window calls
+are looked at in the harness. `PopupWindowFit` is not covered there: it needs a
 live window and a laid-out panel. The arithmetic it defers to is covered in
 `tests/ZeroZero.Win32.Tests/WindowFitTests.cs`, and what remains here is the plumbing between the
 two — which is looked at, not asserted.

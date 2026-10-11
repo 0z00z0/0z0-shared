@@ -165,9 +165,7 @@ public sealed class MqttBrokerEdits
     /// empty prefix, which would put every discovery topic at the root.</summary>
     /// <remarks>Only Apply reads this. Whether the block is dirty compares the box as typed, or a
     /// store holding a blank prefix would open the panel already marked unapplied.</remarks>
-    public string EffectivePrefix => string.IsNullOrWhiteSpace(DiscoveryPrefix)
-        ? MqttSettings.DefaultDiscoveryPrefix
-        : DiscoveryPrefix.Trim();
+    public string EffectivePrefix => MqttSettings.EffectiveDiscoveryPrefix(DiscoveryPrefix);
 
     /// <summary>Recomputes <see cref="State"/> after a staged value moved. A change that puts a field
     /// back where it started leaves the indicator alone rather than clearing an "Applied." that is

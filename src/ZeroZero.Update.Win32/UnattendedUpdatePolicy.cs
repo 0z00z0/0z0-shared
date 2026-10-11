@@ -22,7 +22,9 @@ public enum UnattendedOutcome
     NothingToInstall,
 
     /// <summary>The release was not downloaded, or did not verify, and no verified installer is
-    /// held. Nothing ran, and the next check decides again.</summary>
+    /// held. Nothing ran, the release is let go, and the next check decides again: under
+    /// <see cref="CheckCadence.Once"/> there is none, so nothing installs for the rest of the
+    /// process.</summary>
     NotPrepared,
 
     /// <summary>A verified installer is in hand and this moment was refused. Nothing ran; the next
@@ -78,6 +80,8 @@ public sealed class UnattendedUpdatePolicy : IDisposable
     private readonly TimeProvider _time;
     private readonly ILogSink _log;
     private readonly UpdateScheduler? _scheduler;
+    // Never disposed: a tick still running at Dispose releases it on its way out.
+    private readonly SemaphoreSlim _deciding = new(1, 1);
     private DateTimeOffset? _checkedAt;
 
     // Found and not yet downloaded. Always newer than _prepared where both are set: an installer
@@ -125,10 +129,21 @@ public sealed class UnattendedUpdatePolicy : IDisposable
     /// has not switched unattended installing on.</summary>
     public void Start() => _scheduler?.Start();
 
-    /// <summary>One pass of the decision. The scheduler runs it one at a time.</summary>
+    /// <summary>One pass of the decision. Passes run one at a time: a call arriving while another
+    /// is running waits for it, so two calls never start two installers.</summary>
     public async Task<UnattendedTick> TickAsync(CancellationToken cancellationToken = default)
     {
-        UnattendedTick tick = await DecideAsync(cancellationToken).ConfigureAwait(false);
+        UnattendedTick tick;
+        await _deciding.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            tick = await DecideAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _deciding.Release();
+        }
+
         Report(tick);
         return tick;
     }

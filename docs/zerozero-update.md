@@ -43,8 +43,9 @@ This guide is complete for adoption: the component's own source and tests need n
   the installer's arguments, the initial delay and the check interval, the request and download
   timeouts, the API base and the log sink. Validated when the service is built: the owner, name,
   product name, signer, prefix and file name are required, and a blank or malformed value throws.
-  Defaults: requests 30 s, downloads 10 min, GitHub's API, no log; `InitialDelay` (30 s) and
-  `CheckInterval` (24 h) are for `UpdateScheduler`.
+  Defaults: requests 30 s, downloads 10 min, GitHub's API, no log; `InitialDelay` and
+  `CheckInterval` are for `UpdateScheduler` and default to its `DefaultInitialDelay` (30 s) and
+  `DefaultCheckInterval` (24 h).
 - **`ExpectedSigner`** — who must have signed the installer: the certificate subject, the
   thumbprints (SHA-1 or SHA-256) of the certificates accepted when the machine does not trust the
   chain, and `acceptSelfSignedSubject`, which lets the publisher name alone carry an untrusted
@@ -76,6 +77,8 @@ This guide is complete for adoption: the component's own source and tests need n
 - **`UpdateScheduler`** — runs a check after an initial delay and then at an interval, one at a
   time, counted from process start and never persisted: the component stores nothing. A negative
   delay or an interval of zero or less throws; a check that throws is logged and the schedule goes on.
+  `DefaultInitialDelay` (30 s) and `DefaultCheckInterval` (24 h) are the defaults `UpdateOptions`
+  and `UnattendedUpdateOptions` both start from.
 - **`MachineIdle`** — reads the machine at one moment: how long since the last keyboard or mouse
   input in this session, and whether the session is locked. A measurement and nothing more; what
   counts as free enough to start an installer is decided above it. A reading that does not come back
@@ -126,6 +129,7 @@ This guide is complete for adoption: the component's own source and tests need n
   asked. It drives the check, the download and the launch itself, shows nothing at any point, and
   returns an `UnattendedTick` saying where the pass ended. [Below](#installing-without-being-asked)
   is the whole of what it decides. `TickAsync` is one pass, which `Start` runs every `RetryInterval`.
+  Passes run one at a time: a direct call arriving during another pass waits for it to end.
 - **`UnattendedUpdateOptions`** — what the application supplies: whether this happens at all, how
   often a check runs — periodically or once — the retry tick, the shutdown callback, the call the
   component makes before a release is downloaded (`MayDownloadNow`), the call it makes immediately
@@ -475,7 +479,8 @@ never again for the life of the process, whatever that check finds — something
 cannot express at any value, since even the longest one checks again eventually. The cadence governs
 checking only: a release already found keeps following `MayDownloadNow`, the machine-free rule,
 `MayInstallNow` and the retry when it could not start, so the ticks go on for as long as the
-scheduler runs and simply find no check due once the one check has run.
+scheduler runs and simply find no check due once the one check has run. A download that fails or
+does not verify lets the release go, so under `Once` nothing installs for the rest of the process.
 
 **The application is asked before anything is downloaded.** `MayDownloadNow` is called once a check
 has found a release and before a byte of it is fetched. An `InstallMoment.NotNow` keeps the release
@@ -538,7 +543,7 @@ Each tick says where it ended:
 | `CheckFailed` | The check did not complete and nothing is held. The cadence is not stamped, so the next tick checks again. With something held, the tick carries on with it instead. |
 | `NothingToInstall` | The check completed, there is nothing newer, and nothing is held. |
 | `DownloadRefused` | A release is held and `MayDownloadNow` refused its download at this moment. Nothing was downloaded, and the next tick asks again. |
-| `NotPrepared` | The release was not downloaded, or did not verify, and no verified installer is held. Nothing ran, and the next check decides again. |
+| `NotPrepared` | The release was not downloaded, or did not verify, and no verified installer is held. Nothing ran, the release is let go, and the next check decides again: under `CheckCadence.Once` there is none. |
 | `Refused` | A verified installer is in hand and this moment was refused. `Reason` says which rule refused it. |
 | `LaunchFailed` | The installer did not start. The next tick downloads and verifies it again, or the newer release already waiting where a check found one. |
 | `InstallerStarted` | The installer is running and the shutdown callback has been called. Every tick after it answers the same and does nothing, so a tick landing while the application is still on its way out starts no second installer. |

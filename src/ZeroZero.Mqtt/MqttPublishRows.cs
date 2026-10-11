@@ -14,8 +14,9 @@ public sealed record MqttPublishRow(
     public bool HasDescription => !string.IsNullOrWhiteSpace(Description);
 
     /// <summary>What a screen reader calls the row's info icon. Several sit on one page, so naming
-    /// the subject is what tells them apart.</summary>
-    public string InfoSubject => $"the {Label} group";
+    /// the subject is what tells them apart. The module's own en-GB; a panel formats
+    /// <c>SubjectPublishGroup</c> through its own <see cref="MqttStrings"/>.</summary>
+    public string InfoSubject => MqttStrings.Default.Format("SubjectPublishGroup", Label);
 }
 
 /// <summary>How many declared groups there are and how many are switched on, as a collapsed section

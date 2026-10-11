@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using Xunit;
 
 namespace ZeroZero.Config.Sections.Tests;
@@ -235,7 +234,7 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
             }
             """);
 
-        var result = SettingsMigration.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
+        var result = MigrationProof.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
 
         Assert.Equal(SettingsMigrationOutcome.NotProven, result.Outcome);
         Assert.Contains("retiredInBuild14", result.Missing);
@@ -252,7 +251,7 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
         var damaged = OnDisk().Replace("\"windowWidth\": 1280", "\"windowWidth\": 1281", StringComparison.Ordinal);
         File.WriteAllText(FilePath, damaged);
 
-        var result = SettingsMigration.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
+        var result = MigrationProof.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
 
         Assert.Equal(SettingsMigrationOutcome.NotProven, result.Outcome);
         Assert.Contains("windowWidth", result.Missing);
@@ -268,7 +267,7 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
         var damaged = OnDisk().Replace("/* nothing here has been read since build 14 */", "", StringComparison.Ordinal);
         File.WriteAllText(FilePath, damaged);
 
-        var result = SettingsMigration.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
+        var result = MigrationProof.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
 
         Assert.Equal(SettingsMigrationOutcome.NotProven, result.Outcome);
         Assert.Contains("/* nothing here has been read since build 14 */", result.Missing);
@@ -289,7 +288,7 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
             StringComparison.Ordinal);
         File.WriteAllText(FilePath, damaged);
 
-        var result = SettingsMigration.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
+        var result = MigrationProof.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
 
         Assert.Equal(SettingsMigrationOutcome.NotProven, result.Outcome);
         Assert.Contains(
@@ -313,15 +312,5 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
     {
         var member = root.Find(name)!.Value;
         return member.ValueStart..member.ValueEnd;
-    }
-
-    // The same value with the whitespace between its tokens taken out, which is the only thing a
-    // carry across is allowed to change.
-    private static string Compact(byte[] content, int start, int end)
-    {
-        var text = new StringBuilder();
-        var reader = new Utf8JsonReader(content.AsSpan(start..end), JsonObjectSpans.ReaderOptions);
-        while (reader.Read()) text.Append(reader.TokenType).Append(Encoding.UTF8.GetString(reader.ValueSpan)).Append('|');
-        return text.ToString();
     }
 }

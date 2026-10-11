@@ -270,6 +270,45 @@ localises by adding a language folder; a host with its own resource system suppl
 `IMqttStringSource` on the setup object instead. Everything falls back to the module's built-in
 en-GB, so a resource map that fails to load leaves a readable panel rather than blank controls.
 
+## Inside the panel
+
+The rules the markup and code-behind keep, for anyone changing the panel itself.
+
+- **Alignment.** Every field is one width (`MqttFieldWidth`), every card right-aligns its content,
+  and an info icon always sits to the left of the field it explains. No adornment can then displace
+  a right edge, and the whole column lands on one line without a per-card measurement.
+- **No user-facing text in the markup.** Every string comes from `MqttStrings`, so the module's
+  prose has one home, one fallback and one translation route.
+- **The font is set on the root, and every keyed style that renders text repeats the key.** Rows
+  built in code inherit it; an element with an explicit style takes the style's value over the
+  inherited one, so a style without the key would fall back to the stock face.
+- **The panel's own styles are self-contained.** A shared panel cannot require a host to declare a
+  style key: an unresolved `BasedOn` is a parse failure, not a fallback. A host rebrands colour
+  through the theme keys only.
+- **A tier that changes at run time is a style, never a brush assigned in code.** A brush fetched
+  from a dictionary at run time carries no theme context: it resolves against the application's
+  theme, and inside a subtree with a `RequestedTheme` of its own it lands the wrong way round — a
+  secondary value on a light page painted the dark theme's near-white. A `ThemeResource` inside a
+  setter resolves where the style is applied.
+- **Status values never change size.** One line, never wrapped, an ellipsis where it does not fit,
+  and the whole string on a hover tip; one writer sets text, tip and colour together, and an error
+  changes colour only. A translation longer than the English trims rather than reflowing the block.
+- **A `SettingsCard` whose content can be arbitrarily long collapses its own header column to zero
+  width and then grows without bound.** The card's content column is `Auto` and takes its width
+  first; the header column is `*` and gets what is left; and a horizontal `StackPanel` in the
+  content slot measures its children at infinite width, so `TextWrapping` is inert and a long value
+  reports an unbounded desired width. The Status block is therefore one `Border` around a `Grid`,
+  not four cards: its values are decided by the connection, and a connection error is a sentence of
+  unknown length. Its rows are `Auto` with no fixed height, so a large Windows text size grows the
+  block instead of clipping it; the width cap is what stops the collapse. Its column order is the
+  alignment contract — elastic label, the row's own action, the icon, the value at the field width —
+  so nothing displaces the right edge and no value is squeezed. Any new value rendered inside a
+  `SettingsCard` on the panel needs the same treatment: a width cap, `NoWrap` with
+  `CharacterEllipsis`, and the full string on a hover tip.
+- **No raw dispatcher callback.** An unhandled exception inside one is a stowed exception that ends
+  the process, so background work either awaits back onto the UI thread or goes through the panel's
+  guarded marshal.
+
 ## What the panel never does
 
 - It never writes a settings store directly — every commit goes through `IMqttSettingsStore.Update`,

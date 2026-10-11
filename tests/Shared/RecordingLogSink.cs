@@ -1,7 +1,8 @@
 using ZeroZero.Primitives;
 
-namespace ZeroZero.Update.Tests;
+namespace ZeroZero.Tests;
 
+/// <summary>Keeps every line and error it is handed, for a test to read back. Safe from any thread.</summary>
 internal sealed class RecordingLogSink : ILogSink
 {
     private readonly Lock _lock = new();

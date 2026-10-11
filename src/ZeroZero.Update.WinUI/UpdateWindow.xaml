@@ -92,13 +92,8 @@
                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
             </StackPanel>
 
-            <!-- One action per line, every button the width of the widest, so their brackets line
-                 up into a column. A row would not fit three choices at this width at any scaling.
-                 Each symbol is the act: down for a download, forward for later, away for the
-                 browser, a cross to close and a cross to stop. Every one is a character
-                 the brand face actually carries, checked against its character map rather than
-                 assumed: a symbol it lacks is drawn by whatever font Windows falls back to, which
-                 is a different shape and weight beside the label. -->
+            <!-- One action per line: three choices do not fit a row at this width. Every symbol is one
+                 the brand face carries; a missing one is drawn by a fallback font in another shape. -->
             <brand:BrandBracketButtonColumn x:Name="Actions" Spacing="2" Margin="0,4,0,0"
                                             HorizontalAlignment="Center">
                 <brand:BrandBracketButton x:Name="InstallButton" Symbol="&#x2193;"/>
@@ -110,10 +105,7 @@
 
         </StackPanel>
 
-        <!-- Window-only chrome, over the rule's right-hand end, as the About window places its
-             own. Hidden while the download runs: the download has a button of its own that stops
-             it, and a second cross that only hid the window would mean two ways out meaning two
-             different things. -->
+        <!-- Over the rule's right-hand end, as in the About window; hidden during the download (see GoTo). -->
         <Button x:Name="DismissButton" Grid.Row="0" Grid.RowSpan="2"
                 Content="&#x00D7;" Width="28" Height="28"
                 Padding="0" FontSize="10"

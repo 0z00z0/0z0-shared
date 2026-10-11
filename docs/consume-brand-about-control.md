@@ -11,7 +11,12 @@ routes and the CI shapes are in [`consuming.md`](consuming.md).
 2. Host `BrandAboutControl` in the existing About page's XAML, in place of the bespoke layout —
    or, under the settings shell, return it from the About section's `Build` with no scroll viewer
    of its own, since the shell puts one over every page.
-3. Call `SetInfo(AboutInfo)` once from the page's constructor or `Loaded` handler.
+3. Call `SetInfo(AboutInfo)` from the page's constructor or `Loaded` handler, after
+   `InitializeComponent`; a cached page calling it again on every visit is safe. It is a method and
+   not a property for a build reason: the WinUI XAML compiler generates metadata that needs a
+   parameterless constructor for the type of every public property on a XAML class, and
+   `AboutInfo`'s `required` members leave it without one, so a settable property fails the build
+   with CS9035.
 4. Drop any border the page wrapped the control in: the card draws its own rounded frame, and a
    wrapper adds a second one around it.
 5. Supply only app facts: name, version, description, repo URL, the address the release notes are

@@ -19,7 +19,7 @@ public sealed class Scratch : IDisposable
         {
             System.IO.Directory.Delete(Directory, recursive: true);
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // A handle a failed test left open; the temp folder is cleaned by the system in time.
         }

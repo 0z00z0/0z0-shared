@@ -165,13 +165,8 @@ internal static class SettingsShellScenario
                 {
                     Log($"{title}: build about");
                     var about = new BrandAboutControl();
-                    about.SetInfo(new AboutInfo
-                    {
-                        AppName = "Brand Test Harness",
-                        Version = "0.0.0-dev",
-                        Description = "The About control hosted in the settings window's navigation, the way a full windowed application hosts it.",
-                        RepoUrl = $"{Core.Brand.OrgUrl}/0z0-shared",
-                    });
+                    about.SetInfo(SampleInfo.Create(
+                        "The About control hosted in the settings window's navigation, the way a full windowed application hosts it."));
                     return about;
                 },
                 Enter = () => Log($"{title}: enter about"),

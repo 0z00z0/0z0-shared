@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Xunit;
 
 namespace ZeroZero.Config.Sections.Tests;
@@ -14,8 +13,6 @@ namespace ZeroZero.Config.Sections.Tests;
 /// </remarks>
 public sealed class CommentEmissionTests : SectionedTestBase
 {
-    private static readonly JsonReaderOptions Strict = new() { CommentHandling = JsonCommentHandling.Disallow };
-
     [Fact]
     public void A_write_puts_no_comment_into_a_document_that_had_none()
     {
@@ -118,39 +115,5 @@ public sealed class CommentEmissionTests : SectionedTestBase
 
         Assert.Contains("\"Retries\": 9", OnDisk(), StringComparison.Ordinal);
         Assert.Equal(9, Create().Section<CounterSection>("general").Read().Retries);
-    }
-
-    // Every comment in the bytes, in file order. A comment-allowing reader is the only thing that can
-    // tell one from the same characters inside a string.
-    private static List<string> CommentsIn(byte[] content)
-    {
-        var options = new JsonReaderOptions { CommentHandling = JsonCommentHandling.Allow, AllowTrailingCommas = true };
-        var reader = new Utf8JsonReader(content, options);
-        var found = new List<string>();
-
-        while (reader.Read())
-        {
-            if (reader.TokenType == JsonTokenType.Comment) found.Add(reader.GetComment());
-        }
-
-        return found;
-    }
-
-    private static bool Parses(byte[] content, JsonReaderOptions options)
-    {
-        try
-        {
-            var reader = new Utf8JsonReader(content, options);
-            while (reader.Read())
-            {
-                // Reading to the end is the check: the reader throws on what it will not accept.
-            }
-
-            return true;
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
     }
 }

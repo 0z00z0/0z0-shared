@@ -35,9 +35,9 @@ public sealed class MqttStrings
 
     /// <summary>The text for a key: the source's, the built-in en-GB, or the key itself when a
     /// caller asks for something that does not exist — visible in a screenshot rather than
-    /// silent.</summary>
+    /// silent. A blank translation counts as none.</summary>
     public string Get(string key) =>
-        _source?.Find(key) is { Length: > 0 } translated ? translated
+        _source?.Find(key) is { } translated && !string.IsNullOrWhiteSpace(translated) ? translated
         : Builtin.TryGetValue(key, out string? text) ? text
         : key;
 
@@ -294,6 +294,7 @@ public sealed class MqttStrings
             // panel translated for everyone except the people who most depend on that naming.
             ["SubjectPublishSwitch"]   = "the publish switch",
             ["SubjectPublishGroups"]   = "the publishing groups",
+            ["SubjectPublishGroup"]    = "the {0} group",
             ["SubjectStatus"]          = "the status block",
             ["SubjectConnection"]      = "how the connection was found",
             ["SubjectBrokerInUse"]     = "the broker in use",

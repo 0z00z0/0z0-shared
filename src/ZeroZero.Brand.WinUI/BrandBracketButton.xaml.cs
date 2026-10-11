@@ -235,24 +235,24 @@ public sealed partial class BrandBracketButton : UserControl
     /// keyboard focus and the system's animation setting.</summary>
     private void UpdateMotion()
     {
-        bool motion = _onScreen && AnimationsEnabled;
+        bool canAnimate = _onScreen && AnimationsEnabled;
         bool pressed = Surface.IsPressed;
         bool hovered = Surface.IsPointerOver;
         bool keyboardFocus = Surface.FocusState == FocusState.Keyboard;
 
-        if (!motion) StopBrackets();
+        if (!canAnimate) StopBrackets();
         else if (State == BrandBracketButtonState.Busy) Breathe();
         else MoveBrackets(pressed ? -PressClose : hovered ? HoverSpread : 0);
 
         // The caret belongs to Rest and Attention only; work running or a success being reported
         // shows none.
-        bool caretState = State is BrandBracketButtonState.Rest or BrandBracketButtonState.Attention;
+        bool showsCaret = State is BrandBracketButtonState.Rest or BrandBracketButtonState.Attention;
 
-        if (!caretState) SetCaret(0);
+        if (!showsCaret) SetCaret(0);
         else if (pressed) SetCaret(DimCaret);
         else if (hovered || keyboardFocus)
         {
-            if (motion) StartBlink();
+            if (canAnimate) StartBlink();
             else SetCaret(1);
         }
         else SetCaret(State == BrandBracketButtonState.Attention ? DimCaret : 0);

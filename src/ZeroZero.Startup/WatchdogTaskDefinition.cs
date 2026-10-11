@@ -25,10 +25,7 @@ internal static class WatchdogTaskDefinition
     internal static TaskDefinition Build(TaskService service, WatchdogTaskOptions options,
                                          TaskIdentity identity, string executablePath)
     {
-        TaskDefinition definition = service.NewTask();
-        definition.RegistrationInfo.Description = options.Description;
-
-        CommonTaskDefinition.ApplyPrincipal(definition.Principal, identity);
+        TaskDefinition definition = CommonTaskDefinition.NewDefinition(service, options.Description, identity, executablePath, options.Arguments);
 
         definition.Triggers.Add(new TimeTrigger
         {
@@ -47,9 +44,6 @@ internal static class WatchdogTaskDefinition
             Delay = options.ResumeDelay,
         });
 
-        definition.Actions.Add(CommonTaskDefinition.Action(executablePath, options.Arguments));
-
-        CommonTaskDefinition.ApplyPowerSafeSettings(definition.Settings);
         // A probe missed while the machine was off runs at the next opportunity rather than being
         // dropped, which is the case the watchdog exists for.
         definition.Settings.StartWhenAvailable = true;

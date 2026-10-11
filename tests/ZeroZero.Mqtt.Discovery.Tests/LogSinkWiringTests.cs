@@ -1,4 +1,5 @@
 using Xunit;
+using ZeroZero.Mqtt.Tests;
 using ZeroZero.Primitives;
 
 namespace ZeroZero.Mqtt.Discovery.Tests;
@@ -24,7 +25,7 @@ public class LogSinkWiringTests
         Device = Sample.Device,
         Origin = Sample.Origin,
         Entities = new MqttEntitySet([Sample.Sensor()]),
-        Groups = new PublishGroupSet(new MemorySettingsStore(), []),
+        Groups = new PublishGroupSet(new RecordingSettingsStore(), []),
         Ledger = new RecordingLedgerStore(),
         SetChannelsAsync = (_, _) => Task.CompletedTask,
         SetCommandTargets = _ => { },

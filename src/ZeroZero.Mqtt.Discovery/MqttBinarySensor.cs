@@ -23,8 +23,7 @@ public sealed class MqttBinarySensor : MqttEntity
     /// <inheritdoc cref="MqttSensor.ExpireAfter"/>
     public int? ExpireAfter { get; init; }
 
-    private protected override string? ReadPayload() =>
-        Read() switch { true => PayloadOn, false => PayloadOff, null => null };
+    private protected override string? ReadPayload() => MqttPayload.Flag(Read(), PayloadOn, PayloadOff);
 
     internal override void Describe(DiscoveryKeys keys)
     {

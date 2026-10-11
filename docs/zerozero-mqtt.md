@@ -795,6 +795,8 @@ Nothing local can check that, so a host offering the field says so where the use
 machine-name default is unique by construction. `MqttIdentity` keeps `a-z` and `0-9`, turns anything
 else into an underscore and stops at 48 characters; a machine name with neither gives
 `<topicRoot>_device`, and a typed id that is blank or has neither falls back to the default.
+A changed id empties the old id's retained topics on the next connect; every id superseded while
+there was no link is emptied, and an id that comes back into force is never emptied.
 
 ### Commands
 
@@ -905,12 +907,18 @@ Only an entity the record says was already announced is held unavailable. One wh
 been switched on has no registry entry to protect, and announcing it would create the very thing the
 user declined.
 
-**Removing the device outright is a separate, explicit operation** — `MqttConnection.RemoveDeviceAsync`
-or `DiscoveryPublisher.RemoveDeviceAsync`. It empties the document, both availability topics, every
-state topic and every command topic, and it deletes every registry entry the device owns along with
-the names, entity ids and areas the user chose. Nothing a user does to the settings can reach it.
-Switching publishing off, or blanking the host so the configuration stops being complete, publishes
-offline and leaves everything standing.
+**Removing the device outright is a separate, explicit operation** — `MqttConnection.RemoveDeviceAsync`.
+It empties the document, both availability topics, every state topic and every command topic, then
+stops the connection, and it deletes every registry entry the device owns along with the names,
+entity ids and areas the user chose. Nothing a user does to the settings can reach it. Switching
+publishing off, or blanking the host so the configuration stops being complete, publishes offline and
+leaves everything standing.
+
+- **`DiscoveryPublisher.RemoveDeviceAsync` withdraws without stopping the connection.** The channels
+  go on publishing and refill the emptied state topics, and the next reconnect announces the device
+  again. Use `MqttConnection.RemoveDeviceAsync` to take the device off the receiver.
+- **The stored settings still say publishing is on after a removal.** Any later apply starts it
+  again; an apply that arrives while the removal is running waits for it to finish.
 
 **A value topic no entity claims is reached by `RetiredChannel`.** The four intents above all
 concern a discovery config; a retained payload left behind by an earlier implementation — the shared
@@ -1186,7 +1194,10 @@ writes nothing when it refuses, and `Reload` moves only untouched fields to the 
 `MqttProbeSession` keeps the line under Test connection and drops anything from a superseded run; a
 run started with `Start(target)` is remembered when it passes, and `TryReuse(trigger, target)` is
 the question Apply asks before starting another, answering true and showing the pass again only
-for Apply on the same values.
+for Apply on the same values. `Decide(trigger, validation, publishingEnabled, target)` is the whole
+press in one call, checked in order: `Unusable` for fields `Validate()` refuses, `NothingToProbe` with
+publishing off or no host, `Reused` for that pass, else `Run`, after which the host starts the probe.
+Test connection puts the reason for a refusal on the line; Apply refuses silently.
 
 ### What a closed section says about itself
 
@@ -1245,6 +1256,9 @@ icon rather than an empty one:
 | `PublishInfo` | The master switch's info icon |
 | `PublishGroupsInfo` | The "What to publish" heading's icon. No fallback. |
 | `DeviceIdConsequence` | An application-specific consequence, shown in the device-id dialogue under the module's own |
+
+A blank or whitespace-only `PublishTitle`, `PublishDescription` or `PublishInfo` keeps the module's own
+text, and so does a blank translation from an `IMqttStringSource`.
 
 ### Theming
 

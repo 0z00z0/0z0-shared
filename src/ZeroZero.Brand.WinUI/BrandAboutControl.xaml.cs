@@ -30,13 +30,6 @@ public sealed partial class BrandAboutControl : UserControl
     /// </summary>
     private static readonly TimeSpan FetchTimeout = TimeSpan.FromSeconds(3);
 
-    /// <summary>
-    /// How much of the notes is read. The panel is a few lines in a small window, not a document
-    /// viewer, and a bounded read also caps what an address under someone else's control can make
-    /// this control download.
-    /// </summary>
-    private const int MaxNotesCharacters = 4000;
-
     /// <summary>What is shown while the fetch is in flight, and what replaces it when it fails —
     /// one plain sentence, no error code, no retry offered.</summary>
     private const string Fetching = "Fetching the notes…";
@@ -60,11 +53,11 @@ public sealed partial class BrandAboutControl : UserControl
     /// <summary>The notes as fetched, so reopening the panel costs no second request.</summary>
     private string? _notes;
 
-    /// <summary>The row. Its first <see cref="_builtInButtons"/> children are the control's own;
+    /// <summary>The row. Its first <see cref="_builtInButtonCount"/> children are the control's own;
     /// everything after them came from the host.</summary>
     private readonly ButtonRowPanel _buttonRow = new() { Spacing = RowSpacing };
 
-    private readonly int _builtInButtons;
+    private readonly int _builtInButtonCount;
 
     private readonly Button _newsButton;
 
@@ -91,13 +84,11 @@ public sealed partial class BrandAboutControl : UserControl
         _buttonRow.Children.Add(siteButton);
         _buttonRow.Children.Add(donateButton);
         _buttonRow.Children.Add(_newsButton);
-        _builtInButtons = _buttonRow.Children.Count;
+        _builtInButtonCount = _buttonRow.Children.Count;
         ButtonRowSlot.Child = _buttonRow;
 
-        // Wired once at construction, never from SetInfo: a consumer with a cached in-navigation
-        // About page calls SetInfo on every navigation, and wiring there would stack one more
-        // handler per call — the third visit would open each link three times. The notes handler
-        // therefore reads the current _info rather than capturing a SetInfo argument.
+        // Wired once here, never from SetInfo, which a cached page calls on every visit: wiring there
+        // stacks a handler per call. The notes handler reads the current _info for the same reason.
         _newsButton.Click  += (_, _) => _ = ToggleNotesAsync();
         siteButton.Click   += (_, _) => Open(CoreBrand.WebsiteUrl);
         donateButton.Click += (_, _) => Open(CoreBrand.BuyMeACoffeeUrl);
@@ -116,17 +107,13 @@ public sealed partial class BrandAboutControl : UserControl
     {
         var fetch = _fetch;
         _fetch = null;
-        try { fetch?.Cancel(); }
-        catch (ObjectDisposedException) { /* the fetch already finished and disposed its source */ }
+        fetch?.Cancel();
     }
 
     /// <summary>
-    /// Supplies the per-app data to render. A method rather than a settable CLR property — the
-    /// WinUI XAML compiler generates metadata requiring a parameterless constructor for the type of
-    /// any public property on a XAML class, which <see cref="AboutInfo"/>'s <see langword="required"/>
-    /// members deliberately don't have (CS9035). A XAML-hosted consumer (e.g. an in-nav About page)
-    /// calls this from code-behind after construction; <see cref="BrandAboutWindow"/>'s constructor
-    /// calls it itself.
+    /// Supplies the per-app data to render; calling it again, as a cached page does on every visit,
+    /// is safe. A method, because a public <see cref="AboutInfo"/> property fails the XAML build with
+    /// CS9035 (docs/consume-brand-about-control.md). <see cref="BrandAboutWindow"/> calls it itself.
     /// </summary>
     public void SetInfo(AboutInfo info)
     {
@@ -141,8 +128,9 @@ public sealed partial class BrandAboutControl : UserControl
         DescriptionText.Text = info.Description;
         FooterText.Text     = $"Copyright © {DateTime.UtcNow.Year} {CoreBrand.StudioName} · MIT Licence";
 
-        // A repopulate is a different application's data, so notes fetched for the previous one are
-        // not shown against it. An address that changed also drops whatever is on screen.
+        // A repopulate is a different application's data, so notes fetched, or still being fetched,
+        // for the previous one are not shown against it.
+        CancelPendingFetch();
         _notes = null;
         NewsText.Text = "";
         NewsPanel.Visibility = Visibility.Collapsed;
@@ -156,14 +144,11 @@ public sealed partial class BrandAboutControl : UserControl
         PopulateExternalLibraries(info.ExternalLibraries);
     }
 
-    /// <summary>
-    /// Replaces the host's buttons at the end of the row. Rebuilt on every call for the same reason
-    /// the credit list is cleared: a cached page calls SetInfo on every visit, and a new button per
-    /// call carries exactly one handler.
-    /// </summary>
+    /// <summary>Replaces the host's buttons at the end of the row; rebuilt on every call, so each
+    /// carries exactly one handler.</summary>
     private void PopulateHostButtons(IReadOnlyList<AboutButton> buttons)
     {
-        while (_buttonRow.Children.Count > _builtInButtons)
+        while (_buttonRow.Children.Count > _builtInButtonCount)
         {
             _buttonRow.Children.RemoveAt(_buttonRow.Children.Count - 1);
         }
@@ -224,7 +209,7 @@ public sealed partial class BrandAboutControl : UserControl
         if (NewsPanel.Visibility == Visibility.Visible)
         {
             NewsPanel.Visibility = Visibility.Collapsed;
-            ContentResized?.Invoke(this, EventArgs.Empty);
+            RaiseContentResized();
             return;
         }
 
@@ -235,7 +220,7 @@ public sealed partial class BrandAboutControl : UserControl
         if (_notes is { } already)
         {
             NewsText.Text = already;
-            ContentResized?.Invoke(this, EventArgs.Empty);
+            RaiseContentResized();
             return;
         }
 
@@ -243,18 +228,18 @@ public sealed partial class BrandAboutControl : UserControl
         // waits with it rather than queueing another.
         if (_fetch is not null)
         {
-            ContentResized?.Invoke(this, EventArgs.Empty);
+            RaiseContentResized();
             return;
         }
 
         NewsText.Text = Fetching;
-        ContentResized?.Invoke(this, EventArgs.Empty);
+        RaiseContentResized();
 
         var fetch = new CancellationTokenSource(FetchTimeout);
         _fetch = fetch;
         try
         {
-            string text = await FetchNotesAsync(url, fetch.Token);
+            string text = await ReleaseNotesReader.FetchAsync(Http, url, fetch.Token);
             if (_fetch != fetch) return;
             _notes = text;
             NewsText.Text = text;
@@ -270,51 +255,21 @@ public sealed partial class BrandAboutControl : UserControl
         }
         finally
         {
-            bool current = _fetch == fetch;
-            if (current) _fetch = null;
+            bool isCurrent = _fetch == fetch;
+            if (isCurrent) _fetch = null;
             fetch.Dispose();
             // The panel's height settled either way, so the host resizes to what is now in it.
-            if (current)
-            {
-                try { ContentResized?.Invoke(this, EventArgs.Empty); }
-                catch (Exception ex) { Debug.WriteLine($"BrandAboutControl: resize after fetch: {ex}"); }
-            }
+            if (isCurrent) RaiseContentResized();
         }
-    }
-
-    /// <summary>
-    /// The notes as text, bounded in both time and size by the caller's token and
-    /// <see cref="MaxNotesCharacters"/>. Reads the body as it arrives rather than whole, so a large
-    /// document costs the first few thousand characters and no more.
-    /// </summary>
-    private static async Task<string> FetchNotesAsync(string url, CancellationToken token)
-    {
-        using var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, token);
-        response.EnsureSuccessStatusCode();
-
-        await using var body = await response.Content.ReadAsStreamAsync(token);
-        using var reader = new StreamReader(body);
-
-        var buffer = new char[MaxNotesCharacters];
-        int read = await reader.ReadBlockAsync(buffer, token);
-        string text = new string(buffer, 0, read).TrimEnd();
-
-        if (text.Length == 0) return "There is nothing to show for this release.";
-
-        // A full buffer means the body had more; say so rather than ending mid-sentence in silence.
-        return read == buffer.Length ? text + "…" : text;
     }
 
     private void PopulateExternalLibraries(IReadOnlyList<ExternalLibrary> libraries)
     {
-        // Cleared before every repopulate, for the same reason the link handlers attach once: a
-        // consumer with a cached in-navigation About page calls SetInfo on every navigation, and
-        // appending to a panel that still holds the previous lines renders the whole credit list
-        // once per visit. The group's visibility follows this call's list, in either direction.
+        // Cleared on every call, or a cached page's repeated SetInfo lists every credit once per visit.
         LibrariesPanel.Children.Clear();
         LibrariesGroup.Visibility = libraries.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
 
-        foreach (var lib in libraries)
+        foreach (var library in libraries)
         {
             var line = new TextBlock
             {
@@ -323,17 +278,17 @@ public sealed partial class BrandAboutControl : UserControl
                 Opacity       = 0.85,
             };
 
-            if (lib.Url is { } url)
+            if (library.Url is { } url)
             {
                 var link = new Hyperlink();
-                link.Inlines.Add(new Run { Text = lib.Name });
+                link.Inlines.Add(new Run { Text = library.Name });
                 link.Click += (_, _) => Open(url);
                 line.Inlines.Add(link);
-                line.Inlines.Add(new Run { Text = $" — {lib.Author} — {lib.Purpose} ({lib.License})" });
+                line.Inlines.Add(new Run { Text = $" — {library.Author} — {library.Purpose} ({library.License})" });
             }
             else
             {
-                line.Text = $"{lib.Name} — {lib.Author} — {lib.Purpose} ({lib.License})";
+                line.Text = $"{library.Name} — {library.Author} — {library.Purpose} ({library.License})";
             }
 
             LibrariesPanel.Children.Add(line);
@@ -345,9 +300,28 @@ public sealed partial class BrandAboutControl : UserControl
         bool expanded = LibrariesPanel.Visibility == Visibility.Visible;
         LibrariesPanel.Visibility  = expanded ? Visibility.Collapsed : Visibility.Visible;
         LibrariesToggleBtn.Content = expanded ? "External libraries ▾" : "External libraries ▴";
-        ContentResized?.Invoke(this, EventArgs.Empty);
+        RaiseContentResized();
     }
 
-    private static void Open(string url) =>
-        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+    /// <summary>Every raise goes through here: a host's throwing handler is logged, never let out of a
+    /// click handler or lost in the fetch's unobserved task.</summary>
+    private void RaiseContentResized()
+    {
+        try { ContentResized?.Invoke(this, EventArgs.Empty); }
+        catch (Exception ex) { Debug.WriteLine($"BrandAboutControl: a ContentResized handler threw: {ex}"); }
+    }
+
+    /// <summary>Opens a link in the default browser. A machine with no handler for the address throws
+    /// from the shell, which a click handler must not let escape.</summary>
+    private static void Open(string url)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            Debug.WriteLine($"BrandAboutControl: opening {url}: {ex}");
+        }
+    }
 }
