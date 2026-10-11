@@ -207,10 +207,15 @@ The sequence, for either `StartAsync` overload and either restart mechanism:
    `Ensure()`.
 3. **Register the crash handlers** with `OnStartupFailure` set. The cleanup never marks the exit
    deliberate ([`zerozero-diagnostics.md`](zerozero-diagnostics.md#a-failed-start-is-not-a-deliberate-exit)).
+   Registering them earlier, before the lock (in the `App` constructor, so a XAML-loading failure is
+   logged too), is allowed; a report before `MarkStartupComplete()` then also ends the process with
+   exit code 1, in a second instance that the lock would have refused as well.
 4. **`await TrayStartup.StartAsync`.**
 5. **On `Created`**, open the windows, then call `MarkStartupComplete()`.
 6. **On any other outcome**, report it through the crash handlers, which run the cleanup and end the
-   process. The exit is not deliberate, so the restart mechanism brings the process back.
+   process. The exit is not deliberate, so the restart mechanism brings the process back. `LastError`
+   is null for `ShellNeverAppeared`, so that report carries no exception; the caller logs `Outcome`,
+   `Attempts` and `Elapsed` itself, as in the example below.
 
 ```csharp
 // The lock is taken and the restart mechanism armed.
