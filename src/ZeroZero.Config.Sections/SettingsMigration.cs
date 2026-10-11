@@ -339,7 +339,7 @@ public static class SettingsMigration
         }
 
         var only = entry.Members[0];
-        var value = layout.Shift(source.AsSpan(only.ValueStart..only.ValueEnd), Shift(layout, indent));
+        var value = layout.Shift(source.AsSpan(only.ValueStart..only.ValueEnd), layout.ExtraIndent(indent));
 
         // The name is carried as the file's own bytes, colon included, so a key holding an escape
         // sequence is written back exactly as it was rather than escaped a second time.
@@ -348,11 +348,6 @@ public static class SettingsMigration
             .Append(' ')
             .Append(Encoding.UTF8.GetString(value));
     }
-
-    // A value carried from the old document was laid out at whatever depth it sat at there; the shift
-    // is the difference between that depth's indent and the one it lands at.
-    private static string Shift(JsonLayout layout, string indent) =>
-        indent.StartsWith(layout.Unit, StringComparison.Ordinal) ? indent[layout.Unit.Length..] : indent;
 
     // The new document is read back off the disk, not from the bytes just composed: what has to be
     // true is that the file carries everything, and only a read proves that.

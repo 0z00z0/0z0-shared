@@ -196,7 +196,7 @@ internal sealed class SettingsDocument
         {
             // The key is there but does not hold an object, so there is no member to preserve: the
             // store owns this section and replaces what stands in its place.
-            var extra = Extra(IndentOf(member.NameStart));
+            var extra = Layout.ExtraIndent(IndentOf(member.NameStart));
             edits.Add(new JsonEdit(member.ValueStart, member.ValueEnd, Layout.Shift(draftBytes, extra)));
         }
         else edits.AddRange(RewriteMembers(section, draft, draftBytes, member, serialiser));
@@ -254,7 +254,7 @@ internal sealed class SettingsDocument
                 continue;
             }
 
-            var shifted = Layout.Shift(replacement, Extra(IndentOf(existing.NameStart)));
+            var shifted = Layout.Shift(replacement, Layout.ExtraIndent(IndentOf(existing.NameStart)));
             if (shifted.AsSpan().SequenceEqual(_content.AsSpan(existing.ValueStart..existing.ValueEnd))) continue;
 
             edits.Add(new JsonEdit(existing.ValueStart, existing.ValueEnd, shifted));
@@ -285,7 +285,7 @@ internal sealed class SettingsDocument
             else text.Append(Layout.NewLine).Append(memberIndent);
 
             text.Append('"').Append(JsonEncodedText.Encode(name)).Append("\": ")
-                .Append(Encoding.UTF8.GetString(Layout.Shift(value, Extra(memberIndent))));
+                .Append(Encoding.UTF8.GetString(Layout.Shift(value, Layout.ExtraIndent(memberIndent))));
         }
 
         if (last is { } member) return JsonEdit.Insert(member.ValueEnd, Encoding.UTF8.GetBytes(text.ToString()));
@@ -366,11 +366,6 @@ internal sealed class SettingsDocument
             ? Encoding.UTF8.GetString(_content.AsSpan(at, nameStart - at))
             : string.Empty;
     }
-
-    // A value serialised on its own sits one level in; moving it to a member indented further needs
-    // the difference added to every line after the first.
-    private string Extra(string indent) =>
-        indent.StartsWith(Layout.Unit, StringComparison.Ordinal) ? indent[Layout.Unit.Length..] : indent;
 
     private static int IndexIn(IReadOnlyList<string> order, string name)
     {
