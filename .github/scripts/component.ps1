@@ -1,5 +1,6 @@
 # Shared by the release scripts: which component a tag names, which projects belong to it, and what
 # each of them declares. Dot-source it; it defines functions and one variable, and runs nothing.
+# Its Fail exits the script that dot-sources it.
 #
 # The component key is the first segment of an assembly name after "ZeroZero." — ZeroZero.Mqtt.WinUI
 # is mqtt — lower-cased. It names the tag prefix (mqtt-v0.7.0), the Versions.props property
@@ -73,6 +74,21 @@ function Get-SourceProjects {
 
 function Get-ComponentProjects([string]$Key, [object[]]$All) {
     return @($All | Where-Object { $_.Key -eq $Key -and $_.IsPackable })
+}
+
+# A workflow error annotation, then the exit that fails the step.
+function Fail([string]$Message) {
+    Write-Host "::error::$Message"
+    exit 1
+}
+
+function Get-ReleaseProjects([string]$Key, [object[]]$All) {
+    # A tag whose key matches no packable project would release nothing, so that fails.
+    $projects = @(Get-ComponentProjects $Key $All)
+    if ($projects.Count -eq 0) {
+        Fail "No packable project under src/ has the key '$Key', so the tag would release nothing."
+    }
+    return $projects
 }
 
 function Test-RemoteTag([string]$Remote, [string]$Name) {

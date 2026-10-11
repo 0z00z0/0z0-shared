@@ -26,18 +26,10 @@ $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $false
 . (Join-Path $PSScriptRoot "component.ps1")
 
-function Fail([string]$Message) {
-    Write-Host "::error::$Message"
-    exit 1
-}
-
 try { $release = Read-ReleaseTag $Tag } catch { Fail $_.Exception.Message }
 
 # @() on both: a function returning an empty array hands the caller $null, which has no Count.
-$projects = @(Get-ComponentProjects $release.Key @(Get-SourceProjects))
-if ($projects.Count -eq 0) {
-    Fail "No packable project under src/ has the key '$($release.Key)', so there is nothing to pack."
-}
+$projects = @(Get-ReleaseProjects $release.Key @(Get-SourceProjects))
 
 $outputPath = if ([System.IO.Path]::IsPathRooted($Output)) { $Output } else { Join-Path (Get-Location).Path $Output }
 if (Test-Path $outputPath) {

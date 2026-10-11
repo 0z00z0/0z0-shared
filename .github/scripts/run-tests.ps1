@@ -49,10 +49,9 @@ param(
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $false
 
-# The component-key rule, taken from the release scripts rather than restated here.
+# The component-key rule and $RepoRoot, taken from the release scripts rather than restated here.
 . (Join-Path $PSScriptRoot "component.ps1")
 
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $solutionPath = Join-Path $repoRoot $Solution
 $testsPath = Join-Path $repoRoot $TestsRoot
 

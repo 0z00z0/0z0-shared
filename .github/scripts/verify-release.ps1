@@ -82,7 +82,8 @@ $script:failures = 0
 $script:findings = @()
 $script:tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("verify-release-" + [guid]::NewGuid().ToString("n"))
 
-function Fail([string]$Message) {
+# Records a failure and carries on, so one run reports every finding; Stop-Verification exits.
+function Register-Failure([string]$Message) {
     Write-Host "::error::$Message"
     $script:failures++
 }
@@ -182,17 +183,17 @@ function Test-Package([string]$Path, $Entry) {
     $expectedId = Get-Field $Entry "id"
     $expectedVersion = Get-Field $Entry "version"
     if ([string]::IsNullOrWhiteSpace($expectedId) -or [string]::IsNullOrWhiteSpace($expectedVersion)) {
-        Fail "$name is a package but the record gives it no id or version, so its nuspec cannot be checked."
+        Register-Failure "$name is a package but the record gives it no id or version, so its nuspec cannot be checked."
         return
     }
 
     $zip = $null
     try { $zip = [System.IO.Compression.ZipFile]::OpenRead($Path) }
-    catch { Fail "$name is not a readable package: $($_.Exception.Message)"; return }
+    catch { Register-Failure "$name is not a readable package: $($_.Exception.Message)"; return }
     try {
         $nuspecs = @($zip.Entries | Where-Object { $_.FullName -notmatch '/' -and $_.FullName -like '*.nuspec' })
         if ($nuspecs.Count -ne 1) {
-            Fail "$name holds $($nuspecs.Count) nuspec files at its root; a package holds exactly one."
+            Register-Failure "$name holds $($nuspecs.Count) nuspec files at its root; a package holds exactly one."
             return
         }
         $reader = [System.IO.StreamReader]::new($nuspecs[0].Open())
@@ -201,16 +202,16 @@ function Test-Package([string]$Path, $Entry) {
 
         $id = "$(Get-Field $metadata 'id')"
         $version = "$(Get-Field $metadata 'version')"
-        if ($id -cne $expectedId) { Fail "$name's nuspec says id '$id'; the artefact is $expectedId." }
-        if ($version -ne $expectedVersion) { Fail "$name's nuspec says version '$version'; the release is $expectedVersion." }
+        if ($id -cne $expectedId) { Register-Failure "$name's nuspec says id '$id'; the artefact is $expectedId." }
+        if ($version -ne $expectedVersion) { Register-Failure "$name's nuspec says version '$version'; the release is $expectedVersion." }
 
         $repository = Get-Field $metadata "repository"
         $nuspecCommit = if ($null -ne $repository -and $repository -is [System.Xml.XmlElement]) { $repository.GetAttribute("commit") } else { "" }
         if ([string]::IsNullOrWhiteSpace($nuspecCommit)) {
-            Fail "$name's nuspec names no repository commit, so it cannot say which build it is."
+            Register-Failure "$name's nuspec names no repository commit, so it cannot say which build it is."
         }
         elseif ($nuspecCommit -ne $Commit) {
-            Fail "$name's nuspec says commit $nuspecCommit; the release is $Commit. The package describes another build."
+            Register-Failure "$name's nuspec says commit $nuspecCommit; the release is $Commit. The package describes another build."
         }
         else {
             Write-Host "  nuspec: $id $version at $nuspecCommit."
@@ -225,14 +226,14 @@ function Test-Package([string]$Path, $Entry) {
             [System.IO.Compression.ZipFileExtensions]::ExtractToFile($assembly, $extracted, $true)
             $product = "$((Get-Item -LiteralPath $extracted).VersionInfo.ProductVersion)"
             if ($product -notmatch '^(?<version>[^+]+)\+(?<sha>[0-9a-fA-F]{7,40})$') {
-                Fail "$($assembly.FullName) in $name reports '$product'; the family stamps <version>+<commit>, so this assembly cannot say which build it is."
+                Register-Failure "$($assembly.FullName) in $name reports '$product'; the family stamps <version>+<commit>, so this assembly cannot say which build it is."
                 continue
             }
             if ($Matches['version'] -ne $expectedVersion) {
-                Fail "$($assembly.FullName) in $name reports version $($Matches['version']); the release is $expectedVersion."
+                Register-Failure "$($assembly.FullName) in $name reports version $($Matches['version']); the release is $expectedVersion."
             }
             elseif (-not $Commit.StartsWith($Matches['sha'], [System.StringComparison]::OrdinalIgnoreCase)) {
-                Fail "$($assembly.FullName) in $name was built at commit $($Matches['sha']); the release is $Commit. The package was packed from a stale build."
+                Register-Failure "$($assembly.FullName) in $name was built at commit $($Matches['sha']); the release is $Commit. The package was packed from a stale build."
             }
             else {
                 Write-Host "  $($assembly.FullName): $product."
@@ -245,12 +246,12 @@ function Test-Package([string]$Path, $Entry) {
 function Test-Signer([string]$Path, [string]$Name) {
     $signature = Get-AuthenticodeSignature -LiteralPath $Path
     if ($null -eq $signature.SignerCertificate) {
-        Fail "$Name is not signed (status $($signature.Status)); the release requires a signature by '$Signer'."
+        Register-Failure "$Name is not signed (status $($signature.Status)); the release requires a signature by '$Signer'."
         return
     }
     $subject = $signature.SignerCertificate.Subject
     if ($subject -ne $Signer) {
-        Fail "$Name is signed by '$subject', not by '$Signer'."
+        Register-Failure "$Name is signed by '$subject', not by '$Signer'."
         return
     }
     # The pin is SHA-1 or SHA-256, separators and case ignored, as the update component takes it,
@@ -261,12 +262,12 @@ function Test-Signer([string]$Path, [string]$Name) {
     if ($SignerThumbprint) {
         $pin = ($SignerThumbprint -replace '[\s:-]', '').ToUpperInvariant()
         if ($pin -notmatch '^([0-9A-F]{40}|[0-9A-F]{64})$') {
-            Fail "-SignerThumbprint '$SignerThumbprint' is not a SHA-1 (40 hex) or SHA-256 (64 hex) thumbprint, so no certificate can match it."
+            Register-Failure "-SignerThumbprint '$SignerThumbprint' is not a SHA-1 (40 hex) or SHA-256 (64 hex) thumbprint, so no certificate can match it."
             return
         }
         $actual = if ($pin.Length -eq 40) { $thumbprint.ToUpperInvariant() } else { $sha256.ToUpperInvariant() }
         if ($actual -cne $pin) {
-            Fail "$Name is signed by a certificate with thumbprint $thumbprint (SHA-256 $sha256), not $pin. The subject '$subject' is right and the certificate is not the release's."
+            Register-Failure "$Name is signed by a certificate with thumbprint $thumbprint (SHA-256 $sha256), not $pin. The subject '$subject' is right and the certificate is not the release's."
             return
         }
     }
@@ -276,7 +277,7 @@ function Test-Signer([string]$Path, [string]$Name) {
     $untrustedRootMessage = ([System.ComponentModel.Win32Exception]::new(0x800B0109)).Message
     $untrustedRoot = $signature.Status -eq "UnknownError" -and $signature.StatusMessage -eq $untrustedRootMessage
     if ($signature.Status -ne "Valid" -and -not $untrustedRoot) {
-        Fail "$Name's signature verifies as $($signature.Status): $($signature.StatusMessage)"
+        Register-Failure "$Name's signature verifies as $($signature.Status): $($signature.StatusMessage)"
         return
     }
     # Asserted on the published file because a signing step that never ran leaves no check of its
@@ -284,7 +285,7 @@ function Test-Signer([string]$Path, [string]$Name) {
     # certificate expires — a date nobody chose. Either timestamp scheme answers here.
     $timestamper = $signature.TimeStamperCertificate
     if ($null -eq $timestamper) {
-        Fail "$Name is signed and carries no timestamp, so the signature stops verifying when the signing certificate expires. Nothing timestamped it: either no timestamp authority answered the signing run, or it was signed without one."
+        Register-Failure "$Name is signed and carries no timestamp, so the signature stops verifying when the signing certificate expires. Nothing timestamped it: either no timestamp authority answered the signing run, or it was signed without one."
         return
     }
     Write-Host "  signed by '$subject', thumbprint $thumbprint ($($signature.Status)), timestamped by '$($timestamper.Subject)'."
@@ -309,20 +310,20 @@ if ([string]::IsNullOrWhiteSpace($Location) -and $Manifest.Count -eq 0) {
 $hasSigningOutcome = -not [string]::IsNullOrWhiteSpace($SigningOutcome)
 $hasUnsignedOutcome = -not [string]::IsNullOrWhiteSpace($UnsignedOutcome)
 if ($RequireSigned -and -not $hasSigningOutcome -and -not $hasUnsignedOutcome) {
-    Fail "Signing is required and no signing outcome was given. Pass steps.<id>.outcome of the step that signs as -SigningOutcome, or of the warn-only unsigned step as -UnsignedOutcome; a green job is not evidence that either ran."
+    Register-Failure "Signing is required and no signing outcome was given. Pass steps.<id>.outcome of the step that signs as -SigningOutcome, or of the warn-only unsigned step as -UnsignedOutcome; a green job is not evidence that either ran."
 }
 if ($hasSigningOutcome) {
     if ($SigningOutcome -eq "success") {
         Write-Host "The signing step's recorded outcome is success."
     }
     elseif ($RequireSigned) {
-        Fail "Signing is required and the signing step's recorded outcome is '$SigningOutcome'. Skipped means the step never ran and nothing was signed; a warn-only step cannot say otherwise."
+        Register-Failure "Signing is required and the signing step's recorded outcome is '$SigningOutcome'. Skipped means the step never ran and nothing was signed; a warn-only step cannot say otherwise."
     }
     elseif ($SigningOutcome -eq "skipped") {
         Write-Host "Signing is not required; the signing step's recorded outcome is skipped, so nothing was signed."
     }
     else {
-        Fail "The signing step's recorded outcome is '$SigningOutcome'; a signing step that ran and did not succeed fails the release whether or not signing is required."
+        Register-Failure "The signing step's recorded outcome is '$SigningOutcome'; a signing step that ran and did not succeed fails the release whether or not signing is required."
     }
 }
 if ($hasUnsignedOutcome) {
@@ -330,10 +331,10 @@ if ($hasUnsignedOutcome) {
         Write-Host "The unsigned-installer step's recorded outcome is skipped, so the installer was signed."
     }
     elseif ($UnsignedOutcome -ne "success") {
-        Fail "The unsigned-installer step's recorded outcome is '$UnsignedOutcome'; a step that ran and did not complete fails the release whether or not signing is required."
+        Register-Failure "The unsigned-installer step's recorded outcome is '$UnsignedOutcome'; a step that ran and did not complete fails the release whether or not signing is required."
     }
     elseif ($RequireSigned) {
-        Fail "Signing is required and the unsigned-installer step ran, so the installer shipped unsigned. That step only warns and cannot fail the job; its being skipped is the only evidence of signing."
+        Register-Failure "Signing is required and the unsigned-installer step ran, so the installer shipped unsigned. That step only warns and cannot fail the job; its being skipped is the only evidence of signing."
     }
     else {
         Write-Host "Signing is not required; the unsigned-installer step ran, so the installer is unsigned."
@@ -371,15 +372,15 @@ try {
             $expected = (Get-Field $entry "sha256").ToLowerInvariant()
             Write-Host "=== $name ==="
             $failuresBefore = $script:failures
-            try { $source = Resolve-Source $Location $entry } catch { Fail $_.Exception.Message; Add-Finding $name "" "" $false; continue }
+            try { $source = Resolve-Source $Location $entry } catch { Register-Failure $_.Exception.Message; Add-Finding $name "" "" $false; continue }
             Write-Host "  from $source"
-            try { $fetched = Get-Fetched $source $name } catch { Fail $_.Exception.Message; Add-Finding $name $source "" $false; continue }
+            try { $fetched = Get-Fetched $source $name } catch { Register-Failure $_.Exception.Message; Add-Finding $name $source "" $false; continue }
 
             if ($fetched.Sha256 -eq $expected) {
                 Write-Host "  bytes: $($fetched.Sha256), the build's."
             }
             else {
-                Fail "What came down from $source hashes to $($fetched.Sha256); the build recorded $expected for $name. What is published is not this build."
+                Register-Failure "What came down from $source hashes to $($fetched.Sha256); the build recorded $expected for $name. What is published is not this build."
             }
             # Inspected even after a hash mismatch: a nuspec and a stamp that are right say the feed
             # holds a stale pack of this commit, and ones that are wrong say another build.
@@ -390,40 +391,40 @@ try {
 
     foreach ($path in $Manifest) {
         Write-Host "=== manifest $path ==="
-        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { Fail "Manifest $path does not exist."; continue }
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { Register-Failure "Manifest $path does not exist."; continue }
         try {
             $declaredVersion = Get-ManifestValue $path $VersionKey
             $url = Get-ManifestValue $path $UrlKey
             $declaredHash = Get-ManifestValue $path $HashKey
         }
-        catch { Fail $_.Exception.Message; continue }
+        catch { Register-Failure $_.Exception.Message; continue }
 
         if ($declaredVersion -ne $recordVersion) {
-            Fail "$path declares $VersionKey '$declaredVersion'; the release is $recordVersion."
+            Register-Failure "$path declares $VersionKey '$declaredVersion'; the release is $recordVersion."
         }
         if ($url -notmatch [regex]::Escape($recordVersion)) {
-            Fail "$path's $UrlKey '$url' does not contain the version $recordVersion, so it is not this release's download."
+            Register-Failure "$path's $UrlKey '$url' does not contain the version $recordVersion, so it is not this release's download."
         }
         $name = [uri]::UnescapeDataString(($url -split '[/\\]')[-1])
         if (-not $byName.ContainsKey($name)) {
-            Fail "$path's $UrlKey names '$name', which this build did not produce. The build produced: $(($entries | ForEach-Object { Get-Field $_ 'name' }) -join ', ')."
+            Register-Failure "$path's $UrlKey names '$name', which this build did not produce. The build produced: $(($entries | ForEach-Object { Get-Field $_ 'name' }) -join ', ')."
             continue
         }
         if ($declaredHash -notmatch '^[0-9a-fA-F]{64}$') {
-            Fail "$path's $HashKey '$declaredHash' is not a SHA-256; a placeholder that was never rewritten looks like this."
+            Register-Failure "$path's $HashKey '$declaredHash' is not a SHA-256; a placeholder that was never rewritten looks like this."
             continue
         }
         $entry = $byName[$name]
         $expected = (Get-Field $entry "sha256").ToLowerInvariant()
         $failuresBefore = $script:failures
         Write-Host "  from $url"
-        try { $fetched = Get-Fetched $url $name } catch { Fail $_.Exception.Message; Add-Finding $name $url "" $false; continue }
+        try { $fetched = Get-Fetched $url $name } catch { Register-Failure $_.Exception.Message; Add-Finding $name $url "" $false; continue }
 
         if ($fetched.Sha256 -ne $declaredHash.ToLowerInvariant()) {
-            Fail "$path declares $HashKey $declaredHash; what came down from $url hashes to $($fetched.Sha256). The manifest does not describe what it points at."
+            Register-Failure "$path declares $HashKey $declaredHash; what came down from $url hashes to $($fetched.Sha256). The manifest does not describe what it points at."
         }
         if ($fetched.Sha256 -ne $expected) {
-            Fail "What came down from $url hashes to $($fetched.Sha256); the build recorded $expected for $name. The manifest describes a file that is not this build."
+            Register-Failure "What came down from $url hashes to $($fetched.Sha256); the build recorded $expected for $name. The manifest describes a file that is not this build."
         }
         if ($script:failures -eq $failuresBefore) { Write-Host "  bytes: $($fetched.Sha256), the manifest's and the build's." }
         Test-Contents $fetched $entry
