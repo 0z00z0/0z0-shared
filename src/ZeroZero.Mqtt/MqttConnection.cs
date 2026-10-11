@@ -28,12 +28,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     private int _state = (int)MqttConnectionState.Disabled;
 
     private readonly MqttOwnedTopics _owned;
-
-    // Channel keys whose retained topics could not be emptied when they were dropped, because there
-    // was no link. Kept rather than lost: the replace has already forgotten them, so without this the
-    // next connect has nothing left that knows they were ever published.
-    private readonly Lock _pending = new();
-    private readonly HashSet<string> _pendingEvictions = new(StringComparer.Ordinal);
+    private readonly MqttChannelPublisher _channelPublisher;
 
     // Honoured on the maintain-loop thread, so the forced socket drop cannot race its own connect.
     private volatile bool _reconnectRequested;
@@ -93,6 +88,9 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             setup, _router, Activity, () => _identity.DeviceId, () => _subscriptions,
             (topic, ct) => PublishAsync(topic, "", retain: true, ct: ct));
         _owned = new MqttOwnedTopics(setup, this, () => _client.IsConnected, () => _identity.DeviceId);
+        _channelPublisher = new MqttChannelPublisher(
+            setup, _channels, this, () => _enabled, () => IsConnected, () => _client.IsConnected,
+            () => _identity.DeviceId);
 
         _client = new MqttClientFactory().CreateMqttClient();
         _client.ApplicationMessageReceivedAsync += _inbound.OnMessageReceivedAsync;
@@ -536,7 +534,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
 
         // Channels dropped while there was no link. Before the announcement, so a value is not
         // stranded under a component the document is about to remove.
-        await FlushEvictionsAsync(ct).ConfigureAwait(false);
+        await _channelPublisher.FlushEvictionsAsync(ct).ConfigureAwait(false);
 
         // The layer above announces before anything is declared online.
         if (_setup.Listener is { } listener)
@@ -544,7 +542,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
 
         await PublishAsync(_availabilityTopic, _setup.OnlinePayload, retain: true, ct: ct).ConfigureAwait(false);
         await SubscribeAsync(ct).ConfigureAwait(false);
-        await PublishChannelsAsync(_channels.Channels, force: true, ct).ConfigureAwait(false);
+        await _channelPublisher.PublishChannelsAsync(_channels.Channels, force: true, ct).ConfigureAwait(false);
     }
 
     /// <summary>Drops the command wildcard, so nothing published under it is delivered back to this
@@ -582,53 +580,14 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     /// <summary>Publishes a payload the caller already has, retained so a consumer has a value
     /// immediately on restart. An unchanged payload is cached but not sent; the cache is updated
     /// while disconnected too, ready for the next connect.</summary>
-    public void Publish(string channelKey, string payload)
-    {
-        if (!_enabled) return;
-        if (_channels.Find(channelKey) is not { } channel) return;
-        if (!_channels.Accept(channelKey, payload)) return;
-        if (!_client.IsConnected) return;
-
-        _ = SendChannelAsync(channel, Compose(channel, payload), CancellationToken.None);
-    }
+    public void Publish(string channelKey, string payload) => _channelPublisher.Publish(channelKey, payload);
 
     /// <summary>Signals that a channel's value may have moved. Coalesced and debounced, so a burst of
     /// signals costs one read of the payload function plus at most one trailing read.</summary>
-    public void RequestPublish(string channelKey)
-    {
-        if (!_enabled) return;
-        if (_channels.Signal(channelKey)) _ = Task.Run(() => ChannelLoopAsync(channelKey));
-    }
+    public void RequestPublish(string channelKey) => _channelPublisher.RequestPublish(channelKey);
 
     /// <summary>Signals every declared channel.</summary>
-    public void RequestPublish()
-    {
-        foreach (string key in _channels.Keys) RequestPublish(key);
-    }
-
-    /// <summary>Coalesced driver for one channel. The trailing pass is what guarantees the last
-    /// snapshot wins: two concurrent reads could otherwise let an older one take the dedupe slot and
-    /// strand the newer value.</summary>
-    private async Task ChannelLoopAsync(string channelKey)
-    {
-        do
-        {
-            _channels.BeginPass(channelKey);
-            try
-            {
-                if (_channels.Find(channelKey) is { } channel)
-                {
-                    if (channel.Debounce > TimeSpan.Zero)
-                        await Task.Delay(channel.Debounce).ConfigureAwait(false);
-                    if (_enabled && ComposeCurrent(channel, force: false) is { } message)
-                        await SendChannelAsync(channel, message, CancellationToken.None).ConfigureAwait(false);
-                }
-            }
-            catch (Exception ex) { _log.Error($"MqttConnection.Publish: {MqttProbe.Describe(ex)}", null); }
-            await Task.Yield();   // never hold the pool thread across the repeat check
-        }
-        while (_channels.ShouldRepeat(channelKey));
-    }
+    public void RequestPublish() => _channelPublisher.RequestPublish();
 
     /// <summary>Publishes every channel's current payload on demand. Nothing is announced and no
     /// config topic is written, so this republishes what the entities already are rather than
@@ -639,75 +598,14 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     /// nothing leave the machine is indistinguishable from a dead connection. Which groups are
     /// switched on needs no filter here — a withheld group's entities are not in the channel set.
     /// </remarks>
-    public async Task<bool> PublishNowAsync()
-    {
-        if (!IsConnected) return false;
-        try
-        {
-            return await PublishChannelsAsync(_channels.Channels, force: true, CancellationToken.None)
-                .ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            _log.Error($"MqttConnection.PublishNow: {MqttProbe.Describe(ex)}", null);
-            return false;
-        }
-    }
+    public Task<bool> PublishNowAsync() => _channelPublisher.PublishNowAsync();
 
     /// <summary>Swaps the declared channels and empties the retained topics of the ones that have
     /// gone, in one batched pass. What a group toggle and a rebuilt entity set both come through.</summary>
     /// <remarks>One pass, not one publish per departed entity: at a few dozen entities the sequential
     /// form is a few dozen QoS 1 round trips for a single toggle.</remarks>
-    public async Task SetChannelsAsync(
-        IEnumerable<MqttChannel> channels, CancellationToken ct = default)
-    {
-        var (departed, arrived) = _channels.Replace(channels);
-
-        // Recorded before the link is checked. The replace has already dropped these keys, so a return
-        // here without them written down loses them for good: nothing left would know they were ever
-        // published, and their values would stay retained on the broker for ever.
-        lock (_pending) foreach (string key in departed) _pendingEvictions.Add(key);
-
-        // A channel that has just arrived has published nothing yet, and its topic may have been
-        // emptied when it last went. Ask for its value, so an entity coming back carries one rather
-        // than reading as unknown until something else signals it.
-        foreach (string key in arrived) RequestPublish(key);
-
-        await FlushEvictionsAsync(ct).ConfigureAwait(false);
-    }
-
-    /// <summary>Empties the retained topics of channels that have gone, including any that were
-    /// dropped while there was no link. No-op while disconnected: the next connect runs it.</summary>
-    private async Task FlushEvictionsAsync(CancellationToken ct)
-    {
-        if (!IsConnected) return;
-
-        List<string> keys;
-        lock (_pending)
-        {
-            if (_pendingEvictions.Count == 0) return;
-            keys = [.. _pendingEvictions];
-            _pendingEvictions.Clear();
-        }
-
-        bool landed;
-        try
-        {
-            landed = await PublishAsync(
-                keys.Select(key =>
-                    MqttMessage.Empty(MqttTopics.Channel(_setup.TopicRoot, _identity.DeviceId, key))),
-                ct).ConfigureAwait(false);
-        }
-        // A cancelled batch throws past the rollback below with the pending set already emptied, and
-        // a refusal and a cancellation lose the same work: nothing else remembers these keys.
-        catch { Restore(); throw; }
-
-        // Put back what the broker did not take, so the next connect tries again rather than leaving
-        // a value stranded on a topic nothing publishes to any more.
-        if (!landed) Restore();
-
-        void Restore() { lock (_pending) foreach (string key in keys) _pendingEvictions.Add(key); }
-    }
+    public Task SetChannelsAsync(IEnumerable<MqttChannel> channels, CancellationToken ct = default) =>
+        _channelPublisher.SetChannelsAsync(channels, ct);
 
     /// <summary>Swaps the declared command targets.</summary>
     public void SetCommandTargets(IEnumerable<MqttCommandTarget> targets) => _router.Replace(targets);
@@ -778,7 +676,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     /// <summary>Runs one send per item with <see cref="MaxInFlightPublishes"/> in flight at a time.
     /// Unbounded concurrency would put the whole set on the wire at once, which a broker answers by
     /// stalling or dropping the session.</summary>
-    private static async Task<bool[]> SendConcurrentlyAsync<T>(
+    internal static async Task<bool[]> SendConcurrentlyAsync<T>(
         IReadOnlyList<T> items, Func<T, Task<bool>> send, CancellationToken ct)
     {
         using var slots = new SemaphoreSlim(MaxInFlightPublishes, MaxInFlightPublishes);
@@ -791,94 +689,6 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             await slots.WaitAsync(ct).ConfigureAwait(false);
             try { return await send(item).ConfigureAwait(false); }
             finally { slots.Release(); }
-        }
-    }
-
-    /// <summary>Reads every channel and publishes what each one's current reading calls for, as one
-    /// batch. A send that fails takes its dedupe entry with it, so the next pass re-sends.</summary>
-    private async Task<bool> PublishChannelsAsync(
-        IReadOnlyList<MqttChannel> channels, bool force, CancellationToken ct)
-    {
-        // Nothing to publish is not a failed publish. A device that declares only commands, or whose
-        // groups are all switched off, has an empty channel set, and reporting that as a failure tells
-        // a user watching the panel that the broker refused them.
-        if (channels.Count == 0) return true;
-
-        var batch = new List<(MqttChannel Channel, MqttMessage Message)>(channels.Count);
-        foreach (var channel in channels)
-            if (ComposeCurrent(channel, force) is { } message) batch.Add((channel, message));
-
-        if (batch.Count == 0) return false;
-
-        bool[] results = await SendConcurrentlyAsync(
-            batch, entry => SendChannelAsync(entry.Channel, entry.Message, ct), ct).ConfigureAwait(false);
-        return results.Any(ok => ok);
-    }
-
-    private async Task<bool> SendChannelAsync(MqttChannel channel, MqttMessage message, CancellationToken ct)
-    {
-        bool sent = await PublishAsync(message.Topic, message.Payload, message.Retain, message.Qos, ct)
-            .ConfigureAwait(false);
-
-        // A payload that never reached the broker must not be remembered as the topic's value, or the
-        // next pass dedupes it away and the topic stays wrong until the value happens to change.
-        if (!sent) _channels.Forget(channel.Key);
-        return sent;
-    }
-
-    private MqttMessage Compose(MqttChannel channel, string payload) =>
-        new(MqttTopics.Channel(_setup.TopicRoot, _identity.DeviceId, channel.Key),
-            payload, channel.Retain, channel.Qos);
-
-    /// <summary>What one channel's current reading calls for, or null when it calls for nothing. The
-    /// dedupe slot is taken here, so the caller only has to send.</summary>
-    private MqttMessage? ComposeCurrent(MqttChannel channel, bool force)
-    {
-        var (status, payload) = ReadPayload(channel);
-        switch (status)
-        {
-            case MqttPayloadStatus.Value:
-                if (force) _channels.Force(channel.Key, payload!);
-                else if (!_channels.Accept(channel.Key, payload!)) return null;
-                return Compose(channel, payload!);
-
-            case MqttPayloadStatus.None:
-                // A channel whose producer has a first reading to wait for keeps what it last
-                // published, and sends it again on connect so a consumer that restarted has it.
-                if (channel.RepublishLastOnConnect)
-                    return force && _channels.LastPayload(channel.Key) is { Length: > 0 } last
-                        ? Compose(channel, last)
-                        : null;
-
-                // Otherwise no reading is announced as no reading, in whatever the channel says that
-                // is. Deduped, so it goes out once and not on every pass.
-                return _channels.Accept(channel.Key, channel.NoValuePayload)
-                    ? Compose(channel, channel.NoValuePayload)
-                    : null;
-
-            default:
-                // The reader failed, so nothing is known about the current value. What stands, stands,
-                // and the next pass tries again — emptying the topic here would assert "no value" on
-                // the strength of a bug in the reader.
-                return null;
-        }
-    }
-
-    // A payload function is the application's code on the module's thread, so a throw from one must
-    // not take the connect sequence or the publishing loop with it. A throw and a null are told
-    // apart deliberately: null is "no current reading", a throw is "the reading could not be taken".
-    private (MqttPayloadStatus Status, string? Payload) ReadPayload(MqttChannel channel)
-    {
-        try
-        {
-            return channel.Payload() is { } payload
-                ? (MqttPayloadStatus.Value, payload)
-                : (MqttPayloadStatus.None, null);
-        }
-        catch (Exception ex)
-        {
-            _log.Error($"MqttConnection.Payload:{channel.Key}: {MqttProbe.Describe(ex)}", null);
-            return (MqttPayloadStatus.Failed, null);
         }
     }
 
