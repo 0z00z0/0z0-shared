@@ -108,6 +108,7 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
 
         Assert.Equal(UpdateCheckOutcome.RateLimited, result.Outcome);
         Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1788388349), result.RateLimitResetsAt);
+        Assert.Contains(_log.Infos, line => line.Contains("rate limit") && line.Contains("2026-09-02 22:32:29"));
     }
 
     [Fact]
