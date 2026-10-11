@@ -334,7 +334,7 @@ public static class MqttProbe
     private static string Reason(MqttConnackCode code, string? reason) =>
         string.IsNullOrWhiteSpace(reason) ? code.ToString() : $"{code}: {reason.Trim()}";
 
-    // Type and message only, mirroring MqttConnection's sanitiser: both are broker or OS-generated,
-    // so no staged credential can ride out of here into the UI.
+    // Type and message only, never the exception itself: both are broker or OS-generated, so no
+    // staged credential can ride out of here into the UI or the log. The connection logs through it.
     internal static string Describe(Exception ex) => $"{ex.GetType().Name}: {ex.Message}";
 }

@@ -241,7 +241,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             }
         }
         // Apply discards this task, so an unhandled throw would silently disable the feature.
-        catch (Exception ex) { _log.Error("MqttConnection.Apply", Sanitise(ex)); }
+        catch (Exception ex) { _log.Error($"MqttConnection.Apply: {MqttProbe.Describe(ex)}", null); }
         finally { _gate.Release(); }
     }
 
@@ -845,7 +845,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
                     Enqueue($"Subscription:{subscription.TopicFilter}",
                             ct => subscription.Handler(message, ct));
         }
-        catch (Exception ex) { _log.Error("MqttConnection.OnMessage", Sanitise(ex)); }
+        catch (Exception ex) { _log.Error($"MqttConnection.OnMessage: {MqttProbe.Describe(ex)}", null); }
         return Task.CompletedTask;
     }
 
@@ -911,7 +911,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
                 await run(_workerStop.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (_workerStop.IsCancellationRequested) { break; }
-            catch (Exception ex) { _log.Error($"MqttConnection.{source}", Sanitise(ex)); }
+            catch (Exception ex) { _log.Error($"MqttConnection.{source}: {MqttProbe.Describe(ex)}", null); }
         }
     }
 
@@ -1149,7 +1149,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"MqttConnection.Payload:{channel.Key}", Sanitise(ex));
+            _log.Error($"MqttConnection.Payload:{channel.Key}: {MqttProbe.Describe(ex)}", null);
             return (MqttPayloadStatus.Failed, null);
         }
     }
@@ -1223,11 +1223,8 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     {
         if (Interlocked.Exchange(ref _state, (int)state) == (int)state) return;
         try { StateChanged?.Invoke(state); }
-        catch (Exception ex) { _log.Error("MqttConnection.StateChanged", Sanitise(ex)); }
+        catch (Exception ex) { _log.Error($"MqttConnection.StateChanged: {MqttProbe.Describe(ex)}", null); }
     }
-
-    // Keeps a thrown broker error from carrying the password into the log: type and message only.
-    private static Exception Sanitise(Exception ex) => new($"{ex.GetType().Name}: {ex.Message}");
 
     /// <summary>Tears the connection down. Synchronous, bounded and idempotent on purpose.</summary>
     /// <remarks>Reached from a host's Exit command on the UI thread, so the teardown runs off it and
