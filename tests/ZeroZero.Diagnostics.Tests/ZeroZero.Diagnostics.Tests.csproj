@@ -20,6 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The version-metadata assemblies are the primitives tests', taken as source. -->
+    <Compile Include="..\ZeroZero.Primitives.Tests\TestAssemblies.cs" Link="Shared\TestAssemblies.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />

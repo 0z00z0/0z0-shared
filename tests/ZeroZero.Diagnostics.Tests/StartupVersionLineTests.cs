@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Reflection.Emit;
 using Xunit;
 using ZeroZero.Diagnostics;
 using ZeroZero.Primitives;
@@ -15,29 +14,6 @@ public class StartupVersionLineTests
 
     private static readonly Assembly Diagnostics = typeof(StartupVersionLine).Assembly;
 
-    /// <summary>An assembly carrying exactly the informational version named.</summary>
-    private static Assembly Built(string name, string informational)
-    {
-        var builder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(name) { Version = new Version(1, 2, 3, 0) }, AssemblyBuilderAccess.Run);
-        var constructor = typeof(AssemblyInformationalVersionAttribute).GetConstructor([typeof(string)])!;
-        builder.SetCustomAttribute(new CustomAttributeBuilder(constructor, [informational]));
-        return builder;
-    }
-
-    /// <summary>An assembly with no version of either kind.</summary>
-    private sealed class Unversioned : Assembly
-    {
-        public override AssemblyName GetName() => new("Unversioned");
-
-        public override object[] GetCustomAttributes(Type attributeType, bool inherit) => Array.Empty<Attribute>();
-
-        public override object[] GetCustomAttributes(bool inherit) => Array.Empty<Attribute>();
-
-        public override bool IsDefined(Type attributeType, bool inherit) => false;
-
-        public override IList<CustomAttributeData> GetCustomAttributesData() => [];
-    }
-
     [Fact]
     public void TheLineIsTheNameThenTheVersionTheAssemblyCarriesThenStarting()
     {
@@ -50,14 +26,14 @@ public class StartupVersionLineTests
     [Fact]
     public void TheCommitReachesTheLineWholeRatherThanInTheAboutBoxForm()
     {
-        Assembly built = Built("Stamped", "1.2.3+" + FortyCharacterCommit);
+        Assembly built = TestAssemblies.Built(new Version(1, 2, 3, 0), "1.2.3+" + FortyCharacterCommit, "Stamped");
 
         Assert.Equal("Stamped 1.2.3+" + FortyCharacterCommit + " starting", StartupVersionLine.For(built));
     }
 
     [Fact]
     public void AnAssemblyWithNoVersionGivesTheNameAlone() =>
-        Assert.Equal("Unversioned starting", StartupVersionLine.For(new Unversioned()));
+        Assert.Equal("Unversioned starting", StartupVersionLine.For(new UnversionedAssembly()));
 
     [Fact]
     public void WriteSendsTheLineAsInfoAndNothingElse()
