@@ -59,13 +59,13 @@ public class MqttConnectionLoopbackTests
             RememberEndpoint = remember,
         };
 
-    /// <summary>A command entity that takes only the two payloads its kind has, as a real one does.
-    /// What makes an empty payload a refusal rather than something quietly accepted.</summary>
     /// <summary>A command entity that takes any payload, as a text one does — including the empty
     /// string, which is a value there and not an absence.</summary>
     private static MqttCommandTarget Text(string entityId, Action<string> applied) =>
         new(entityId, payload => MqttCommandVerdict.Accept(() => applied(payload)));
 
+    /// <summary>A command entity that takes only the two payloads its kind has, as a real one does.
+    /// What makes an empty payload a refusal rather than something quietly accepted.</summary>
     private static MqttCommandTarget Switch(string entityId, Action<string>? applied = null) =>
         new(entityId, payload => payload is "ON" or "OFF"
             ? MqttCommandVerdict.Accept(() => applied?.Invoke(payload))
