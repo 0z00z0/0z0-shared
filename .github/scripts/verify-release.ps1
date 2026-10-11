@@ -271,8 +271,10 @@ function Test-Signer([string]$Path, [string]$Name) {
         }
     }
     # A self-signed studio certificate reads as an untrusted root on a machine that has not been
-    # told to trust it; the signature itself is intact. Anything else is a broken signature.
-    $untrustedRoot = $signature.Status -eq "UnknownError" -and $signature.StatusMessage -match "not trusted"
+    # told to trust it; the signature itself is intact. Anything else is a broken signature. The
+    # message is localised, so it is compared with the system's text for CERT_E_UNTRUSTEDROOT.
+    $untrustedRootMessage = ([System.ComponentModel.Win32Exception]::new(0x800B0109)).Message
+    $untrustedRoot = $signature.Status -eq "UnknownError" -and $signature.StatusMessage -eq $untrustedRootMessage
     if ($signature.Status -ne "Valid" -and -not $untrustedRoot) {
         Fail "$Name's signature verifies as $($signature.Status): $($signature.StatusMessage)"
         return
