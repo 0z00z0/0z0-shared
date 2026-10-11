@@ -32,8 +32,8 @@ public sealed class TrayHostOptions
     /// <summary>The theme the menu is drawn in. Not given, it follows the taskbar's own theme,
     /// read at every rebuild: the menu opens on the taskbar, and a menu following the apps theme
     /// instead draws light against a dark taskbar. An application pinned to one theme passes it
-    /// here, and <see cref="ElementTheme.Default"/> leaves the process's menu mode alone, which is
-    /// what Windows decides from the apps theme.</summary>
+    /// here. <see cref="ElementTheme.Default"/> makes no call, so the process's menu mode stays
+    /// whatever the application set, or Windows' own where it set none.</summary>
     public ElementTheme? MenuTheme { get; init; }
 
     /// <summary>What a single left click does.</summary>

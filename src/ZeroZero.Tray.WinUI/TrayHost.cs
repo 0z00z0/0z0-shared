@@ -4,6 +4,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Win32;
+using ZeroZero.Win32;
 
 namespace ZeroZero.Tray.WinUI;
 
@@ -150,9 +151,18 @@ public sealed class TrayHost : IDisposable
         };
         _icon = icon;
 
-        Render();
-        ApplyTooltip();
-        RebuildMenu();
+        // A throwing application delegate leaves the host not started, so it can be started again.
+        try
+        {
+            Render();
+            ApplyTooltip();
+            RebuildMenu();
+        }
+        catch
+        {
+            Abandon();
+            throw;
+        }
     }
 
     // A refusal throws before any listener is attached, and the library deletes a half-added icon first.
@@ -282,28 +292,15 @@ public sealed class TrayHost : IDisposable
     /// </summary>
     private void ApplyMenuTheme()
     {
-        var mode = (_options.MenuTheme ?? ThemeForTaskbar()) switch
+        DarkChromeMode? mode = (_options.MenuTheme ?? ThemeForTaskbar()) switch
         {
-            ElementTheme.Light => NativeMethods.PreferredAppMode.ForceLight,
-            ElementTheme.Dark => NativeMethods.PreferredAppMode.ForceDark,
-            // Default hands the menu back to the application, which is what Windows decides from
-            // the apps theme on its own.
-            _ => NativeMethods.PreferredAppMode.Default,
+            ElementTheme.Light => DarkChromeMode.ForceLight,
+            ElementTheme.Dark => DarkChromeMode.ForceDark,
+            _ => null,
         };
 
-        try
-        {
-            NativeMethods.SetPreferredAppMode(mode);
-            // Without this the first menu's theme is cached for the process and every later one
-            // opens in it, whatever the mode now says.
-            NativeMethods.FlushMenuThemes();
-        }
-        catch (Exception ex) when (ex is EntryPointNotFoundException or DllNotFoundException)
-        {
-            // The export is undocumented and reached by ordinal, so a Windows build without it is
-            // not ruled out; the menu then stays as Windows draws it — which is what a host that
-            // never asked would have had.
-        }
+        // False on a Windows without the export, where the menu stays as Windows draws it.
+        if (mode is { } chosen) DarkChrome.Apply(chosen);
     }
 
     /// <summary>The element theme the taskbar is drawn in now. Its own registry value, not the
@@ -322,12 +319,11 @@ public sealed class TrayHost : IDisposable
     private void Render()
     {
         var request = ReadRequest();
-        _request = request;
-
         TrayIconImage image = _options.Icon(request);
         var (path, changed) = _cache.Resolve(image);
         if (!changed && _loaded is not null)
         {
+            _request = request;
             Push();
             return;
         }
@@ -338,6 +334,8 @@ public sealed class TrayHost : IDisposable
         _loaded = new System.Drawing.Icon(path, request.SlotPixels, request.SlotPixels);
         // The library keeps the object: it re-adds this handle after a shell restart.
         _icon!.Icon = _loaded;
+        // Recorded only once loaded, or a throw here leaves the next reconcile keeping the old icon.
+        _request = request;
         previous?.Dispose();
     }
 
