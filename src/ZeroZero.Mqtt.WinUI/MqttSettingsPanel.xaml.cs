@@ -183,7 +183,8 @@ public sealed partial class MqttSettingsPanel : UserControl
         _edits.Load(setup.Settings.Read());
         WithUpdatingSuppressed(PushBrokerFields);
         _probe.Clear();
-        RefreshEditIndicators();
+        // A probe in flight is about the values just thrown away.
+        CancelProbe();
         RefreshStatus();
     }
 
