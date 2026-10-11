@@ -118,6 +118,11 @@ public static class DiscoveryDocument
         return entry;
     }
 
+    /// <summary>The keys a <see cref="MqttEntity.Description"/> writes, with their abbreviated forms.
+    /// An entity setting any of them in <see cref="MqttEntity.Extra"/> as well is refused.</summary>
+    internal static readonly string[] DescriptionKeys =
+        ["json_attributes_topic", "json_attributes_template", "json_attr_t", "json_attr_tpl"];
+
     // An escaped brace leaves no {{, {% or {#, so the receiver treats the template as static text.
     private static string DescriptionTemplate(string description) =>
         "{\"description\":" + JsonSerializer.Serialize(description, Writer).Replace("{", "\\u007B") + "}";
