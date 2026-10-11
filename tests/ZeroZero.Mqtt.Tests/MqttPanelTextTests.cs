@@ -269,7 +269,7 @@ public class MqttPanelTextTests
     [Fact]
     public void ATranslatedPanelComposesTheSameFactsFromItsOwnStrings()
     {
-        var strings = new MqttStrings(new Fixed(new()
+        var strings = new MqttStrings(new FixedStringSource(new()
         {
             ["ProvenanceAutomatic"] = "Funnet automatisk",
             ["ProvenanceEncrypted"] = "{0} — kryptert",
@@ -281,10 +281,5 @@ public class MqttPanelTextTests
             translated.Connection(Request(), memory, MqttConnectionState.Connected, probing: false));
         // Untranslated keys still answer, in the module's own en-GB.
         Assert.Equal("Nothing published yet", translated.DescribeLastPublish(null, Now));
-    }
-
-    private sealed class Fixed(Dictionary<string, string> entries) : IMqttStringSource
-    {
-        public string? Find(string key) => entries.GetValueOrDefault(key);
     }
 }

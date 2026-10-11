@@ -361,7 +361,7 @@ public class MqttProbeSessionTests
     [Fact]
     public void ATranslatedSessionComposesItsLinesFromItsOwnStrings()
     {
-        var session = new MqttProbeSession(new MqttPanelText(new MqttStrings(new Fixed(new()
+        var session = new MqttProbeSession(new MqttPanelText(new MqttStrings(new FixedStringSource(new()
         {
             ["TestRunning"] = "Tester…",
         }))));
@@ -369,10 +369,5 @@ public class MqttProbeSessionTests
         session.Start();
 
         Assert.Equal("Tester…", session.Line);
-    }
-
-    private sealed class Fixed(Dictionary<string, string> entries) : IMqttStringSource
-    {
-        public string? Find(string key) => entries.GetValueOrDefault(key);
     }
 }
