@@ -129,8 +129,7 @@ public sealed class TrayHost : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_icon is not null) throw new InvalidOperationException("The host has already started.");
-        _dispatcher = DispatcherQueue.GetForCurrentThread()
-            ?? throw new InvalidOperationException("Start the host on the UI thread: its listeners are marshalled to that thread's dispatcher queue.");
+        _dispatcher = UiThread.Dispatcher();
 
         var doubleClick = TimeSpan.FromMilliseconds(Math.Max(1, NativeMethods.GetDoubleClickTime()));
         _clicks = new TrayClickPolicy(doubleClick, _options.ReopenGuard);
