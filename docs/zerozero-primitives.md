@@ -2,13 +2,14 @@
 
 `ZeroZero.Primitives` holds the pieces several components need and none of them owns: the
 two-member log sink and its no-op, the reader of the version an assembly reports and the form an
-About box shows, the coalescing gate, and the source-revision stamp as build properties and targets.
+About box shows, the coalescing gate, the timestamp-list file, and the source-revision stamp as build
+properties and targets.
 Plain `net10.0`, no package references, no project references, and no domain vocabulary — which is
 what makes it **foundation** rather than a component: any component may take it. The MQTT module
 does, for its log sink and for the gate under every retained channel; the diagnostics component
 does, for the sink and for the version reader beneath its startup line; the update component does,
 for the sink and for the version reader behind the running version; and the lifecycle and startup
-components do, for the sink.
+components do, for the sink and for the file their relaunch and restart limits are counted in.
 
 The assembly is versioned as `PrimitivesVersion` in `Versions.props` and released under
 `primitives-v<x.y.z>` tags, with notes under `docs/release-notes/primitives/`;
@@ -54,6 +55,13 @@ This guide is complete for adoption: the component's own source and tests need n
   thread and no timer, so the coalescing decision is testable without either.
   Safe to signal from any thread. Only a false `ShouldRepeat()` clears the running flag: a loop left
   any other way, an exception out of a pass included, leaves every later `Signal()` answering false.
+- **`TimestampListFile`** — `Read(path)` and `Write(path, stamps)` for a file of moments, one per
+  line in the invariant culture's round-trip (`O`) form, offset included. `Read` returns them in
+  file order, nothing for a missing file, and drops a line that does not parse, so a hand-edited or
+  truncated file costs only its damaged lines. `Write` replaces the file and creates its folder. A
+  file that cannot be read or written throws the file system's own exception (`IOException`,
+  `UnauthorizedAccessException`); what that means — allow, refuse, log — is the caller's. It never
+  sorts, prunes or locks: two processes writing one file at once is the caller's to prevent.
 - **The source-revision stamp** — `build/ZeroZero.Primitives.props` and
   `build/ZeroZero.Primitives.targets`. The targets file sets `SourceRevisionId` to the short
   seven-character commit of the consuming project's own repository, so `AssemblyInformationalVersion`
