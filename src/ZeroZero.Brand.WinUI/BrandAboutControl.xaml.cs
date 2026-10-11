@@ -53,11 +53,11 @@ public sealed partial class BrandAboutControl : UserControl
     /// <summary>The notes as fetched, so reopening the panel costs no second request.</summary>
     private string? _notes;
 
-    /// <summary>The row. Its first <see cref="_builtInButtons"/> children are the control's own;
+    /// <summary>The row. Its first <see cref="_builtInButtonCount"/> children are the control's own;
     /// everything after them came from the host.</summary>
     private readonly ButtonRowPanel _buttonRow = new() { Spacing = RowSpacing };
 
-    private readonly int _builtInButtons;
+    private readonly int _builtInButtonCount;
 
     private readonly Button _newsButton;
 
@@ -84,7 +84,7 @@ public sealed partial class BrandAboutControl : UserControl
         _buttonRow.Children.Add(siteButton);
         _buttonRow.Children.Add(donateButton);
         _buttonRow.Children.Add(_newsButton);
-        _builtInButtons = _buttonRow.Children.Count;
+        _builtInButtonCount = _buttonRow.Children.Count;
         ButtonRowSlot.Child = _buttonRow;
 
         // Wired once here, never from SetInfo, which a cached page calls on every visit: wiring there
@@ -148,7 +148,7 @@ public sealed partial class BrandAboutControl : UserControl
     /// carries exactly one handler.</summary>
     private void PopulateHostButtons(IReadOnlyList<AboutButton> buttons)
     {
-        while (_buttonRow.Children.Count > _builtInButtons)
+        while (_buttonRow.Children.Count > _builtInButtonCount)
         {
             _buttonRow.Children.RemoveAt(_buttonRow.Children.Count - 1);
         }
@@ -255,11 +255,11 @@ public sealed partial class BrandAboutControl : UserControl
         }
         finally
         {
-            bool current = _fetch == fetch;
-            if (current) _fetch = null;
+            bool isCurrent = _fetch == fetch;
+            if (isCurrent) _fetch = null;
             fetch.Dispose();
             // The panel's height settled either way, so the host resizes to what is now in it.
-            if (current) RaiseContentResized();
+            if (isCurrent) RaiseContentResized();
         }
     }
 
@@ -269,7 +269,7 @@ public sealed partial class BrandAboutControl : UserControl
         LibrariesPanel.Children.Clear();
         LibrariesGroup.Visibility = libraries.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
 
-        foreach (var lib in libraries)
+        foreach (var library in libraries)
         {
             var line = new TextBlock
             {
@@ -278,17 +278,17 @@ public sealed partial class BrandAboutControl : UserControl
                 Opacity       = 0.85,
             };
 
-            if (lib.Url is { } url)
+            if (library.Url is { } url)
             {
                 var link = new Hyperlink();
-                link.Inlines.Add(new Run { Text = lib.Name });
+                link.Inlines.Add(new Run { Text = library.Name });
                 link.Click += (_, _) => Open(url);
                 line.Inlines.Add(link);
-                line.Inlines.Add(new Run { Text = $" — {lib.Author} — {lib.Purpose} ({lib.License})" });
+                line.Inlines.Add(new Run { Text = $" — {library.Author} — {library.Purpose} ({library.License})" });
             }
             else
             {
-                line.Text = $"{lib.Name} — {lib.Author} — {lib.Purpose} ({lib.License})";
+                line.Text = $"{library.Name} — {library.Author} — {library.Purpose} ({library.License})";
             }
 
             LibrariesPanel.Children.Add(line);
