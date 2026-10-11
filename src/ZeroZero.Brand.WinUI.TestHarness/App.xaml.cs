@@ -1,8 +1,6 @@
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Automation.Peers;
-using Microsoft.UI.Xaml.Automation.Provider;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
@@ -131,7 +129,6 @@ public partial class App : Application
     private readonly List<SettingsRowsWindow> _rowWindows = [];
     private readonly List<TitleBarWindow> _titleBarWindows = [];
     private readonly List<ZeroZero.SettingsShell.WinUI.SettingsWindow> _settingsWindows = [];
-    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _probeTimer;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _settledTimer;
     private string? _onlyTitle;
 
@@ -240,12 +237,6 @@ public partial class App : Application
         ShowAbout(commandLine);
     }
 
-    private static readonly ExternalLibrary[] Libraries =
-    [
-        new("Microsoft.WindowsAppSDK", "Microsoft", "WinUI 3 / Windows App SDK runtime", "MIT", "https://github.com/microsoft/WindowsAppSDK"),
-        new("H.NotifyIcon.WinUI", "HavenDV", "The notify-icon library behind the tray host, a dependency of this harness through ZeroZero.Tray.WinUI", "MIT", "https://github.com/HavenDV/H.NotifyIcon"),
-    ];
-
     /// <summary>
     /// One About surface per run. The popup dismisses itself the moment it loses focus, so a second
     /// window opened beside it would take the focus and close it before anyone saw it —
@@ -269,8 +260,7 @@ public partial class App : Application
             return;
         }
 
-        string? notesUrl = ValueAfter(commandLine, "--notes")
-            ?? $"{CoreBrand.OrgUrl}/0z0-shared/releases/latest/download/whats-new.txt";
+        string notesUrl = ValueAfter(commandLine, "--notes") ?? SampleInfo.DefaultNotesUrl;
         string? probePath = ValueAfter(commandLine, "--probe");
         var theme = ValueAfter(commandLine, "--theme") switch
         {
@@ -281,18 +271,13 @@ public partial class App : Application
 
         if (commandLine.Any(a => a.Equals("--hosted", StringComparison.Ordinal)))
         {
-            var hostedInfo = new AboutInfo
-            {
-                AppName     = "Brand Test Harness (hosted control)",
-                Version     = "0.0.0-dev",
-                Description = DescriptionFrom(commandLine)
-                              ?? "Same BrandAboutControl content as the popup, hosted directly inside a plain " +
-                                 "window with ordinary chrome and no update button — simulating an " +
-                                 "in-navigation About page, which has no popup or update/exit concept.",
-                RepoUrl     = $"{CoreBrand.OrgUrl}/0z0-shared",
-                ReleaseNotesUrl = notesUrl,
-                ExternalLibraries = Libraries,
-            };
+            var hostedInfo = SampleInfo.Create(
+                DescriptionFrom(commandLine)
+                    ?? "Same BrandAboutControl content as the popup, hosted directly inside a plain " +
+                       "window with ordinary chrome and no update button — simulating an " +
+                       "in-navigation About page, which has no popup or update/exit concept.",
+                appName: SampleInfo.AppName + " (hosted control)",
+                releaseNotesUrl: notesUrl, withLibraries: true);
             _hostedControlWindow = new HostedControlWindow(hostedInfo);
             ApplyTheme(_hostedControlWindow, theme);
             _hostedControlWindow.Activate();
@@ -302,18 +287,12 @@ public partial class App : Application
 
         var options = new BrandAboutOptions
         {
-            Info = new AboutInfo
-            {
-                AppName     = "Brand Test Harness",
-                Version     = "0.0.0-dev",
-                Description = DescriptionFrom(commandLine)
-                              ?? "Interactive launch-test rig for the shared BrandAboutWindow component — " +
-                                 "renders the About box from this repo's own sample data, independently " +
-                                 "of any consuming app.",
-                RepoUrl     = $"{CoreBrand.OrgUrl}/0z0-shared",
-                ReleaseNotesUrl = notesUrl,
-                ExternalLibraries = Libraries,
-            },
+            Info = SampleInfo.Create(
+                DescriptionFrom(commandLine)
+                    ?? "Interactive launch-test rig for the shared BrandAboutWindow component — " +
+                       "renders the About box from this repo's own sample data, independently " +
+                       "of any consuming app.",
+                releaseNotesUrl: notesUrl, withLibraries: true),
             // Present so the "Check for Updates" button is visible and clickable for the test —
             // omit this to verify the button hides itself instead (see BrandAboutWindow.xaml.cs).
             // Returns false (no update applied) so the window stays open for inspection rather than
@@ -362,17 +341,11 @@ public partial class App : Application
         {
             var options = new BrandAboutOptions
             {
-                Info = new AboutInfo
-                {
-                    AppName = "Brand Test Harness",
-                    Version = "0.0.0-dev",
-                    Description = "Opened from a button, so the dismissal can be driven the way a " +
-                                  "consuming application opens it.",
-                    RepoUrl = $"{CoreBrand.OrgUrl}/0z0-shared",
-                    ReleaseNotesUrl = ValueAfter(commandLine, "--notes")
-                        ?? $"{CoreBrand.OrgUrl}/0z0-shared/releases/latest/download/whats-new.txt",
-                    ExternalLibraries = Libraries,
-                },
+                Info = SampleInfo.Create(
+                    "Opened from a button, so the dismissal can be driven the way a " +
+                    "consuming application opens it.",
+                    releaseNotesUrl: ValueAfter(commandLine, "--notes") ?? SampleInfo.DefaultNotesUrl,
+                    withLibraries: true),
             };
             // Every activation change against the milliseconds since the button was pressed. The
             // order of "took focus" and "lost focus" around a double-click is the whole question,
@@ -462,19 +435,8 @@ public partial class App : Application
         // twice, and the difference between the two passes is only visible this early.
         if (probePath is { Length: > 0 })
         {
-            _earlyTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
-            _earlyTimer.Interval = TimeSpan.FromMilliseconds(250);
-            _earlyTimer.IsRepeating = false;
-            _earlyTimer.Tick += (_, _) =>
-            {
-                try
-                {
-                    File.WriteAllText(probePath + ".early.txt", "");
-                    AboutProbe.Dump(probePath + ".early.txt", "early", window);
-                }
-                catch (Exception ex) { File.WriteAllText(probePath + ".early.error.txt", ex.ToString()); }
-            };
-            _earlyTimer.Start();
+            ProbeFile.WriteAfter(TimeSpan.FromMilliseconds(250), probePath + ".early.txt",
+                                 path => AboutProbe.Dump(path, "early", window));
         }
 
         _settledTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
@@ -483,39 +445,24 @@ public partial class App : Application
         _settledTimer.Tick += (_, _) =>
         {
             var root = (FrameworkElement)window.Content;
-            if (news && AboutProbe.Find<Button>(root, "NewsBtn") is { } newsButton)
+            if (news && HarnessTree.FindNamed<Button>(root, "NewsBtn") is { } newsButton)
             {
                 if (probePath is { Length: > 0 }) WatchNotes(root, probePath + ".timing.txt");
-                Press(newsButton);
+                HarnessTree.Press(newsButton);
             }
-            if (expand && AboutProbe.Find<Button>(root, "LibrariesToggleBtn") is { } toggle) Press(toggle);
+            if (expand && HarnessTree.FindNamed<Button>(root, "LibrariesToggleBtn") is { } toggle) HarnessTree.Press(toggle);
 
             if (probePath is not { Length: > 0 }) return;
 
             // After the presses, and after whatever they set off has had time to answer: the notes
             // fetch gives up after three seconds, so the numbers are read once that is settled too.
-            _probeTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
-            _probeTimer.Interval = TimeSpan.FromSeconds(news ? 4.0 : 0.5);
-            _probeTimer.IsRepeating = false;
-            _probeTimer.Tick += (_, _) =>
-            {
-                try
-                {
-                    File.WriteAllText(probePath, "");
-                    AboutProbe.Dump(probePath, window.Title, window);
-                }
-                catch (Exception ex)
-                {
-                    File.WriteAllText(probePath + ".error.txt", ex.ToString());
-                }
-            };
-            _probeTimer.Start();
+            ProbeFile.WriteAfter(TimeSpan.FromSeconds(news ? 4.0 : 0.5), probePath,
+                                 path => AboutProbe.Dump(path, window.Title, window));
         };
         _settledTimer.Start();
     }
 
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _notesTimer;
-    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _earlyTimer;
 
     /// <summary>
     /// Records every change to the notes text against the milliseconds since the button was pressed,
@@ -534,7 +481,7 @@ public partial class App : Application
         _notesTimer.IsRepeating = true;
         _notesTimer.Tick += (timer, _) =>
         {
-            string now = AboutProbe.Find<TextBlock>(root, "NewsText")?.Text ?? "";
+            string now = HarnessTree.FindNamed<TextBlock>(root, "NewsText")?.Text ?? "";
             if (now != last)
             {
                 last = now;
@@ -544,11 +491,6 @@ public partial class App : Application
         };
         _notesTimer.Start();
     }
-
-    /// <summary>Presses a button through its automation peer, so the control's own click path runs
-    /// rather than a handler being called behind its back.</summary>
-    private static void Press(Button button) =>
-        ((IInvokeProvider)new ButtonAutomationPeer(button).GetPattern(PatternInterface.Invoke)).Invoke();
 
     private TrayScenario? _tray;
 
@@ -950,69 +892,31 @@ public partial class App : Application
         // buttons are the prompt's own and nothing an application would call belongs on it for a
         // rig's sake.
         await Task.Delay(1500);
-        if (window.Content is FrameworkElement root)
+        string resultPath = Path.Combine(Path.GetTempPath(), "text-prompt-result.txt");
+        if (window.Content is DependencyObject root)
         {
             // --type "<text>" edits the field before either answer, so a cancel after an edit is
             // its own case and not only a cancel of the untouched, still-selected initial text.
             string? typed = confirmWith ?? ValueAfter(Environment.GetCommandLineArgs(), "--type");
-            if (typed is not null && FindDescendant<TextBox>(root) is { } field) field.Text = typed;
+            if (typed is not null && HarnessTree.Find<TextBox>(root) is { } field) field.Text = typed;
             string wanted = cancel ? "Cancel" : "Rename";
-            if (FindButton(root, wanted) is { } button &&
-                FrameworkElementAutomationPeer.CreatePeerForElement(button) is IInvokeProvider invoke)
-                invoke.Invoke();
+            if (!HarnessTree.Press(root, button => button.Content is string text && text == wanted))
+            {
+                // Written instead of the answer: the prompt would otherwise wait for a person.
+                File.WriteAllText(resultPath, $"<miss: no button \"{wanted}\">");
+                return;
+            }
         }
         string? result = await window.Result;
-        File.WriteAllText(Path.Combine(Path.GetTempPath(), "text-prompt-result.txt"), result ?? "<null>");
+        File.WriteAllText(resultPath, result ?? "<null>");
         // No Exit(): the prompt was the last window, so the rig is already shutting down, and
         // calling Exit() during the last-window shutdown crashes the process.
-    }
-
-    private static Button? FindButton(DependencyObject root, string content)
-    {
-        int count = VisualTreeHelper.GetChildrenCount(root);
-        for (int i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is Button { Content: string text } button && text == content) return button;
-            if (FindButton(child, content) is { } found) return found;
-        }
-        return null;
-    }
-
-    private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
-    {
-        int count = VisualTreeHelper.GetChildrenCount(root);
-        for (int i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is T match) return match;
-            if (FindDescendant<T>(child) is { } found) return found;
-        }
-        return null;
     }
 
     /// <summary>
     /// Runs a dump to a tab-separated file once layout has settled, so the capture and the numbers
     /// come from the same run.
     /// </summary>
-    private void StartProbe(string path, Action<string> dump)
-    {
-        // Held in a field: a local timer is unrooted and can be collected before it ever ticks.
-        _probeTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
-        _probeTimer.Interval = TimeSpan.FromSeconds(2.5);
-        _probeTimer.IsRepeating = false;
-        _probeTimer.Tick += (_, _) =>
-        {
-            try
-            {
-                File.WriteAllText(path, "");
-                dump(path);
-            }
-            catch (Exception ex)
-            {
-                File.WriteAllText(path + ".error.txt", ex.ToString());
-            }
-        };
-        _probeTimer.Start();
-    }
+    private static void StartProbe(string path, Action<string> dump) =>
+        ProbeFile.WriteAfter(TimeSpan.FromSeconds(2.5), path, dump);
 }

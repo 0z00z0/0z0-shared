@@ -4,10 +4,6 @@ using System.Net.Sockets;
 using System.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
-using Microsoft.UI.Xaml.Automation.Peers;
-using Microsoft.UI.Xaml.Automation.Provider;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using ZeroZero.Primitives;
 using ZeroZero.Update;
 using ZeroZero.Update.Win32;
@@ -73,12 +69,20 @@ internal static class UpdateCancelScenario
         // Answered through the buttons themselves rather than behind their backs, so what is
         // measured is the path a person takes.
         await Task.Delay(TimeSpan.FromSeconds(1.2));
-        Press(UpdateMessages.InstallLabel);
+        if (!Press(UpdateMessages.InstallLabel))
+        {
+            await EndAsync(UpdateMessages.InstallLabel);
+            return;
+        }
 
         await Task.Delay(TimeSpan.FromSeconds(2.5));
         long servedWhenStopped = server.BytesServed;
         if (mode == "caller") caller.Cancel();
-        else Press(UpdateMessages.CancelDownloadLabel);
+        else if (!Press(UpdateMessages.CancelDownloadLabel))
+        {
+            await EndAsync(UpdateMessages.CancelDownloadLabel);
+            return;
+        }
 
         string answer;
         try
@@ -94,7 +98,7 @@ internal static class UpdateCancelScenario
         // Read after the run has ended, so a directory still being written is not counted as left
         // behind. The downloader removes the partial file and the service the directory around it.
         string[] left = Directory.GetDirectories(Path.GetTempPath(), DirectoryPrefix + "-*");
-        await File.WriteAllTextAsync(probePath, string.Join(Environment.NewLine,
+        ProbeFile.Write(probePath, staging => File.WriteAllText(staging, string.Join(Environment.NewLine,
         [
             $"mode\t{mode}",
             $"answer\t{answer}",
@@ -102,33 +106,27 @@ internal static class UpdateCancelScenario
             $"directories-left\t{left.Length.ToString(CultureInfo.InvariantCulture)}",
             $"files-left\t{left.Sum(directory => Directory.GetFiles(directory).Length).ToString(CultureInfo.InvariantCulture)}",
             "",
-        ]));
-        await File.WriteAllTextAsync(probePath + ".done", "");
+        ])));
 
         await Task.Delay(TimeSpan.FromSeconds(2));
         exit();
+
+        // A button that is not there ends the run with a row saying so: the flow would otherwise
+        // wait for an answer nothing is going to give.
+        async Task EndAsync(string missingLabel)
+        {
+            ProbeFile.Write(probePath, staging => File.WriteAllText(staging,
+                $"mode\t{mode}{Environment.NewLine}miss\t{missingLabel}{Environment.NewLine}"));
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            exit();
+        }
     }
 
     /// <summary>Presses the bracket button carrying that label through its automation peer, so the
-    /// control's own click path runs.</summary>
-    private static void Press(string label)
-    {
-        if (_window?.Content is not FrameworkElement root) return;
-        if (FindByAutomationName(root, label) is not { } button) return;
-        if (FrameworkElementAutomationPeer.CreatePeerForElement(button) is IInvokeProvider invoke) invoke.Invoke();
-    }
-
-    private static Button? FindByAutomationName(DependencyObject root, string name)
-    {
-        int count = VisualTreeHelper.GetChildrenCount(root);
-        for (int i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is Button button && AutomationProperties.GetName(button) == name) return button;
-            if (FindByAutomationName(child, name) is { } found) return found;
-        }
-        return null;
-    }
+    /// control's own click path runs. False when the button is not found or cannot be invoked.</summary>
+    private static bool Press(string label) =>
+        _window?.Content is DependencyObject root &&
+        HarnessTree.Press(root, button => AutomationProperties.GetName(button) == label);
 
     /// <summary>A release whose installer is served by the loopback server, with one hash in its
     /// body so the download is reached at all.</summary>
