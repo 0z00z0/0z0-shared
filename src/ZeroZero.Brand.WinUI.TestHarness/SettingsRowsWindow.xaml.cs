@@ -1,10 +1,6 @@
-using Microsoft.UI;
-using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Windows.Graphics;
 using ZeroZero.Controls.WinUI;
-using ZeroZero.Win32;
 
 namespace ZeroZero.Brand.WinUI.TestHarness;
 
@@ -41,21 +37,6 @@ public sealed partial class SettingsRowsWindow : Window
     /// <summary>The realised root, for the theme probe.</summary>
     internal FrameworkElement ProbeRoot => Root;
 
-    private void Resize(double clientWidth, int offset)
-    {
-        Scroller.Measure(new Windows.Foundation.Size(clientWidth, double.PositiveInfinity));
-        double contentHeight = Scroller.DesiredSize.Height;
-
-        IntPtr window = Win32Interop.GetWindowFromWindowId(AppWindow.Id);
-        double scale = MonitorMetrics.ScaleForWindow(window);
-        var (chromeWidth, chromeHeight) = MonitorMetrics.NonClientSize(window);
-
-        int workAreaHeight = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary)
-                                        .WorkArea.Height;
-        int wanted = (int)Math.Ceiling(contentHeight * scale) + chromeHeight;
-        int height = Math.Min(wanted, (int)(workAreaHeight * MaxWorkAreaFraction));
-
-        AppWindow.Resize(new SizeInt32((int)Math.Ceiling(clientWidth * scale) + chromeWidth, height));
-        AppWindow.Move(new PointInt32(offset, 0));
-    }
+    private void Resize(double clientWidth, int offset) =>
+        WindowSizing.FitToContent(this, Scroller, clientWidth, offset, MaxWorkAreaFraction);
 }
