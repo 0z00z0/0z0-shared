@@ -8,7 +8,7 @@ public class GitHubReleaseSourceTests
 {
     private const string Hash = "AD26D1A44E4D772CEDB730988E645FD127F7C0300678F9BD1C09C411443FE084";
 
-    private static UpdateOptions Options(Uri api, TimeSpan? timeout = null, RecordingLogSink? log = null) => new()
+    private static UpdateOptions Options(Uri api, TimeSpan? timeout = null) => new()
     {
         RepositoryOwner = "studio",
         RepositoryName = "product",
@@ -18,7 +18,6 @@ public class GitHubReleaseSourceTests
         InstallerFileName = "Product-Setup-{version}.exe",
         ApiBaseUri = api,
         RequestTimeout = timeout ?? TimeSpan.FromSeconds(10),
-        Log = log ?? new RecordingLogSink(),
     };
 
     private static HttpClient Client() => new() { Timeout = Timeout.InfiniteTimeSpan };
@@ -159,14 +158,12 @@ public class GitHubReleaseSourceTests
         using var server = new LocalReleaseServer();
         server.Map("/repos/studio/product/releases/latest", new LocalReleaseServer.Response(403, Encoding.UTF8.GetBytes("""{"message":"API rate limit exceeded"}"""),
             new Dictionary<string, string> { ["X-RateLimit-Remaining"] = "0", ["X-RateLimit-Reset"] = "1788388349" }));
-        var log = new RecordingLogSink();
-        var source = new GitHubReleaseSource(Client(), Options(server.BaseUri, log: log));
+        var source = new GitHubReleaseSource(Client(), Options(server.BaseUri));
 
         ReleaseLookup lookup = await source.LookupLatestAsync();
 
         Assert.Equal(ReleaseLookupOutcome.RateLimited, lookup.Outcome);
         Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1788388349), lookup.RateLimitResetsAt);
-        Assert.Contains(log.Infos, line => line.Contains("rate limit"));
     }
 
     [Theory]

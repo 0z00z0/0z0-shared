@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
-using ZeroZero.Primitives;
 
 namespace ZeroZero.Update;
 
@@ -11,7 +10,6 @@ public sealed class GitHubReleaseSource : IReleaseSource
 {
     private readonly HttpClient _http;
     private readonly TimeSpan _timeout;
-    private readonly ILogSink _log;
 
     /// <param name="http">A client the host owns, already carrying the user agent. Its own timeout
     /// is not used; the request runs under <see cref="UpdateOptions.RequestTimeout"/> through a
@@ -24,7 +22,6 @@ public sealed class GitHubReleaseSource : IReleaseSource
         _http = http;
         Uri = new Uri(options.ApiBaseUri, $"repos/{System.Uri.EscapeDataString(options.RepositoryOwner)}/{System.Uri.EscapeDataString(options.RepositoryName)}/releases/latest");
         _timeout = options.RequestTimeout;
-        _log = options.Log;
     }
 
     public Uri Uri { get; }
@@ -60,10 +57,7 @@ public sealed class GitHubReleaseSource : IReleaseSource
                 return new ReleaseLookup(ReleaseLookupOutcome.NoReleases, Detail: "the repository has published no release");
 
             if (IsRateLimited(response, out DateTimeOffset? resetsAt))
-            {
-                _log.Info($"Update check refused by the rate limit; it lifts at {resetsAt?.ToString("u", CultureInfo.InvariantCulture) ?? "an unknown time"}.");
                 return new ReleaseLookup(ReleaseLookupOutcome.RateLimited, RateLimitResetsAt: resetsAt, Detail: "GitHub's rate limit refused the request");
-            }
 
             // A failure status is the service answering, not a release this version cannot read, so
             // it is its own outcome and never InvalidResponse: the body is not looked at at all.

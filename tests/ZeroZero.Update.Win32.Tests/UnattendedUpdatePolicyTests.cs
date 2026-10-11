@@ -40,16 +40,6 @@ public class UnattendedUpdatePolicyTests
     private void ReleaseIsWaiting(ReleaseInfo? release = null) =>
         _service.CheckResult = new UpdateCheckResult(UpdateCheckOutcome.UpdateAvailable, new Version(1, 0, 0, 0), release ?? FakeUpdateService.Release);
 
-    private static async Task WaitUntil(Func<bool> condition, TimeSpan within)
-    {
-        DateTime deadline = DateTime.UtcNow + within;
-        while (!condition())
-        {
-            Assert.True(DateTime.UtcNow < deadline, "The condition did not come true in time.");
-            await Task.Delay(10);
-        }
-    }
-
     [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task SettingOff_InstallsNothingAndChecksNothing()
@@ -96,6 +86,27 @@ public class UnattendedUpdatePolicyTests
         UnattendedTick after = await policy.TickAsync();
 
         Assert.Equal(UnattendedOutcome.InstallerStarted, after.Outcome);
+        Assert.Equal(1, _service.Launches);
+        Assert.Equal(1, _shutdowns);
+    }
+
+    /// <summary>Two direct calls overlapping inside the check start one installer: the second
+    /// waits for the first and finds it handed over.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task OverlappingTicks_StartOneInstaller()
+    {
+        ReleaseIsWaiting();
+        _idle.ScreenLocked = true;
+        _service.HoldCheck = new TaskCompletionSource();
+        UnattendedUpdatePolicy policy = Policy();
+
+        Task<UnattendedTick> first = policy.TickAsync();
+        Task<UnattendedTick> second = policy.TickAsync();
+        _service.HoldCheck.SetResult();
+        UnattendedTick[] ticks = await Task.WhenAll(first, second);
+
+        Assert.All(ticks, tick => Assert.Equal(UnattendedOutcome.InstallerStarted, tick.Outcome));
         Assert.Equal(1, _service.Launches);
         Assert.Equal(1, _shutdowns);
     }
@@ -325,7 +336,7 @@ public class UnattendedUpdatePolicyTests
             tickReported: tick => { lock (seenByScheduler) seenByScheduler.Add(tick); }))
         {
             driven.Start();
-            await WaitUntil(() => { lock (seenByScheduler) return seenByScheduler.Count > 0; }, TimeSpan.FromSeconds(5));
+            await Polling.WaitUntil(() => { lock (seenByScheduler) return seenByScheduler.Count > 0; }, TimeSpan.FromSeconds(5));
         }
 
         UnattendedTick first;

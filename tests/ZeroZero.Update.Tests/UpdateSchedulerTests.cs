@@ -4,16 +4,6 @@ namespace ZeroZero.Update.Tests;
 
 public class UpdateSchedulerTests
 {
-    private static async Task WaitUntil(Func<bool> condition, TimeSpan within)
-    {
-        DateTime deadline = DateTime.UtcNow + within;
-        while (!condition())
-        {
-            Assert.True(DateTime.UtcNow < deadline, "The condition did not come true in time.");
-            await Task.Delay(10);
-        }
-    }
-
     [Fact]
     public async Task Start_RunsAfterTheDelayAndThenAtTheInterval()
     {
@@ -26,7 +16,7 @@ public class UpdateSchedulerTests
 
         scheduler.Start();
 
-        await WaitUntil(() => Volatile.Read(ref runs) >= 3, TimeSpan.FromSeconds(5));
+        await Polling.WaitUntil(() => Volatile.Read(ref runs) >= 3, TimeSpan.FromSeconds(5));
         Assert.True(scheduler.Runs >= 3);
     }
 
@@ -56,7 +46,7 @@ public class UpdateSchedulerTests
             return Task.CompletedTask;
         });
         scheduler.Start();
-        await WaitUntil(() => Volatile.Read(ref runs) >= 2, TimeSpan.FromSeconds(5));
+        await Polling.WaitUntil(() => Volatile.Read(ref runs) >= 2, TimeSpan.FromSeconds(5));
 
         scheduler.Dispose();
         await Task.Delay(60);
@@ -79,7 +69,7 @@ public class UpdateSchedulerTests
 
         scheduler.Start();
 
-        await WaitUntil(() => Volatile.Read(ref runs) >= 3, TimeSpan.FromSeconds(5));
+        await Polling.WaitUntil(() => Volatile.Read(ref runs) >= 3, TimeSpan.FromSeconds(5));
         (string source, Exception? error) = Assert.Single(log.Errors);
         Assert.Equal(nameof(UpdateScheduler), source);
         Assert.IsType<InvalidOperationException>(error);
@@ -102,7 +92,7 @@ public class UpdateSchedulerTests
         scheduler.Start();
         scheduler.Start();
 
-        await WaitUntil(() => Volatile.Read(ref runs) >= 4, TimeSpan.FromSeconds(5));
+        await Polling.WaitUntil(() => Volatile.Read(ref runs) >= 4, TimeSpan.FromSeconds(5));
         Assert.Equal(0, Volatile.Read(ref overlaps));
     }
 
