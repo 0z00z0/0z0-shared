@@ -425,7 +425,7 @@ public partial class App : Application
         presenter.IsResizable = false;
         presenter.IsAlwaysOnTop = true;
         _anchorWindow.AppWindow.SetPresenter(presenter);
-        _anchorWindow.AppWindow.IsShownInSwitchers = false;
+        SwitcherVisibility.TrySet(_anchorWindow.AppWindow, shown: false);
         _anchorWindow.AppWindow.MoveAndResize(
             new Windows.Graphics.RectInt32(workArea.Left + 8, workArea.Top + 8, 160, 80));
         _anchorWindow.Activate();

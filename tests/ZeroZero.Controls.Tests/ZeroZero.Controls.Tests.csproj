@@ -16,6 +16,12 @@
          WinUI type on purpose so their values can be pinned here. -->
     <Compile Include="..\..\src\ZeroZero.Controls.WinUI\TitleBarTheme.cs" Link="Linked\TitleBarTheme.cs" />
     <Compile Include="..\..\src\ZeroZero.Controls.WinUI\TitleBarPalette.cs" Link="Linked\TitleBarPalette.cs" />
+    <!-- The switcher setter's guard, which names no WinUI type, and the sink it logs to. -->
+    <Compile Include="..\..\src\ZeroZero.Controls.WinUI\SwitcherVisibilityGuard.cs" Link="Linked\SwitcherVisibilityGuard.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ZeroZero.Primitives\ZeroZero.Primitives.csproj" />
   </ItemGroup>
 
   <ItemGroup>

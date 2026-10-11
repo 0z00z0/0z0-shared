@@ -2,7 +2,8 @@
 
 `ZeroZero.Controls.WinUI` holds the WinUI controls that carry no studio identity: the settings-row
 vocabulary — info bubble, section header, card row — title-bar theming, the single-line text
-prompt, and the sizing of a popup window to its own content.
+prompt, the sizing of a popup window to its own content, and a taskbar-and-Alt+Tab setter that
+survives a start before the taskbar exists.
 `net10.0-windows10.0.26100.0`, the Windows App SDK, the Community Toolkit's settings
 controls, `ZeroZero.Win32` and `ZeroZero.Primitives`; no font pack, no palette, and no toolkit type
 in a public signature.
@@ -102,6 +103,17 @@ This guide is complete for adoption: the component's own source and tests need n
   needed. The arithmetic itself is `ZeroZero.Win32`'s `WindowFit`, which a caller sizing something
   other than a popup uses directly. `Width` and `MinimumHeight` are required; `ScrollerPadding`
   (none), `HeightFraction` (0.8), `Name` ("Popup") and `Log` (silent) are optional.
+- **`SwitcherVisibility`** — `TrySet(appWindow, shown, log)` sets `AppWindow.IsShownInSwitchers`,
+  whether the window appears on the taskbar and in Alt+Tab. **The plain setter throws
+  `NotImplementedException` ("SetShownInSwitchers failed") while no taskbar window exists** —
+  during a sign-in start before Explorer has created it, or on a desktop with no shell — and from a
+  window's constructor that ends the process. `TrySet` returns false in that case, leaves the
+  window as it was in the taskbar and Alt+Tab, and writes one line to `log` the first time in the
+  process; any other exception propagates. Nothing retries the call later: a window that must be
+  hidden from the switchers either opens only once the taskbar exists
+  ([the startup rule](zerozero-tray.md#the-startup-rule)) or calls `TrySet` again itself. `log` is
+  optional, and without one nothing is written and the once-per-process line stays unspent. The
+  About window, the update window and the text prompt all set it this way.
 
 Not here, by design: anything carrying the studio's face or palette. Those are the brand component's
 ([`zerozero-brand.md`](zerozero-brand.md)), which a component takes when it needs them and says so.

@@ -49,7 +49,7 @@ This guide is complete for adoption: the component's own source and tests need n
 
 ### `ZeroZero.Brand.WinUI`
 
-References `ZeroZero.Brand.Core` and `ZeroZero.Win32`.
+References `ZeroZero.Brand.Core`, `ZeroZero.Win32` and `ZeroZero.Controls.WinUI`.
 
 - **`BrandAboutControl`** — a `UserControl` holding the actual About *content*: the `[Ø]` studio mark
   and brand header band, the company name and tagline as plain non-interactive text, app description,
@@ -192,7 +192,7 @@ owns the clean-exit-before-relaunch step via `OnBeforeExit`.
 Either route in [`consuming.md`](consuming.md) — a `PackageReference` on the studio feed, or a
 `ProjectReference` on a sibling checkout carrying
 `<UndefineProperties>WindowsAppSDKSelfContained</UndefineProperties>`. The reference is
-`ZeroZero.Brand.WinUI`; it pulls in `ZeroZero.Brand.Core` and `ZeroZero.Win32` transitively and
+`ZeroZero.Brand.WinUI`; it pulls in `ZeroZero.Brand.Core`, `ZeroZero.Win32` and `ZeroZero.Controls.WinUI` transitively and
 ships the typeface as content, so a consumer gets the correct brand face with no extra setup, in a
 build and in a publish alike. The consuming app's `app.manifest` declares `PerMonitorV2` DPI
 awareness so the window renders sharp on high-DPI displays.

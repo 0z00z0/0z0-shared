@@ -30,6 +30,8 @@
     <ProjectReference Include="..\ZeroZero.Brand.Core\ZeroZero.Brand.Core.csproj" />
     <!-- Foundation: monitor and DPI metrics for centring the About window. -->
     <ProjectReference Include="..\ZeroZero.Win32\ZeroZero.Win32.csproj" />
+    <!-- Foundation: the switcher setter that survives a start before the taskbar exists. -->
+    <ProjectReference Include="..\ZeroZero.Controls.WinUI\ZeroZero.Controls.WinUI.csproj" />
   </ItemGroup>
 
   <!--

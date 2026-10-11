@@ -7,6 +7,7 @@ using Windows.Foundation;
 using Windows.Graphics;
 using Windows.System;
 using ZeroZero.Brand.WinUI;
+using ZeroZero.Controls.WinUI;
 using ZeroZero.Update.Win32;
 using ZeroZero.Win32;
 
@@ -299,7 +300,7 @@ public sealed partial class UpdateWindow : Window
 
     private void ConfigureChrome()
     {
-        AppWindow.IsShownInSwitchers = false;
+        SwitcherVisibility.TrySet(AppWindow, shown: false);
 
         var presenter = OverlappedPresenter.Create();
         presenter.SetBorderAndTitleBar(hasBorder: true, hasTitleBar: false);

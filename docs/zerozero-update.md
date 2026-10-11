@@ -12,13 +12,14 @@ and the check scheduler.
 `ZeroZero.Update` and `ZeroZero.Update.Win32` are plain `net10.0` and declare themselves
 Windows-only; `ZeroZero.Update.WinUI` targets WinUI. `ZeroZero.Update` takes `ZeroZero.Primitives`
 for the log sink and the version reader; `ZeroZero.Update.WinUI` takes `ZeroZero.Brand.WinUI` for
-the bracket action button and the studio typeface, and `ZeroZero.Win32` for monitor metrics and the
-count of transient windows.
+the bracket action button and the studio typeface, `ZeroZero.Win32` for monitor metrics and the
+count of transient windows, and `ZeroZero.Controls.WinUI` for the switcher setter that survives a
+start before the taskbar exists.
 
 The three assemblies are versioned as `UpdateVersion` in `Versions.props` and released under
 `update-v<x.y.z>` tags, with notes under `docs/release-notes/update/`;
-[`releasing.md`](releasing.md) has the procedure. The component releases after `primitives` and
-`win32` are on the feed at the versions it references.
+[`releasing.md`](releasing.md) has the procedure. The component releases after `primitives`,
+`win32`, `brand` and `controls` are on the feed at the versions it references.
 
 This guide is complete for adoption: the component's own source and tests need not be read.
 

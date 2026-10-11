@@ -31,6 +31,8 @@
     <!-- Monitor and DPI metrics for sizing and centring, and the count of transient windows that
          keeps a self-dismissing window beneath this one from closing itself. -->
     <ProjectReference Include="..\ZeroZero.Win32\ZeroZero.Win32.csproj" />
+    <!-- The switcher setter that survives a start before the taskbar exists. -->
+    <ProjectReference Include="..\ZeroZero.Controls.WinUI\ZeroZero.Controls.WinUI.csproj" />
   </ItemGroup>
 
 </Project>

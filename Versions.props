@@ -13,10 +13,10 @@
        after that era and have no number below 0.7.0 at all, so a version range starting there
        finds nothing. A published number never moves backwards. -->
   <PropertyGroup>
-    <BrandVersion>0.11.1</BrandVersion>
+    <BrandVersion>0.12.0</BrandVersion>
     <BuildVersion>0.9.1</BuildVersion>
     <ConfigVersion>0.8.1</ConfigVersion>
-    <ControlsVersion>0.8.1</ControlsVersion>
+    <ControlsVersion>0.9.0</ControlsVersion>
     <DiagnosticsVersion>0.8.0</DiagnosticsVersion>
     <LifecycleVersion>0.7.1</LifecycleVersion>
     <MqttVersion>0.11.0</MqttVersion>
@@ -24,7 +24,7 @@
     <SettingsShellVersion>0.8.1</SettingsShellVersion>
     <StartupVersion>0.8.2</StartupVersion>
     <TrayVersion>0.11.0</TrayVersion>
-    <UpdateVersion>0.13.1</UpdateVersion>
+    <UpdateVersion>0.14.0</UpdateVersion>
     <Win32Version>0.9.1</Win32Version>
   </PropertyGroup>
 

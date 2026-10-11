@@ -126,7 +126,7 @@ public sealed partial class TextPromptWindow : Window
 
     private void ConfigureChrome()
     {
-        AppWindow.IsShownInSwitchers = false;
+        SwitcherVisibility.TrySet(AppWindow, shown: false);
 
         var presenter = OverlappedPresenter.Create();
         presenter.SetBorderAndTitleBar(hasBorder: true, hasTitleBar: false);

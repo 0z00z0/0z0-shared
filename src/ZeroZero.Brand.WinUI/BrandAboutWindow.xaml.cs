@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Input;
 using Windows.Foundation;
 using Windows.Graphics;
 using Windows.System;
+using ZeroZero.Controls.WinUI;
 using ZeroZero.Win32;
 
 namespace ZeroZero.Brand.WinUI;
@@ -166,7 +167,7 @@ public sealed partial class BrandAboutWindow : Window
 
     private void ConfigureChrome()
     {
-        AppWindow.IsShownInSwitchers = false;
+        SwitcherVisibility.TrySet(AppWindow, shown: false);
 
         var presenter = OverlappedPresenter.Create();
         presenter.SetBorderAndTitleBar(hasBorder: true, hasTitleBar: false);
