@@ -1,8 +1,5 @@
-using Microsoft.UI;
 using Microsoft.UI.Xaml;
-using Windows.Graphics;
 using ZeroZero.Controls.WinUI;
-using ZeroZero.Win32;
 
 namespace ZeroZero.Brand.WinUI.TestHarness;
 
@@ -61,18 +58,6 @@ public sealed partial class TitleBarWindow : Window
         Resize(offset);
     }
 
-    private void Resize(int offset)
-    {
-        Body.Measure(new Windows.Foundation.Size(ClientWidth, double.PositiveInfinity));
-        double contentHeight = Math.Max(Body.DesiredSize.Height, 120);
-
-        IntPtr window = Win32Interop.GetWindowFromWindowId(AppWindow.Id);
-        double scale = MonitorMetrics.ScaleForWindow(window);
-        var (chromeWidth, chromeHeight) = MonitorMetrics.NonClientSize(window);
-
-        AppWindow.Resize(new SizeInt32(
-            (int)Math.Ceiling(ClientWidth * scale) + chromeWidth,
-            (int)Math.Ceiling(contentHeight * scale) + chromeHeight));
-        AppWindow.Move(new PointInt32(offset, 0));
-    }
+    private void Resize(int offset) =>
+        WindowSizing.FitToContent(this, Body, ClientWidth, offset, minimumContentHeight: 120);
 }
