@@ -294,6 +294,7 @@ public sealed class MqttStrings
             // panel translated for everyone except the people who most depend on that naming.
             ["SubjectPublishSwitch"]   = "the publish switch",
             ["SubjectPublishGroups"]   = "the publishing groups",
+            ["SubjectPublishGroup"]    = "the {0} group",
             ["SubjectStatus"]          = "the status block",
             ["SubjectConnection"]      = "how the connection was found",
             ["SubjectBrokerInUse"]     = "the broker in use",

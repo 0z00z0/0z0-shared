@@ -929,7 +929,11 @@ public sealed partial class MqttSettingsPanel : UserControl
 
             var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
             if (row.HasInfo)
-                content.Children.Add(new InfoIcon { Subject = row.InfoSubject, Info = row.Info });
+                content.Children.Add(new InfoIcon
+                {
+                    Subject = _strings.Format("SubjectPublishGroup", row.Label),
+                    Info = row.Info,
+                });
             content.Children.Add(toggle);
 
             var card = new CommunityToolkit.WinUI.Controls.SettingsCard
