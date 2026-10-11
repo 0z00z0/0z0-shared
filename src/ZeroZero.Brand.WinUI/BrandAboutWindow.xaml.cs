@@ -13,9 +13,7 @@ namespace ZeroZero.Brand.WinUI;
 
 /// <summary>
 /// The shared, parameterised About popup for ZeroZero Software apps — 320px wide, Mica backdrop,
-/// centred on the monitor under the cursor, no title bar, always-on-top. Takes its monitor and
-/// DPI metrics from <see cref="MonitorMetrics"/>, so it has no dependency on a consuming app's
-/// own NativeMethods class.
+/// centred on the monitor under the cursor, no title bar, always-on-top.
 ///
 /// This is a thin shell: the actual About content (brand header, links, credits, release notes)
 /// lives in the hosted <see cref="BrandAboutControl"/>. This window only owns chrome — sizing,
