@@ -29,6 +29,9 @@
           Link="BrandResources.xaml" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\src\ZeroZero.Brand.WinUI\BrandAboutControl.xaml"
           Link="BrandAboutControl.xaml" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Retypes palette colours in its own markup, held against the constants the same way. -->
+    <None Include="..\..\src\ZeroZero.Brand.WinUI\BrandBracketButton.xaml"
+          Link="BrandBracketButton.xaml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
