@@ -57,6 +57,11 @@ public sealed class MqttSettings
     /// change.</summary>
     public const string DefaultDiscoveryPrefix = "homeassistant";
 
+    /// <summary>The prefix in force: a blank one means the default, never an empty prefix, which
+    /// would put every discovery topic at the root.</summary>
+    internal static string EffectiveDiscoveryPrefix(string? prefix) =>
+        string.IsNullOrWhiteSpace(prefix) ? DefaultDiscoveryPrefix : prefix.Trim();
+
     /// <summary>Must match the receiver's own prefix, or discovery documents land where nothing reads
     /// them. Never read by the connection itself, which treats it as inert and passes it through.</summary>
     public string DiscoveryPrefix { get; set; } = DefaultDiscoveryPrefix;

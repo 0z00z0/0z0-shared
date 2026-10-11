@@ -203,9 +203,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             string deviceId = MqttIdentity.Effective(parameters.DeviceId, _setup.TopicRoot, machine);
             _identity = new(
                 deviceId,
-                string.IsNullOrWhiteSpace(parameters.DiscoveryPrefix)
-                    ? MqttSettings.DefaultDiscoveryPrefix
-                    : parameters.DiscoveryPrefix.Trim(),
+                MqttSettings.EffectiveDiscoveryPrefix(parameters.DiscoveryPrefix),
                 string.IsNullOrWhiteSpace(parameters.DeviceName)
                     ? _setup.DefaultDeviceName(machine)
                     : parameters.DeviceName.Trim());
