@@ -141,8 +141,9 @@ public sealed partial class BrandAboutControl : UserControl
         DescriptionText.Text = info.Description;
         FooterText.Text     = $"Copyright © {DateTime.UtcNow.Year} {CoreBrand.StudioName} · MIT Licence";
 
-        // A repopulate is a different application's data, so notes fetched for the previous one are
-        // not shown against it. An address that changed also drops whatever is on screen.
+        // A repopulate is a different application's data, so notes fetched, or still being fetched,
+        // for the previous one are not shown against it.
+        CancelPendingFetch();
         _notes = null;
         NewsText.Text = "";
         NewsPanel.Visibility = Visibility.Collapsed;
