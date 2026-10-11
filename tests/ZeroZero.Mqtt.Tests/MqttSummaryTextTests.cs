@@ -241,7 +241,7 @@ public class MqttSummaryTextTests
     [Fact]
     public void ATranslationMayReorderTheSummarysParts()
     {
-        var strings = new MqttStrings(new Fixed(new() { ["SummaryBroker"] = "{2} {3} {0}:{1}" }));
+        var strings = new MqttStrings(new FixedStringSource(new() { ["SummaryBroker"] = "{2} {3} {0}:{1}" }));
         var request = Request(port: 8883, transport: MqttTransportMode.Tcp,
                               encryption: MqttEncryptionMode.On);
 
@@ -304,10 +304,5 @@ public class MqttSummaryTextTests
                      MqttStatusText.SummariseBroker(
                          Request(), Memory(), MqttConnectionState.Connected, MqttCertificateTrustMode.System));
         Assert.Equal("1 of 2 switched on", MqttStatusText.SummarisePublish(new MqttPublishTally(1, 2)));
-    }
-
-    private sealed class Fixed(Dictionary<string, string> entries) : IMqttStringSource
-    {
-        public string? Find(string key) => entries.GetValueOrDefault(key);
     }
 }

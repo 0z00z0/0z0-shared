@@ -47,25 +47,6 @@ public sealed class RecordingPublisher : IMqttPublisher
     }
 }
 
-/// <summary>The broker settings over an in-memory document, so a <see cref="PublishGroupSet"/> can be
-/// built without a file.</summary>
-public sealed class MemorySettingsStore : IMqttSettingsStore
-{
-    private MqttSettings _settings = new();
-
-    public MqttSettings Read() => _settings.Copy();
-
-    public void Update(Action<MqttSettings> mutate)
-    {
-        var draft = _settings.Copy();
-        mutate(draft);
-        _settings = draft;
-        Changed?.Invoke();
-    }
-
-    public event Action? Changed;
-}
-
 /// <summary>The ledger over an in-memory document, counting its writes: "how often was the record
 /// rewritten" is the question behind the half-landed pass.</summary>
 public sealed class RecordingLedgerStore : IDiscoveryLedgerStore

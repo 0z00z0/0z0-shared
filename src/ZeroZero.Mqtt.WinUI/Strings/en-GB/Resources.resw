@@ -476,6 +476,9 @@ Leaving the box empty falls back to the name derived from this machine.</value>
   <data name="SubjectPort" xml:space="preserve">
     <value>the broker port</value>
   </data>
+  <data name="SubjectPublishGroup" xml:space="preserve">
+    <value>the {0} group</value>
+  </data>
   <data name="SubjectPublishGroups" xml:space="preserve">
     <value>the publishing groups</value>
   </data>

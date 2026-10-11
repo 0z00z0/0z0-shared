@@ -1,5 +1,14 @@
 namespace ZeroZero.Mqtt;
 
+/// <summary>What a press of Test connection or Apply came to: see <see cref="MqttProbeSession.Decide"/>.</summary>
+public enum MqttProbeDecision
+{
+    Unusable,
+    NothingToProbe,
+    Reused,
+    Run,
+}
+
 /// <summary>The one line under the Test connection button: the sweep as it happens, then the verdict.
 /// Pure — it holds no task, no token source and no control, so the ordering rules it enforces are
 /// testable without running a probe.</summary>
@@ -78,6 +87,32 @@ public sealed class MqttProbeSession
         // The newest verdict replaces whatever was remembered, so a failure on the same values is
         // never answered later with the pass that came before it.
         _passed = report.Succeeded && _currentTarget is { } target ? (target, report) : null;
+    }
+
+    /// <summary>Checked in order: unusable fields, then publishing off or no host, then a pass to show
+    /// again (Apply only), else a run. Test connection refuses with a reason on the line, because a
+    /// press that shows nothing is the worse failure; Apply refuses silently.</summary>
+    public MqttProbeDecision Decide(
+        MqttProbeTrigger trigger, MqttEditValidation validation, bool publishingEnabled,
+        MqttProbeTarget target)
+    {
+        bool test = trigger == MqttProbeTrigger.TestConnection;
+
+        if (!validation.Usable)
+        {
+            if (test)
+                Refuse(validation.Message ?? _text.Strings.Format(
+                    "PortNotANumber", MqttBrokerEdits.PortMin, MqttBrokerEdits.PortMax));
+            return MqttProbeDecision.Unusable;
+        }
+
+        if (!MqttEndpointPlan.ShouldProbe(trigger, publishingEnabled, target.Host))
+        {
+            if (test) Refuse(_text.Strings.Get("ReportNoHost"));
+            return MqttProbeDecision.NothingToProbe;
+        }
+
+        return TryReuse(trigger, target) ? MqttProbeDecision.Reused : MqttProbeDecision.Run;
     }
 
     /// <summary>Shows the newest verdict again, and answers true, when <paramref name="trigger"/> is

@@ -47,6 +47,14 @@ public class MqttStringsTests
     }
 
     [Fact]
+    public void AWhitespaceTranslationIsNoTranslation()
+    {
+        var strings = new MqttStrings(new Source(new() { ["AgeJustNow"] = "  " }));
+
+        Assert.Equal("just now", strings.Get("AgeJustNow"));
+    }
+
+    [Fact]
     public void AKeyNothingDeclaresRendersAsItself()
     {
         // Visible in a screenshot rather than silently empty.

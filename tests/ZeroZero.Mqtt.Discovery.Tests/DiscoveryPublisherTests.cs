@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Xunit;
+using ZeroZero.Mqtt.Tests;
 
 namespace ZeroZero.Mqtt.Discovery.Tests;
 
@@ -35,7 +36,7 @@ public class DiscoveryPublisherTests
             params PublishGroup[] groups)
         {
             Ledger = ledger ?? new RecordingLedgerStore();
-            Groups = new PublishGroupSet(new MemorySettingsStore(), groups);
+            Groups = new PublishGroupSet(new RecordingSettingsStore(), groups);
             Publisher = new DiscoveryPublisher(new DiscoveryPublisherSetup
             {
                 IsConnected = () => Connected,

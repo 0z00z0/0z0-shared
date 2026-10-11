@@ -182,6 +182,9 @@ public sealed class DiscoveryPublisher : IMqttConnectionListener, IDisposable
     /// <summary>Removes the device outright: the document, the availability topics and every value.
     /// Deliberately explicit, and never what switching publishing off does — this takes the whole
     /// device off the receiver.</summary>
+    /// <remarks>Withdraws without stopping the connection: its channels refill the emptied state
+    /// topics and the next reconnect announces the device again. Use
+    /// <see cref="MqttConnection.RemoveDeviceAsync"/>, which withdraws the same way and then stops.</remarks>
     public Task RemoveDeviceAsync(CancellationToken ct = default)
     {
         var (publisher, identity) = Target();
