@@ -21,6 +21,9 @@ internal sealed class FakeUpdateService : IUpdateService
 
     public LaunchResult LaunchResult { get; set; } = new(true, "the installer is running");
 
+    /// <summary>Reported to the reporter the flow hands over, where set; the download's place.</summary>
+    public DownloadProgress? ReportsWhilePreparing { get; set; }
+
     public int Checks { get; private set; }
     public int Prepares { get; private set; }
     public int Launches { get; private set; }
@@ -46,6 +49,7 @@ internal sealed class FakeUpdateService : IUpdateService
     {
         Prepares++;
         Sequence.Add("prepare");
+        if (ReportsWhilePreparing is { } step) progress?.Report(step);
         return Task.FromResult(Prepared);
     }
 

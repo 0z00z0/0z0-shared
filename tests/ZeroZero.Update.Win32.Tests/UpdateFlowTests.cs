@@ -13,8 +13,9 @@ public class UpdateFlowTests
     private readonly List<Uri> _opened = [];
     private int _shutdowns;
 
-    private UpdateFlow Flow() => new(_service, _prompts, new UpdateFlowOptions
+    private UpdateFlow Flow(IProgress<DownloadProgress>? progress = null) => new(_service, _prompts, new UpdateFlowOptions
     {
+        Progress = progress,
         Shutdown = () =>
         {
             _shutdowns++;
@@ -178,6 +179,19 @@ public class UpdateFlowTests
         // The window is handed the download and taken off the screen before the application goes.
         Assert.Equal(1, _prompts.Downloads);
         Assert.Equal(1, _prompts.Dismissals);
+    }
+
+    /// <summary>The application's reporter is fed during the download, beside the window's bar.</summary>
+    [Fact]
+    public async Task Installing_FeedsTheApplicationsProgressReporter()
+    {
+        _service.CheckResult = Available();
+        _service.ReportsWhilePreparing = new DownloadProgress(5, 10);
+        var seen = new List<DownloadProgress>();
+
+        await Flow(new SynchronousProgress<DownloadProgress>(seen.Add)).RunAsync(UpdateTrigger.Manual);
+
+        Assert.Equal([new DownloadProgress(5, 10)], seen);
     }
 
     [Theory]
