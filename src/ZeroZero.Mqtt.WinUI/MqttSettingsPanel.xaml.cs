@@ -807,40 +807,20 @@ public sealed partial class MqttSettingsPanel : UserControl
 
         CancelProbe();
 
-        var validation = _edits.Validate();
-        var request = _edits.Request;
-
-        // One gate for the button and for Apply, and a refusal is still an answer: an action that
-        // appears to do nothing at all is the worse failure.
-        if (!validation.Usable)
+        var target = ProbeTarget(_edits.Request);
+        switch (_probe.Decide(trigger, _edits.Validate(), EnabledToggle.IsOn, target))
         {
-            if (trigger == MqttProbeTrigger.TestConnection)
-                _probe.Refuse(validation.Message ?? _strings.Format("PortNotANumber",
-                    MqttBrokerEdits.PortMin, MqttBrokerEdits.PortMax));
-            RefreshEditIndicators();
-            return;
+            case MqttProbeDecision.Run:
+                RunProbe(target);
+                break;
+            case MqttProbeDecision.Unusable:
+                RefreshEditIndicators();
+                break;
+            default:
+                RefreshEditIndicators();
+                RefreshStatus();
+                break;
         }
-
-        if (!MqttEndpointPlan.ShouldProbe(trigger, EnabledToggle.IsOn, request.Host))
-        {
-            if (trigger == MqttProbeTrigger.TestConnection) _probe.Refuse(_strings.Get("ReportNoHost"));
-            RefreshEditIndicators();
-            RefreshStatus();
-            return;
-        }
-
-        var target = ProbeTarget(request);
-
-        // Apply straight after a pass on these exact values shows that pass again: a second
-        // connection would only prove the same fact twice.
-        if (_probe.TryReuse(trigger, target))
-        {
-            RefreshEditIndicators();
-            RefreshStatus();
-            return;
-        }
-
-        RunProbe(target);
     }
 
     /// <summary>The staged values as a probe tries them.</summary>

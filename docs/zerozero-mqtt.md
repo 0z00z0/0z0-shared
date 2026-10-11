@@ -1194,7 +1194,10 @@ writes nothing when it refuses, and `Reload` moves only untouched fields to the 
 `MqttProbeSession` keeps the line under Test connection and drops anything from a superseded run; a
 run started with `Start(target)` is remembered when it passes, and `TryReuse(trigger, target)` is
 the question Apply asks before starting another, answering true and showing the pass again only
-for Apply on the same values.
+for Apply on the same values. `Decide(trigger, validation, publishingEnabled, target)` is the whole
+press in one call, checked in order: `Unusable` for fields `Validate()` refuses, `NothingToProbe` with
+publishing off or no host, `Reused` for that pass, else `Run`, after which the host starts the probe.
+Test connection puts the reason for a refusal on the line; Apply refuses silently.
 
 ### What a closed section says about itself
 
