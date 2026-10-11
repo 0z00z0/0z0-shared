@@ -22,10 +22,14 @@ public static class MqttPayload
     public const string None = MqttChannelPayload.None;
 
     /// <summary>A boolean reading, or null when there is none.</summary>
-    public static string? Flag(bool? value) => value switch
+    public static string? Flag(bool? value) => Flag(value, On, Off);
+
+    /// <summary>A boolean reading in a declared on and off pair, the publishing side of
+    /// <see cref="ReadFlag"/>.</summary>
+    internal static string? Flag(bool? value, string on, string off) => value switch
     {
-        true => On,
-        false => Off,
+        true => on,
+        false => off,
         null => null,
     };
 
