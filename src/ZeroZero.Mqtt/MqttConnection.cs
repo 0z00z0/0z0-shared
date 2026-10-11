@@ -1,4 +1,3 @@
-using System.Threading.Channels;
 using MQTTnet;
 using ZeroZero.Primitives;
 
@@ -19,14 +18,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     private readonly MqttChannelSet _channels;
     private readonly MqttCommandRouter _router;
     private volatile IReadOnlyList<MqttSubscription> _subscriptions;
-
-    // Drained on a dedicated worker off the MQTT receive callback, which must return promptly. Single
-    // reader: one command's read-modify-write must finish before the next starts.
-    private readonly Channel<(string Source, Func<CancellationToken, Task> Run)> _work =
-        Channel.CreateUnbounded<(string, Func<CancellationToken, Task>)>(
-            new UnboundedChannelOptions { SingleReader = true });
-    private readonly CancellationTokenSource _workerStop = new();
-    private readonly Task _worker;
+    private readonly MqttInbound _inbound;
 
     private volatile bool _enabled;
     private MqttConnectParameters? _parameters;
@@ -52,11 +44,6 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     // next connect has nothing left that knows they were ever published.
     private readonly Lock _pending = new();
     private readonly HashSet<string> _pendingEvictions = new(StringComparer.Ordinal);
-
-    // Command topics this connection has just emptied. The broker delivers the clear back to us with
-    // an empty payload and the retain flag down, which is indistinguishable from someone sending an
-    // empty command — and for a text entity an empty string is a value.
-    private readonly HashSet<string> _selfCleared = new(StringComparer.Ordinal);
 
     // Honoured on the maintain-loop thread, so the forced socket drop cannot race its own connect.
     private volatile bool _reconnectRequested;
@@ -112,11 +99,13 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         _channels = new MqttChannelSet(setup.Channels);
         _router = new MqttCommandRouter(setup.CommandTargets);
         _subscriptions = setup.Subscriptions;
+        _inbound = new MqttInbound(
+            setup, _router, Activity, () => _identity.DeviceId, () => _subscriptions,
+            (topic, ct) => PublishAsync(topic, "", retain: true, ct: ct));
 
         _client = new MqttClientFactory().CreateMqttClient();
-        _client.ApplicationMessageReceivedAsync += OnMessageReceivedAsync;
+        _client.ApplicationMessageReceivedAsync += _inbound.OnMessageReceivedAsync;
         _client.DisconnectedAsync += OnClientDisconnectedAsync;
-        _worker = Task.Run(ProcessWorkAsync);
     }
 
     /// <summary>When something last reached the broker, and what the broker last asked for. Owned by
@@ -740,93 +729,6 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     /// <summary>Empties the dedupe cache, so the next pass re-sends every channel.</summary>
     public void ForgetPublished() => _channels.Forget();
 
-    /// <summary>Inbound handler. Runs on the MQTT receive callback, so it only judges and enqueues.
-    /// Never throws — the MQTT loop must survive a bad payload — and never logs the payload.</summary>
-    private Task OnMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs e)
-    {
-        try
-        {
-            var message = new MqttInboundMessage(
-                e.ApplicationMessage.Topic,
-                e.ApplicationMessage.ConvertPayloadToString() ?? "",
-                e.ApplicationMessage.Retain);
-
-            if (RouteCommand(message)) return Task.CompletedTask;
-
-            foreach (var subscription in _subscriptions)
-                if (subscription.Matches(message.Topic))
-                    Enqueue($"Subscription:{subscription.TopicFilter}",
-                            ct => subscription.Handler(message, ct));
-        }
-        catch (Exception ex) { _log.Error($"MqttConnection.OnMessage: {MqttProbe.Describe(ex)}", null); }
-        return Task.CompletedTask;
-    }
-
-    /// <summary>True when the message belonged to the command subtree, whatever became of it.</summary>
-    private bool RouteCommand(MqttInboundMessage message)
-    {
-        // The echo of this connection's own retained-clear. It arrives with the retain flag down and
-        // an empty payload, and an entity that takes an empty string as a value would act on it.
-        if (message.Payload.Length == 0 && TakeSelfCleared(message.Topic)) return true;
-
-        var routing = _router.Route(
-            _setup.TopicRoot, _identity.DeviceId, message.Topic, message.Retained, message.Payload);
-
-        if (routing.EntityId is not { } entityId) return false;
-
-        // A command is an event, not state. Left retained it is redelivered and refused on every
-        // reconnect for ever, and only whoever put it there could otherwise clear it.
-        if (routing.Verdict.Outcome == MqttCommandOutcome.Retained) ClearRetainedCommand(message.Topic);
-
-        if (routing.Verdict is { Outcome: MqttCommandOutcome.Accepted, Run: { } run })
-        {
-            // Recorded on acceptance, not on completion: the status line answers "is the broker
-            // reaching us".
-            Activity.RecordCommand(entityId);
-            Enqueue($"Command:{entityId}", run);
-            return true;
-        }
-
-        // Not acted on. The facts are the module's; the wording is the entity's, carried verbatim.
-        _setup.CommandRefused?.Invoke(new MqttCommandRefusal(
-            DateTimeOffset.UtcNow, entityId, routing.Verdict.Outcome, routing.Verdict.Detail));
-        return true;
-    }
-
-    /// <summary>Empties a command topic something left retained, and notes that the clear's own echo
-    /// is to be ignored.</summary>
-    private void ClearRetainedCommand(string topic)
-    {
-        lock (_pending) _selfCleared.Add(topic);
-        Enqueue($"ClearRetained:{topic}", ct => PublishAsync(topic, "", retain: true, ct: ct));
-    }
-
-    /// <summary>Whether an empty payload on this topic is this connection's own clear coming back.
-    /// Taken rather than read: the note stands for one message.</summary>
-    private bool TakeSelfCleared(string topic)
-    {
-        lock (_pending) return _selfCleared.Remove(topic);
-    }
-
-    private void Enqueue(string source, Func<CancellationToken, Task> run) =>
-        _work.Writer.TryWrite((source, run));   // unbounded and non-blocking; the worker drains in order
-
-    /// <summary>Drains the queue one item at a time, so a blocking read-modify-write completes before
-    /// the next starts. Ends when the writer is completed.</summary>
-    private async Task ProcessWorkAsync()
-    {
-        await foreach (var (source, run) in _work.Reader.ReadAllAsync().ConfigureAwait(false))
-        {
-            try
-            {
-                // Any republish happens through the application's own change signal, not a publish
-                // here.
-                await run(_workerStop.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (_workerStop.IsCancellationRequested) { break; }
-            catch (Exception ex) { _log.Error($"MqttConnection.{source}: {MqttProbe.Describe(ex)}", null); }
-        }
-    }
 
     /// <summary>Empties every retained topic each superseded identity owned, so a consumer deletes the
     /// old device rather than leaving a ghost. No-op while disconnected: the next connect runs it.</summary>
@@ -1148,18 +1050,17 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 
-        _work.Writer.TryComplete();
+        _inbound.Complete();
 
         var stopCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(750));
         try { Task.Run(() => StopUnderGateAsync(stopCts.Token)).Wait(TimeSpan.FromSeconds(1)); }
         catch { /* the process is exiting either way */ }
 
-        _workerStop.Cancel();
-        try { _worker.Wait(TimeSpan.FromSeconds(2)); } catch { /* a handler outliving the budget */ }
+        _inbound.StopWorker();
 
         _client.Dispose();
         _cts?.Dispose();
-        _workerStop.Dispose();
+        _inbound.Dispose();
         // The gate is left undisposed on purpose. Nothing here takes its wait handle, so it holds
         // nothing to release, while disposing it would turn a reconcile that is already past the
         // check above into a throw out of its own release.
