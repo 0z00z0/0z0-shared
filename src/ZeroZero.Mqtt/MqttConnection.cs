@@ -99,9 +99,8 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
 
     internal static readonly TimeSpan InitialBackoff = TimeSpan.FromSeconds(3);
 
-    // What one candidate's handshake costs before the next is tried. Same budget the connection check
-    // gives each transport, so the two agree on how long "no answer" takes. The stage that opens the
-    // socket is bounded separately and usually far more tightly — see MqttProbe.SocketBudget.
+    // One candidate's handshake, after its socket stage (MqttProbe.SocketBudget). A sweeping check
+    // allows MqttProbe.SweepTimeout in all, so a slower handshake connects here but fails the check.
     private static readonly TimeSpan ConnectTimeout = MqttProbe.Timeout;
 
     private const double MaxBackoffSeconds = 60;
