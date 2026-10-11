@@ -174,14 +174,21 @@ public sealed class UpdateFlow
 
     private async Task<UpdateFlowRun> InstallCoreAsync(ReleaseInfo release, Version runningVersion, CancellationToken cancellationToken)
     {
-        switch (await _prompts.AskToInstallAsync(release, runningVersion))
+        // Only Install goes on; a value no member names declines rather than downloading.
+        InstallChoice choice = await _prompts.AskToInstallAsync(release, runningVersion);
+        switch (choice)
         {
+            case InstallChoice.Install:
+                break;
             case InstallChoice.Later:
                 _log.Info($"Update to {release.TagName} declined for now.");
                 return new UpdateFlowRun(UpdateFlowResult.Declined, Release: release);
             case InstallChoice.OpenReleasePage:
                 if (release.HtmlUri is { } page) Open(page);
                 return new UpdateFlowRun(UpdateFlowResult.ReleasePageOpened, Release: release);
+            default:
+                _log.Info($"Update to {release.TagName} declined: the prompt answered {choice}, which is no choice.");
+                return new UpdateFlowRun(UpdateFlowResult.Declined, Release: release);
         }
 
         DownloadSurface surface = _prompts.BeginDownload(release);

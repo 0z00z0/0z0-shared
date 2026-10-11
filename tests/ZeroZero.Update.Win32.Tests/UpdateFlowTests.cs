@@ -116,6 +116,22 @@ public class UpdateFlowTests
         Assert.Contains(_log.Infos, line => line.Contains("declined"));
     }
 
+    /// <summary>A prompt answering a value no member names declines: the flow fails closed.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task AnUndefinedChoice_DeclinesAndDownloadsNothing()
+    {
+        _service.CheckResult = Available();
+        _prompts.Choice = (InstallChoice)99;
+
+        UpdateFlowRun run = await Flow().RunAsync(UpdateTrigger.Manual);
+
+        Assert.Equal(UpdateFlowResult.Declined, run.Result);
+        Assert.Equal(0, _service.Prepares);
+        Assert.Equal(0, _shutdowns);
+        Assert.Contains(_log.Infos, line => line.Contains("99"));
+    }
+
     [Fact]
     public async Task OpeningTheReleasePage_OpensItAndDownloadsNothing()
     {

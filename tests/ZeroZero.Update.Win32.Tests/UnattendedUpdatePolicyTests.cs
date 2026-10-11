@@ -100,6 +100,27 @@ public class UnattendedUpdatePolicyTests
         Assert.Equal(1, _shutdowns);
     }
 
+    /// <summary>Two direct calls overlapping inside the check start one installer: the second
+    /// waits for the first and finds it handed over.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task OverlappingTicks_StartOneInstaller()
+    {
+        ReleaseIsWaiting();
+        _idle.ScreenLocked = true;
+        _service.HoldCheck = new TaskCompletionSource();
+        UnattendedUpdatePolicy policy = Policy();
+
+        Task<UnattendedTick> first = policy.TickAsync();
+        Task<UnattendedTick> second = policy.TickAsync();
+        _service.HoldCheck.SetResult();
+        UnattendedTick[] ticks = await Task.WhenAll(first, second);
+
+        Assert.All(ticks, tick => Assert.Equal(UnattendedOutcome.InstallerStarted, tick.Outcome));
+        Assert.Equal(1, _service.Launches);
+        Assert.Equal(1, _shutdowns);
+    }
+
     [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task ApplicationRefusesTheMoment_NothingStarts()

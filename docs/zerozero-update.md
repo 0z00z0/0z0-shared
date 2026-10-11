@@ -126,6 +126,7 @@ This guide is complete for adoption: the component's own source and tests need n
   asked. It drives the check, the download and the launch itself, shows nothing at any point, and
   returns an `UnattendedTick` saying where the pass ended. [Below](#installing-without-being-asked)
   is the whole of what it decides. `TickAsync` is one pass, which `Start` runs every `RetryInterval`.
+  Passes run one at a time: a direct call arriving during another pass waits for it to end.
 - **`UnattendedUpdateOptions`** — what the application supplies: whether this happens at all, how
   often a check runs — periodically or once — the retry tick, the shutdown callback, the call the
   component makes before a release is downloaded (`MayDownloadNow`), the call it makes immediately
