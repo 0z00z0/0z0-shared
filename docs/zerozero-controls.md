@@ -77,7 +77,8 @@ This guide is complete for adoption: the component's own source and tests need n
 - **`TextPromptWindow`** — `ShowAsync(TextPromptOptions)`: a frameless Mica window centred on the
   monitor under the cursor, with a title, a message, one field, an optional note beneath it, and
   an equal-width cancel-and-confirm row with the confirm on the right. Resolves with the text on
-  confirm and null on cancel, Escape or any other way out; Enter confirms from the field; the
+  confirm and null on cancel, Escape from any control, or any other way out; Enter confirms from
+  the field; the
   confirm button waits for text unless `AllowEmpty` is set. Every string is the caller's —
   `Confirm` says what the answer does, "Rename", not "OK" — and so is the theme, so an application
   pinned dark passes it. The prompt collapses the field's selection on every way out, Alt+F4
