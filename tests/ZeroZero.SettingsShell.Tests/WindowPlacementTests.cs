@@ -114,6 +114,19 @@ public class WindowPlacementTests
     }
 
     [Fact]
+    public void FitToContent_RoundsUpAddsTheFrameNeverNarrowsAndStaysInsideTheWorkArea()
+    {
+        var current = new NativeRect(1500, 900, 2100, 1200);
+
+        var rect = WindowPlacement.FitToContent(current, clientWidth: 300.2, clientHeight: 400.1, scale: 1.5, frame: (16, 39), Cursor);
+
+        // 300.2 × 1.5 rounds up to 451, plus 16, narrower than the 600 it has; 400.1 × 1.5 rounds up to 601, plus 39.
+        Assert.Equal(600, rect.Width);
+        Assert.Equal(640, rect.Height);
+        Assert.Equal((Cursor.Right, Cursor.Bottom), (rect.Right, rect.Bottom));
+    }
+
+    [Fact]
     public void Remember_KeepsARestoredRectangle()
     {
         var rect = new WindowRect(10, 20, 800, 600);

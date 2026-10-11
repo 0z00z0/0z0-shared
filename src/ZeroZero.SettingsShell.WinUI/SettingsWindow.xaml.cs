@@ -159,13 +159,10 @@ public sealed partial class SettingsWindow : Window, ISectionHost<UIElement>
         IntPtr hwnd = Win32Interop.GetWindowFromWindowId(_appWindow.Id);
         double scale = MonitorMetrics.ScaleForWindow(hwnd);
         var (frameWidth, frameHeight) = MonitorMetrics.NonClientSize(hwnd);
-        var bounds = WorkAreaOf(DisplayArea.GetFromWindowId(_appWindow.Id, DisplayAreaFallback.Nearest));
-        var position = _appWindow.Position;
-        var size = _appWindow.Size;
+        var (position, size) = (_appWindow.Position, _appWindow.Size);
+        var current = new NativeRect(position.X, position.Y, position.X + size.Width, position.Y + size.Height);
 
-        int outerWidth = Math.Min(Math.Max((int)Math.Ceiling(clientWidth * scale) + frameWidth, size.Width), bounds.Width);
-        int outerHeight = Math.Min((int)Math.Ceiling(clientHeight * scale) + frameHeight, bounds.Height);
-        var fitted = new NativeRect(position.X, position.Y, position.X + outerWidth, position.Y + outerHeight).ClampInto(bounds);
+        var fitted = WindowPlacement.FitToContent(current, clientWidth, clientHeight, scale, (frameWidth, frameHeight), WorkAreaAt(current));
         _appWindow.MoveAndResize(new RectInt32(fitted.Left, fitted.Top, fitted.Width, fitted.Height));
     }
 
@@ -268,8 +265,7 @@ public sealed partial class SettingsWindow : Window, ISectionHost<UIElement>
             setup.DefaultClientWidth,
             setup.DefaultClientHeight,
             MonitorMetrics.NonClientSize(hwnd),
-            rect => WorkAreaOf(DisplayArea.GetFromRect(
-                new RectInt32(rect.Left, rect.Top, rect.Width, rect.Height), DisplayAreaFallback.Nearest)));
+            WorkAreaAt);
 
         _appWindow.MoveAndResize(new RectInt32(opening.Left, opening.Top, opening.Width, opening.Height));
         // Seeded here: a window closed without ever being moved or resized raises no change to
@@ -286,9 +282,7 @@ public sealed partial class SettingsWindow : Window, ISectionHost<UIElement>
         _ => new IconSourceElement { IconSource = icon },
     };
 
-    private static NativeRect WorkAreaOf(DisplayArea area)
-    {
-        var work = area.WorkArea;
-        return new NativeRect(work.X, work.Y, work.X + work.Width, work.Y + work.Height);
-    }
+    // The monitor under the rectangle's centre, the rule every other window in the family places by.
+    private static NativeRect WorkAreaAt(NativeRect rect) =>
+        MonitorMetrics.ForPoint(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2).WorkArea;
 }

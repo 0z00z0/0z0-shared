@@ -85,7 +85,7 @@ a rebuild would lose, so a request naming it is a mistake rather than an excepti
 
 `FitToPages()` measures every page at the width the pages have now — each made visible for its
 own measure and put back — and grows the window to the tallest, widening only for a page that
-cannot fit the width it has, within the work area of the monitor it is on. Everything conditional
+cannot fit the width it has, within the work area of the monitor under its centre. Everything conditional
 about a page is therefore decided inside `Build`, which has run for every section before any
 measure. Called before the content has loaded, it waits for load, so an application calls it
 straight after the constructor.
@@ -172,7 +172,8 @@ sealed class SettingsWindowRectStore(SettingsFile file) : IWindowRectStore
 ## Placement
 
 The store is asked once as the window opens and told once as it closes. A saved rectangle is
-kept where it was, shrunk to the work area of the monitor nearest it if it has outgrown that,
+kept where it was, shrunk to the work area of the monitor under its centre (the nearest one when
+the centre is on none) if it has outgrown that,
 and moved inside it if it has strayed — a monitor that has gone leaves a rectangle nothing can
 reach. With nothing saved, the default client size at the cursor monitor's scale, centred on that
 monitor's work area, which is the screen whose tray was just clicked. The rectangle told back is
