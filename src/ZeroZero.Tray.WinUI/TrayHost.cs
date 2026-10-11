@@ -169,9 +169,8 @@ public sealed class TrayHost : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         var icon = _icon ?? throw new InvalidOperationException("The host has not been prepared.");
 
-        // The library's default arms efficiency mode for the whole process: idle priority class
-        // and power throttling, applied here and never restored. Refused, and a test measures the
-        // process afterwards rather than this argument.
+        // The library's default arms efficiency mode for the whole process (idle priority, power
+        // throttling) and never restores it; a test measures the process, not this argument.
         icon.ForceCreate(enablesEfficiencyMode: false);
 
         var window = icon.TrayIcon.MessageWindow;
@@ -252,18 +251,14 @@ public sealed class TrayHost : IDisposable
         _renderer.Release();
     }
 
-    /// <summary>Removes the icon and adds it again, so the shell reads the per-icon settings
-    /// afresh. The library keeps the icon's state, so what comes back is the same icon with the
-    /// same tooltip and the same menu.</summary>
+    // The shell reads the per-icon settings only when the icon is added.
     private void Reregister()
     {
         if (_icon is not { IsCreated: true } icon) return;
         AddAgain(icon);
     }
 
-    /// <summary>Removes the icon from the shell and adds it again from the state the library holds.
-    /// A refused add throws: to the caller where the application made the call, and into
-    /// <see cref="Failed"/> through the guard every change the host starts on its own runs in.</summary>
+    // The library's own state restores the same icon, tooltip and menu. A refused add throws.
     internal static void AddAgain(TaskbarIcon icon)
     {
         icon.TrayIcon.TryRemove();
@@ -278,13 +273,8 @@ public sealed class TrayHost : IDisposable
         if (_icon is null) throw new InvalidOperationException("The host has not started.");
     }
 
-    /// <summary>
-    /// Draws the menu in the taskbar's own theme, or in the one the application pinned. The menu
-    /// is a native popup rather than a XAML flyout, so its colours come from the process's menu
-    /// mode and not from any property on the flyout or the icon (measured: a theme set on either
-    /// leaves the menu light). The mode is process-wide and covers every Win32 menu the
-    /// application shows.
-    /// </summary>
+    // The menu is a native popup: its colours come from the process-wide menu mode (measured: a
+    // theme set on the flyout or the icon leaves it light). docs/zerozero-tray.md has the rest.
     private void ApplyMenuTheme()
     {
         DarkChromeMode? mode = (_options.MenuTheme ?? ThemeForTaskbar()) switch

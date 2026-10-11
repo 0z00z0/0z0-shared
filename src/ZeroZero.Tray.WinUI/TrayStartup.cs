@@ -26,7 +26,7 @@ public static class TrayStartup
     {
         options ??= new TrayStartupOptions();
         options.Validate();
-        UiThread.Dispatcher();
+        _ = UiThread.Dispatcher();
 
         var clock = Stopwatch.StartNew();
         return TrayStartupSequence.RunAsync(
