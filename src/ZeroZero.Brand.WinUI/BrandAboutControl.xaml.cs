@@ -87,10 +87,8 @@ public sealed partial class BrandAboutControl : UserControl
         _builtInButtons = _buttonRow.Children.Count;
         ButtonRowSlot.Child = _buttonRow;
 
-        // Wired once at construction, never from SetInfo: a consumer with a cached in-navigation
-        // About page calls SetInfo on every navigation, and wiring there would stack one more
-        // handler per call — the third visit would open each link three times. The notes handler
-        // therefore reads the current _info rather than capturing a SetInfo argument.
+        // Wired once here, never from SetInfo, which a cached page calls on every visit: wiring there
+        // stacks a handler per call. The notes handler reads the current _info for the same reason.
         _newsButton.Click  += (_, _) => _ = ToggleNotesAsync();
         siteButton.Click   += (_, _) => Open(CoreBrand.WebsiteUrl);
         donateButton.Click += (_, _) => Open(CoreBrand.BuyMeACoffeeUrl);
@@ -114,12 +112,9 @@ public sealed partial class BrandAboutControl : UserControl
     }
 
     /// <summary>
-    /// Supplies the per-app data to render. A method rather than a settable CLR property — the
-    /// WinUI XAML compiler generates metadata requiring a parameterless constructor for the type of
-    /// any public property on a XAML class, which <see cref="AboutInfo"/>'s <see langword="required"/>
-    /// members deliberately don't have (CS9035). A XAML-hosted consumer (e.g. an in-nav About page)
-    /// calls this from code-behind after construction; <see cref="BrandAboutWindow"/>'s constructor
-    /// calls it itself.
+    /// Supplies the per-app data to render; calling it again, as a cached page does on every visit,
+    /// is safe. A method, because a public <see cref="AboutInfo"/> property fails the XAML build with
+    /// CS9035 (docs/consume-brand-about-control.md). <see cref="BrandAboutWindow"/> calls it itself.
     /// </summary>
     public void SetInfo(AboutInfo info)
     {
@@ -150,11 +145,8 @@ public sealed partial class BrandAboutControl : UserControl
         PopulateExternalLibraries(info.ExternalLibraries);
     }
 
-    /// <summary>
-    /// Replaces the host's buttons at the end of the row. Rebuilt on every call for the same reason
-    /// the credit list is cleared: a cached page calls SetInfo on every visit, and a new button per
-    /// call carries exactly one handler.
-    /// </summary>
+    /// <summary>Replaces the host's buttons at the end of the row; rebuilt on every call, so each
+    /// carries exactly one handler.</summary>
     private void PopulateHostButtons(IReadOnlyList<AboutButton> buttons)
     {
         while (_buttonRow.Children.Count > _builtInButtons)
@@ -278,10 +270,7 @@ public sealed partial class BrandAboutControl : UserControl
 
     private void PopulateExternalLibraries(IReadOnlyList<ExternalLibrary> libraries)
     {
-        // Cleared before every repopulate, for the same reason the link handlers attach once: a
-        // consumer with a cached in-navigation About page calls SetInfo on every navigation, and
-        // appending to a panel that still holds the previous lines renders the whole credit list
-        // once per visit. The group's visibility follows this call's list, in either direction.
+        // Cleared on every call, or a cached page's repeated SetInfo lists every credit once per visit.
         LibrariesPanel.Children.Clear();
         LibrariesGroup.Visibility = libraries.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
 
