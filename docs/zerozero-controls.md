@@ -124,8 +124,9 @@ This guide is complete for adoption: the component's own source and tests need n
   process; any other exception propagates. Nothing retries the call later: a window that must be
   hidden from the switchers either opens only once the taskbar exists
   ([the startup rule](zerozero-tray.md#the-startup-rule)) or calls `TrySet` again itself. `log` is
-  optional, and without one nothing is written and the once-per-process line stays unspent. The
-  About window, the update window and the text prompt all set it this way.
+  optional, and without one nothing is written and the once-per-process line stays unspent.
+  `ContentSizedPopup` sets it this way, and the About window, the update window and the text prompt
+  are built on it.
 
 Not here, by design: anything carrying the studio's face or palette. Those are the brand component's
 ([`zerozero-brand.md`](zerozero-brand.md)), which a component takes when it needs them and says so.
