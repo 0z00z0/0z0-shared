@@ -583,6 +583,44 @@ public class MqttConnectionLoopbackTests
         Assert.DoesNotContain(broker.Published, p => p.Topic == Availability && p.Payload.Length == 0);
     }
 
+    /// <summary>An apply arriving during a removal waits for it. Run inside it, the apply switches
+    /// publishing back on while the removal is still emptying the device's topics.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task AnApplyArrivingDuringARemovalWaitsForIt()
+    {
+        using var broker = new FakeBroker();
+        var listener = new RemovalListener();
+        using var connection = await ConnectAsync(broker, Setup() with { Listener = listener });
+        Task? apply = null;
+        bool appliedInside = true;
+        listener.During = async () =>
+        {
+            apply = connection.ApplyAsync(Parameters(broker) with { DeviceName = "Workshop" });
+            await Task.Delay(300);
+            appliedInside = apply.IsCompleted;
+        };
+
+        Assert.True(await connection.RemoveDeviceAsync());
+
+        Assert.False(appliedInside, "an apply ran inside the removal");
+        await apply!;
+    }
+
+    private sealed class RemovalListener : IMqttConnectionListener
+    {
+        public Func<Task> During { get; set; } = () => Task.CompletedTask;
+
+        public Task OnConnectedAsync(IMqttPublisher publisher, MqttDeviceIdentity identity, CancellationToken ct) =>
+            Task.CompletedTask;
+
+        public Task OnRemovingAsync(IMqttPublisher publisher, MqttDeviceIdentity identity, CancellationToken ct) =>
+            During();
+
+        public Task OnIdentityRetiredAsync(IMqttPublisher publisher, MqttDeviceIdentity retired, CancellationToken ct) =>
+            Task.CompletedTask;
+    }
+
     [Fact]
     public async Task AChannelThatArrivesIsAskedForItsValueAtOnce()
     {

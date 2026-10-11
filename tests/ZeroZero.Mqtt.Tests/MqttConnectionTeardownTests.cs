@@ -50,14 +50,35 @@ public class MqttConnectionTeardownTests
         Assert.Null(await Record.ExceptionAsync(() => connection.ApplyAsync(Parameters())));
     }
 
-    /// <summary>A second disposal is what a host that tears down explicitly and then disposes on the
-    /// way out does, and it must cost nothing.</summary>
+    /// <summary>A reconcile already past the disposal check and waiting at the gate when the teardown
+    /// lands reconciles nothing. Run, it takes a new identity and drives a maintain loop over a client
+    /// that has been disposed.</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
-    public void DisposingTwiceIsHarmless()
+    public async Task AReconcileWaitingAtTheGateWhenTheTeardownLandsReconcilesNothing()
     {
-        var connection = new MqttConnection(new MqttConnectionSetup { TopicRoot = "exampleapp" });
-        connection.Dispose();
+        using var release = new SemaphoreSlim(0);
+        int recalls = 0;
+        var connection = new MqttConnection(new MqttConnectionSetup
+        {
+            TopicRoot = "exampleapp",
+            RecallEndpoint = () =>
+            {
+                if (Interlocked.Increment(ref recalls) == 1) release.Wait();
+                return null;
+            },
+        });
 
-        Assert.Null(Record.Exception(connection.Dispose));
+        var holding = Task.Run(() => connection.ApplyAsync(Parameters()));
+        Assert.True(await FakeBroker.WaitAsync(() => Volatile.Read(ref recalls) == 1));
+        var waiting = Task.Run(() => connection.ApplyAsync(Parameters() with { DeviceId = "desk02" }));
+        await Task.Delay(300);   // past the disposal check and queued at the gate
+
+        connection.Dispose();
+        release.Release();
+        await holding;
+        await waiting;
+
+        Assert.Equal("desk01", connection.DeviceId);
     }
 }

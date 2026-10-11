@@ -173,6 +173,9 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
+            // A teardown that took the gate first has already stopped everything this would start.
+            if (Volatile.Read(ref _disposed) != 0) return;
+
             if (!parameters.ShouldRun)
             {
                 // Switched off, or a configuration that has stopped being complete — a blanked host is
@@ -1154,12 +1157,19 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     /// topics, every value and every command topic. Explicit and separate, because it takes the whole
     /// device off the receiver, which nothing a user does to the settings should.</summary>
     /// <returns>False when there was no live link to do it over, so nothing was removed.</returns>
+    /// <remarks>Holds the gate, so an apply arriving during the removal waits for it to finish. The
+    /// stored parameters still say publishing is on: any later apply starts it again.</remarks>
     public async Task<bool> RemoveDeviceAsync(CancellationToken ct = default)
     {
-        if (!_client.IsConnected) return false;
-        await StopInternalAsync(remove: true, ct).ConfigureAwait(false);
-        SetState(MqttConnectionState.Disabled);
-        return true;
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            if (!_client.IsConnected) return false;
+            await StopInternalAsync(remove: true, ct).ConfigureAwait(false);
+            SetState(MqttConnectionState.Disabled);
+            return true;
+        }
+        finally { _gate.Release(); }
     }
 
     /// <param name="remove">Whether the device is being removed outright, as against publishing
@@ -1230,7 +1240,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         try { _work.Writer.TryComplete(); } catch { /* already completed */ }
 
         var stopCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(750));
-        try { Task.Run(() => StopInternalAsync(remove: false, stopCts.Token)).Wait(TimeSpan.FromSeconds(1)); }
+        try { Task.Run(() => StopUnderGateAsync(stopCts.Token)).Wait(TimeSpan.FromSeconds(1)); }
         catch { /* the process is exiting either way */ }
 
         _workerStop.Cancel();
@@ -1243,5 +1253,14 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         // nothing to release, while disposing it would turn a reconcile that is already past the
         // check above into a throw out of its own release.
         // stopCts is left undisposed: its token can outlive this call, and the process is exiting.
+    }
+
+    // Under the gate so a reconcile cannot interleave with the stop. A reconcile that holds the gate
+    // past the budget, including one that called Dispose itself, leaves this to time out.
+    private async Task StopUnderGateAsync(CancellationToken ct)
+    {
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try { await StopInternalAsync(remove: false, ct).ConfigureAwait(false); }
+        finally { _gate.Release(); }
     }
 }
