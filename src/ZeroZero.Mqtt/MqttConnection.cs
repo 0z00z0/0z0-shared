@@ -1234,7 +1234,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 
-        try { _work.Writer.TryComplete(); } catch { /* already completed */ }
+        _work.Writer.TryComplete();
 
         var stopCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(750));
         try { Task.Run(() => StopUnderGateAsync(stopCts.Token)).Wait(TimeSpan.FromSeconds(1)); }
