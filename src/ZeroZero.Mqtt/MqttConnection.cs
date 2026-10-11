@@ -317,8 +317,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             }
 
             // A half-open session from a refused CONNACK would make the next attempt look connected.
-            try { if (_client.IsConnected) await DropOwnSessionAsync().ConfigureAwait(false); }
-            catch { /* the socket is going away either way */ }
+            await DropOwnSessionAsync().ConfigureAwait(false);
             attempts.Add(new(candidate, result));
         }
 
@@ -364,12 +363,18 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     private static string Where(MqttEndpointAttempt attempt) =>
         $"{MqttStatusText.Name(attempt.Candidate.Transport)}:{attempt.Candidate.Port}";
 
-    /// <summary>Ends the current session on this connection's own account, so the disconnect it raises
-    /// is not reported as a lost link.</summary>
-    private Task DropOwnSessionAsync()
+    /// <summary>Ends the current session, if there is one, on this connection's own account, so the
+    /// disconnect it raises is not reported as a lost link. Never throws: the socket is going away
+    /// either way, and every caller reconnects next.</summary>
+    private async Task DropOwnSessionAsync()
     {
-        Volatile.Write(ref _ownDrop, 1);
-        return _client.DisconnectAsync();
+        try
+        {
+            if (!_client.IsConnected) return;
+            Volatile.Write(ref _ownDrop, 1);
+            await _client.DisconnectAsync().ConfigureAwait(false);
+        }
+        catch { /* the socket is going away either way */ }
     }
 
     /// <summary>Whether the next round's socket stage should take the full budget: this one tried
@@ -464,8 +469,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             if (_reconnectRequested)
             {
                 _reconnectRequested = false;
-                try { if (_client.IsConnected) await DropOwnSessionAsync().ConfigureAwait(false); }
-                catch { /* about to reconnect anyway */ }
+                await DropOwnSessionAsync().ConfigureAwait(false);
                 backoff.Resume();
             }
 
@@ -520,8 +524,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
                 // The connect sequence can throw with the socket up, leaving neither branch reachable
                 // next pass — a healthy-looking connection that never gets its announcement,
                 // availability or subscription. Drop it so the next pass retries.
-                try { if (_client.IsConnected) await DropOwnSessionAsync().ConfigureAwait(false); }
-                catch { /* the next pass reconnects */ }
+                await DropOwnSessionAsync().ConfigureAwait(false);
                 backoff.Failed();
                 SetState(MqttConnectionState.Retrying);
             }
