@@ -25,130 +25,8 @@
 
 $ErrorActionPreference = "Stop"
 
-$repoRoot   = Split-Path $PSScriptRoot -Parent   # scripts\ sits one level below the repository root
-$harnessDir = Join-Path $repoRoot "src\ZeroZero.Brand.WinUI.TestHarness"
-$outDir     = Join-Path $repoRoot "docs\screenshots"
-
-# The harness csproj derives its RuntimeIdentifier from the running process architecture, so the
-# output folder is win-x64 on x64 and win-arm64 on arm64. Locate the exe instead of assuming one.
-function Resolve-HarnessExe {
-    Get-ChildItem -Path (Join-Path $harnessDir "bin\Debug") -Filter "ZeroZero.Brand.WinUI.TestHarness.exe" `
-                  -Recurse -File -ErrorAction SilentlyContinue |
-        Sort-Object LastWriteTime -Descending |
-        Select-Object -First 1 -ExpandProperty FullName
-}
-
-$exePath = Resolve-HarnessExe
-if (-not $exePath) {
-    Write-Host "Building test harness..."
-    dotnet build $harnessDir
-    $exePath = Resolve-HarnessExe
-    if (-not $exePath) { throw "Test harness exe not found under $harnessDir\bin\Debug." }
-}
-
-Add-Type -TypeDefinition @'
-using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Text;
-public class AboutCapture {
-    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-    [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-    [DllImport("user32.dll")] public static extern int GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-    [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
-    [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr hWnd);
-    [DllImport("user32.dll")] public static extern int GetWindowTextLength(IntPtr hWnd);
-    [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
-    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-    [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
-    [DllImport("user32.dll")] public static extern IntPtr SetProcessDpiAwarenessContext(IntPtr value);
-    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
-    [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr hWnd);
-    [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr hWnd, IntPtr dc);
-    [DllImport("gdi32.dll")] public static extern uint GetPixel(IntPtr dc, int x, int y);
-    public struct RECT { public int Left, Top, Right, Bottom; }
-
-    public static List<IntPtr> GetProcessWindows(uint pid) {
-        var handles = new List<IntPtr>();
-        EnumWindows((hWnd, lParam) => {
-            uint windowPid;
-            GetWindowThreadProcessId(hWnd, out windowPid);
-            if (windowPid == pid && IsWindowVisible(hWnd) && GetWindowTextLength(hWnd) > 0) {
-                handles.Add(hWnd);
-            }
-            return true;
-        }, IntPtr.Zero);
-        return handles;
-    }
-
-    public static string GetTitle(IntPtr hWnd) {
-        var sb = new StringBuilder(256);
-        GetWindowText(hWnd, sb, sb.Capacity);
-        return sb.ToString();
-    }
-
-    // Moved without being activated: focus has to stay on the window being captured, which closes
-    // the instant it loses it.
-    public static void Park(IntPtr h, int x, int y) {
-        SetWindowPos(h, new IntPtr(-1), x, y, 0, 0, 0x0001 | 0x0010);
-    }
-}
-'@
-Add-Type -AssemblyName System.Drawing
-
-# Per-monitor-v2 so GetWindowRect returns physical pixels and the capture is full-resolution and
-# sharp. Without it every rectangle comes back in system-DPI coordinates and each capture is the
-# top-left corner of the real window.
-[AboutCapture]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
-
-function Find-HarnessWindow([uint32]$processId, [string]$title, [int]$timeoutMs) {
-    $deadline = (Get-Date).AddMilliseconds($timeoutMs)
-    while ((Get-Date) -lt $deadline) {
-        foreach ($handle in [AboutCapture]::GetProcessWindows($processId)) {
-            if ([AboutCapture]::GetTitle($handle) -eq $title) { return $handle }
-        }
-        Start-Sleep -Milliseconds 150
-    }
-    return [IntPtr]::Zero
-}
-
-function Test-Anchor([uint32]$processId, $beside) {
-    $handle = Find-HarnessWindow $processId "White Anchor" 8000
-    if ($handle -eq [IntPtr]::Zero) { return $false }
-
-    # Parked beside the captured window rather than in a screen corner, which another always-on-top
-    # window can hold: a patch nothing can see says nothing about the screen.
-    $x = $beside.Left - 260
-    if ($x -lt 0) { $x = $beside.Right + 20 }
-    [AboutCapture]::Park($handle, $x, $beside.Top)
-    Start-Sleep -Milliseconds 400
-
-    $rect = New-Object AboutCapture+RECT
-    [AboutCapture]::GetWindowRect($handle, [ref]$rect) | Out-Null
-    $dc = [AboutCapture]::GetDC([IntPtr]::Zero)
-    $raw = [AboutCapture]::GetPixel($dc, [int](($rect.Left + $rect.Right) / 2), [int](($rect.Top + $rect.Bottom) / 2))
-    [AboutCapture]::ReleaseDC([IntPtr]::Zero, $dc) | Out-Null
-
-    return (($raw -band 0xFF) -eq 255) -and ((($raw -shr 8) -band 0xFF) -eq 255) -and ((($raw -shr 16) -band 0xFF) -eq 255)
-}
-
-function Save-Window([IntPtr]$handle, [string]$path) {
-    $rect = New-Object AboutCapture+RECT
-    [AboutCapture]::GetWindowRect($handle, [ref]$rect) | Out-Null
-    $width  = $rect.Right - $rect.Left
-    $height = $rect.Bottom - $rect.Top
-
-    $bmp = New-Object System.Drawing.Bitmap $width, $height
-    $gfx = [System.Drawing.Graphics]::FromImage($bmp)
-    $hdc = $gfx.GetHdc()
-    $ok  = [AboutCapture]::PrintWindow($handle, $hdc, 2)   # 2 = PW_RENDERFULLCONTENT
-    $gfx.ReleaseHdc($hdc)
-    if (-not $ok) { $gfx.Dispose(); $bmp.Dispose(); throw "PrintWindow failed." }
-
-    $bmp.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
-    $gfx.Dispose(); $bmp.Dispose()
-    return "$width x $height"
-}
+. (Join-Path $PSScriptRoot "harness-capture.ps1")
+$exePath = Get-HarnessExe
 
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
@@ -169,14 +47,14 @@ foreach ($surface in $surfaces) {
             if ($handle -eq [IntPtr]::Zero) { continue }
 
             Start-Sleep -Milliseconds 1200   # let the window finish rendering before capturing
-            if (-not [AboutCapture]::IsWindow($handle)) {
+            if (-not [HarnessCapture]::IsWindow($handle)) {
                 Write-Host "'$($surface.Title)' dismissed itself before the capture; retrying."
                 continue
             }
 
-            $rect = New-Object AboutCapture+RECT
-            [AboutCapture]::GetWindowRect($handle, [ref]$rect) | Out-Null
-            if (-not (Test-Anchor ([uint32]$p.Id) $rect)) {
+            $rect = New-Object HarnessCapture+RECT
+            [HarnessCapture]::GetWindowRect($handle, [ref]$rect) | Out-Null
+            if (-not (Test-WhiteAnchor ([uint32]$p.Id) $rect)) {
                 Write-Host "The white anchor did not read white: the screen is dimmed or locked. Retrying."
                 continue
             }
