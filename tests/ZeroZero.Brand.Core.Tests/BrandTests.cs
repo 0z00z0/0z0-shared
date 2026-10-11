@@ -41,15 +41,7 @@ public class BrandTests
     /// <summary>The palette is consumed as raw hex by both WinUI (via a colour parser) and by
     /// documentation, so the literal form matters as much as the value.</summary>
     [Theory]
-    [InlineData(Brand.ColorBg)]
-    [InlineData(Brand.ColorBg2)]
-    [InlineData(Brand.ColorTeal)]
-    [InlineData(Brand.ColorBlue)]
-    [InlineData(Brand.ColorPurple)]
-    [InlineData(Brand.ColorIndigo)]
-    [InlineData(Brand.ColorAmber)]
-    [InlineData(Brand.ColorSteelBlue)]
-    [InlineData(Brand.ColorTerracotta)]
+    [MemberData(nameof(PaletteConstants.Values), MemberType = typeof(PaletteConstants))]
     public void Palette_IsSixDigitLowercaseHexWithAHash(string colour)
         => Assert.Matches(new Regex("^#[0-9a-f]{6}$"), colour);
 
@@ -64,12 +56,7 @@ public class BrandTests
     [Fact]
     public void Palette_EveryColourIsDistinct()
     {
-        string[] palette =
-        [
-            Brand.ColorBg, Brand.ColorBg2, Brand.ColorTeal, Brand.ColorBlue,
-            Brand.ColorPurple, Brand.ColorIndigo, Brand.ColorAmber,
-            Brand.ColorSteelBlue, Brand.ColorTerracotta,
-        ];
+        string[] palette = PaletteConstants.All.Values.ToArray();
 
         Assert.Equal(palette.Length, palette.Distinct(StringComparer.Ordinal).Count());
     }

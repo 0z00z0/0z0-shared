@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Reflection;
 using Xunit;
 
 namespace ZeroZero.Brand.Core.Tests;
@@ -92,10 +91,7 @@ public class PaletteContrastTests
     [Fact]
     public void EveryPaletteConstantIsEitherAGroundOrAMeasuredAccent()
     {
-        var constants = typeof(Brand).GetFields(BindingFlags.Public | BindingFlags.Static)
-            .Where(f => f.IsLiteral && f.Name.StartsWith("Color", StringComparison.Ordinal))
-            .Select(f => (string)f.GetRawConstantValue()!)
-            .ToArray();
+        var constants = PaletteConstants.All.Values.ToArray();
 
         string[] covered = [Brand.ColorBg, Brand.ColorBg2, .. Accents.Select(a => a.Colour)];
         Assert.Equal(constants.Order(), covered.Order());

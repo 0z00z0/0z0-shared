@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Xml.Linq;
 using Xunit;
 
@@ -36,9 +35,7 @@ public class BrandResourcesTests
     [Fact]
     public void EveryPaletteConstantIsDeclaredOnceAndRepeatedInLightAndDark()
     {
-        var constants = typeof(Brand).GetFields(BindingFlags.Public | BindingFlags.Static)
-            .Where(f => f.IsLiteral && f.Name.StartsWith("Color", StringComparison.Ordinal))
-            .ToDictionary(f => f.Name, f => (string)f.GetRawConstantValue()!);
+        var constants = PaletteConstants.All;
 
         Assert.Equal(constants.Keys.Order(), Palette.Select(p => p.Constant).Order());
 
