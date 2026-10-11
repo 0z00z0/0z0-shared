@@ -21,6 +21,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The About control's release-notes download, which names no WinUI type. -->
+    <Compile Include="..\..\src\ZeroZero.Brand.WinUI\ReleaseNotesReader.cs" Link="Linked\ReleaseNotesReader.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- The brand dictionary declares the palette a second time, in the form XAML consumes, and the
          About control names the brand face on its own. Both live in a Windows-only project this one
          cannot reference, so they are copied in as data and held against the constants as text.

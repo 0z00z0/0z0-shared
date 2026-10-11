@@ -30,13 +30,6 @@ public sealed partial class BrandAboutControl : UserControl
     /// </summary>
     private static readonly TimeSpan FetchTimeout = TimeSpan.FromSeconds(3);
 
-    /// <summary>
-    /// How much of the notes is read. The panel is a few lines in a small window, not a document
-    /// viewer, and a bounded read also caps what an address under someone else's control can make
-    /// this control download.
-    /// </summary>
-    private const int MaxNotesCharacters = 4000;
-
     /// <summary>What is shown while the fetch is in flight, and what replaces it when it fails —
     /// one plain sentence, no error code, no retry offered.</summary>
     private const string Fetching = "Fetching the notes…";
@@ -255,7 +248,7 @@ public sealed partial class BrandAboutControl : UserControl
         _fetch = fetch;
         try
         {
-            string text = await FetchNotesAsync(url, fetch.Token);
+            string text = await ReleaseNotesReader.FetchAsync(Http, url, fetch.Token);
             if (_fetch != fetch) return;
             _notes = text;
             NewsText.Text = text;
@@ -281,29 +274,6 @@ public sealed partial class BrandAboutControl : UserControl
                 catch (Exception ex) { Debug.WriteLine($"BrandAboutControl: resize after fetch: {ex}"); }
             }
         }
-    }
-
-    /// <summary>
-    /// The notes as text, bounded in both time and size by the caller's token and
-    /// <see cref="MaxNotesCharacters"/>. Reads the body as it arrives rather than whole, so a large
-    /// document costs the first few thousand characters and no more.
-    /// </summary>
-    private static async Task<string> FetchNotesAsync(string url, CancellationToken token)
-    {
-        using var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, token);
-        response.EnsureSuccessStatusCode();
-
-        await using var body = await response.Content.ReadAsStreamAsync(token);
-        using var reader = new StreamReader(body);
-
-        var buffer = new char[MaxNotesCharacters];
-        int read = await reader.ReadBlockAsync(buffer, token);
-        string text = new string(buffer, 0, read).TrimEnd();
-
-        if (text.Length == 0) return "There is nothing to show for this release.";
-
-        // A full buffer means the body had more; say so rather than ending mid-sentence in silence.
-        return read == buffer.Length ? text + "…" : text;
     }
 
     private void PopulateExternalLibraries(IReadOnlyList<ExternalLibrary> libraries)
