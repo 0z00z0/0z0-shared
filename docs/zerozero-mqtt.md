@@ -907,12 +907,18 @@ Only an entity the record says was already announced is held unavailable. One wh
 been switched on has no registry entry to protect, and announcing it would create the very thing the
 user declined.
 
-**Removing the device outright is a separate, explicit operation** — `MqttConnection.RemoveDeviceAsync`
-or `DiscoveryPublisher.RemoveDeviceAsync`. It empties the document, both availability topics, every
-state topic and every command topic, and it deletes every registry entry the device owns along with
-the names, entity ids and areas the user chose. Nothing a user does to the settings can reach it.
-Switching publishing off, or blanking the host so the configuration stops being complete, publishes
-offline and leaves everything standing.
+**Removing the device outright is a separate, explicit operation** — `MqttConnection.RemoveDeviceAsync`.
+It empties the document, both availability topics, every state topic and every command topic, then
+stops the connection, and it deletes every registry entry the device owns along with the names,
+entity ids and areas the user chose. Nothing a user does to the settings can reach it. Switching
+publishing off, or blanking the host so the configuration stops being complete, publishes offline and
+leaves everything standing.
+
+- **`DiscoveryPublisher.RemoveDeviceAsync` withdraws without stopping the connection.** The channels
+  go on publishing and refill the emptied state topics, and the next reconnect announces the device
+  again. Use `MqttConnection.RemoveDeviceAsync` to take the device off the receiver.
+- **The stored settings still say publishing is on after a removal.** Any later apply starts it
+  again; an apply that arrives while the removal is running waits for it to finish.
 
 **A value topic no entity claims is reached by `RetiredChannel`.** The four intents above all
 concern a discovery config; a retained payload left behind by an earlier implementation — the shared
