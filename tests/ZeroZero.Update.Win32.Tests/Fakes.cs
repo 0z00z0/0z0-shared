@@ -1,24 +1,4 @@
-using ZeroZero.Primitives;
-
 namespace ZeroZero.Update.Win32.Tests;
-
-internal sealed class RecordingLogSink : ILogSink
-{
-    private readonly Lock _lock = new();
-
-    public List<string> Infos { get; } = [];
-    public List<(string Source, Exception? Error)> Errors { get; } = [];
-
-    public void Info(string message)
-    {
-        lock (_lock) Infos.Add(message);
-    }
-
-    public void Error(string source, Exception? ex)
-    {
-        lock (_lock) Errors.Add((source, ex));
-    }
-}
 
 /// <summary>A service that answers what the test set and records what the flow asked of it. No
 /// network, no file, no process.</summary>
@@ -109,7 +89,6 @@ internal sealed class RecordingPrompts : IUpdatePrompts
     public List<UpdateCheckResult> CheckFailed { get; } = [];
     public List<PreparedUpdate> CannotInstall { get; } = [];
     public List<(PreparedUpdate Update, LaunchResult Result)> LaunchFailed { get; } = [];
-    public List<DownloadProgress> Reported { get; } = [];
     public int Downloads { get; private set; }
     public int Dismissals { get; private set; }
     public List<string> Sequence { get; } = [];
@@ -129,7 +108,8 @@ internal sealed class RecordingPrompts : IUpdatePrompts
     {
         Downloads++;
         Sequence.Add("download");
-        return new DownloadSurface(new Progress<DownloadProgress>(Reported.Add), StopDownload?.Token ?? default);
+        // A bar that draws nothing, so the flow still pairs it with the application's reporter.
+        return new DownloadSurface(new SynchronousProgress<DownloadProgress>(_ => { }), StopDownload?.Token ?? default);
     }
 
     public Task SayUpToDateAsync(Version runningVersion)

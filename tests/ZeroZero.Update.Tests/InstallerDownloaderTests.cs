@@ -30,7 +30,7 @@ public class InstallerDownloaderTests : IDisposable
         var downloader = new InstallerDownloader(_client, TimeSpan.FromSeconds(10), _log);
         var seen = new List<DownloadProgress>();
 
-        string path = await downloader.DownloadAsync(asset, _directory, "Product-Setup-1.2.3.exe", new Progress(seen.Add));
+        string path = await downloader.DownloadAsync(asset, _directory, "Product-Setup-1.2.3.exe", new SynchronousProgress<DownloadProgress>(seen.Add));
 
         Assert.Equal(Path.Combine(_directory, "Product-Setup-1.2.3.exe"), path);
         Assert.Equal(payload, await File.ReadAllBytesAsync(path));
@@ -124,11 +124,5 @@ public class InstallerDownloaderTests : IDisposable
         {
             // Left for the temporary folder's own housekeeping.
         }
-    }
-
-    /// <summary>Synchronous, so the last report has landed when the download returns.</summary>
-    private sealed class Progress(Action<DownloadProgress> report) : IProgress<DownloadProgress>
-    {
-        public void Report(DownloadProgress value) => report(value);
     }
 }

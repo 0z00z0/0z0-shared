@@ -1,6 +1,6 @@
-namespace ZeroZero.Startup.Tests;
+namespace ZeroZero.Tests;
 
-/// <summary>A clock the test moves, so a fifteen-minute window costs nothing to cross.</summary>
+/// <summary>A clock the test moves, so a window of minutes costs nothing to cross.</summary>
 internal sealed class FakeClock : TimeProvider
 {
     public DateTimeOffset Now { get; set; } = new(2026, 9, 2, 12, 0, 0, TimeSpan.Zero);

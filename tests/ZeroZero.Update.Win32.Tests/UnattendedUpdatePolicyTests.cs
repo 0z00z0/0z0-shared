@@ -40,16 +40,6 @@ public class UnattendedUpdatePolicyTests
     private void ReleaseIsWaiting(ReleaseInfo? release = null) =>
         _service.CheckResult = new UpdateCheckResult(UpdateCheckOutcome.UpdateAvailable, new Version(1, 0, 0, 0), release ?? FakeUpdateService.Release);
 
-    private static async Task WaitUntil(Func<bool> condition, TimeSpan within)
-    {
-        DateTime deadline = DateTime.UtcNow + within;
-        while (!condition())
-        {
-            Assert.True(DateTime.UtcNow < deadline, "The condition did not come true in time.");
-            await Task.Delay(10);
-        }
-    }
-
     [Trait(Guard.Category, Guard.Value)]
     [Fact]
     public async Task SettingOff_InstallsNothingAndChecksNothing()
@@ -346,7 +336,7 @@ public class UnattendedUpdatePolicyTests
             tickReported: tick => { lock (seenByScheduler) seenByScheduler.Add(tick); }))
         {
             driven.Start();
-            await WaitUntil(() => { lock (seenByScheduler) return seenByScheduler.Count > 0; }, TimeSpan.FromSeconds(5));
+            await Polling.WaitUntil(() => { lock (seenByScheduler) return seenByScheduler.Count > 0; }, TimeSpan.FromSeconds(5));
         }
 
         UnattendedTick first;

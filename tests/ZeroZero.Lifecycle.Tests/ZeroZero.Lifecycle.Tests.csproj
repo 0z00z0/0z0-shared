@@ -29,6 +29,12 @@
     <ProjectReference Include="..\..\src\ZeroZero.Lifecycle\ZeroZero.Lifecycle.csproj" />
   </ItemGroup>
 
+  <!-- Test helpers shared with other test projects, each linked where it is used. -->
+  <ItemGroup>
+    <Compile Include="..\Shared\RecordingLogSink.cs" Link="Shared\RecordingLogSink.cs" />
+    <Compile Include="..\Shared\FakeClock.cs" Link="Shared\FakeClock.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />

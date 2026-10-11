@@ -22,6 +22,13 @@
     <ProjectReference Include="..\..\src\ZeroZero.Update\ZeroZero.Update.csproj" />
   </ItemGroup>
 
+  <!-- Test helpers shared with other test projects, each linked where it is used. -->
+  <ItemGroup>
+    <Compile Include="..\Shared\RecordingLogSink.cs" Link="Shared\RecordingLogSink.cs" />
+    <Compile Include="..\Shared\Polling.cs" Link="Shared\Polling.cs" />
+    <Compile Include="..\Shared\SynchronousProgress.cs" Link="Shared\SynchronousProgress.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
