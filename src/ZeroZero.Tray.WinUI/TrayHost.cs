@@ -18,12 +18,10 @@ namespace ZeroZero.Tray.WinUI;
 public sealed class TrayHost : IDisposable
 {
     private readonly TrayHostOptions _options;
-    private readonly TrayIconFileCache _cache;
+    private readonly TrayIconRenderer _renderer;
     private TaskbarIcon? _icon;
-    private System.Drawing.Icon? _loaded;
     private DispatcherQueue? _dispatcher;
     private TrayClickPolicy? _clicks;
-    private TrayIconRequest? _request;
     private TrayIconPlacement? _placementReplaced;
     private bool _disposed;
 
@@ -33,7 +31,7 @@ public sealed class TrayHost : IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(options.Name);
         ArgumentNullException.ThrowIfNull(options.Icon);
         _options = options;
-        _cache = new TrayIconFileCache(options.CacheDirectory ?? Path.GetTempPath(), options.Name);
+        _renderer = new TrayIconRenderer(options.Icon, new TrayIconFileCache(options.CacheDirectory ?? Path.GetTempPath(), options.Name));
         Id = options.Id ?? TrayIcon.CreateUniqueGuidFromString(options.Name);
     }
 
@@ -109,11 +107,12 @@ public sealed class TrayHost : IDisposable
     /// <summary>Whether the shell currently holds the icon.</summary>
     public bool IsCreated => _icon?.IsCreated ?? false;
 
-    /// <summary>The slot and theme the icon was last rendered for; null before <see cref="Start"/>.</summary>
-    public TrayIconRequest? CurrentRequest => _request;
+    /// <summary>The slot and theme the icon was last rendered for; null before <see cref="Start"/>
+    /// and after <see cref="Dispose"/>.</summary>
+    public TrayIconRequest? CurrentRequest => _renderer.Request;
 
     /// <summary>Where a render is written.</summary>
-    public string CachePath => _cache.Path;
+    public string CachePath => _renderer.CachePath;
 
     /// <summary>
     /// Creates the icon. On the UI thread, once, after the XAML runtime is up: the listeners are
@@ -243,8 +242,7 @@ public sealed class TrayHost : IDisposable
             _icon = null;
         }
 
-        _loaded?.Dispose();
-        _loaded = null;
+        _renderer.Release();
     }
 
     // A refused icon left in place adds itself at the next TaskbarCreated without this host's listeners.
@@ -252,9 +250,7 @@ public sealed class TrayHost : IDisposable
     {
         _icon?.Dispose();
         _icon = null;
-        _loaded?.Dispose();
-        _loaded = null;
-        _request = null;
+        _renderer.Release();
     }
 
     /// <summary>Removes the icon and adds it again, so the shell reads the per-icon settings
@@ -269,7 +265,7 @@ public sealed class TrayHost : IDisposable
     /// <summary>Removes the icon from the shell and adds it again from the state the library holds.
     /// A refused add throws: to the caller where the application made the call, and into
     /// <see cref="Failed"/> through the guard every change the host starts on its own runs in.</summary>
-    private static void AddAgain(TaskbarIcon icon)
+    internal static void AddAgain(TaskbarIcon icon)
     {
         icon.TrayIcon.TryRemove();
         icon.TrayIcon.Create();
@@ -308,54 +304,14 @@ public sealed class TrayHost : IDisposable
     private static ElementTheme ThemeForTaskbar() =>
         TaskbarThemes.Read() == TaskbarTheme.Light ? ElementTheme.Light : ElementTheme.Dark;
 
-    private static TrayIconRequest ReadRequest()
-    {
-        var theme = TaskbarThemes.Read();
-        return new TrayIconRequest(TrayIconSlot.PixelsForTaskbar(), theme, TaskbarThemes.StrokeToneFor(theme));
-    }
-
-    /// <summary>Asks the application for the icon at the current slot and theme and hands the
-    /// shell the frame of the slot's own size, so nothing is resampled.</summary>
     private void Render()
     {
-        var request = ReadRequest();
-        TrayIconImage image = _options.Icon(request);
-        var (path, changed) = _cache.Resolve(image);
-        if (!changed && _loaded is not null)
-        {
-            _request = request;
-            Push();
-            return;
-        }
-
-        var previous = _loaded;
-        // The file's bytes are read into the handle here; a later overwrite of the cache file does
-        // not reach an icon already loaded.
-        _loaded = new System.Drawing.Icon(path, request.SlotPixels, request.SlotPixels);
-        // The library keeps the object: it re-adds this handle after a shell restart.
-        _icon!.Icon = _loaded;
-        // Recorded only once loaded, or a throw here leaves the next reconcile keeping the old icon.
-        _request = request;
-        previous?.Dispose();
+        if (_icon is { } icon) _renderer.Render(icon);
     }
 
-    /// <summary>The request re-read after a theme, display or shell change: a change is a new
-    /// render, and no change is a push of the current icon, which repairs an icon the shell
-    /// dropped without saying so.</summary>
     private void Reconcile()
     {
-        if (ReadRequest() != _request) Render();
-        else Push();
-    }
-
-    /// <summary>Puts the current icon to the shell again. A refusal means the shell no longer
-    /// holds the icon and sent no TaskbarCreated, so it is added afresh from the state the
-    /// library still holds.</summary>
-    private void Push()
-    {
-        if (_icon is null || _loaded is null || !_icon.IsCreated) return;
-        if (_icon.TrayIcon.UpdateIcon(_loaded.Handle)) return;
-        AddAgain(_icon);
+        if (_icon is { } icon) _renderer.Reconcile(icon);
     }
 
     private void ApplyTooltip()
