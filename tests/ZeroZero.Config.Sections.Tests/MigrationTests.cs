@@ -173,7 +173,7 @@ public sealed class MigrationTests : SectionedTestBase
         // declares something else is not the file that was asked for.
         File.WriteAllText(FilePath, """{ "ConfigVersion": 9, "general": { "startMinimised": true } }""");
 
-        var result = SettingsMigration.ProveTarget(
+        var result = MigrationProof.ProveTarget(
             Request(new SettingsSectionMove("general", ["startMinimised"])) with { Version = 1 },
             source);
 

@@ -234,7 +234,7 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
             }
             """);
 
-        var result = SettingsMigration.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
+        var result = MigrationProof.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
 
         Assert.Equal(SettingsMigrationOutcome.NotProven, result.Outcome);
         Assert.Contains("retiredInBuild14", result.Missing);
@@ -251,7 +251,7 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
         var damaged = OnDisk().Replace("\"windowWidth\": 1280", "\"windowWidth\": 1281", StringComparison.Ordinal);
         File.WriteAllText(FilePath, damaged);
 
-        var result = SettingsMigration.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
+        var result = MigrationProof.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
 
         Assert.Equal(SettingsMigrationOutcome.NotProven, result.Outcome);
         Assert.Contains("windowWidth", result.Missing);
@@ -267,7 +267,7 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
         var damaged = OnDisk().Replace("/* nothing here has been read since build 14 */", "", StringComparison.Ordinal);
         File.WriteAllText(FilePath, damaged);
 
-        var result = SettingsMigration.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
+        var result = MigrationProof.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
 
         Assert.Equal(SettingsMigrationOutcome.NotProven, result.Outcome);
         Assert.Contains("/* nothing here has been read since build 14 */", result.Missing);
@@ -288,7 +288,7 @@ public sealed class AwkwardFileMigrationTests : SectionedTestBase
             StringComparison.Ordinal);
         File.WriteAllText(FilePath, damaged);
 
-        var result = SettingsMigration.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
+        var result = MigrationProof.ProveTarget(new SettingsMigrationRequest(SourcePath, FilePath) { Moves = Moves }, source);
 
         Assert.Equal(SettingsMigrationOutcome.NotProven, result.Outcome);
         Assert.Contains(
