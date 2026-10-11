@@ -49,10 +49,7 @@ public sealed partial class MqttSettingsPanel : UserControl
 
     private CancellationTokenSource? _probeCts;
 
-    // The two relative ages have to move while nothing at all is happening: a panel left open showing
-    // "just now" must reach "2 minutes ago" without a publish to trigger it. Twenty seconds is inside
-    // the coarsest thing the wording can show, and the tick stops the moment the page is off screen
-    // so no consuming application pays for a timer behind a page nobody is looking at.
+    // Moves the two ages on while nothing happens; runs only while the page is on screen.
     private readonly DispatcherTimer _ageTick = new() { Interval = TimeSpan.FromSeconds(20) };
 
     public MqttSettingsPanel()
@@ -95,16 +92,12 @@ public sealed partial class MqttSettingsPanel : UserControl
 
     /// <summary>Re-reads everything the store holds, without discarding what is being typed. A field
     /// that has been edited keeps the edit; one that has not takes whatever the store now says.</summary>
-    /// <remarks>A host may call this whenever it re-shows the page. Losing a typed host to a
-    /// re-invocation of the settings window — with the group still open and the text simply gone —
-    /// is the failure this signature exists to make impossible.</remarks>
+    /// <remarks>Safe to call whenever the host re-shows the page.</remarks>
     /// <exception cref="InvalidOperationException"><see cref="Initialise"/> has not been called. The
     /// panel has no store to read until it is.</exception>
     public void Reload()
     {
-        // Loud rather than silent: there is nothing to read before the store arrives, and a quiet
-        // return turns a host calling this from a general refresh step into a blank panel with no
-        // trail back to the ordering that caused it.
+        // Loud: a quiet return leaves a blank panel with no trail back to the ordering mistake.
         if (_setup is not { } setup)
             throw new InvalidOperationException(
                 "MqttSettingsPanel.Initialise must be called before Reload.");
@@ -293,11 +286,8 @@ public sealed partial class MqttSettingsPanel : UserControl
     }
 
     /// <summary>The publish switch's text with the module build in force appended.</summary>
-    /// <remarks>Version information conventionally lives in an About box, and nobody opens one while
-    /// chasing a broker that will not connect. This icon is in front of the reader at the moment the
-    /// question arises, so a consumer that has done nothing at all still reports which build produced
-    /// the behaviour being described. It rides whatever text is in force, the host's included, so
-    /// supplying <see cref="MqttPanelSetup.PublishInfo"/> does not silently drop it.</remarks>
+    /// <remarks>Here rather than in an About box, which nobody opens while chasing a broker. Rides the
+    /// host's <see cref="MqttPanelSetup.PublishInfo"/> too, so supplying one does not drop it.</remarks>
     private string WithModuleVersion(string info) =>
         $"{info}\n\n{_strings.Format("ModuleVersion", MqttModule.Version)}";
 
@@ -392,14 +382,9 @@ public sealed partial class MqttSettingsPanel : UserControl
                 Visibility = Visibility.Collapsed,
                 Style = StyleFor("MqttResultErrorStyle"),
             };
-            // The id is sanitised to [a-z0-9_] before it reaches a topic, so echo what will be
-            // published — otherwise "Office ThinkPad" silently becomes something else.
-            // The panel's own secondary tier rather than an opacity: an opacity is a tone no theme
-            // key can reach, so a host that rebrands the panel cannot rebrand these two lines.
+            // Echoes the sanitised id that will be published; a style, so a host's theme keys reach it.
             var previewText = new TextBlock { Style = StyleFor("MqttResultStyle") };
-            // Names the mechanism rather than one application's consequence of it: a consumer with no
-            // automations still has dashboards, history or nothing at all, and the module cannot know
-            // which. A host with a sharper consequence supplies it beside this.
+            // Names the mechanism, not a consequence; a host adds its own through DeviceIdConsequence.
             var ack = new CheckBox { Content = _strings.Get("DeviceIdAcknowledge") };
 
             var body = new StackPanel { Spacing = 8, Width = 420 };
@@ -750,10 +735,8 @@ public sealed partial class MqttSettingsPanel : UserControl
         PublishNowBtn.IsEnabled = !_publishing && EnabledToggle.IsOn
                                && _setup?.ConnectionState() == MqttConnectionState.Connected;
 
-    /// <summary>Republishes the current state on demand. State only: what the entities already are,
-    /// never a fresh announcement, so no retained config topic is rewritten. Awaited on the UI thread,
-    /// which is where the continuation resumes — no raw dispatcher callback, whose unhandled exception
-    /// would take the process down as a stowed exception.</summary>
+    /// <summary>Republishes the current state on demand; no config topic is rewritten. Awaited on the
+    /// UI thread: a raw dispatcher callback that throws ends the process as a stowed exception.</summary>
     private async void OnPublishNowClicked(object sender, RoutedEventArgs e)
     {
         if (_publishing || _setup is not { } setup) return;

@@ -10,21 +10,8 @@
     mc:Ignorable="d"
     FontFamily="{ThemeResource MqttPanelFontFamily}">
 
-    <!-- The alignment contract for the panel. Every field is one width, every card right-aligns its
-         content, and an InfoIcon always sits to the LEFT of the field it explains — so no adornment
-         can displace a right edge and the whole column lands on one line without a single per-card
-         measurement.
-
-         No user-facing text lives in this file. Every string comes from MqttStrings through the
-         panel's own resolver, so the module's prose has one home, one fallback and one translation
-         mechanism rather than a second set of literals here that could drift from it.
-
-         FontFamily sits on the root so the rows the code-behind builds inherit the host's face
-         without a style of their own, and every keyed style below that renders text repeats the
-         key, because an element carrying an explicit style takes the style's value over the
-         inherited one. A toolkit card's own header is the one thing outside the key's reach and
-         stays on the stock face: the card carries the family through its own style, which outranks
-         the value it would otherwise inherit. -->
+    <!-- Alignment, text and font rules: docs/consume-mqtt-settings-panel.md, "Inside the panel".
+         No user-facing text here; every keyed style that renders text repeats the font key. -->
     <UserControl.Resources>
         <x:Double x:Key="MqttFieldWidth">240</x:Double>
 
@@ -63,10 +50,7 @@
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
-        <!-- Section heading and rule. Self-contained rather than inherited from the host, because a
-             shared panel cannot require a host to have declared a style key: an unresolved BasedOn is
-             a parse failure, not a fallback. What a host does rebrand is the colour, through the one
-             theme key. -->
+        <!-- Self-contained: a BasedOn naming a key the host never declared is a parse failure. -->
         <Style x:Key="MqttSubHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{ThemeResource MqttPanelFontFamily}"/>
             <Setter Property="FontSize" Value="15"/>
@@ -74,9 +58,7 @@
             <Setter Property="CharacterSpacing" Value="40"/>
             <Setter Property="Foreground" Value="{ThemeResource MqttPanelHeadingBrush}"/>
         </Style>
-        <!-- Marks where one sub-section ends and the next begins. The whole gap between groups sits
-             above the rule and the heading, so a heading binds downwards to its own cards rather
-             than floating between two groups. -->
+        <!-- The gap sits above the rule, so a heading binds to the cards below it. -->
         <Style x:Key="MqttSectionDividerStyle" TargetType="Border">
             <Setter Property="Height" Value="1"/>
             <Setter Property="Background" Value="{ThemeResource DividerStrokeColorDefaultBrush}"/>
@@ -93,10 +75,8 @@
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
             <Setter Property="Foreground" Value="{ThemeResource MqttPanelBodyBrush}"/>
         </Style>
-        <!-- The overflow rule, in one place: one line, never wrapped, an ellipsis where it does not
-             fit, and the whole string on a hover tip that the code-behind sets beside the text.
-             Nothing here may change a size — a value that is an error changes colour and only
-             colour. A translation longer than the English trims rather than reflowing the block. -->
+        <!-- Never changes a size: one line, an ellipsis, the whole string on a hover tip set in code;
+             an error changes colour only. -->
         <Style x:Key="MqttStatusValueStyle" TargetType="TextBlock"
                BasedOn="{StaticResource MqttHintStyle}">
             <Setter Property="Width" Value="{StaticResource MqttFieldWidth}"/>
@@ -106,11 +86,8 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
-        <!-- The error tier is a style rather than a brush assigned in code. A brush fetched from a
-             dictionary at runtime carries no theme context, so it resolves against the application's
-             theme and lands the wrong way round inside a subtree with a RequestedTheme of its own —
-             a secondary value in a light page painted the dark theme's near-white. A ThemeResource
-             inside a setter is resolved where the style is applied, which is the element. -->
+        <!-- A style, never a brush set in code: a brush fetched at run time resolves against the
+             application's theme and inverts inside a subtree with its own RequestedTheme. -->
         <Style x:Key="MqttStatusErrorStyle" TargetType="TextBlock"
                BasedOn="{StaticResource MqttStatusValueStyle}">
             <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}"/>
@@ -124,11 +101,8 @@
         </Style>
     </UserControl.Resources>
 
-    <!-- Five sections in the order the questions arise: whether to publish at all, what the
-         connection is doing, which device this is, how it is reached, and what goes out. The last
-         two are collapsed, because both are set once and then left.
-
-         The heading introducing this panel belongs to the host page, not here. -->
+    <!-- Sections in the order the questions arise; the last two are set once, so start collapsed.
+         The heading introducing the panel belongs to the host page. -->
     <StackPanel Spacing="4">
 
         <!-- No section heading of its own: the master switch is one card at the top of the panel,
@@ -155,30 +129,8 @@
                 <shared:InfoIcon x:Name="StatusInfoIcon"/>
             </StackPanel>
 
-            <!-- THE TRAP, AND THE FIX.
-
-                 A SettingsCard whose content can be arbitrarily long collapses its own header column
-                 to zero width and then grows without bound. The card's content column is Auto and
-                 takes its width first; the header column is * and gets whatever is left; and a
-                 horizontal StackPanel in the content slot measures its children at infinite width,
-                 so TextWrapping is inert and a long value reports an unbounded desired width.
-
-                 So this is one Border around a Grid, not four SettingsCards: the content here is a
-                 value the connection decides, and a connection error is a sentence of unknown
-                 length. The values never wrap and trim with an ellipsis at the field width, and a
-                 single writer (SetStatusValue) puts on text, tooltip and colour together so nothing
-                 can change a size.
-
-                 The rows are Auto and the block has no fixed height, so a large
-                 Windows text size grows the block instead of clipping four lines inside it. The
-                 width cap is what stops the trap; the height never needed to be part of it.
-
-                 Any new value rendered inside a SettingsCard on this panel needs the same treatment:
-                 a width cap, NoWrap with CharacterEllipsis, and the full string on a hover tooltip.
-
-                 Column order is the panel's alignment contract: elastic label, then the row's own
-                 action, then the icon, then the value at the field width, so nothing can displace
-                 the right edge and no value can be squeezed. -->
+            <!-- Not SettingsCards: a card with unbounded content collapses its header to zero width
+                 and grows without bound. See docs/consume-mqtt-settings-panel.md, "Inside the panel". -->
             <Border x:Name="StatusBorder"
                     Background="{ThemeResource MqttPanelCardBackgroundBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
