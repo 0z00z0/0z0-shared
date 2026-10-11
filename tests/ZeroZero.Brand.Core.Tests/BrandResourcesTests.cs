@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Xml.Linq;
 using Xunit;
 
@@ -36,9 +35,7 @@ public class BrandResourcesTests
     [Fact]
     public void EveryPaletteConstantIsDeclaredOnceAndRepeatedInLightAndDark()
     {
-        var constants = typeof(Brand).GetFields(BindingFlags.Public | BindingFlags.Static)
-            .Where(f => f.IsLiteral && f.Name.StartsWith("Color", StringComparison.Ordinal))
-            .ToDictionary(f => f.Name, f => (string)f.GetRawConstantValue()!);
+        var constants = PaletteConstants.All;
 
         Assert.Equal(constants.Keys.Order(), Palette.Select(p => p.Constant).Order());
 
@@ -114,6 +111,51 @@ public class BrandResourcesTests
 
         Assert.Equal(controlFace, dictionaryFace);
     }
+
+    /// <summary>The header band's lighter navy, which the palette has no constant for.</summary>
+    private const string HeaderNavy = "#15263A";
+
+    /// <summary>The controls keep their markup self-contained, so a retyped palette colour is held here instead.
+    /// Light themes are left out: their darker shades are deliberate.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Theory]
+    [InlineData("BrandBracketButton.xaml")]
+    [InlineData("BrandAboutControl.xaml")]
+    public void EveryColourAControlRetypesOutsideItsLightThemeIsAPaletteConstant(string file)
+    {
+        var literals = Markup(file).Descendants()
+            .Where(e => !e.AncestorsAndSelf(Presentation + "ResourceDictionary").Any(d => d.Attribute(Xaml + "Key")?.Value == "Light"))
+            .Attributes()
+            .Where(a => a.Name.LocalName is "Color" or "Fill" or "Stroke" && a.Value.StartsWith('#'))
+            .Select(a => a.Value)
+            .ToArray();
+
+        Assert.NotEmpty(literals);
+        foreach (string literal in literals)
+        {
+            Assert.True(literal.Equals(HeaderNavy, StringComparison.OrdinalIgnoreCase)
+                        || PaletteConstants.All.Values.Contains(literal, StringComparer.OrdinalIgnoreCase),
+                        $"{file} retypes {literal}, which is no palette constant.");
+        }
+    }
+
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void TheLightOrangeIsOneShadeInBothControls()
+    {
+        string? button = LightBrush("BrandBracketButton.xaml", "BracketOrangeBrush");
+        Assert.NotNull(button);
+        Assert.Equal(button, LightBrush("BrandAboutControl.xaml", "DonateMarkBrush"));
+    }
+
+    private static XDocument Markup(string file) =>
+        XDocument.Load(Path.Combine(AppContext.BaseDirectory, file));
+
+    private static string? LightBrush(string file, string key) =>
+        Markup(file).Descendants(Presentation + "ResourceDictionary")
+            .Single(d => d.Attribute(Xaml + "Key")?.Value == "Light")
+            .Elements(Presentation + "SolidColorBrush").Single(e => Key(e) == key)
+            .Attribute("Color")?.Value;
 
     private static XDocument Dictionary() =>
         XDocument.Load(Path.Combine(AppContext.BaseDirectory, "BrandResources.xaml"));

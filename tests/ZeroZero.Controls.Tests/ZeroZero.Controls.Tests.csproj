@@ -18,6 +18,8 @@
     <Compile Include="..\..\src\ZeroZero.Controls.WinUI\TitleBarPalette.cs" Link="Linked\TitleBarPalette.cs" />
     <!-- The switcher setter's guard, which names no WinUI type, and the sink it logs to. -->
     <Compile Include="..\..\src\ZeroZero.Controls.WinUI\SwitcherVisibilityGuard.cs" Link="Linked\SwitcherVisibilityGuard.cs" />
+    <!-- The content-sized popup's arithmetic, which names no WinUI type. -->
+    <Compile Include="..\..\src\ZeroZero.Controls.WinUI\ContentSizedPopupLayout.cs" Link="Linked\ContentSizedPopupLayout.cs" />
   </ItemGroup>
 
   <ItemGroup>

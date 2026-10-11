@@ -8,10 +8,8 @@ namespace ZeroZero.Controls.WinUI;
 /// <para>Two sets ship, the platform's own dark and light captions. Mica does not paint the
 /// caption area, so a dark window that leaves the bar alone shows a light strip behind its
 /// caption buttons; the dark set paints the strip the colour of the window it sits on.</para>
-/// <para>The light set exists for one reason: a bar that has been painted once cannot be handed
-/// back to the system. Setting its colours to null afterwards leaves a black bar, measured, not
-/// the light one an untouched window has. So a window that has never been painted is left alone
-/// on light, and one that has been painted dark is painted light again on the way back.</para>
+/// <para>The light set exists because a painted bar cannot be handed back to the system; the
+/// trap and the rule it forces are on <c>TitleBarTheming</c>.</para>
 /// <para>An application whose identity wants other values passes its own palette; the shape is
 /// the same twelve properties the title bar exposes, in the same names.</para>
 /// </remarks>

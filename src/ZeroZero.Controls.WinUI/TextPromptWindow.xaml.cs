@@ -1,11 +1,6 @@
-using Microsoft.UI;
-using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
-using Windows.Foundation;
-using Windows.Graphics;
 using Windows.System;
-using ZeroZero.Win32;
 
 namespace ZeroZero.Controls.WinUI;
 
@@ -16,21 +11,18 @@ namespace ZeroZero.Controls.WinUI;
 /// text on confirm and null on cancel, Escape or the window closing any other way.
 /// </summary>
 /// <remarks>
-/// Enter confirms and Escape cancels from the field. The confirm button waits for text unless the
-/// options allow an empty answer. The window owns no wording: every string is the caller's, and
+/// Enter confirms from the field; Escape cancels from any control. The confirm button waits for
+/// text unless the options allow an empty answer. The window owns no wording: every string is the caller's, and
 /// the theme is the caller's too, so an application pinned dark gets a dark prompt.
 /// </remarks>
 public sealed partial class TextPromptWindow : Window
 {
-    /// <summary>Client width in device-independent units; the content is measured and laid out
-    /// at this width, so the measured height is the height that renders.</summary>
+    /// <summary>Client width in device-independent units.</summary>
     private const double ContentWidth = 360;
 
     private readonly TextPromptOptions _options;
     private readonly TaskCompletionSource<string?> _completion =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private NativeRect _workArea;
-    private double _scale;
 
     /// <summary>Opens the prompt and resolves with the answer, or null when it was dismissed.</summary>
     public static Task<string?> ShowAsync(TextPromptOptions options)
@@ -63,11 +55,11 @@ public sealed partial class TextPromptWindow : Window
         }
         RefreshConfirm();
 
-        ConfigureChrome();
+        ContentSizedPopup.Attach(this, Root, ContentWidth, Cancel);
         Closed += OnClosed;
+        // Subscribed after Attach, so the window is fitted before the field takes focus.
         Root.Loaded += (_, _) =>
         {
-            ResizeToContent();
             Field.SelectAll();
             Field.Focus(FocusState.Programmatic);
         };
@@ -80,16 +72,10 @@ public sealed partial class TextPromptWindow : Window
 
     private void OnFieldKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        switch (e.Key)
+        if (e.Key == VirtualKey.Enter && ConfirmButton.IsEnabled)
         {
-            case VirtualKey.Enter when ConfirmButton.IsEnabled:
-                e.Handled = true;
-                Confirm();
-                break;
-            case VirtualKey.Escape:
-                e.Handled = true;
-                Cancel();
-                break;
+            e.Handled = true;
+            Confirm();
         }
     }
 
@@ -123,46 +109,4 @@ public sealed partial class TextPromptWindow : Window
 
     private void RefreshConfirm() =>
         ConfirmButton.IsEnabled = _options.AllowEmpty || !string.IsNullOrWhiteSpace(Field.Text);
-
-    private void ConfigureChrome()
-    {
-        SwitcherVisibility.TrySet(AppWindow, shown: false);
-
-        var presenter = OverlappedPresenter.Create();
-        presenter.SetBorderAndTitleBar(hasBorder: true, hasTitleBar: false);
-        presenter.IsResizable = false;
-        presenter.IsMaximizable = false;
-        presenter.IsMinimizable = false;
-        presenter.IsAlwaysOnTop = true;
-        AppWindow.SetPresenter(presenter);
-
-        Root.Width = ContentWidth;
-        (_workArea, _scale) = MonitorMetrics.ForCursor();
-        // Provisional: text measured before the tree is live uses fallback metrics. Loaded
-        // measures again with the layout on screen.
-        ResizeToContent();
-    }
-
-    private void ResizeToContent()
-    {
-        // Measured from the layout the window has, and rounded up, because a client area a pixel
-        // short of its content clips the last row.
-        Root.InvalidateMeasure();
-        Root.UpdateLayout();
-        Root.Measure(new Size(ContentWidth, double.PositiveInfinity));
-        int width = (int)Math.Ceiling(ContentWidth * _scale);
-        int height = (int)Math.Ceiling((Root.DesiredSize.Height > 0 ? Root.DesiredSize.Height : 200) * _scale);
-
-        // The frame this presenter actually has, read from the window, so the client fills with
-        // the content exactly at any scaling. Nothing in the prompt scrolls, so the outer height
-        // stops at the work area and an over-tall prompt sits against its top.
-        var (ncWidth, ncHeight) = MonitorMetrics.NonClientSize(Win32Interop.GetWindowFromWindowId(AppWindow.Id));
-        int outerHeight = height + ncHeight;
-        if (_workArea.Height > 0 && outerHeight > _workArea.Height) outerHeight = _workArea.Height;
-        AppWindow.Resize(new SizeInt32(width + ncWidth, outerHeight));
-        var outer = AppWindow.Size;
-        AppWindow.Move(new PointInt32(
-            _workArea.Left + (_workArea.Width - outer.Width) / 2,
-            _workArea.Top + Math.Max(0, (_workArea.Height - outer.Height) / 2)));
-    }
 }

@@ -4,13 +4,9 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Brand typeface: Cascadia Mono, embedded in this library (Assets/Fonts). Grid/StackPanel
-         have no FontFamily to inherit from, so it's applied via an implicit TextBlock style
-         (covers every TextBlock, including the credit rows added in code-behind) plus an explicit
-         BrandFont on each Button's label. Per 0z0-design: Cascadia Mono is the studio's UI/body
-         face; Cascadia Code is only for genuine code/terminal surfaces, not this control.
-         The URI is scoped to this assembly's folder, the one place the font exists on both
-         reference routes; the output root holds it only under a project reference. -->
+    <!-- Cascadia Mono, the studio's UI face (Cascadia Code is for code surfaces only). Panels pass no
+         font down, so an implicit TextBlock style and an explicit BrandFont on each button carry it.
+         The URI is scoped to this assembly's folder, the one place the font exists on both routes. -->
     <UserControl.Resources>
         <ResourceDictionary>
             <FontFamily x:Key="BrandFont">ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
@@ -18,21 +14,9 @@
                 <Setter Property="FontFamily" Value="{StaticResource BrandFont}"/>
             </Style>
 
-            <!--
-                The Donate button's mark, drawn rather than typed. A character missing from Cascadia
-                Mono is drawn from a fallback face in a different shape and weight — for a cup, a
-                colour emoji of a fixed design beside labels in the studio's own face. A path
-                scales with the display, takes the theme, and stays the studio's to change.
-
-                Read as a cup at a glance: a tapered body, a handle on the right, a saucer under
-                it. Sized in the template at 17 effective pixels, twice the label's cap height
-                beside it, and still inside the button's own minimum height so the row it sits in
-                does not grow.
-            -->
-
-            <!-- A template rather than markup in place: the button is built in code-behind, and
-                 LoadContent gives it this tree with its ThemeResource brushes intact, which a
-                 shape built in code could not have. -->
+            <!-- The Donate cup, drawn: Cascadia Mono has no cup, and its fallback is a colour emoji.
+                 17 px fits inside the button's minimum height. A template, so LoadContent keeps the
+                 ThemeResource brushes that a shape built in code-behind would lose. -->
             <DataTemplate x:Key="DonateMark">
                 <Viewbox Height="17" VerticalAlignment="Center"
                          AutomationProperties.AccessibilityView="Raw">
@@ -90,9 +74,8 @@
             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
         <StackPanel>
 
-            <!-- ── Brand header: unified brand navy (not per-app tinted, not theme-adaptive — this is
-                 fixed studio identity, deliberately not a ThemeResource; see class doc). Its corners
-                 are the frame's own, so the band stops where the stroke turns. ────────────────────── -->
+            <!-- Brand header: fixed studio navy in every theme, so no ThemeResource. Its corners are
+                 the frame's own, so the band stops where the stroke turns. -->
             <Border Padding="16,12,16,12" CornerRadius="8,8,0,0">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -211,12 +194,8 @@
                     </ScrollViewer>
                 </Border>
 
-                <!-- External libraries (collapsed by default; hidden entirely if empty).
-                     A plain text toggle rather than a full Expander control — the built-in
-                     Expander's card chrome (background, border, full-width header) reads as a
-                     prominent action row; local Background/BorderThickness overrides on it don't
-                     fully strip that, since the header's own theme-resource brushes still apply.
-                     A small link-styled Button is a deliberately low-key credits footnote. -->
+                <!-- External libraries: a plain text toggle, because local overrides cannot strip an
+                     Expander's card chrome (its header keeps its own theme brushes). -->
                 <StackPanel x:Name="LibrariesGroup" Spacing="4">
                     <Button x:Name="LibrariesToggleBtn" Click="OnLibrariesToggle"
                             Content="External libraries ▾"

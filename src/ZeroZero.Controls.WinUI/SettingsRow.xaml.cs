@@ -98,12 +98,6 @@ public sealed partial class SettingsRow : UserControl
         ApplyInfo();
     }
 
-    private void ApplyInfo()
-    {
-        string info = Info ?? "";
-        Bubble.Info = info;
-        string subject = InfoSubject;
-        Bubble.Subject = !string.IsNullOrEmpty(subject) ? subject : (Header as string) ?? "";
-        Bubble.Visibility = !string.IsNullOrWhiteSpace(info) ? Visibility.Visible : Visibility.Collapsed;
-    }
+    private void ApplyInfo() =>
+        Bubble.ShowFor(Info, !string.IsNullOrEmpty(InfoSubject) ? InfoSubject : (Header as string) ?? "");
 }
