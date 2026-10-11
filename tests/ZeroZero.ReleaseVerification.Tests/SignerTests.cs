@@ -1,5 +1,4 @@
 using Xunit;
-using System.Text.Json;
 
 namespace ZeroZero.ReleaseVerification.Tests;
 
@@ -19,28 +18,8 @@ public sealed class SignerTests : IDisposable
 
     private static string Pwsh { get; } = FindPwsh();
 
-    private static string SubjectOf(string executable)
-    {
-        var result = Scripts.Command($"(Get-AuthenticodeSignature -LiteralPath {Scripts.Quote(executable)}).SignerCertificate.Subject");
-        Assert.True(result.Passed, result.ToString());
-        return result.Output.Trim();
-    }
-
-    private (string Feed, string Record) Publish(string file, string name)
-    {
-        var feed = Path.Combine(root, "feed");
-        Directory.CreateDirectory(feed);
-        File.Copy(file, Path.Combine(feed, name));
-        var record = Path.Combine(root, "release-artefacts.json");
-        File.WriteAllText(record, JsonSerializer.Serialize(new
-        {
-            tag = Tag,
-            version = "1.0.0",
-            commit = Commit,
-            artefacts = new[] { new { name, sha256 = PackedRelease.Sha256(file) } },
-        }));
-        return (feed, record);
-    }
+    private (string Feed, string Record) Publish(string file, string name) =>
+        Artefacts.Publish(root, file, name, Tag, Commit);
 
     private static string ThumbprintOf(string executable)
     {
@@ -66,7 +45,7 @@ public sealed class SignerTests : IDisposable
     [Fact]
     public void Accepts_an_executable_signed_by_the_expected_subject()
     {
-        var subject = SubjectOf(Pwsh);
+        var subject = Artefacts.SignerSubjectOf(Pwsh);
         Assert.False(string.IsNullOrWhiteSpace(subject), "pwsh.exe on this machine is not signed, so the signed case cannot be exercised here");
         var (feed, record) = Publish(Pwsh, "pwsh.exe");
 
@@ -79,7 +58,7 @@ public sealed class SignerTests : IDisposable
     [Fact]
     public void Accepts_the_certificate_with_the_expected_thumbprint()
     {
-        var subject = SubjectOf(Pwsh);
+        var subject = Artefacts.SignerSubjectOf(Pwsh);
         var thumbprint = ThumbprintOf(Pwsh);
         Assert.Matches("^[0-9A-Fa-f]{40}$", thumbprint);
         var (feed, record) = Publish(Pwsh, "pwsh.exe");
@@ -95,7 +74,7 @@ public sealed class SignerTests : IDisposable
     {
         // The form the update component's guide has an application pin, so the one string serves
         // the release check and the installed application alike.
-        var subject = SubjectOf(Pwsh);
+        var subject = Artefacts.SignerSubjectOf(Pwsh);
         var sha256 = Sha256ThumbprintOf(Pwsh);
         Assert.Matches("^[0-9A-Fa-f]{64}$", sha256);
         var separated = string.Join(':', Enumerable.Range(0, 32).Select(i => sha256.Substring(i * 2, 2).ToLowerInvariant()));
@@ -111,7 +90,7 @@ public sealed class SignerTests : IDisposable
     {
         // A subject is a string anyone can put on a self-signed certificate; the thumbprint is
         // the certificate itself.
-        var subject = SubjectOf(Pwsh);
+        var subject = Artefacts.SignerSubjectOf(Pwsh);
         var (feed, record) = Publish(Pwsh, "pwsh.exe");
 
         var result = Verify(feed, record, subject, "-SignerThumbprint", new string('A', 40));
@@ -123,7 +102,7 @@ public sealed class SignerTests : IDisposable
     [Fact]
     public void Refuses_the_right_subject_on_another_certificate_by_sha256()
     {
-        var subject = SubjectOf(Pwsh);
+        var subject = Artefacts.SignerSubjectOf(Pwsh);
         var (feed, record) = Publish(Pwsh, "pwsh.exe");
 
         var result = Verify(feed, record, subject, "-SignerThumbprint", new string('A', 64));
@@ -136,7 +115,7 @@ public sealed class SignerTests : IDisposable
     public void Refuses_a_pin_that_is_neither_sha1_nor_sha256()
     {
         // A pin no certificate can match must fail, never read as "no pin given".
-        var subject = SubjectOf(Pwsh);
+        var subject = Artefacts.SignerSubjectOf(Pwsh);
         var (feed, record) = Publish(Pwsh, "pwsh.exe");
 
         var result = Verify(feed, record, subject, "-SignerThumbprint", "ABC");
@@ -161,7 +140,7 @@ public sealed class SignerTests : IDisposable
     {
         // One byte changed well inside the image: the certificate is still attached and still
         // names the right subject, and the signed hash no longer describes the file.
-        var subject = SubjectOf(Pwsh);
+        var subject = Artefacts.SignerSubjectOf(Pwsh);
         var tampered = Path.Combine(root, "pwsh.exe");
         var bytes = File.ReadAllBytes(Pwsh);
         bytes[0x2000] ^= 0xFF;

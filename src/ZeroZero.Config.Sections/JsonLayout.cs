@@ -81,4 +81,9 @@ internal sealed class JsonLayout
         var text = Encoding.UTF8.GetString(value);
         return Encoding.UTF8.GetBytes(text.Replace(NewLine, NewLine + extra, StringComparison.Ordinal));
     }
+
+    /// <summary>What <see cref="Shift"/> needs to move a value laid out one level in to a member
+    /// written at <paramref name="indent"/>: that indent less one level.</summary>
+    internal string ExtraIndent(string indent) =>
+        indent.StartsWith(Unit, StringComparison.Ordinal) ? indent[Unit.Length..] : indent;
 }

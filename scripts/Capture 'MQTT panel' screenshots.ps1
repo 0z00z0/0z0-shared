@@ -14,89 +14,15 @@
 #
 # The display is held awake and the desktop is checked for composition before anything is captured.
 # DWM composes nothing while the display is off, so a capture taken then is uniformly black — and
-# black is not obviously wrong until someone opens the file.
+# black is not obviously wrong until someone opens the file. The run is also anchored: the harness
+# opens a pure-white window under --anchor, and anything but white read off the screen refuses it.
 
 param([switch]$Branded)
 
 $ErrorActionPreference = "Stop"
 
-$repoRoot   = Split-Path $PSScriptRoot -Parent   # scripts\ sits one level below the repository root
-$harnessDir = Join-Path $repoRoot "src\ZeroZero.Brand.WinUI.TestHarness"
-$outDir     = Join-Path $repoRoot "docs\screenshots"
-
-# The harness csproj derives its RuntimeIdentifier from the running process architecture, so the
-# output folder is win-x64 on x64 and win-arm64 on arm64. Locate the exe instead of assuming one.
-function Resolve-HarnessExe {
-    Get-ChildItem -Path (Join-Path $harnessDir "bin\Debug") -Filter "ZeroZero.Brand.WinUI.TestHarness.exe" `
-                  -Recurse -File -ErrorAction SilentlyContinue |
-        Sort-Object LastWriteTime -Descending |
-        Select-Object -First 1 -ExpandProperty FullName
-}
-
-$exePath = Resolve-HarnessExe
-if (-not $exePath) {
-    Write-Host "Building test harness..."
-    dotnet build $harnessDir
-    $exePath = Resolve-HarnessExe
-    if (-not $exePath) { throw "Test harness exe not found under $harnessDir\bin\Debug." }
-}
-
-Add-Type -TypeDefinition @'
-using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Text;
-public class PanelCapture {
-    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-    [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-    [DllImport("user32.dll")] public static extern int GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-    [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
-    [DllImport("user32.dll")] public static extern int GetWindowTextLength(IntPtr hWnd);
-    [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
-    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-    [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
-    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
-    [DllImport("user32.dll")] public static extern IntPtr SetProcessDpiAwarenessContext(IntPtr value);
-    [DllImport("user32.dll")] public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, uint flags, uint timeout, out IntPtr result);
-    [DllImport("user32.dll")] public static extern void mouse_event(uint f, int dx, int dy, uint d, IntPtr e);
-    [DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint esFlags);
-    public struct RECT { public int Left, Top, Right, Bottom; }
-
-    public const uint ES_CONTINUOUS = 0x80000000, ES_DISPLAY_REQUIRED = 0x00000002, ES_SYSTEM_REQUIRED = 0x00000001;
-
-    public static void MonitorOn() {
-        IntPtr r;
-        // WM_SYSCOMMAND / SC_MONITORPOWER / -1 = on, then a mouse nudge so an already-blanked
-        // display powers back up rather than only being told not to blank again.
-        SendMessageTimeout((IntPtr)0xffff, 0x0112, (IntPtr)0xF170, (IntPtr)(-1), 0x0002, 1000, out r);
-        mouse_event(0x0001, 1, 0, 0, IntPtr.Zero);
-        mouse_event(0x0001, -1, 0, 0, IntPtr.Zero);
-    }
-
-    public static List<IntPtr> GetProcessWindows(uint pid) {
-        var handles = new List<IntPtr>();
-        EnumWindows((hWnd, lParam) => {
-            uint windowPid;
-            GetWindowThreadProcessId(hWnd, out windowPid);
-            if (windowPid == pid && IsWindowVisible(hWnd) && GetWindowTextLength(hWnd) > 0) {
-                handles.Add(hWnd);
-            }
-            return true;
-        }, IntPtr.Zero);
-        return handles;
-    }
-
-    public static string GetTitle(IntPtr hWnd) {
-        var sb = new StringBuilder(256);
-        GetWindowText(hWnd, sb, sb.Capacity);
-        return sb.ToString();
-    }
-}
-'@
-Add-Type -AssemblyName System.Drawing
-
-# Per-monitor-v2 so GetWindowRect returns physical pixels and the capture is full-resolution/sharp.
-[PanelCapture]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
+. (Join-Path $PSScriptRoot "harness-capture.ps1")
+$exePath = Get-HarnessExe
 
 function Test-DesktopComposing {
     $bmp = New-Object System.Drawing.Bitmap 240, 240
@@ -114,14 +40,14 @@ function Test-DesktopComposing {
     return $lit
 }
 
-[PanelCapture]::MonitorOn()
-[PanelCapture]::SetThreadExecutionState(
-    [PanelCapture]::ES_CONTINUOUS -bor [PanelCapture]::ES_DISPLAY_REQUIRED -bor [PanelCapture]::ES_SYSTEM_REQUIRED) | Out-Null
+[HarnessCapture]::MonitorOn()
+[HarnessCapture]::SetThreadExecutionState(
+    [HarnessCapture]::ES_CONTINUOUS -bor [HarnessCapture]::ES_DISPLAY_REQUIRED -bor [HarnessCapture]::ES_SYSTEM_REQUIRED) | Out-Null
 
 $composing = $false
 for ($i = 0; $i -lt 15; $i++) {
     if (Test-DesktopComposing) { $composing = $true; break }
-    [PanelCapture]::MonitorOn()
+    [HarnessCapture]::MonitorOn()
     Start-Sleep -Milliseconds 700
 }
 if (-not $composing) { throw "Desktop is not composing - a capture now would be black." }
@@ -147,50 +73,40 @@ $titleToFile = if ($Branded) {
     }
 }
 
-$harnessArgs = if ($Branded) { @("--mqtt", "--brand") } else { @("--mqtt") }
+$harnessArgs = if ($Branded) { @("--mqtt", "--brand", "--anchor") } else { @("--mqtt", "--anchor") }
 $p = Start-Process -FilePath $exePath -ArgumentList $harnessArgs -PassThru
 try {
     $handles = @()
     for ($i = 0; $i -lt 40; $i++) {
         Start-Sleep -Milliseconds 250
         $p.Refresh()
-        $handles = [PanelCapture]::GetProcessWindows([uint32]$p.Id)
-        if ($handles.Count -ge $titleToFile.Count) { break }
+        $handles = [HarnessCapture]::ProcessWindows([uint32]$p.Id, $true)
+        $panels = @($handles | Where-Object { $titleToFile.ContainsKey([HarnessCapture]::TitleOf($_)) })
+        if ($panels.Count -ge $titleToFile.Count) { break }
     }
     if ($handles.Count -eq 0) { throw "Harness windows never appeared." }
 
     Start-Sleep -Milliseconds 1200   # let the windows finish rendering before capturing
+    if (-not (Test-WhiteAnchor ([uint32]$p.Id))) {
+        throw "The white anchor did not read white, or the harness opened none: the screen is dimmed or locked."
+    }
 
     New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
     foreach ($hwnd in $handles) {
-        $title = [PanelCapture]::GetTitle($hwnd)
+        $title = [HarnessCapture]::TitleOf($hwnd)
         $fileName = $titleToFile[$title]
         if (-not $fileName) { continue }
         $outPath = Join-Path $outDir $fileName
 
-        [PanelCapture]::SetForegroundWindow($hwnd) | Out-Null
+        [HarnessCapture]::SetForegroundWindow($hwnd) | Out-Null
         Start-Sleep -Milliseconds 500
 
-        $rect = New-Object PanelCapture+RECT
-        [PanelCapture]::GetWindowRect($hwnd, [ref]$rect) | Out-Null
-        $w = $rect.Right - $rect.Left
-        $h = $rect.Bottom - $rect.Top
-
-        $bmp = New-Object System.Drawing.Bitmap $w, $h
-        $gfx = [System.Drawing.Graphics]::FromImage($bmp)
-        $hdc = $gfx.GetHdc()
-        $ok  = [PanelCapture]::PrintWindow($hwnd, $hdc, 2)   # 2 = PW_RENDERFULLCONTENT
-        $gfx.ReleaseHdc($hdc)
-        if (-not $ok) { throw "PrintWindow failed for '$title'." }
-
-        $bmp.Save($outPath, [System.Drawing.Imaging.ImageFormat]::Png)
-        $gfx.Dispose(); $bmp.Dispose()
-
-        Write-Host "Saved '$title' screenshot ($w x $h) to $outPath"
+        $size = Save-Window $hwnd $outPath
+        Write-Host "Saved '$title' screenshot ($size) to $outPath"
     }
 }
 finally {
     if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
-    [PanelCapture]::SetThreadExecutionState([PanelCapture]::ES_CONTINUOUS) | Out-Null
+    [HarnessCapture]::SetThreadExecutionState([HarnessCapture]::ES_CONTINUOUS) | Out-Null
 }

@@ -30,11 +30,6 @@ $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $false
 . (Join-Path $PSScriptRoot "component.ps1")
 
-function Fail([string]$Message) {
-    Write-Host "::error::$Message"
-    exit 1
-}
-
 try { $release = Read-ReleaseTag $Tag } catch { Fail $_.Exception.Message }
 $key = $release.Key
 $version = $release.Version
@@ -70,10 +65,7 @@ switch ($Check) {
             Fail "Versions.props declares $property $($versions[$key]); the tag says $version."
         }
         # @() on both: a function returning an empty array hands the caller $null, which has no Count.
-        $projects = @(Get-ComponentProjects $key @(Get-SourceProjects))
-        if ($projects.Count -eq 0) {
-            Fail "No packable project under src/ has the key '$key', so the tag would release nothing."
-        }
+        $projects = @(Get-ReleaseProjects $key @(Get-SourceProjects))
         $mismatch = $false
         foreach ($project in $projects) {
             if ($project.Version -ne $version) {
@@ -87,10 +79,7 @@ switch ($Check) {
 
     "Dependencies" {
         $all = @(Get-SourceProjects)
-        $projects = @(Get-ComponentProjects $key $all)
-        if ($projects.Count -eq 0) {
-            Fail "No packable project under src/ has the key '$key', so the tag would release nothing."
-        }
+        $projects = @(Get-ReleaseProjects $key $all)
         $byName = @{}
         foreach ($project in $all) { $byName[$project.Name] = $project }
 

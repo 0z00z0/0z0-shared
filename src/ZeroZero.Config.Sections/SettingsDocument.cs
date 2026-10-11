@@ -18,43 +18,14 @@ internal enum SectionOutcome
     Unparseable,
 }
 
-/// <summary>A write refused because it would leave the document carrying two keys that differ only in
-/// case.</summary>
-/// <remarks>A reader takes the last of two such keys, so adding one silently retires the other and
-/// the values behind it. Refusing is the only outcome that neither loses the person's settings nor
-/// hides that something is wrong: the message names both spellings, and the file is left alone.</remarks>
-public sealed class SettingsKeyCaseConflictException : InvalidOperationException
-{
-    internal SettingsKeyCaseConflictException(string wanted, string found, string where)
-        : base($"Writing '{wanted}' {where} would put it beside '{found}', which differs from it only in case. A reader takes the last of two such keys, so the other one would stop governing anything. Nothing has been written.")
-    {
-        Wanted = wanted;
-        Found = found;
-    }
-
-    /// <summary>The name this build wanted to write.</summary>
-    public string Wanted { get; }
-
-    /// <summary>The name the document already carries, differing only in case.</summary>
-    public string Found { get; }
-}
-
-/// <summary>A sectioned settings document, held as the bytes that are on disk.</summary>
+/// <summary>A sectioned settings document, held as the bytes that are on disk. What it preserves, and
+/// how top-level keys are matched: <see cref="SectionedSettingsFile"/>.</summary>
 /// <remarks>
-/// <para>Nothing here binds the document to a type. Sections are located as byte ranges, one section
-/// is bound at a time, and a write replaces the byte ranges of the values it changes and nothing
-/// else — so a sibling section, a section from a build that no longer exists, a comment and the
-/// file's own key order all survive because they are never handled, not because a rule says they
-/// should be.</para>
 /// <para>The <c>ConfigVersion</c> key comes first and is written only when the document has none.
 /// Raising an existing version is refused here on purpose: sections belong to independently released
 /// components, so declaring that the whole document has moved to a new shape is a decision above any
 /// one section, and it belongs to the migration.</para>
-/// <para>Top-level keys are matched letter for letter, case included, whatever the serialiser says:
-/// the serialiser's case-insensitive matching binds a section's members, and reaches no further. So
-/// a document carrying <c>Version</c> or <c>version</c> for its own purposes carries an ordinary
-/// key, and <c>ConfigVersion</c> is stamped beside it without either being renamed. A key differing
-/// from <c>ConfigVersion</c> only in case is the one shape that refuses the write.</para>
+/// <para>A key differing from <c>ConfigVersion</c> only in case refuses the write.</para>
 /// </remarks>
 internal sealed class SettingsDocument
 {
@@ -196,7 +167,7 @@ internal sealed class SettingsDocument
         {
             // The key is there but does not hold an object, so there is no member to preserve: the
             // store owns this section and replaces what stands in its place.
-            var extra = Extra(IndentOf(member.NameStart));
+            var extra = Layout.ExtraIndent(IndentOf(member.NameStart));
             edits.Add(new JsonEdit(member.ValueStart, member.ValueEnd, Layout.Shift(draftBytes, extra)));
         }
         else edits.AddRange(RewriteMembers(section, draft, draftBytes, member, serialiser));
@@ -254,7 +225,7 @@ internal sealed class SettingsDocument
                 continue;
             }
 
-            var shifted = Layout.Shift(replacement, Extra(IndentOf(existing.NameStart)));
+            var shifted = Layout.Shift(replacement, Layout.ExtraIndent(IndentOf(existing.NameStart)));
             if (shifted.AsSpan().SequenceEqual(_content.AsSpan(existing.ValueStart..existing.ValueEnd))) continue;
 
             edits.Add(new JsonEdit(existing.ValueStart, existing.ValueEnd, shifted));
@@ -285,7 +256,7 @@ internal sealed class SettingsDocument
             else text.Append(Layout.NewLine).Append(memberIndent);
 
             text.Append('"').Append(JsonEncodedText.Encode(name)).Append("\": ")
-                .Append(Encoding.UTF8.GetString(Layout.Shift(value, Extra(memberIndent))));
+                .Append(Encoding.UTF8.GetString(Layout.Shift(value, Layout.ExtraIndent(memberIndent))));
         }
 
         if (last is { } member) return JsonEdit.Insert(member.ValueEnd, Encoding.UTF8.GetBytes(text.ToString()));
@@ -366,11 +337,6 @@ internal sealed class SettingsDocument
             ? Encoding.UTF8.GetString(_content.AsSpan(at, nameStart - at))
             : string.Empty;
     }
-
-    // A value serialised on its own sits one level in; moving it to a member indented further needs
-    // the difference added to every line after the first.
-    private string Extra(string indent) =>
-        indent.StartsWith(Layout.Unit, StringComparison.Ordinal) ? indent[Layout.Unit.Length..] : indent;
 
     private static int IndexIn(IReadOnlyList<string> order, string name)
     {

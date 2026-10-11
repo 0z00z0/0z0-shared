@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.Json;
 using Xunit;
 
 namespace ZeroZero.ReleaseVerification.Tests;
@@ -60,7 +59,7 @@ public sealed class TimestampTests : IDisposable
         Assert.Contains("carries no timestamp", result.Output, StringComparison.Ordinal);
         // The file it refused really is signed and really carries no timestamp, so the guard is
         // reading the case it names rather than failing for some other reason.
-        Assert.Equal(Subject, SignerOf(file));
+        Assert.Equal(Subject, Artefacts.SignerSubjectOf(file));
         Assert.Null(TimestamperOf(file));
     }
 
@@ -73,7 +72,7 @@ public sealed class TimestampTests : IDisposable
 
         Assert.True(result.Passed, result.ToString());
         Assert.Contains("no timestamp was asked for", result.Output, StringComparison.Ordinal);
-        Assert.Equal(Subject, SignerOf(file));
+        Assert.Equal(Subject, Artefacts.SignerSubjectOf(file));
     }
 
     [Trait(Guard.Category, Guard.Value)]
@@ -110,28 +109,8 @@ public sealed class TimestampTests : IDisposable
         return path;
     }
 
-    private (string Feed, string Record) Publish(string file, string name)
-    {
-        string feed = Path.Combine(_root, "feed");
-        Directory.CreateDirectory(feed);
-        File.Copy(file, Path.Combine(feed, name));
-        string record = Path.Combine(_root, "release-artefacts.json");
-        File.WriteAllText(record, JsonSerializer.Serialize(new
-        {
-            tag = Tag,
-            version = "1.0.0",
-            commit = Commit,
-            artefacts = new[] { new { name, sha256 = PackedRelease.Sha256(file) } },
-        }));
-        return (feed, record);
-    }
-
-    private static string SignerOf(string file)
-    {
-        var result = Scripts.Command($"(Get-AuthenticodeSignature -LiteralPath {Scripts.Quote(file)}).SignerCertificate.Subject");
-        Assert.True(result.Passed, result.ToString());
-        return result.Output.Trim();
-    }
+    private (string Feed, string Record) Publish(string file, string name) =>
+        Artefacts.Publish(_root, file, name, Tag, Commit);
 
     private static string? TimestamperOf(string file)
     {

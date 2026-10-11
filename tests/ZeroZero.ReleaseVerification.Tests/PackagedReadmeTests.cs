@@ -1,4 +1,3 @@
-using System.Xml.Linq;
 using Xunit;
 
 namespace ZeroZero.ReleaseVerification.Tests;
@@ -43,11 +42,9 @@ public sealed class PackagedReadmeTests
     /// what it declares, never by its name.</summary>
     private static HashSet<string> Packed()
     {
-        var projects = Directory.EnumerateFiles(Path.Combine(Scripts.RepoRoot, "src"), "*.csproj", SearchOption.AllDirectories)
-            .Where(static path => !XDocument.Load(path).Descendants("IsPackable")
-                .Any(static node => string.Equals(node.Value.Trim(), "false", StringComparison.OrdinalIgnoreCase)))
-            .Select(Path.GetFileNameWithoutExtension)
-            .Select(static name => name!)
+        var projects = Repository.Projects.Values
+            .Where(static project => project.Packable)
+            .Select(static project => project.Name)
             .ToHashSet(StringComparer.Ordinal);
 
         // A repository with nothing packable would pass both assertions above without meaning it.
