@@ -68,14 +68,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     // connect, read there once per round.
     private volatile bool _socketBudgetEscalated;
 
-    // Cuts the maintain loop's inter-poll delay short. Volatile: swapped for a fresh instance on use.
-    private volatile TaskCompletionSource _wake = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-    // The link went down. Separate from the wake above because it may only cut short the long poll of
-    // a session that was up: honoured during a backoff wait, a drop the loop caused itself cancels
-    // the wait it had just earned and the backoff stops existing. Armed before each connect attempt,
-    // so a drop noted earlier says nothing about the session that attempt starts.
-    private volatile TaskCompletionSource _drop = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly MqttLoopSignals _signals = new();
 
     private CancellationTokenSource? _cts;
 
@@ -448,7 +441,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
                         : MqttConnectionState.Connecting);
 
                     // Only a drop of the session this attempt is about to start may shorten its poll.
-                    ArmDrop();
+                    _signals.ArmDrop();
                     var round = await ConnectUsingPlanAsync(parameters, ct).ConfigureAwait(false);
                     if (round.Connected)
                     {
@@ -510,45 +503,11 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     /// flap.</summary>
     public static bool IsStableConnection(TimeSpan lifetime) => lifetime >= StableConnection;
 
-    /// <summary>Waits up to <paramref name="delay"/>, early on a wake. False on cancel.</summary>
-    /// <param name="wakeOnDrop">Whether a lost link may end the wait too. True only for the poll of a
-    /// session that is up. False is what makes a backoff wait a wait: the loop drops the socket itself
-    /// when a connect sequence throws, and honouring that drop would cancel the delay the failed round
-    /// had just earned and leave the retry rate continuous.</param>
-    internal async Task<bool> DelayOrWake(TimeSpan delay, CancellationToken ct, bool wakeOnDrop = false)
-    {
-        var wake = _wake.Task;
-        var drop = _drop.Task;
-        // Linked source so a winning wake cancels the losing delay rather than abandoning its timer.
-        using var delayCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        try
-        {
-            var delayTask = Task.Delay(delay, delayCts.Token);
-            var winner = wakeOnDrop
-                ? await Task.WhenAny(delayTask, wake, drop).ConfigureAwait(false)
-                : await Task.WhenAny(delayTask, wake).ConfigureAwait(false);
+    /// <inheritdoc cref="MqttLoopSignals.DelayOrWake"/>
+    internal Task<bool> DelayOrWake(TimeSpan delay, CancellationToken ct, bool wakeOnDrop = false) =>
+        _signals.DelayOrWake(delay, ct, wakeOnDrop);
 
-            if (winner != delayTask)
-            {
-                await delayCts.CancelAsync().ConfigureAwait(false);
-                try { await delayTask.ConfigureAwait(false); } catch (OperationCanceledException) { }
-                // Re-arm whichever fired. A signal racing the swap costs at worst one poll interval.
-                if (wake.IsCompleted)
-                    _wake = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                if (drop.IsCompleted) ArmDrop();
-            }
-            else
-                await winner.ConfigureAwait(false);   // observe cancellation raised by the delay
-
-            return !ct.IsCancellationRequested;
-        }
-        catch (OperationCanceledException) { return false; }
-    }
-
-    internal void Wake() => _wake.TrySetResult();
-
-    private void ArmDrop() =>
-        _drop = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    internal void Wake() => _signals.Wake();
 
     /// <summary>Notes that the link went down, so the loop's long poll of a live session ends at once
     /// and "online" is republished, shrinking the window where a consumer shows the Last Will
@@ -559,7 +518,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         if (ShouldWakeOnDisconnect(_enabled, e.ClientWasConnected))
         {
             SetState(MqttConnectionState.Retrying);
-            _drop.TrySetResult();
+            _signals.Drop();
 
             if (_outage.IsNewLoss())
                 _log.Info($"MQTT: the connection to the broker was lost — {MqttClientWiring.DisconnectReason(e)}. " +
