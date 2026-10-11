@@ -11,6 +11,7 @@ public sealed class SettingsKeyCaseConflictException : InvalidOperationException
         Found = found;
     }
 
+    /// <summary>The name this build wanted to write.</summary>
     public string Wanted { get; }
 
     /// <summary>The name the document already carries, differing only in case.</summary>
