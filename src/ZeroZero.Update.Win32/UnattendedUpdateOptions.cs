@@ -37,7 +37,7 @@ public sealed class UnattendedUpdateOptions
 
     /// <summary>How long after <see cref="UnattendedUpdatePolicy.Start"/> the first tick runs, and
     /// the first check under either cadence.</summary>
-    public TimeSpan InitialDelay { get; init; } = TimeSpan.FromSeconds(30);
+    public TimeSpan InitialDelay { get; init; } = UpdateScheduler.DefaultInitialDelay;
 
     /// <summary>Periodic unless the application sets it. <see cref="CheckCadence.Once"/> governs
     /// checking only: a release already found still follows <see cref="MayDownloadNow"/>, the
@@ -47,7 +47,7 @@ public sealed class UnattendedUpdateOptions
     /// <summary>How long between one check and the next under <see cref="CheckCadence.Periodic"/>.
     /// Once a day unless the application sets it. Counted from process start, never persisted.
     /// Ignored under <see cref="CheckCadence.Once"/>.</summary>
-    public TimeSpan CheckInterval { get; init; } = TimeSpan.FromHours(24);
+    public TimeSpan CheckInterval { get; init; } = UpdateScheduler.DefaultCheckInterval;
 
     /// <summary>How often the policy looks again between checks. A check that did not complete and
     /// an installer that could not start are both retried on this tick rather than waiting for the

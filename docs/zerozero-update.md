@@ -43,8 +43,9 @@ This guide is complete for adoption: the component's own source and tests need n
   the installer's arguments, the initial delay and the check interval, the request and download
   timeouts, the API base and the log sink. Validated when the service is built: the owner, name,
   product name, signer, prefix and file name are required, and a blank or malformed value throws.
-  Defaults: requests 30 s, downloads 10 min, GitHub's API, no log; `InitialDelay` (30 s) and
-  `CheckInterval` (24 h) are for `UpdateScheduler`.
+  Defaults: requests 30 s, downloads 10 min, GitHub's API, no log; `InitialDelay` and
+  `CheckInterval` are for `UpdateScheduler` and default to its `DefaultInitialDelay` (30 s) and
+  `DefaultCheckInterval` (24 h).
 - **`ExpectedSigner`** — who must have signed the installer: the certificate subject, the
   thumbprints (SHA-1 or SHA-256) of the certificates accepted when the machine does not trust the
   chain, and `acceptSelfSignedSubject`, which lets the publisher name alone carry an untrusted
@@ -76,6 +77,8 @@ This guide is complete for adoption: the component's own source and tests need n
 - **`UpdateScheduler`** — runs a check after an initial delay and then at an interval, one at a
   time, counted from process start and never persisted: the component stores nothing. A negative
   delay or an interval of zero or less throws; a check that throws is logged and the schedule goes on.
+  `DefaultInitialDelay` (30 s) and `DefaultCheckInterval` (24 h) are the defaults `UpdateOptions`
+  and `UnattendedUpdateOptions` both start from.
 - **`MachineIdle`** — reads the machine at one moment: how long since the last keyboard or mouse
   input in this session, and whether the session is locked. A measurement and nothing more; what
   counts as free enough to start an installer is decided above it. A reading that does not come back
