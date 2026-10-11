@@ -105,12 +105,22 @@ public static class DiscoveryDocument
         keys.SetWhenFalse("enabled_by_default", entity.EnabledByDefault);
         entity.Describe(keys);
 
+        if (entity.Description is { Length: > 0 } description)
+        {
+            entry["json_attributes_topic"] = MqttTopics.Availability(topicRoot, deviceId);
+            entry["json_attributes_template"] = DescriptionTemplate(description);
+        }
+
         if (entity.Extra is { } extra)
             foreach (var (key, value) in extra)
                 keys.SetRaw(key, value);
 
         return entry;
     }
+
+    // An escaped brace leaves no {{, {% or {#, so the receiver treats the template as static text.
+    private static string DescriptionTemplate(string description) =>
+        "{\"description\":" + JsonSerializer.Serialize(description, Writer).Replace("{", "\\u007B") + "}";
 
     private static JsonObject DeviceBlock(MqttDeviceIdentity identity, DiscoveryDevice device)
     {

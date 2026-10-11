@@ -99,6 +99,13 @@ public abstract class MqttEntity
     /// becomes a typed property on the component that owns it.</remarks>
     public IReadOnlyDictionary<string, object?>? Extra { get; init; }
 
+    /// <summary>Shown as the receiver's <c>description</c> attribute; read off the availability topic,
+    /// the one retained topic every component has. Null or empty writes nothing.</summary>
+    public string? Description { get; init; }
+
+    private static readonly string[] AttributeKeys =
+        ["json_attributes_topic", "json_attributes_template", "json_attr_t", "json_attr_tpl"];
+
     /// <summary>The receiver's platform name — the <c>p</c> key inside the component entry.</summary>
     public abstract string Platform { get; }
 
@@ -149,10 +156,14 @@ public abstract class MqttEntity
     }
 
     /// <summary>Why this entity cannot be published, or null when it can.</summary>
-    internal virtual string? Validate() =>
-        MqttEntityId.Normalise(EntityId) != EntityId
-            ? $"Entity id '{EntityId}' is not in the topic-safe alphabet. Compose it through {nameof(MqttEntityIdAllocator)}."
-            : MqttTopics.ValidateChannelKey(EntityId);
+    internal virtual string? Validate() => this switch
+    {
+        _ when MqttEntityId.Normalise(EntityId) != EntityId =>
+            $"Entity id '{EntityId}' is not in the topic-safe alphabet. Compose it through {nameof(MqttEntityIdAllocator)}.",
+        { Description.Length: > 0, Extra: { } extra } when AttributeKeys.FirstOrDefault(extra.ContainsKey) is { } key =>
+            $"Entity '{EntityId}' declares a {nameof(Description)} and '{key}' in {nameof(Extra)}, which both set the attributes keys.",
+        _ => MqttTopics.ValidateChannelKey(EntityId),
+    };
 
     /// <summary>The keys specific to this component, written after the shared ones.</summary>
     internal abstract void Describe(DiscoveryKeys keys);

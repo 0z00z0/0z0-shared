@@ -21,6 +21,28 @@ public class MqttEntitySetTests
         Assert.Contains("cpu_load", error.Message, StringComparison.Ordinal);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
+    [Theory]
+    [InlineData("json_attributes_topic")]
+    [InlineData("json_attributes_template")]
+    [InlineData("json_attr_t")]
+    [InlineData("json_attr_tpl")]
+    public void ADescriptionBesideAnAttributesKeyInExtraIsRejected(string key)
+    {
+        MqttSensor Declare(string? description) => new()
+        {
+            EntityId = "cpu_load",
+            Name = "CPU load",
+            Read = () => "1",
+            Description = description,
+            Extra = new Dictionary<string, object?> { [key] = "exampleapp/x" },
+        };
+
+        var error = Assert.Throws<ArgumentException>(() => new MqttEntitySet([Declare("Load.")]));
+        Assert.Contains(key, error.Message, StringComparison.Ordinal);
+        Assert.Single(new MqttEntitySet([Declare(null)]).All);
+    }
+
     [Fact]
     public void ADuplicateIdIsRejectedEvenBetweenTwoOfTheSameComponent() =>
         Assert.Throws<ArgumentException>(() =>

@@ -706,6 +706,30 @@ Members common to every entity:
 | `Retain` | Whether the state topic is published retained. Set it false on anything declaring `ExpireAfter`: a retained value is replayed on every subscribe, so an expiry that already elapsed comes back looking current. |
 | `RepublishLastOnConnect` | Whether an absent reading keeps the last published value instead of announcing itself absent. Off by default. |
 | `Extra` | Discovery keys this model has no property for, merged into the component entry last. The escape hatch, and deliberately small. |
+| `Description` | A fixed text the receiver shows as the entity's `description` attribute. Null or empty writes nothing. |
+
+**`Description` publishes nothing of its own.** Set, it writes two keys into the component entry:
+
+- `json_attributes_topic` is the device's availability topic, `<topicRoot>/<deviceId>/availability`,
+  on every component type, a withheld entity included. That topic holds a retained payload for as
+  long as the device exists, and it is the one topic a button has. A state topic would lose the text
+  after a receiver restart wherever it holds nothing: a button has none, and a withheld, non-retained
+  or not-yet-read entity leaves it empty.
+- `json_attributes_template` is the attributes object itself, `{"description":"…"}`, with every `{`
+  inside the text written as `{`. It contains no template delimiter, so the receiver ignores the
+  payload and returns the object as written. Quotes, backslashes, line breaks and non-ASCII text
+  arrive unchanged.
+
+No topic is added, so nothing is left to clear: the availability topic is emptied when the device is
+removed. The text changes when the declaration does, on the next document.
+
+**`Description` and an attributes key in `Extra` are refused together.** An entity declaring a
+`Description` and any of `json_attributes_topic`, `json_attributes_template`, `json_attr_t` or
+`json_attr_tpl` in `Extra` makes `MqttEntitySet` throw an `ArgumentException` naming the key. Without
+a `Description`, those `Extra` keys are written like any other.
+
+It never carries a value that changes between documents, never adds an attribute other than
+`description`, and is never shown in the entity's name or state.
 
 **`Include` may fail as well as answer.** It runs on the announcement thread and usually reads live
 hardware, so a throw is not a false: it says the capability could not be read, which is not the same

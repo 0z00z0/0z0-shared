@@ -520,4 +520,59 @@ public class DiscoveryDocumentTests
     [Fact]
     public void TheQosTheReceiverSubscribesAtIsDeclared() =>
         Assert.Equal(1, (int?)Build([Sample.Sensor()])["qos"]);
+
+    private static MqttEntity[] EveryKind(string? description) =>
+    [
+        new MqttSensor { EntityId = "a", Name = "A", Read = () => "1", Description = description },
+        new MqttBinarySensor { EntityId = "b", Name = "B", Read = () => true, Description = description },
+        new MqttSwitch { EntityId = "c", Name = "C", Read = () => true, Apply = _ => MqttCommandVerdict.Accept(() => { }), Description = description },
+        new MqttButton { EntityId = "d", Name = "D", Press = () => MqttCommandVerdict.Accept(() => { }), Description = description },
+        new MqttNumber { EntityId = "e", Name = "E", Read = () => 1, Apply = _ => MqttCommandVerdict.Accept(() => { }), Min = 0, Max = 2, Description = description },
+        new MqttSelect { EntityId = "f", Name = "F", Options = () => ["x"], Read = () => "x", Apply = _ => MqttCommandVerdict.Accept(() => { }), Description = description },
+        new MqttText { EntityId = "g", Name = "G", Read = () => "x", Apply = _ => MqttCommandVerdict.Accept(() => { }), Description = description },
+    ];
+
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void ADescriptionPointsEveryKindAtTheAvailabilityTopicAndNoneWithout()
+    {
+        var described = Build(EveryKind("Says what it is."));
+        var plain = Build(EveryKind(null));
+        var empty = Build(EveryKind(""));
+
+        foreach (string id in "abcdefg".Select(c => c.ToString()))
+        {
+            Assert.Equal(Sample.Availability, (string?)Component(described, id)["json_attributes_topic"]);
+            Assert.NotNull(Component(described, id)["json_attributes_template"]);
+            Assert.DoesNotContain(EveryKey(Component(plain, id)), k => k.StartsWith("json_attr", StringComparison.Ordinal));
+            Assert.DoesNotContain(EveryKey(Component(empty, id)), k => k.StartsWith("json_attr", StringComparison.Ordinal));
+        }
+    }
+
+    [Trait(Guard.Category, Guard.Value)]
+    [Theory]
+    [InlineData("Plain")]
+    [InlineData("Quote \" and backslash \\ and æøå ÆØÅ")]
+    [InlineData("Line one\nline two\r\ttab")]
+    [InlineData("{{ states('x') }} {% raw %} {# note #} {\"a\":1}")]
+    [InlineData("Emoji \U0001F600 and </script>")]
+    public void TheDescriptionRoundTripsThroughTheTemplateExactly(string text)
+    {
+        var button = new MqttButton
+        {
+            EntityId = "restart",
+            Name = "Restart",
+            Press = () => MqttCommandVerdict.Accept(() => { }),
+            Description = text,
+        };
+        string template = (string)Component(Build([button]), "restart")["json_attributes_template"]!;
+
+        // No delimiter, so the receiver renders nothing and hands the text on as written.
+        Assert.DoesNotContain("{{", template, StringComparison.Ordinal);
+        Assert.DoesNotContain("{%", template, StringComparison.Ordinal);
+        Assert.DoesNotContain("{#", template, StringComparison.Ordinal);
+        var attributes = (JsonObject)JsonNode.Parse(template)!;
+        Assert.Equal(["description"], attributes.Select(pair => pair.Key));
+        Assert.Equal(text, (string?)attributes["description"]);
+    }
 }
