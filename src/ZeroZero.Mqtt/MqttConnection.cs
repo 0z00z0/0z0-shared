@@ -27,17 +27,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     private string _availabilityTopic = "";
     private int _state = (int)MqttConnectionState.Disabled;
 
-    /// <summary>A superseded identity with the topic keys it owned at the moment it was superseded.
-    /// The keys travel with it because the set in force moves on: reading them later composes the old
-    /// id's topics from the new id's entities.</summary>
-    private sealed record RetiredIdentity(
-        MqttDeviceIdentity Identity, IReadOnlyList<string> Channels, IReadOnlyList<string> Commands);
-
-    // Held rather than evicted inline because the change can land while disconnected: best-effort now,
-    // guaranteed on the next connect. Keyed by device id, so A → B → C while disconnected keeps both A
-    // and B; the identity in force is never held, so A → B → A cannot evict the live device.
-    private readonly Lock _retiredLock = new();
-    private readonly Dictionary<string, RetiredIdentity> _retired = new(StringComparer.Ordinal);
+    private readonly MqttOwnedTopics _owned;
 
     // Channel keys whose retained topics could not be emptied when they were dropped, because there
     // was no link. Kept rather than lost: the replace has already forgotten them, so without this the
@@ -102,6 +92,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         _inbound = new MqttInbound(
             setup, _router, Activity, () => _identity.DeviceId, () => _subscriptions,
             (topic, ct) => PublishAsync(topic, "", retain: true, ct: ct));
+        _owned = new MqttOwnedTopics(setup, this, () => _client.IsConnected, () => _identity.DeviceId);
 
         _client = new MqttClientFactory().CreateMqttClient();
         _client.ApplicationMessageReceivedAsync += _inbound.OnMessageReceivedAsync;
@@ -190,9 +181,9 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             if (previousIdentity.DeviceId.Length > 0 && previousIdentity.DeviceId != deviceId)
             {
                 _log.Info($"MQTT: device id '{previousIdentity.DeviceId}' → '{deviceId}'; evicting the old device.");
-                HoldRetired(new(previousIdentity, _channels.Keys, _router.EntityIds));
+                _owned.HoldRetired(new(previousIdentity, _channels.Keys, _router.EntityIds));
             }
-            await ClearRetiredIdentityAsync(CancellationToken.None).ConfigureAwait(false);
+            await _owned.ClearRetiredIdentityAsync(CancellationToken.None).ConfigureAwait(false);
 
             _enabled = true;
             if (!wasRunning)
@@ -541,7 +532,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             : $"MQTT: connected; announcing '{_identity.DeviceId}'.");
 
         // Evict a superseded device id first, so a consumer never sees both devices at once.
-        await ClearRetiredIdentityAsync(ct).ConfigureAwait(false);
+        await _owned.ClearRetiredIdentityAsync(ct).ConfigureAwait(false);
 
         // Channels dropped while there was no link. Before the announcement, so a value is not
         // stranded under a component the document is about to remove.
@@ -728,84 +719,6 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
 
     /// <summary>Empties the dedupe cache, so the next pass re-sends every channel.</summary>
     public void ForgetPublished() => _channels.Forget();
-
-
-    /// <summary>Empties every retained topic each superseded identity owned, so a consumer deletes the
-    /// old device rather than leaving a ghost. No-op while disconnected: the next connect runs it.</summary>
-    /// <remarks>An eviction that did not land is put back rather than discarded. The old id is gone
-    /// from everything else by this point, so dropping it here leaves a ghost device on the receiver
-    /// with every retained value intact and nothing left that knows it exists.</remarks>
-    private async Task ClearRetiredIdentityAsync(CancellationToken ct)
-    {
-        if (!_client.IsConnected) return;
-
-        List<RetiredIdentity> retired;
-        lock (_retiredLock)
-        {
-            if (_retired.Count == 0) return;
-            retired = [.. _retired.Values];
-            _retired.Clear();
-        }
-
-        for (int i = 0; i < retired.Count; i++)
-        {
-            bool landed;
-            try
-            {
-                if (_setup.Listener is { } listener)
-                    await listener.OnIdentityRetiredAsync(this, retired[i].Identity, ct).ConfigureAwait(false);
-
-                landed = await PublishAsync(
-                        OwnTopics(retired[i].Identity.DeviceId, retired[i].Channels, retired[i].Commands)
-                            .Select(MqttMessage.Empty),
-                        ct)
-                    .ConfigureAwait(false);
-            }
-            catch
-            {
-                foreach (var left in retired.Skip(i)) HoldRetired(left);
-                throw;
-            }
-
-            if (!landed) HoldRetired(retired[i]);
-        }
-    }
-
-    /// <summary>Records a superseded identity for eviction. A repeat of an id already held merges its
-    /// keys, and the identity in force is dropped rather than held: evicting it would empty the live
-    /// device's topics.</summary>
-    private void HoldRetired(RetiredIdentity retired)
-    {
-        lock (_retiredLock)
-        {
-            string id = retired.Identity.DeviceId;
-            if (_retired.TryGetValue(id, out var held))
-                retired = new(
-                    retired.Identity,
-                    [.. held.Channels.Union(retired.Channels, StringComparer.Ordinal)],
-                    [.. held.Commands.Union(retired.Commands, StringComparer.Ordinal)]);
-            _retired[id] = retired;
-            _retired.Remove(_identity.DeviceId);
-        }
-    }
-
-    /// <summary>Every topic this layer owns under one device id: the two availability topics, each
-    /// named channel and each named command topic. The channels and commands are passed in rather than
-    /// read here, because the set in force is the new identity's — composing the old id's topics from
-    /// today's keys evicts whatever the two happen to have in common and strands the rest.</summary>
-    /// <remarks>The command topics belong in a removal even though this layer never publishes on them:
-    /// something else can leave a retained command there, and a device removed with one still standing
-    /// gets it redelivered the moment it is published again.</remarks>
-    private IEnumerable<string> OwnTopics(
-        string deviceId, IReadOnlyList<string> channels, IReadOnlyList<string> commands)
-    {
-        yield return MqttTopics.Availability(_setup.TopicRoot, deviceId);
-        yield return MqttTopics.WithheldAvailability(_setup.TopicRoot, deviceId);
-        foreach (string key in channels)
-            yield return MqttTopics.Channel(_setup.TopicRoot, deviceId, key);
-        foreach (string entityId in commands)
-            yield return MqttTopics.Command(_setup.TopicRoot, deviceId, entityId);
-    }
 
     /// <summary>False when the message did not reach the broker. Only a caller the user is watching
     /// needs to know — everything else publishes into the background, where the log is the trace.
@@ -1015,7 +928,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
                 if (_setup.Listener is { } listener)
                     await listener.OnRemovingAsync(this, _identity, ct).ConfigureAwait(false);
                 await PublishAsync(
-                        OwnTopics(_identity.DeviceId, _channels.Keys, _router.EntityIds)
+                        _owned.OwnTopics(_identity.DeviceId, _channels.Keys, _router.EntityIds)
                             .Select(MqttMessage.Empty),
                         ct)
                     .ConfigureAwait(false);
