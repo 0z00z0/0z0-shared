@@ -348,6 +348,17 @@ public sealed partial class BrandAboutControl : UserControl
         ContentResized?.Invoke(this, EventArgs.Empty);
     }
 
-    private static void Open(string url) =>
-        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+    /// <summary>Opens a link in the default browser. A machine with no handler for the address throws
+    /// from the shell, which a click handler must not let escape.</summary>
+    private static void Open(string url)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            Debug.WriteLine($"BrandAboutControl: opening {url}: {ex}");
+        }
+    }
 }
