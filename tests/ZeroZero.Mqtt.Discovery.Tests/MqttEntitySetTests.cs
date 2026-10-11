@@ -1,4 +1,5 @@
 using Xunit;
+using ZeroZero.Mqtt.Tests;
 
 namespace ZeroZero.Mqtt.Discovery.Tests;
 
@@ -7,7 +8,7 @@ namespace ZeroZero.Mqtt.Discovery.Tests;
 public class MqttEntitySetTests
 {
     private static PublishGroupSnapshot Groups(params PublishGroup[] declared) =>
-        new PublishGroupSet(new MemorySettingsStore(), declared).Snapshot();
+        new PublishGroupSet(new RecordingSettingsStore(), declared).Snapshot();
 
     [Trait(Guard.Category, Guard.Value)]
     [Fact]

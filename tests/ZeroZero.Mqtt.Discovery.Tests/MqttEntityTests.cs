@@ -1,4 +1,5 @@
 using Xunit;
+using ZeroZero.Mqtt.Tests;
 
 namespace ZeroZero.Mqtt.Discovery.Tests;
 
@@ -213,7 +214,7 @@ public class MqttEntityTests
     public void IncludeAndTheGroupBothDecideMembership()
     {
         var groups = new PublishGroupSet(
-            new MemorySettingsStore(), [new PublishGroup("metrics", "Metrics", DefaultOn: false)]);
+            new RecordingSettingsStore(), [new PublishGroup("metrics", "Metrics", DefaultOn: false)]);
 
         Assert.False(Sample.Sensor(group: "metrics").IsPublished(groups.Snapshot()));
         Assert.True(Sample.Sensor(group: null).IsPublished(groups.Snapshot()));
@@ -254,7 +255,7 @@ public class MqttEntityTests
         // its own sake — including work that can throw.
         int reads = 0;
         var groups = new PublishGroupSet(
-            new MemorySettingsStore(), [new PublishGroup("metrics", "Metrics", DefaultOn: false)]);
+            new RecordingSettingsStore(), [new PublishGroup("metrics", "Metrics", DefaultOn: false)]);
         var entity = Sample.Sensor(group: "metrics", include: () => { reads++; return true; });
 
         Assert.False(entity.IsPublished(groups.Snapshot()));
