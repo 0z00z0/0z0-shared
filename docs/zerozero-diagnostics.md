@@ -130,7 +130,9 @@ crash.MarkStartupComplete();
 
 - **Until `MarkStartupComplete()`, `Report` ends the process.** It logs the exception as always,
   runs `OnStartupFailure`, then calls `Environment.Exit(StartupFailureExitCode)`, which is 1. It does
-  not return, so the `Handled` line after it in the host's handler never runs.
+  not return, so the `Handled` line after it in the host's handler never runs. The process ends
+  through `Environment.Exit`, not a crash, so no dump is written for an exception reported there;
+  the crash line and the log are the record.
 - **Mark completion once the application is fully up**: the tray icon created and the first window,
   if any, opened.
 - **The cleanup cannot stop the exit.** An exception from it is logged under `StartupFailureSource`
