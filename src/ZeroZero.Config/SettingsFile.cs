@@ -1,6 +1,5 @@
-using System.Globalization;
+using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace ZeroZero.Config;
 
@@ -17,7 +16,8 @@ namespace ZeroZero.Config;
 /// for a moment is retried briefly. It never throws: the returned <see cref="SettingsSaveResult"/>
 /// and the <see cref="SaveFailed"/> event carry the failure, and the in-memory state rolls back so
 /// it can never disagree with the file.</para>
-/// <para>A file that is present but cannot be parsed is copied aside before defaults take over.
+/// <para>A file that is present but cannot be parsed is copied aside before defaults take over; when
+/// the policy keeps copies and the copy fails, the file counts as unreadable and is not written over.
 /// Missing, empty and unreadable files all end at defaults — but a file that could not be read at
 /// all may still be intact, so nothing is written over it until a read has succeeded. That latch is
 /// set once and never cleared: a later read that fails, or finds the file broken, does not stop a
@@ -27,12 +27,6 @@ namespace ZeroZero.Config;
 /// defaults are the state a missing file stands for.</typeparam>
 public sealed class SettingsFile<T> where T : class, new()
 {
-    private const string QuarantineMarker = ".bad";
-    private const string StampFormat = "yyyy-MM-dd-HHmmss";
-
-    // The stamp StampFormat writes, and the attempt number a second copy in the same second takes.
-    private const string CopyStampPattern = @"\A[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}(-[0-9]+)?\z";
-
     private readonly Lock _gate = new();
     private readonly SettingsFileOptions _options;
     private readonly JsonSerializerOptions _serialiser;
@@ -45,6 +39,10 @@ public sealed class SettingsFile<T> where T : class, new()
     // Whether any read has ever succeeded. Until one has, memory holds only defaults and the file
     // may hold the user's settings behind a lock, so a write would put nothing over something.
     private bool _hasLoaded;
+
+    // Whether the file on disk failed to parse and its quarantine copy failed too. Nothing is written
+    // over it until a read finds it otherwise.
+    private bool _uncopied;
 
     public SettingsFile(SettingsFileOptions options)
     {
@@ -174,10 +172,10 @@ public sealed class SettingsFile<T> where T : class, new()
     // rather than the whitespace a hand edit left behind. Null when the file could not be read.
     private string? Load()
     {
-        string? text;
+        byte[]? content;
         try
         {
-            text = File.Exists(FilePath) ? File.ReadAllText(FilePath) : null;
+            content = File.Exists(FilePath) ? File.ReadAllBytes(FilePath) : null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -186,12 +184,23 @@ public sealed class SettingsFile<T> where T : class, new()
             return null;
         }
 
+        _uncopied = false;
+        var text = content is null ? null : Decode(content);
+
         // An empty file states nothing, so there is nothing worth preserving.
         if (string.IsNullOrWhiteSpace(text)) return Serialise(new T());
 
         if (TryCanonicalise(text, out var canonical)) return canonical;
 
-        _quarantinePath = Quarantine() ?? _quarantinePath;
+        var copy = QuarantineCopy.TryWrite(_options.Quarantine, _options.Directory, _options.FileName, content!);
+        if (copy is null && _options.Quarantine.Keep > 0)
+        {
+            // The file is the only copy of what it holds, so it is read as unreadable, not replaced.
+            _uncopied = true;
+            return null;
+        }
+
+        _quarantinePath = copy ?? _quarantinePath;
 
         var defaults = Serialise(new T());
         TryWrite(defaults);
@@ -218,78 +227,29 @@ public sealed class SettingsFile<T> where T : class, new()
         return false;
     }
 
-    private Exception? TryWriteOnceLoaded(string json) =>
-        _hasLoaded
-            ? TryWrite(json)
-            : new InvalidOperationException(
+    private Exception? TryWriteOnceLoaded(string json)
+    {
+        if (!_hasLoaded)
+        {
+            return new InvalidOperationException(
                 "The file has not been read since the store opened, so it is not written over: what is on disk may be intact. Reload it first.");
+        }
+
+        if (_uncopied)
+        {
+            return new IOException(
+                "The file cannot be parsed and its quarantine copy could not be written, so it is not written over. Reload it once the copy can be written.");
+        }
+
+        return TryWrite(json);
+    }
 
     private Exception? TryWrite(string json) => AtomicFile.WriteText(FilePath, json);
 
-    private string? Quarantine()
+    // The decoding File.ReadAllText applies: UTF-8 unless a byte-order mark names another encoding.
+    private static string Decode(byte[] content)
     {
-        var policy = _options.Quarantine;
-        if (policy.Keep <= 0) return null;
-
-        var folder = policy.Directory ?? _options.Directory;
-        var stem = Path.GetFileNameWithoutExtension(_options.FileName);
-        var extension = Path.GetExtension(_options.FileName);
-
-        try
-        {
-            Directory.CreateDirectory(folder);
-
-            var stamp = DateTime.Now.ToString(StampFormat, CultureInfo.InvariantCulture);
-            var copy = Path.Combine(folder, $"{stem}.{stamp}{QuarantineMarker}{extension}");
-            for (var attempt = 2; File.Exists(copy); attempt++)
-            {
-                copy = Path.Combine(folder, $"{stem}.{stamp}-{attempt}{QuarantineMarker}{extension}");
-            }
-
-            File.Copy(FilePath, copy);
-            Prune(folder, stem, extension, policy.Keep);
-            return copy;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // Preserving the file is best effort; defaults still take over.
-            return null;
-        }
-    }
-
-    private static void Prune(string folder, string stem, string extension, int keep)
-    {
-        // The stamp sorts chronologically, so the newest copies are the last by ordinal name.
-        var copies = Directory.EnumerateFiles(folder, $"{stem}.*{QuarantineMarker}{extension}")
-            .Where(path => IsCopyOf(path, stem, extension))
-            .OrderDescending(StringComparer.Ordinal)
-            .Skip(keep);
-
-        foreach (var stale in copies)
-        {
-            try
-            {
-                File.Delete(stale);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                // One copy too many costs nothing; failing the load would cost the settings.
-            }
-        }
-    }
-
-    // A copy of this file and no other: the stem, a dot, a stamp, the marker and the extension. The
-    // search pattern alone also takes in the copies of a file whose name starts with this stem and a
-    // dot — app.local.json beside app.json — and the prune would delete them.
-    private static bool IsCopyOf(string path, string stem, string extension)
-    {
-        var name = Path.GetFileName(path);
-        var head = stem.Length + 1;
-        var tail = QuarantineMarker.Length + extension.Length;
-
-        return name.Length > head + tail
-            && name.StartsWith(stem + ".", StringComparison.Ordinal)
-            && name.EndsWith(QuarantineMarker + extension, StringComparison.Ordinal)
-            && Regex.IsMatch(name.AsSpan(head, name.Length - head - tail), CopyStampPattern);
+        using var reader = new StreamReader(new MemoryStream(content), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        return reader.ReadToEnd();
     }
 }

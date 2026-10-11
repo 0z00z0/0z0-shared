@@ -116,6 +116,43 @@ public sealed class SectionIsolationTests : SectionedTestBase
         Assert.True(File.Exists(sibling));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void A_section_it_cannot_read_is_not_written_over_when_its_copy_fails()
+    {
+        Given("""{ "ConfigVersion": 1, "general": { "Mode": "Scorching" } }""");
+        var before = OnDiskBytes();
+
+        var result = Create(UnusableFolder()).Section<GeneralSection>("general").Update(g => g.Retries = 5);
+
+        Assert.False(result.Saved);
+        Assert.IsType<IOException>(result.Error);
+        Assert.Equal(before, OnDiskBytes());
+    }
+
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public void A_document_broken_by_hand_is_not_written_over_when_its_copy_fails()
+    {
+        Given("""{ "ConfigVersion": 1, "general": { "Retries": 7 } }""");
+        var store = Create(UnusableFolder());
+        File.WriteAllText(FilePath, "{ this is not json at all");
+
+        var result = store.Section<GeneralSection>("general").Update(g => g.Retries = 9);
+
+        Assert.False(result.Saved);
+        Assert.IsType<IOException>(result.Error);
+        Assert.Equal("{ this is not json at all", OnDisk());
+    }
+
+    // A folder under a file cannot be created, so every quarantine copy fails.
+    private SettingsFileQuarantine UnusableFolder()
+    {
+        var blocker = Path.Combine(Root, "blocker");
+        File.WriteAllText(blocker, string.Empty);
+        return new SettingsFileQuarantine(Keep: 3, Directory: Path.Combine(blocker, "quarantine"));
+    }
+
     [Fact]
     public void A_section_the_document_lacks_reads_as_defaults_and_is_not_a_failure()
     {

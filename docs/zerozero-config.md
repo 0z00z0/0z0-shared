@@ -56,7 +56,16 @@ edit to take effect without a restart.
   Nothing surfaces it, so a host should: `SettingsFile<T>.LastQuarantinePath` names the copy, and a
   host that leaves it unread leaves its user without a configuration and with nothing on screen to
   say so. `Keep` (3; zero keeps no copy) and `Directory` (beside the file) are optional; `Default`
-  and `Off` are the two ready-made policies.
+  and `Off` are the two ready-made policies. **When `Keep` is above zero and the copy cannot be
+  written, the original is not overwritten**: the file counts as unreadable, as below, and every
+  write is refused with an `IOException` until a read finds it parseable or a copy succeeds.
+- **`QuarantineCopy`** — the copy itself, shared by both stores and usable on its own.
+  `TryWrite(policy, directory, fileName, content)` writes `content` (the bytes already read, never a
+  second read of the file) to `<stem>.<yyyy-MM-dd-HHmmss>[-n].bad<extension>` in the policy's folder,
+  or `directory` when it names none, then deletes the oldest copies of that file beyond `Keep`. It
+  returns the copy's path, or null when `Keep` is zero or the file system refused the copy; it never
+  throws for a refusal. A failed prune leaves an extra copy and still returns the path. The prune
+  never touches the copies of another file whose name starts with the same stem and a dot.
 - **`AtomicFile`** — the write itself, usable on its own: the content goes to a temporary sibling, is
   flushed through to the disk, and only then replaces the target, so neither a crash nor a power loss
   can leave half a file where a whole one was. A replace the operating system refuses for a moment —
@@ -82,8 +91,8 @@ defaults in memory, and every `Update` and `Save` is refused until a `Reload` ha
 result carries an `InvalidOperationException` and `SaveFailed` is raised. The file may be intact, and
 quarantine cannot cover it, because the copy is taken by reading the file. A `Reload` that meets the
 same failure keeps the state already held. Once any read has succeeded the store stays writable
-whatever a later read finds: writing a good configuration over a file broken by hand is the intended
-repair. `SettingsFile<T>` reports the latch through nothing: a host learns of it from the refused
+whatever a later read finds — writing a good configuration over a file broken by hand is the intended
+repair — except when that read finds the file broken and its quarantine copy fails. `SettingsFile<T>` reports the latch through nothing: a host learns of it from the refused
 save, which is why the result is worth reading. The sectioned store carries it as
 `SectionedSettingsFile.HasLoaded`.
 
@@ -243,7 +252,9 @@ since the last read is part of the file the write preserves.
 A document this build cannot read is copied aside **from the bytes already in hand**, never by
 reading the file a second time — the copy has to work for the file whose second read would fail too.
 A file that could not be read at all therefore gets no copy, and is not written over either.
-`LastQuarantinePath` names the copy; the three most recent are kept.
+`LastQuarantinePath` names the copy; the three most recent are kept. **When `Keep` is above zero and
+the copy cannot be written** — the quarantine folder cannot be created or written — the write is
+refused with an `IOException` and the broken document stays on disk.
 
 ### Taking a section
 
