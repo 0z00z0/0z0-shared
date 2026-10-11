@@ -103,6 +103,17 @@ This guide is complete for adoption: the component's own source and tests need n
   needed. The arithmetic itself is `ZeroZero.Win32`'s `WindowFit`, which a caller sizing something
   other than a popup uses directly. `Width` and `MinimumHeight` are required; `ScrollerPadding`
   (none), `HeightFraction` (0.8), `Name` ("Popup") and `Log` (silent) are optional.
+- **`ContentSizedPopup`** — a fixed-width popup sized to content that does not scroll; content that
+  scrolls takes `PopupWindowFit`. `Attach(window, root, contentWidth, escape)` is called from the
+  window's constructor after `InitializeComponent`. It hides the window from the taskbar and
+  Alt+Tab through `SwitcherVisibility`, makes it frameless, not resizable and always on top, sets
+  the root's width, and binds Escape on the root to `escape`, so Escape works from whichever control
+  has focus. It fits the window at once and again when the root loads, because a measure before
+  then uses the fallback face's metrics. `Fit()` fits again after the content changed height. A fit
+  measures the root at that width, rounds up, adds the frame the window actually has, stops at the
+  work area's height and centres on the monitor that was under the cursor at `Attach`; a window
+  taller than the work area keeps its top on screen. A measure of zero counts as 200 units. After
+  the window closes, `Fit` does nothing.
 - **`SwitcherVisibility`** — `TrySet(appWindow, shown, log)` sets `AppWindow.IsShownInSwitchers`,
   whether the window appears on the taskbar and in Alt+Tab. **The plain setter throws
   `NotImplementedException` ("SetShownInSwitchers failed") while no taskbar window exists** —
@@ -193,7 +204,9 @@ the title-bar enum and palette, compiled in as linked source and pinned — opaq
 grounds the window colour, glyph and fill ordering, no value shared between the two sets — and
 the controls' markup read as data beside the panel's, so the section header keeps the panel's
 sub-header typography and rule, the row keeps its bubble before its field, and the prompt keeps
-its confirm on the right of two equal columns. `PopupWindowFit` is not covered there: it needs a
+its confirm on the right of two equal columns. `ContentSizedPopup`'s arithmetic — rounding up, the
+200-unit fallback, the work-area cap and the centring — is linked in and tested; its window calls
+are looked at in the harness. `PopupWindowFit` is not covered there: it needs a
 live window and a laid-out panel. The arithmetic it defers to is covered in
 `tests/ZeroZero.Win32.Tests/WindowFitTests.cs`, and what remains here is the plumbing between the
 two — which is looked at, not asserted.
