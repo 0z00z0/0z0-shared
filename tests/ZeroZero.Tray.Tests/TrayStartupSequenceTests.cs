@@ -68,6 +68,19 @@ public class TrayStartupSequenceTests
         Assert.Equal((1, 3, 0), (rig.Prepared, result.Attempts, rig.Abandoned));
     }
 
+    [Fact]
+    [Trait(Guard.Category, Guard.Value)]
+    public async Task AHostDisposedDuringTheRetryDelayThrowsRatherThanReportingARefusal()
+    {
+        var rig = new Rig();
+        rig.Refuses = attempt => attempt == 1
+            ? true
+            : throw new ObjectDisposedException("TrayHost");
+
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => rig.RunAsync(new TrayStartupOptions { CreateAttempts = 5 }));
+        Assert.Equal((2, 0), (rig.Attempts, rig.Abandoned));
+    }
+
     // The callback-based TrayStartup.StartAsync(create, abandon, options) overload wires in a
     // genuine no-op for prepare, not a counted stub; this exercises that exact shape.
     [Fact]

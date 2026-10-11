@@ -50,6 +50,16 @@ internal static class WindowPlacement
         return new NativeRect(left, top, left + outerWidth, top + outerHeight);
     }
 
+    /// <summary>The window grown to fit measured content: rounded up, unlike <see cref="Opening"/>'s
+    /// default size, since a pixel lost would clip the content; never narrower; inside the work area.</summary>
+    public static NativeRect FitToContent(
+        NativeRect current, double clientWidth, double clientHeight, double scale, (int Width, int Height) frame, NativeRect workArea)
+    {
+        int outerWidth = Math.Min(Math.Max((int)Math.Ceiling(clientWidth * scale) + frame.Width, current.Width), workArea.Width);
+        int outerHeight = Math.Min((int)Math.Ceiling(clientHeight * scale) + frame.Height, workArea.Height);
+        return new NativeRect(current.Left, current.Top, current.Left + outerWidth, current.Top + outerHeight).ClampInto(workArea);
+    }
+
     /// <summary>
     /// The rectangle worth remembering, or null. A maximised or minimised window's geometry is
     /// the presenter's, not the user's — restored from it, the window would fill the screen with

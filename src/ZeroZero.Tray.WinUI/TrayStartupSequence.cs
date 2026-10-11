@@ -34,7 +34,8 @@ internal static class TrayStartupSequence
                 create();
                 return new TrayStartupResult(TrayStartupOutcome.Created, attempt, elapsed(), null);
             }
-            catch (Exception ex)
+            // A host disposed during the retry delay throws as documented rather than counting as a refusal.
+            catch (Exception ex) when (ex is not ObjectDisposedException)
             {
                 last = ex;
             }

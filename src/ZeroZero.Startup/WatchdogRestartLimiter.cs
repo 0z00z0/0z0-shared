@@ -1,4 +1,3 @@
-using System.Globalization;
 using ZeroZero.Primitives;
 
 namespace ZeroZero.Startup;
@@ -10,18 +9,9 @@ namespace ZeroZero.Startup;
 /// nothing a person has not already noticed.
 /// </summary>
 /// <remarks>
-/// The count is on disk because the process keeping it is the one that keeps dying; anything in
-/// memory dies with it. The file sits beside the hold marker, in the folder the application already
-/// names for the watchdog's state.
-/// <para>A start the person asked for clears the count: someone is at the machine, so whatever the
-/// loop was, it is over.</para>
-/// <para><b>How a run's length is known without the dead run reporting it.</b> A probe start is
-/// recorded only where the application genuinely came up, because a probe that finds a live
-/// instance exits at the instance gate. The gap between two recorded starts is therefore the
-/// previous run's length plus the wait for the next probe, and that wait is at most the probe
-/// interval. A gap longer than the interval plus <see cref="StaysUp"/> means the run outlasted
-/// <see cref="StaysUp"/>, and the count starts again. The gap bounds the run's length from above,
-/// so a run that only just passed the bar may still be counted.</para>
+/// A start the person asked for clears the count. How a run's length is read from the gap between
+/// starts is in docs/zerozero-startup.md, "The restart bound"; the gap bounds the length from above,
+/// so a run that only just passed the bar may still be counted.
 /// </remarks>
 public sealed class WatchdogRestartLimiter
 {
@@ -82,14 +72,14 @@ public sealed class WatchdogRestartLimiter
                 return true;
             }
 
-            List<DateTimeOffset> starts = Read().Where(stamp => now - stamp < _window).Order().ToList();
+            List<DateTimeOffset> starts = TimestampListFile.Read(FilePath).Where(stamp => now - stamp < _window).Order().ToList();
 
             // The run before this one outlasted the bar, so it is not part of a loop and neither is
             // anything before it.
             if (starts.Count > 0 && now - starts[^1] > _probeInterval + _staysUp) starts.Clear();
 
             starts.Add(now);
-            Write(starts);
+            TimestampListFile.Write(FilePath, starts);
 
             if (starts.Count < _limit) return true;
 
@@ -110,22 +100,5 @@ public sealed class WatchdogRestartLimiter
         // Nothing to clear is the ordinary case. File.Delete is silent about a missing file but not
         // about the folder it would have been in.
         catch (DirectoryNotFoundException) { }
-    }
-
-    private IEnumerable<DateTimeOffset> Read()
-    {
-        if (!File.Exists(FilePath)) yield break;
-
-        // A line that does not parse is dropped rather than fatal: a hand-edited or truncated file
-        // must not stop the application starting.
-        foreach (string line in File.ReadAllLines(FilePath))
-            if (DateTimeOffset.TryParseExact(line.Trim(), "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset stamp))
-                yield return stamp;
-    }
-
-    private void Write(IEnumerable<DateTimeOffset> stamps)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-        File.WriteAllLines(FilePath, stamps.Select(stamp => stamp.ToString("O", CultureInfo.InvariantCulture)));
     }
 }

@@ -1,4 +1,3 @@
-using System.Globalization;
 using ZeroZero.Primitives;
 
 namespace ZeroZero.Lifecycle;
@@ -43,7 +42,7 @@ public sealed class RelaunchLimiter
         DateTimeOffset now = _clock.GetUtcNow();
         try
         {
-            List<DateTimeOffset> recent = Read().Where(stamp => now - stamp < _window).ToList();
+            List<DateTimeOffset> recent = TimestampListFile.Read(FilePath).Where(stamp => now - stamp < _window).ToList();
             if (recent.Count >= _limit)
             {
                 _log.Info($"Relaunch refused: {recent.Count} relaunches in the last {_window.TotalMinutes:0} minutes (limit {_limit}).");
@@ -51,7 +50,7 @@ public sealed class RelaunchLimiter
             }
 
             recent.Add(now);
-            Write(recent);
+            TimestampListFile.Write(FilePath, recent);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -59,22 +58,5 @@ public sealed class RelaunchLimiter
             _log.Error(nameof(RelaunchLimiter), ex);
             return true;
         }
-    }
-
-    private IEnumerable<DateTimeOffset> Read()
-    {
-        if (!File.Exists(FilePath)) yield break;
-
-        // A line that does not parse is dropped, not fatal: a hand-edited or truncated file must
-        // neither block the relaunch nor break the exit path.
-        foreach (string line in File.ReadAllLines(FilePath))
-            if (DateTimeOffset.TryParseExact(line.Trim(), "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset stamp))
-                yield return stamp;
-    }
-
-    private void Write(IEnumerable<DateTimeOffset> stamps)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-        File.WriteAllLines(FilePath, stamps.Select(stamp => stamp.ToString("O", CultureInfo.InvariantCulture)));
     }
 }

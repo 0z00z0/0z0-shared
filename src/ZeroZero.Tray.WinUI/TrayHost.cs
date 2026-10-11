@@ -4,6 +4,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Win32;
+using ZeroZero.Win32;
 
 namespace ZeroZero.Tray.WinUI;
 
@@ -17,12 +18,10 @@ namespace ZeroZero.Tray.WinUI;
 public sealed class TrayHost : IDisposable
 {
     private readonly TrayHostOptions _options;
-    private readonly TrayIconFileCache _cache;
+    private readonly TrayIconRenderer _renderer;
     private TaskbarIcon? _icon;
-    private System.Drawing.Icon? _loaded;
     private DispatcherQueue? _dispatcher;
     private TrayClickPolicy? _clicks;
-    private TrayIconRequest? _request;
     private TrayIconPlacement? _placementReplaced;
     private bool _disposed;
 
@@ -32,7 +31,7 @@ public sealed class TrayHost : IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(options.Name);
         ArgumentNullException.ThrowIfNull(options.Icon);
         _options = options;
-        _cache = new TrayIconFileCache(options.CacheDirectory ?? Path.GetTempPath(), options.Name);
+        _renderer = new TrayIconRenderer(options.Icon, new TrayIconFileCache(options.CacheDirectory ?? Path.GetTempPath(), options.Name));
         Id = options.Id ?? TrayIcon.CreateUniqueGuidFromString(options.Name);
     }
 
@@ -108,11 +107,12 @@ public sealed class TrayHost : IDisposable
     /// <summary>Whether the shell currently holds the icon.</summary>
     public bool IsCreated => _icon?.IsCreated ?? false;
 
-    /// <summary>The slot and theme the icon was last rendered for; null before <see cref="Start"/>.</summary>
-    public TrayIconRequest? CurrentRequest => _request;
+    /// <summary>The slot and theme the icon was last rendered for; null before <see cref="Start"/>
+    /// and after <see cref="Dispose"/>.</summary>
+    public TrayIconRequest? CurrentRequest => _renderer.Request;
 
     /// <summary>Where a render is written.</summary>
-    public string CachePath => _cache.Path;
+    public string CachePath => _renderer.CachePath;
 
     /// <summary>
     /// Creates the icon. On the UI thread, once, after the XAML runtime is up: the listeners are
@@ -129,8 +129,7 @@ public sealed class TrayHost : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_icon is not null) throw new InvalidOperationException("The host has already started.");
-        _dispatcher = DispatcherQueue.GetForCurrentThread()
-            ?? throw new InvalidOperationException("Start the host on the UI thread: its listeners are marshalled to that thread's dispatcher queue.");
+        _dispatcher = UiThread.Dispatcher();
 
         var doubleClick = TimeSpan.FromMilliseconds(Math.Max(1, NativeMethods.GetDoubleClickTime()));
         _clicks = new TrayClickPolicy(doubleClick, _options.ReopenGuard);
@@ -150,9 +149,18 @@ public sealed class TrayHost : IDisposable
         };
         _icon = icon;
 
-        Render();
-        ApplyTooltip();
-        RebuildMenu();
+        // A throwing application delegate leaves the host not started, so it can be started again.
+        try
+        {
+            Render();
+            ApplyTooltip();
+            RebuildMenu();
+        }
+        catch
+        {
+            Abandon();
+            throw;
+        }
     }
 
     // A refusal throws before any listener is attached, and the library deletes a half-added icon first.
@@ -161,9 +169,8 @@ public sealed class TrayHost : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         var icon = _icon ?? throw new InvalidOperationException("The host has not been prepared.");
 
-        // The library's default arms efficiency mode for the whole process: idle priority class
-        // and power throttling, applied here and never restored. Refused, and a test measures the
-        // process afterwards rather than this argument.
+        // The library's default arms efficiency mode for the whole process (idle priority, power
+        // throttling) and never restores it; a test measures the process, not this argument.
         icon.ForceCreate(enablesEfficiencyMode: false);
 
         var window = icon.TrayIcon.MessageWindow;
@@ -233,8 +240,7 @@ public sealed class TrayHost : IDisposable
             _icon = null;
         }
 
-        _loaded?.Dispose();
-        _loaded = null;
+        _renderer.Release();
     }
 
     // A refused icon left in place adds itself at the next TaskbarCreated without this host's listeners.
@@ -242,24 +248,18 @@ public sealed class TrayHost : IDisposable
     {
         _icon?.Dispose();
         _icon = null;
-        _loaded?.Dispose();
-        _loaded = null;
-        _request = null;
+        _renderer.Release();
     }
 
-    /// <summary>Removes the icon and adds it again, so the shell reads the per-icon settings
-    /// afresh. The library keeps the icon's state, so what comes back is the same icon with the
-    /// same tooltip and the same menu.</summary>
+    // The shell reads the per-icon settings only when the icon is added.
     private void Reregister()
     {
         if (_icon is not { IsCreated: true } icon) return;
         AddAgain(icon);
     }
 
-    /// <summary>Removes the icon from the shell and adds it again from the state the library holds.
-    /// A refused add throws: to the caller where the application made the call, and into
-    /// <see cref="Failed"/> through the guard every change the host starts on its own runs in.</summary>
-    private static void AddAgain(TaskbarIcon icon)
+    // The library's own state restores the same icon, tooltip and menu. A refused add throws.
+    internal static void AddAgain(TaskbarIcon icon)
     {
         icon.TrayIcon.TryRemove();
         icon.TrayIcon.Create();
@@ -273,37 +273,19 @@ public sealed class TrayHost : IDisposable
         if (_icon is null) throw new InvalidOperationException("The host has not started.");
     }
 
-    /// <summary>
-    /// Draws the menu in the taskbar's own theme, or in the one the application pinned. The menu
-    /// is a native popup rather than a XAML flyout, so its colours come from the process's menu
-    /// mode and not from any property on the flyout or the icon (measured: a theme set on either
-    /// leaves the menu light). The mode is process-wide and covers every Win32 menu the
-    /// application shows.
-    /// </summary>
+    // The menu is a native popup: its colours come from the process-wide menu mode (measured: a
+    // theme set on the flyout or the icon leaves it light). docs/zerozero-tray.md has the rest.
     private void ApplyMenuTheme()
     {
-        var mode = (_options.MenuTheme ?? ThemeForTaskbar()) switch
+        DarkChromeMode? mode = (_options.MenuTheme ?? ThemeForTaskbar()) switch
         {
-            ElementTheme.Light => NativeMethods.PreferredAppMode.ForceLight,
-            ElementTheme.Dark => NativeMethods.PreferredAppMode.ForceDark,
-            // Default hands the menu back to the application, which is what Windows decides from
-            // the apps theme on its own.
-            _ => NativeMethods.PreferredAppMode.Default,
+            ElementTheme.Light => DarkChromeMode.ForceLight,
+            ElementTheme.Dark => DarkChromeMode.ForceDark,
+            _ => null,
         };
 
-        try
-        {
-            NativeMethods.SetPreferredAppMode(mode);
-            // Without this the first menu's theme is cached for the process and every later one
-            // opens in it, whatever the mode now says.
-            NativeMethods.FlushMenuThemes();
-        }
-        catch (Exception ex) when (ex is EntryPointNotFoundException or DllNotFoundException)
-        {
-            // The export is undocumented and reached by ordinal, so a Windows build without it is
-            // not ruled out; the menu then stays as Windows draws it — which is what a host that
-            // never asked would have had.
-        }
+        // False on a Windows without the export, where the menu stays as Windows draws it.
+        if (mode is { } chosen) DarkChrome.Apply(chosen);
     }
 
     /// <summary>The element theme the taskbar is drawn in now. Its own registry value, not the
@@ -311,53 +293,14 @@ public sealed class TrayHost : IDisposable
     private static ElementTheme ThemeForTaskbar() =>
         TaskbarThemes.Read() == TaskbarTheme.Light ? ElementTheme.Light : ElementTheme.Dark;
 
-    private static TrayIconRequest ReadRequest()
-    {
-        var theme = TaskbarThemes.Read();
-        return new TrayIconRequest(TrayIconSlot.PixelsForTaskbar(), theme, TaskbarThemes.StrokeToneFor(theme));
-    }
-
-    /// <summary>Asks the application for the icon at the current slot and theme and hands the
-    /// shell the frame of the slot's own size, so nothing is resampled.</summary>
     private void Render()
     {
-        var request = ReadRequest();
-        _request = request;
-
-        TrayIconImage image = _options.Icon(request);
-        var (path, changed) = _cache.Resolve(image);
-        if (!changed && _loaded is not null)
-        {
-            Push();
-            return;
-        }
-
-        var previous = _loaded;
-        // The file's bytes are read into the handle here; a later overwrite of the cache file does
-        // not reach an icon already loaded.
-        _loaded = new System.Drawing.Icon(path, request.SlotPixels, request.SlotPixels);
-        // The library keeps the object: it re-adds this handle after a shell restart.
-        _icon!.Icon = _loaded;
-        previous?.Dispose();
+        if (_icon is { } icon) _renderer.Render(icon);
     }
 
-    /// <summary>The request re-read after a theme, display or shell change: a change is a new
-    /// render, and no change is a push of the current icon, which repairs an icon the shell
-    /// dropped without saying so.</summary>
     private void Reconcile()
     {
-        if (ReadRequest() != _request) Render();
-        else Push();
-    }
-
-    /// <summary>Puts the current icon to the shell again. A refusal means the shell no longer
-    /// holds the icon and sent no TaskbarCreated, so it is added afresh from the state the
-    /// library still holds.</summary>
-    private void Push()
-    {
-        if (_icon is null || _loaded is null || !_icon.IsCreated) return;
-        if (_icon.TrayIcon.UpdateIcon(_loaded.Handle)) return;
-        AddAgain(_icon);
+        if (_icon is { } icon) _renderer.Reconcile(icon);
     }
 
     private void ApplyTooltip()

@@ -71,8 +71,9 @@ the XAML runtime is up.
   isChecked, action)`, each with an enabled flag that defaults to true, and `Separator()`, which
   takes nothing — a rule between groups has nothing to enable.
 - `MenuTheme` — the theme the menu is drawn in. Not given, the menu follows the taskbar's own
-  theme, read again at every rebuild; an application pinned to one theme names it here, and
-  `ElementTheme.Default` hands the menu back to the application's theme.
+  theme, read again at every rebuild; an application pinned to one theme names it here.
+  `ElementTheme.Default` makes no call, so the process's menu mode stays whatever the application
+  set, or Windows' own where it set none.
 - `LeftClick` and `DoubleClick` — the actions.
 - `CacheDirectory` — where a render is written; the temporary folder when not given.
   `ReopenGuard` — how long after a pop-out's dismissal a click is dropped; the system's
@@ -143,7 +144,8 @@ the XAML runtime is up.
   rules are under the settings key below.
 
 - **Refusals.** `Start()` throws when called twice or on a thread with no dispatcher queue, and
-  when the shell refuses the icon, after which the host cannot be started again; the
+  when the shell refuses the icon, after which the host cannot be started again; a delegate in the
+  options that throws during `Start()` throws to the caller and leaves the host not started; the
   refresh, menu and placement calls throw before `Start()` and after `Dispose()`, and `IsStarted`
   says which. `FromFrames` refuses an empty list and `Command` and `Toggle` a blank label; `FromFile`
   does not check that the file exists, and it must when the host loads it. `TrayClickPolicy`,
