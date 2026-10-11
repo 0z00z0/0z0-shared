@@ -19,19 +19,8 @@ namespace ZeroZero.Update.WinUI;
 /// — a refusal, a failure, or the notice that nothing newer exists.
 /// </summary>
 /// <remarks>
-/// One window rather than several, because the question, the download and the answer are one act:
-/// pressing "Install now" leaves the window where it is and starts the download in it, so nothing
-/// disappears and reappears in the middle of a gesture.
-/// <para>
-/// Frameless on a Mica backdrop, always on top, centred on the monitor under the cursor, sized to
-/// its own content at whatever scaling that monitor has. It counts itself among the application's
-/// transient windows for as long as it is open, so a window beneath it that dismisses itself on
-/// focus loss stays where it is — see <see cref="TransientWindows"/>.
-/// </para>
-/// <para>
-/// The window owns no wording: every sentence comes from <see cref="UpdateMessages"/>, so a
-/// surface written outside this repository words an outcome the same way.
-/// </para>
+/// One window, so "Install now" starts the download where the question was. It owns no wording:
+/// every sentence comes from <see cref="UpdateMessages"/>. docs/zerozero-update.md describes the window.
 /// </remarks>
 public sealed partial class UpdateWindow : Window
 {
