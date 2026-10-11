@@ -61,14 +61,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     // Honoured on the maintain-loop thread, so the forced socket drop cannot race its own connect.
     private volatile bool _reconnectRequested;
 
-    // What the log was last told about why there is no link — the outage marker or a refusal's text —
-    // so a retry that finds the same thing says nothing. Cleared on every connect.
-    private string? _reported;
-    private const string OutageReported = "outage";
-
-    // Set just before this connection ends its own session, so the disconnect it raises is not
-    // reported as a lost link. Taken by the disconnect event, cleared on connect.
-    private int _ownDrop;
+    private readonly MqttOutageLog _outage;
 
     // Whether the socket stage takes the full budget because a whole round went by with nothing
     // answering anywhere. Written under _gate on an apply and on the maintain-loop thread on a
@@ -122,6 +115,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     {
         _setup = setup;
         _log = setup.Log;
+        _outage = new MqttOutageLog(_log);
         _channels = new MqttChannelSet(setup.Channels);
         _router = new MqttCommandRouter(setup.CommandTargets);
         _subscriptions = setup.Subscriptions;
@@ -322,43 +316,9 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         // opens its sockets under the full one.
         if (ShouldEscalateSocketBudget(attempts)) _socketBudgetEscalated = true;
 
-        ReportFailedRound(attempts);
+        _outage.ReportFailedRound(attempts);
         return new(false, attempts);
     }
-
-    /// <summary>Tells the log what a failed round found, once rather than on every retry. A refusal is
-    /// an error, because retrying cannot change it; anything else is the link being down, which is one
-    /// line per outage. The details are OS or broker text, never a staged credential.</summary>
-    private void ReportFailedRound(IReadOnlyList<MqttEndpointAttempt> attempts)
-    {
-        var refused = attempts.Where(a => RefusalText(a.Outcome) is not null).ToList();
-        if (refused.Count > 0)
-        {
-            string reason = string.Join("; ", refused.Select(a =>
-                $"{Where(a)}: {RefusalText(a.Outcome)} ({a.Result.Detail})"));
-            if (Interlocked.Exchange(ref _reported, reason) != reason)
-                _log.Error($"MqttConnection.Connect: the connection was refused — {reason}", null);
-            return;
-        }
-
-        if (Interlocked.Exchange(ref _reported, OutageReported) != OutageReported)
-            _log.Info("MQTT: the broker could not be reached — " +
-                string.Join("; ", attempts.Select(a => $"{Where(a)}: {a.Result.Detail}")) +
-                ". Sending resumes when the connection returns.");
-    }
-
-    // What waiting cannot fix: the broker answered no, or its certificate is not one this connection
-    // trusts. Null for every outcome that is only the link being down.
-    private static string? RefusalText(MqttProbeOutcome outcome) => outcome switch
-    {
-        MqttProbeOutcome.AuthRejected => "the broker refused the login",
-        MqttProbeOutcome.Rejected => "the broker refused the connection",
-        MqttProbeOutcome.TlsUntrusted => "the broker's certificate is not trusted",
-        _ => null,
-    };
-
-    private static string Where(MqttEndpointAttempt attempt) =>
-        $"{MqttStatusText.Name(attempt.Candidate.Transport)}:{attempt.Candidate.Port}";
 
     /// <summary>Ends the current session, if there is one, on this connection's own account, so the
     /// disconnect it raises is not reported as a lost link. Never throws: the socket is going away
@@ -368,7 +328,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         try
         {
             if (!_client.IsConnected) return;
-            Volatile.Write(ref _ownDrop, 1);
+            _outage.OwnDrop();
             await _client.DisconnectAsync().ConfigureAwait(false);
         }
         catch { /* the socket is going away either way */ }
@@ -456,7 +416,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
         var backoff = new MqttReconnectBackoff();
 
         // Publishing switched back on starts a fresh account, so its first failure is reported again.
-        Volatile.Write(ref _reported, null);
+        _outage.Forget();
 
         while (!ct.IsCancellationRequested && _enabled)
         {
@@ -601,9 +561,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             SetState(MqttConnectionState.Retrying);
             _drop.TrySetResult();
 
-            // One line per outage; a session this connection ended itself is not one.
-            if (Interlocked.Exchange(ref _ownDrop, 0) == 0
-                && Interlocked.Exchange(ref _reported, OutageReported) != OutageReported)
+            if (_outage.IsNewLoss())
                 _log.Info($"MQTT: the connection to the broker was lost — {MqttClientWiring.DisconnectReason(e)}. " +
                           "Sending resumes when the connection returns.");
         }
@@ -624,10 +582,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
 
     private async Task OnConnectedAsync(CancellationToken ct)
     {
-        // A new session: nothing reported about the last outage or refusal holds any more, and a drop
-        // flagged but never raised belonged to a session that has gone.
-        Volatile.Write(ref _reported, null);
-        Volatile.Write(ref _ownDrop, 0);
+        _outage.Connected();
 
         // The encryption is named because Automatic can fall back to plain with nobody choosing it,
         // and a downgrade that leaves no trace is one nobody can notice afterwards.
