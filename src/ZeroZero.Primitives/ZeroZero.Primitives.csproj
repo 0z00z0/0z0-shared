@@ -7,8 +7,14 @@
 
     <AssemblyTitle>ZeroZero.Primitives</AssemblyTitle>
     <Product>ZeroZero.Primitives</Product>
-    <Description>The plain primitives any component may take: the two-member log sink and its no-op, the informational-version reader with its display form, the coalescing gate, the timestamp-list file, and the source-revision stamp as build properties and targets.</Description>
+    <Description>The plain primitives any component may take: the two-member log sink and its no-op, the informational-version reader with its display form, the coalescing gate, the timestamp-list file, a component's own texts with the host's localizer asked first, and the source-revision stamp as build properties and targets.</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The standard host-override seam for texts, abstractions only: no dependency injection,
+         logging or options package reaches a component. -->
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- The revision stamp travels with the package. NuGet imports build\<PackageId>.props and
