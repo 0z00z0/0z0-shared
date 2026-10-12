@@ -13,7 +13,7 @@ public class UnattendedUpdatePolicyTests
     private readonly RecordingLogSink _log = new();
     private int _shutdowns;
 
-    private UnattendedUpdatePolicy Policy(bool enabled = true, Func<ReleaseInfo, InstallMoment>? mayInstallNow = null, CheckCadence cadence = CheckCadence.Periodic,
+    private UnattendedUpdatePolicy Policy(bool enabled = true, InstallHolds? holds = null, CheckCadence cadence = CheckCadence.Periodic,
         TimeSpan? initialDelay = null, TimeSpan? retryInterval = null, Action<UnattendedTick>? tickReported = null,
         Func<ReleaseInfo, InstallMoment>? mayDownloadNow = null, TimeProvider? time = null) =>
         new(_service, new UnattendedUpdateOptions
@@ -23,7 +23,7 @@ public class UnattendedUpdatePolicyTests
             InitialDelay = initialDelay ?? TimeSpan.FromSeconds(30),
             RetryInterval = retryInterval ?? TimeSpan.FromMinutes(10),
             MayDownloadNow = mayDownloadNow,
-            MayInstallNow = mayInstallNow,
+            Holds = holds,
             TickReported = tickReported,
             Shutdown = () => _shutdowns++,
             Log = _log,
@@ -113,25 +113,29 @@ public class UnattendedUpdatePolicyTests
 
     [Trait(Guard.Category, Guard.Value)]
     [Fact]
-    public async Task ApplicationRefusesTheMoment_NothingStarts()
+    public async Task AHold_RefusesWithOneLogLine_AndInstallsOnceReleased()
     {
         ReleaseIsWaiting();
         _idle.ScreenLocked = true;
-        var asked = new List<ReleaseInfo>();
-
-        UnattendedUpdatePolicy policy = Policy(mayInstallNow: release =>
-        {
-            asked.Add(release);
-            return InstallMoment.NotNow("the application is in the middle of something");
-        });
+        var holds = new InstallHolds();
+        IDisposable session = holds.Hold("a focus session is running");
+        UnattendedUpdatePolicy policy = Policy(holds: holds);
 
         UnattendedTick refused = await policy.TickAsync();
+        await policy.TickAsync();
 
         Assert.Equal(UnattendedOutcome.Refused, refused.Outcome);
-        Assert.Equal("the application is in the middle of something", refused.Reason);
-        Assert.Equal([FakeUpdateService.Release], asked);
+        Assert.Equal("a focus session is running", refused.Reason);
+        Assert.Single(_log.Infos, line => line.StartsWith("Not installing", StringComparison.Ordinal));
         Assert.Equal(0, _service.Launches);
         Assert.Equal(0, _shutdowns);
+
+        session.Dispose();
+        UnattendedTick started = await policy.TickAsync();
+
+        Assert.Equal(UnattendedOutcome.InstallerStarted, started.Outcome);
+        Assert.Equal(1, _service.Launches);
+        Assert.Equal(1, _shutdowns);
     }
 
     /// <summary>An installer that will not start is removed, so the next tick's fresh download
@@ -162,13 +166,15 @@ public class UnattendedUpdatePolicyTests
         _idle.ScreenLocked = true;
         bool mayDownload = false;
         int installAsked = 0;
+        var holds = new InstallHolds();
+        holds.Hold(() =>
+        {
+            installAsked++;
+            return null;
+        });
         UnattendedUpdatePolicy policy = Policy(
             mayDownloadNow: _ => mayDownload ? InstallMoment.Now : InstallMoment.NotNow("installing is switched off"),
-            mayInstallNow: _ =>
-            {
-                installAsked++;
-                return InstallMoment.Now;
-            });
+            holds: holds);
 
         UnattendedTick first = await policy.TickAsync();
         UnattendedTick second = await policy.TickAsync();
@@ -236,7 +242,9 @@ public class UnattendedUpdatePolicyTests
         ReleaseIsWaiting();
         _idle.ScreenLocked = true;
         bool mayInstall = false;
-        UnattendedUpdatePolicy policy = Policy(mayInstallNow: _ => mayInstall ? InstallMoment.Now : InstallMoment.NotNow("a job is running"), time: clock);
+        var holds = new InstallHolds();
+        holds.Hold(() => mayInstall ? null : "a job is running");
+        UnattendedUpdatePolicy policy = Policy(holds: holds, time: clock);
 
         UnattendedTick first = await policy.TickAsync();
         Assert.Equal(UnattendedOutcome.Refused, first.Outcome);

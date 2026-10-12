@@ -222,7 +222,7 @@ public sealed class UnattendedUpdatePolicy : IDisposable
         InstallMoment free = MachineFree();
         if (!free.Accepted) return Refuse(free, release);
 
-        InstallMoment moment = _options.MayInstallNow?.Invoke(release) ?? InstallMoment.Now;
+        InstallMoment moment = _options.Holds?.Ask(_log) ?? InstallMoment.Now;
         if (!moment.Accepted) return Refuse(moment, release);
 
         _refusal = null;

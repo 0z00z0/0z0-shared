@@ -41,7 +41,7 @@ public sealed class UnattendedUpdateOptions
 
     /// <summary>Periodic unless the application sets it. <see cref="CheckCadence.Once"/> governs
     /// checking only: a release already found still follows <see cref="MayDownloadNow"/>, the
-    /// machine-free rule, <see cref="MayInstallNow"/> and the retry when it could not start.</summary>
+    /// machine-free rule, <see cref="Holds"/> and the retry when it could not start.</summary>
     public CheckCadence Cadence { get; init; } = CheckCadence.Periodic;
 
     /// <summary>How long between one check and the next under <see cref="CheckCadence.Periodic"/>.
@@ -64,9 +64,8 @@ public sealed class UnattendedUpdateOptions
     public Func<ReleaseInfo, InstallMoment>? MayDownloadNow { get; init; }
 
     /// <summary>Asked immediately before the installer starts, once the machine-free rule has
-    /// already passed. A refusal stops that attempt and nothing else; the next tick asks again.
-    /// Null accepts every moment.</summary>
-    public Func<ReleaseInfo, InstallMoment>? MayInstallNow { get; init; }
+    /// passed. A hold stops that attempt only; the next tick asks again. Null holds nothing.</summary>
+    public InstallHolds? Holds { get; init; }
 
     /// <summary>Called with every tick's result, whatever the outcome — the same
     /// <see cref="UnattendedTick"/> a direct call to <see cref="UnattendedUpdatePolicy.TickAsync"/>
