@@ -129,7 +129,7 @@ public sealed class MqttPanelSetup
     public Func<string, string>? CommandLabel { get; init; }
 
     /// <summary>The host's localizer, asked before the module's own texts for every key. Null asks the
-    /// application's own resource map instead; a key either does not answer falls back to the module.</summary>
+    /// application's own resource map instead; a key neither of them answers falls back to the module.</summary>
     public IStringLocalizer? Strings { get; init; }
 
     /// <summary>Where the panel's guarded handlers report. Defaults to the no-op.</summary>
