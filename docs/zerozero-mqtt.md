@@ -729,7 +729,10 @@ removed. The text changes when the declaration does, on the next document.
 a `Description`, those `Extra` keys are written like any other.
 
 It never carries a value that changes between documents, never adds an attribute other than
-`description`, and is never shown in the entity's name or state.
+`description`, and is never shown in the entity's name or state. The receiver shows the text as the
+entity's `description` attribute, which a dashboard shows as the second line under the name with
+`secondary_info: description` on an entities-card row or `state_content: description` on a tile
+card; the receiver's own hover tooltip always shows the entity name and cannot carry it.
 
 **`Include` may fail as well as answer.** It runs on the announcement thread and usually reads live
 hardware, so a throw is not a false: it says the capability could not be read, which is not the same
