@@ -54,6 +54,9 @@ public sealed class UpdateWindowPrompts : IUpdatePrompts
     public Task SayLaunchFailedAsync(PreparedUpdate update, LaunchResult result) =>
         SayAsync(UpdateMessages.LaunchFailedHeadline, UpdateMessages.LaunchFailedText(result), attention: true);
 
+    public Task SayHeldAsync(ReleaseInfo release, string reason) =>
+        SayAsync(UpdateMessages.HeldHeadline(release), UpdateMessages.HeldText(reason), attention: false);
+
     public void Dismiss()
     {
         UpdateWindow? window = _window;

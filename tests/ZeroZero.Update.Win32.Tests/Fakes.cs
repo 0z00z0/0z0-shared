@@ -146,9 +146,17 @@ internal sealed class RecordingPrompts : IUpdatePrompts
         return Task.CompletedTask;
     }
 
+    public List<string> Held { get; } = [];
+
+    public Task SayHeldAsync(ReleaseInfo release, string reason)
+    {
+        Held.Add(reason);
+        return Task.CompletedTask;
+    }
+
     public void Dismiss() => Dismissals++;
 
-    public int Said => UpToDate.Count + NothingReleased + CheckFailed.Count + CannotInstall.Count + LaunchFailed.Count;
+    public int Said => UpToDate.Count + NothingReleased + CheckFailed.Count + CannotInstall.Count + LaunchFailed.Count + Held.Count;
 }
 
 /// <summary>A machine that reads whatever the test set. No session and no input are touched.</summary>
