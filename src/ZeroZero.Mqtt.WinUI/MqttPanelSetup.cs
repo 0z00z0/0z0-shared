@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using ZeroZero.Primitives;
 
 namespace ZeroZero.Mqtt.WinUI;
@@ -127,10 +128,9 @@ public sealed class MqttPanelSetup
     /// Without one the entity id stands, which is what the wire actually carried.</summary>
     public Func<string, string>? CommandLabel { get; init; }
 
-    /// <summary>Where the module's own strings are translated. Null takes the module's resource map,
-    /// and anything that map does not answer falls back to the built-in en-GB — so a host that ships
-    /// no translation, and one whose resource map fails to load, both get a readable panel.</summary>
-    public IMqttStringSource? Strings { get; init; }
+    /// <summary>The host's localizer, asked before the module's own texts for every key. Null asks the
+    /// application's own resource map instead; a key either does not answer falls back to the module.</summary>
+    public IStringLocalizer? Strings { get; init; }
 
     /// <summary>Where the panel's guarded handlers report. Defaults to the no-op.</summary>
     public ILogSink Log { get; init; } = NullLogSink.Instance;

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace ZeroZero.Mqtt;
 
@@ -56,12 +57,13 @@ public sealed class MqttBrokerEdits
 
     public const int PortMax = 65535;
 
-    private readonly MqttStrings _text;
+    private readonly IStringLocalizer _text;
     private MqttSettings _saved = new();
 
-    public MqttBrokerEdits(MqttStrings? text = null)
+    /// <param name="host">The host's localizer, asked before the module's own texts.</param>
+    public MqttBrokerEdits(IStringLocalizer? host = null)
     {
-        _text = text ?? MqttStrings.Default;
+        _text = MqttTexts.With(host);
         Load(new MqttSettings());
     }
 
@@ -131,8 +133,8 @@ public sealed class MqttBrokerEdits
         return Parse(TypedPort, out _)
             ? new(null, true)
             : new(TypedPort.Trim().All(char.IsAsciiDigit)
-                    ? _text.Format("PortOutOfRange", PortMin, PortMax)
-                    : _text.Format("PortNotANumber", PortMin, PortMax),
+                    ? _text["PortOutOfRange", PortMin, PortMax].Value
+                    : _text["PortNotANumber", PortMin, PortMax].Value,
                   false);
     }
 

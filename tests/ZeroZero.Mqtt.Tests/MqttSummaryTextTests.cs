@@ -241,7 +241,7 @@ public class MqttSummaryTextTests
     [Fact]
     public void ATranslationMayReorderTheSummarysParts()
     {
-        var strings = new MqttStrings(new FixedStringSource(new() { ["SummaryBroker"] = "{2} {3} {0}:{1}" }));
+        var strings = new FixedLocalizer(new() { ["SummaryBroker"] = "{2} {3} {0}:{1}" });
         var request = Request(port: 8883, transport: MqttTransportMode.Tcp,
                               encryption: MqttEncryptionMode.On);
 

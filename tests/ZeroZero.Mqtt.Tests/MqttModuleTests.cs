@@ -60,6 +60,6 @@ public class MqttModuleTests
         // The panel appends this to the publish switch's info text, which is the one icon in front of
         // a reader at the moment the question arises.
         Assert.Equal("MQTT module 0.5.0+abc1234.",
-                     MqttStrings.Default.Format("ModuleVersion", "0.5.0+abc1234"));
+                     MqttPanelText.Default.Strings["ModuleVersion", "0.5.0+abc1234"].Value);
     }
 }

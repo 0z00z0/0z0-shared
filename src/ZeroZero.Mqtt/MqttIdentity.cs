@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.Extensions.Localization;
 
 namespace ZeroZero.Mqtt;
 
@@ -57,16 +58,15 @@ public static class MqttIdentity
     /// host offering this field says so where the user types it. The machine-name default is unique by
     /// construction.</remarks>
     /// <param name="raw">The value as typed.</param>
-    /// <param name="text">Where the wording comes from, so a translated panel reports a translated
-    /// reason. Omitted gives the module's own en-GB.</param>
-    public static string? Validate(string raw, MqttStrings? text = null)
+    /// <param name="host">The host's localizer, asked before the module's own texts.</param>
+    public static string? Validate(string raw, IStringLocalizer? host = null)
     {
         string trimmed = raw.Trim();
         if (trimmed.Length == 0) return null;
 
-        var strings = text ?? MqttStrings.Default;
-        if (trimmed.Length > MaxLength) return strings.Format("DeviceIdTooLong", MaxLength);
-        if (!Sanitise(trimmed).HasAlnum) return strings.Get("DeviceIdNoAlnum");
+        var strings = MqttTexts.With(host);
+        if (trimmed.Length > MaxLength) return strings["DeviceIdTooLong", MaxLength].Value;
+        if (!Sanitise(trimmed).HasAlnum) return strings["DeviceIdNoAlnum"].Value;
         return null;
     }
 

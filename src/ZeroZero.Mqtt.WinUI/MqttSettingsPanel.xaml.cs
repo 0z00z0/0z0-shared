@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.Extensions.Localization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -22,13 +23,17 @@ namespace ZeroZero.Mqtt.WinUI;
 /// beside its heading rather than inside the expander, and the two controls outside that expander
 /// commit on their own.</para>
 /// <para>The panel knows no application's subject matter. Everything domain-shaped arrives through
-/// <see cref="MqttPanelSetup"/>, and every string of the module's own comes from
-/// <see cref="MqttStrings"/>.</para>
+/// <see cref="MqttPanelSetup"/>, and every text of the module's own comes from its resource files,
+/// behind the host's localizer.</para>
 /// </remarks>
 public sealed partial class MqttSettingsPanel : UserControl
 {
+    // The application's own resource map, asked first when the host supplies no localizer.
+    private static readonly Lazy<IStringLocalizer> ApplicationResources =
+        new(() => new ResourceMapStringLocalizer("ZeroZero.Mqtt.WinUI"));
+
     private MqttPanelSetup? _setup;
-    private MqttStrings _strings = MqttStrings.Default;
+    private IStringLocalizer _strings = MqttPanelText.Default.Strings;
     private MqttPanelText _text = MqttPanelText.Default;
     private MqttBrokerEdits _edits = new();
     private MqttProbeSession _probe = new();
@@ -79,9 +84,10 @@ public sealed partial class MqttSettingsPanel : UserControl
         setup.EnsureConnectionMembers(nameof(setup));
         _setup = setup;
 
-        _strings = new MqttStrings(setup.Strings ?? MqttResourceStrings.Instance);
-        _text = new MqttPanelText(_strings);
-        _edits = new MqttBrokerEdits(_strings);
+        var host = setup.Strings ?? ApplicationResources.Value;
+        _text = new MqttPanelText(host);
+        _strings = _text.Strings;
+        _edits = new MqttBrokerEdits(host);
         _probe = new MqttProbeSession(_text);
 
         ApplyText();
@@ -188,76 +194,76 @@ public sealed partial class MqttSettingsPanel : UserControl
 
     private void ApplyText()
     {
-        PublishCard.Header = _strings.Get("TitlePublishSwitch");
-        PublishDescriptionText.Text = _strings.Get("DescPublishSwitch");
-        SetInfo(PublishInfoIcon, _strings.Get("SubjectPublishSwitch"),
-                WithModuleVersion(_strings.Get("InfoPublishSwitch")));
-        EnabledToggle.OnContent = _strings.Get("ToggleOn");
-        EnabledToggle.OffContent = _strings.Get("ToggleOff");
+        PublishCard.Header = _strings["TitlePublishSwitch"].Value;
+        PublishDescriptionText.Text = _strings["DescPublishSwitch"].Value;
+        SetInfo(PublishInfoIcon, _strings["SubjectPublishSwitch"].Value,
+                WithModuleVersion(_strings["InfoPublishSwitch"].Value));
+        EnabledToggle.OnContent = _strings["ToggleOn"].Value;
+        EnabledToggle.OffContent = _strings["ToggleOff"].Value;
 
-        SetHeader(StatusHeader, "HeadingStatus", "SubjectStatus", _strings.Get("InfoStatus"));
-        ConnectionLabel.Text = _strings.Get("RowConnection");
-        SetInfo(ConnectionInfoIcon, _strings.Get("SubjectConnection"), _strings.Get("InfoConnection"));
-        BrokerInUseLabel.Text = _strings.Get("RowBrokerInUse");
-        SetInfo(BrokerInUseInfoIcon, _strings.Get("SubjectBrokerInUse"), _strings.Get("InfoBrokerInUse"));
-        LastPublishLabel.Text = _strings.Get("RowLastPublish");
-        PublishNowBtn.Content = _strings.Get("ButtonPublishNow");
-        SetInfo(LastPublishInfoIcon, _strings.Get("SubjectLastPublish"), _strings.Get("InfoLastPublish"));
-        LastCommandLabel.Text = _strings.Get("RowLastCommand");
-        SetInfo(LastCommandInfoIcon, _strings.Get("SubjectLastCommand"), _strings.Get("InfoLastCommand"));
+        SetHeader(StatusHeader, "HeadingStatus", "SubjectStatus", _strings["InfoStatus"].Value);
+        ConnectionLabel.Text = _strings["RowConnection"].Value;
+        SetInfo(ConnectionInfoIcon, _strings["SubjectConnection"].Value, _strings["InfoConnection"].Value);
+        BrokerInUseLabel.Text = _strings["RowBrokerInUse"].Value;
+        SetInfo(BrokerInUseInfoIcon, _strings["SubjectBrokerInUse"].Value, _strings["InfoBrokerInUse"].Value);
+        LastPublishLabel.Text = _strings["RowLastPublish"].Value;
+        PublishNowBtn.Content = _strings["ButtonPublishNow"].Value;
+        SetInfo(LastPublishInfoIcon, _strings["SubjectLastPublish"].Value, _strings["InfoLastPublish"].Value);
+        LastCommandLabel.Text = _strings["RowLastCommand"].Value;
+        SetInfo(LastCommandInfoIcon, _strings["SubjectLastCommand"].Value, _strings["InfoLastCommand"].Value);
 
-        SetHeader(DeviceHeader, "HeadingDevice", "SubjectDevice", _strings.Get("InfoDevice"));
-        DeviceNameCard.Header = _strings.Get("RowDeviceName");
-        DeviceNameDescription.Text = _strings.Get("DescDeviceName");
-        SetInfo(DeviceNameInfoIcon, _strings.Get("SubjectDeviceName"), _strings.Get("InfoDeviceName"));
-        DeviceNameSavedText.Text = _strings.Get("Saved");
-        DeviceIdCard.Header = _strings.Get("RowDeviceId");
-        DeviceIdDescription.Text = _strings.Get("DescDeviceId");
-        SetInfo(DeviceIdInfoIcon, _strings.Get("SubjectDeviceId"),
-                _strings.Format("InfoDeviceId", MqttIdentity.MaxLength));
-        ChangeDeviceIdBtn.Content = _strings.Get("ButtonChangeDeviceId");
+        SetHeader(DeviceHeader, "HeadingDevice", "SubjectDevice", _strings["InfoDevice"].Value);
+        DeviceNameCard.Header = _strings["RowDeviceName"].Value;
+        DeviceNameDescription.Text = _strings["DescDeviceName"].Value;
+        SetInfo(DeviceNameInfoIcon, _strings["SubjectDeviceName"].Value, _strings["InfoDeviceName"].Value);
+        DeviceNameSavedText.Text = _strings["Saved"].Value;
+        DeviceIdCard.Header = _strings["RowDeviceId"].Value;
+        DeviceIdDescription.Text = _strings["DescDeviceId"].Value;
+        SetInfo(DeviceIdInfoIcon, _strings["SubjectDeviceId"].Value,
+                _strings["InfoDeviceId", MqttIdentity.MaxLength].Value);
+        ChangeDeviceIdBtn.Content = _strings["ButtonChangeDeviceId"].Value;
 
-        SetHeader(BrokerHeader, "HeadingBroker", "SubjectBroker", _strings.Get("InfoBroker"));
-        BrokerDirtyText.Text = _strings.Get("NotApplied");
+        SetHeader(BrokerHeader, "HeadingBroker", "SubjectBroker", _strings["InfoBroker"].Value);
+        BrokerDirtyText.Text = _strings["NotApplied"].Value;
         // The two expander summaries are not set here: they are composed from live state, in
         // RefreshSummaries, exactly as the Status rows are.
 
-        HostCard.Header = _strings.Get("RowHost");
-        SetInfo(HostInfoIcon, _strings.Get("SubjectHost"), _strings.Get("InfoHost"));
-        HostBox.PlaceholderText = _strings.Get("PlaceholderHost");
-        PortCard.Header = _strings.Get("RowPort");
-        PortDescription.Text = _strings.Get("DescPort");
-        SetInfo(PortInfoIcon, _strings.Get("SubjectPort"), _strings.Get("InfoPort"));
-        PortCustomBox.PlaceholderText = _strings.Get("PlaceholderPort");
-        TransportCard.Header = _strings.Get("RowTransport");
-        TransportDescription.Text = _strings.Get("DescTransport");
-        SetInfo(TransportInfoIcon, _strings.Get("SubjectTransport"), _strings.Get("InfoTransport"));
-        EncryptionCard.Header = _strings.Get("RowEncryption");
-        EncryptionDescription.Text = _strings.Get("DescEncryption");
-        SetInfo(EncryptionInfoIcon, _strings.Get("SubjectEncryption"), _strings.Get("InfoEncryption"));
-        TrustCard.Header = _strings.Get("RowCertificateTrust");
-        TrustDescription.Text = _strings.Get("DescCertificateTrust");
-        SetInfo(TrustInfoIcon, _strings.Get("SubjectCertificateTrust"), _strings.Get("InfoCertificateTrust"));
-        UsernameCard.Header = _strings.Get("RowUsername");
-        UsernameDescription.Text = _strings.Get("DescUsername");
-        SetInfo(UsernameInfoIcon, _strings.Get("SubjectUsername"), _strings.Get("InfoUsername"));
-        PasswordCard.Header = _strings.Get("RowPassword");
-        PasswordDescription.Text = _strings.Get("DescPassword");
-        SetInfo(PasswordInfoIcon, _strings.Get("SubjectPassword"), _strings.Get("InfoPassword"));
-        PrefixCard.Header = _strings.Get("RowDiscoveryPrefix");
-        PrefixDescription.Text = _strings.Get("DescDiscoveryPrefix");
-        SetInfo(PrefixInfoIcon, _strings.Get("SubjectDiscoveryPrefix"), _strings.Get("InfoDiscoveryPrefix"));
+        HostCard.Header = _strings["RowHost"].Value;
+        SetInfo(HostInfoIcon, _strings["SubjectHost"].Value, _strings["InfoHost"].Value);
+        HostBox.PlaceholderText = _strings["PlaceholderHost"].Value;
+        PortCard.Header = _strings["RowPort"].Value;
+        PortDescription.Text = _strings["DescPort"].Value;
+        SetInfo(PortInfoIcon, _strings["SubjectPort"].Value, _strings["InfoPort"].Value);
+        PortCustomBox.PlaceholderText = _strings["PlaceholderPort"].Value;
+        TransportCard.Header = _strings["RowTransport"].Value;
+        TransportDescription.Text = _strings["DescTransport"].Value;
+        SetInfo(TransportInfoIcon, _strings["SubjectTransport"].Value, _strings["InfoTransport"].Value);
+        EncryptionCard.Header = _strings["RowEncryption"].Value;
+        EncryptionDescription.Text = _strings["DescEncryption"].Value;
+        SetInfo(EncryptionInfoIcon, _strings["SubjectEncryption"].Value, _strings["InfoEncryption"].Value);
+        TrustCard.Header = _strings["RowCertificateTrust"].Value;
+        TrustDescription.Text = _strings["DescCertificateTrust"].Value;
+        SetInfo(TrustInfoIcon, _strings["SubjectCertificateTrust"].Value, _strings["InfoCertificateTrust"].Value);
+        UsernameCard.Header = _strings["RowUsername"].Value;
+        UsernameDescription.Text = _strings["DescUsername"].Value;
+        SetInfo(UsernameInfoIcon, _strings["SubjectUsername"].Value, _strings["InfoUsername"].Value);
+        PasswordCard.Header = _strings["RowPassword"].Value;
+        PasswordDescription.Text = _strings["DescPassword"].Value;
+        SetInfo(PasswordInfoIcon, _strings["SubjectPassword"].Value, _strings["InfoPassword"].Value);
+        PrefixCard.Header = _strings["RowDiscoveryPrefix"].Value;
+        PrefixDescription.Text = _strings["DescDiscoveryPrefix"].Value;
+        SetInfo(PrefixInfoIcon, _strings["SubjectDiscoveryPrefix"].Value, _strings["InfoDiscoveryPrefix"].Value);
 
-        ApplyCard.Header = _strings.Get("RowApply");
-        ApplyDescription.Text = _strings.Get("DescApply");
-        ApplyBtn.Content = _strings.Get("ButtonApply");
-        TestBtn.Content = _strings.Get("ButtonTest");
-        AppliedText.Text = _strings.Get("Applied");
-        SetInfo(TestInfoIcon, _strings.Get("SubjectTest"), _strings.Get("InfoTest"));
+        ApplyCard.Header = _strings["RowApply"].Value;
+        ApplyDescription.Text = _strings["DescApply"].Value;
+        ApplyBtn.Content = _strings["ButtonApply"].Value;
+        TestBtn.Content = _strings["ButtonTest"].Value;
+        AppliedText.Text = _strings["Applied"].Value;
+        SetInfo(TestInfoIcon, _strings["SubjectTest"].Value, _strings["InfoTest"].Value);
 
         // The bubble text is the host's, set in ApplyHostText.
-        PublishHeader.Heading = _strings.Get("HeadingPublish");
-        PublishHeader.InfoSubject = _strings.Get("SubjectPublishGroups");
+        PublishHeader.Heading = _strings["HeadingPublish"].Value;
+        PublishHeader.InfoSubject = _strings["SubjectPublishGroups"].Value;
     }
 
     /// <summary>The strings the host owns. What an application publishes is the one thing the module
@@ -269,7 +275,7 @@ public sealed partial class MqttSettingsPanel : UserControl
         if (setup.PublishDescription is { } description && !string.IsNullOrWhiteSpace(description))
             PublishDescriptionText.Text = description;
         if (setup.PublishInfo is { } info && !string.IsNullOrWhiteSpace(info))
-            SetInfo(PublishInfoIcon, _strings.Get("SubjectPublishSwitch"), WithModuleVersion(info));
+            SetInfo(PublishInfoIcon, _strings["SubjectPublishSwitch"].Value, WithModuleVersion(info));
 
         // No module fallback: the header hides a blank bubble.
         PublishHeader.Info = setup.PublishGroupsInfo ?? "";
@@ -283,8 +289,8 @@ public sealed partial class MqttSettingsPanel : UserControl
 
     private void SetHeader(SettingsSectionHeader header, string headingKey, string subjectKey, string info)
     {
-        header.Heading = _strings.Get(headingKey);
-        header.InfoSubject = _strings.Get(subjectKey);
+        header.Heading = _strings[headingKey].Value;
+        header.InfoSubject = _strings[subjectKey].Value;
         header.Info = info;
     }
 
@@ -292,7 +298,7 @@ public sealed partial class MqttSettingsPanel : UserControl
     /// <remarks>Here rather than in an About box, which nobody opens while chasing a broker. Rides the
     /// host's <see cref="MqttPanelSetup.PublishInfo"/> too, so supplying one does not drop it.</remarks>
     private string WithModuleVersion(string info) =>
-        $"{info}\n\n{_strings.Format("ModuleVersion", MqttModule.Version)}";
+        $"{info}\n\n{_strings["ModuleVersion", MqttModule.Version].Value}";
 
     // ---------------------------------------------------------------------------------------------
     // The master switch.
@@ -393,10 +399,10 @@ public sealed partial class MqttSettingsPanel : UserControl
     private void BuildPortCombo()
     {
         PortCombo.Items.Clear();
-        PortCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("OptionAutomatic") });
+        PortCombo.Items.Add(new ComboBoxItem { Content = _strings["OptionAutomatic"].Value });
         foreach (int port in MqttEndpointPlan.OfferedPorts)
             PortCombo.Items.Add(new ComboBoxItem { Content = port.ToString(CultureInfo.InvariantCulture) });
-        PortCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("PortCustom") });
+        PortCombo.Items.Add(new ComboBoxItem { Content = _strings["PortCustom"].Value });
     }
 
     /// <summary>The transport, encryption and certificate-trust dropdowns. Their order is the enum's,
@@ -404,18 +410,18 @@ public sealed partial class MqttSettingsPanel : UserControl
     private void BuildModeCombos()
     {
         TransportCombo.Items.Clear();
-        TransportCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("OptionAutomatic") });
-        TransportCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("TransportTcp") });
-        TransportCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("TransportWebSocket") });
+        TransportCombo.Items.Add(new ComboBoxItem { Content = _strings["OptionAutomatic"].Value });
+        TransportCombo.Items.Add(new ComboBoxItem { Content = _strings["TransportTcp"].Value });
+        TransportCombo.Items.Add(new ComboBoxItem { Content = _strings["TransportWebSocket"].Value });
 
         EncryptionCombo.Items.Clear();
-        EncryptionCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("OptionAutomatic") });
-        EncryptionCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("ToggleOn") });
-        EncryptionCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("ToggleOff") });
+        EncryptionCombo.Items.Add(new ComboBoxItem { Content = _strings["OptionAutomatic"].Value });
+        EncryptionCombo.Items.Add(new ComboBoxItem { Content = _strings["ToggleOn"].Value });
+        EncryptionCombo.Items.Add(new ComboBoxItem { Content = _strings["ToggleOff"].Value });
 
         TrustCombo.Items.Clear();
-        TrustCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("TrustSystem") });
-        TrustCombo.Items.Add(new ComboBoxItem { Content = _strings.Get("TrustAcceptAny") });
+        TrustCombo.Items.Add(new ComboBoxItem { Content = _strings["TrustSystem"].Value });
+        TrustCombo.Items.Add(new ComboBoxItem { Content = _strings["TrustAcceptAny"].Value });
     }
 
     private int PortCustomIndex => PortCombo.Items.Count - 1;
@@ -539,7 +545,7 @@ public sealed partial class MqttSettingsPanel : UserControl
     private void RefreshTrustFields()
     {
         bool acceptAny = _edits.TrustMode == MqttCertificateTrustMode.AcceptAny;
-        TrustNoteText.Text = acceptAny ? _strings.Get("TrustAcceptAnyNote") : "";
+        TrustNoteText.Text = acceptAny ? _strings["TrustAcceptAnyNote"].Value : "";
         TrustNoteText.Visibility = acceptAny ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -671,7 +677,7 @@ public sealed partial class MqttSettingsPanel : UserControl
             if (_closed) return;   // panel went while the publish was in flight
 
             RefreshActivityTexts();
-            if (!sent) SetStatusValue(LastPublishText, _strings.Get("PublishFailed"), error: true);
+            if (!sent) SetStatusValue(LastPublishText, _strings["PublishFailed"].Value, error: true);
         }
         catch (Exception ex) { Log("MqttSettingsPanel.OnPublishNowClicked", ex); }
         finally
@@ -806,8 +812,8 @@ public sealed partial class MqttSettingsPanel : UserControl
         {
             var toggle = new ToggleSwitch
             {
-                OnContent = _strings.Get("ToggleOn"),
-                OffContent = _strings.Get("ToggleOff"),
+                OnContent = _strings["ToggleOn"].Value,
+                OffContent = _strings["ToggleOff"].Value,
                 IsOn = row.On,
                 Tag = row.Key,
             };
@@ -818,7 +824,7 @@ public sealed partial class MqttSettingsPanel : UserControl
             if (row.HasInfo)
                 content.Children.Add(new InfoIcon
                 {
-                    Subject = _strings.Format("SubjectPublishGroup", row.Label),
+                    Subject = _strings["SubjectPublishGroup", row.Label].Value,
                     Info = row.Info,
                 });
             content.Children.Add(toggle);

@@ -11,12 +11,6 @@
     <UseWinUI>true</UseWinUI>
     <WinUISDKReferences>false</WinUISDKReferences>
 
-    <!-- MakePRI's own notion of the default language, distinct from NeutralLanguage in
-         Directory.Build.props: the resources sit under a language folder, so without a declared
-         default MakePRI compares them against its en-US assumption and every build that consumes
-         this project reports PRI257. -->
-    <DefaultLanguage>en-GB</DefaultLanguage>
-
     <AssemblyTitle>ZeroZero.Mqtt.WinUI</AssemblyTitle>
     <Product>ZeroZero.Mqtt.WinUI</Product>
     <Description>The MQTT settings panel: master switch, live status, device identity, a staged broker block and one row per application-declared publish group.</Description>
@@ -44,16 +38,6 @@
          the chain below it has to be complete here or a consumer that took that one reference is
          short an assembly it was told it already had. -->
     <ProjectReference Include="..\ZeroZero.Mqtt.Discovery\ZeroZero.Mqtt.Discovery.csproj" />
-  </ItemGroup>
-
-  <!--
-    The module's own user-facing prose, neutral language en-GB (Directory.Build.props). A consumer
-    localises by adding its own language folder; nothing here needs forking. Every string also has a
-    built-in en-GB default in MqttStrings, so a resource map that fails to load degrades to the
-    module's own wording rather than to blank controls.
-  -->
-  <ItemGroup>
-    <PRIResource Include="Strings\en-GB\Resources.resw" />
   </ItemGroup>
 
 </Project>

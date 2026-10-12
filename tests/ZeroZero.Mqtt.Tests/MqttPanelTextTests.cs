@@ -1,3 +1,4 @@
+using System.Globalization;
 using Xunit;
 
 namespace ZeroZero.Mqtt.Tests;
@@ -29,7 +30,7 @@ public class MqttPanelTextTests
     [InlineData(2 * 3600, "2 hours ago")]
     [InlineData(86400, "1 day ago")]
     [InlineData(2 * 86400, "2 days ago")]
-    public void RelativeChoosesSingularAndPluralInCode(int secondsAgo, string expected) =>
+    public void RelativeChoosesSingularAndPluralByThePluralRule(int secondsAgo, string expected) =>
         Assert.Equal(expected, Text.Relative(Now.AddSeconds(-secondsAgo), Now, "never"));
 
     /// <summary>The last second each unit still owns. A coarser unit reached one second early renders
@@ -41,13 +42,20 @@ public class MqttPanelTextTests
     public void RelativeKeepsAUnitUntilTheNextOneIsWhole(int secondsAgo, string expected) =>
         Assert.Equal(expected, Text.Relative(Now.AddSeconds(-secondsAgo), Now, "never"));
 
+    /// <summary>InvariantGlobalization leaves every UI culture invariant, which has no plural rule of
+    /// its own; the neutral language's rule stands in, or one would read "1 hours ago".</summary>
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
-    public void RelativeUsesSeparateKeysForTheSingularAndThePlural()
-    {
-        // Not "hour" plus an "s": a language whose plural is a different word has both to change.
-        Assert.NotEqual(MqttStrings.Builtin["AgeHour"], MqttStrings.Builtin["AgeHours"]);
-        Assert.NotEqual(MqttStrings.Builtin["AgeDay"], MqttStrings.Builtin["AgeDays"]);
-    }
+    public void UnderTheInvariantCultureOneIsStillSingular() =>
+        Assert.Equal("1 hour ago",
+            UiCulture.Run(CultureInfo.InvariantCulture, () => Text.Relative(Now.AddHours(-1), Now, "never")));
+
+    [Theory]
+    [InlineData(3600, "for 1 time siden")]
+    [InlineData(2 * 3600, "for 2 timer siden")]
+    public void ANorwegianUiCultureTakesTheBokmalForms(int secondsAgo, string expected) =>
+        Assert.Equal(expected,
+            UiCulture.Run(CultureInfo.GetCultureInfo("nb-NO"), () => Text.Relative(Now.AddSeconds(-secondsAgo), Now, "never")));
 
     [Fact]
     public void AnAgeMovesOnWithNothingHavingHappened()
@@ -269,17 +277,17 @@ public class MqttPanelTextTests
     [Fact]
     public void ATranslatedPanelComposesTheSameFactsFromItsOwnStrings()
     {
-        var strings = new MqttStrings(new FixedStringSource(new()
+        var strings = new FixedLocalizer(new()
         {
-            ["ProvenanceAutomatic"] = "Funnet automatisk",
-            ["ProvenanceEncrypted"] = "{0} — kryptert",
-        }));
+            ["ProvenanceAutomatic"] = "Automatisch gefunden",
+            ["ProvenanceEncrypted"] = "{0} — verschlüsselt",
+        });
         var translated = new MqttPanelText(strings);
         var memory = new MqttEndpointMemory("broker.invalid", "user", 8883, MqttTransport.Tcp, true);
 
-        Assert.Equal("Funnet automatisk — kryptert",
+        Assert.Equal("Automatisch gefunden — verschlüsselt",
             translated.Connection(Request(), memory, MqttConnectionState.Connected, probing: false));
-        // Untranslated keys still answer, in the module's own en-GB.
+        // Keys the host does not hold still answer, in the module's own text.
         Assert.Equal("Nothing published yet", translated.DescribeLastPublish(null, Now));
     }
 

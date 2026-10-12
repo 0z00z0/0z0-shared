@@ -1,11 +1,11 @@
 namespace ZeroZero.Mqtt;
 
-/// <summary>Pure rendering of the status lines a settings panel shows, in the module's own en-GB.
+/// <summary>Pure rendering of the status lines a settings panel shows, in the module's own texts.
 /// Callers pass the current instant in rather than the formatter reading a clock, so the wording is
 /// testable without one, and every probe sentence is composed here rather than beside the socket
 /// that produced it.</summary>
 /// <remarks>The static face of <see cref="MqttPanelText.Default"/>. A caller with a translation to
-/// apply builds a <see cref="MqttPanelText"/> over its own string source instead; everything else
+/// apply builds a <see cref="MqttPanelText"/> over its own localizer instead; everything else
 /// wants the module's own wording, and this is the shorter way to ask for it.</remarks>
 public static class MqttStatusText
 {

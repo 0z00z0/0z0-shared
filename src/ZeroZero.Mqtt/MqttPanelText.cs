@@ -1,31 +1,23 @@
 using System.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace ZeroZero.Mqtt;
 
-/// <summary>Every sentence a settings panel renders, composed from live state through
-/// <see cref="MqttStrings"/>. Pure: the instant is passed in rather than read from a clock, and no
-/// call here touches a socket, a store or a control.</summary>
-/// <remarks>
-/// <para>An instance rather than a static so the string source is a constructor argument. A panel
-/// hands it one backed by the host's resource map; a test hands it none and pins the module's own
-/// en-GB, which is the same text either way when nothing is translated.</para>
-/// <para><see cref="MqttStatusText"/> is the static facade over <see cref="Default"/>, kept because
-/// most callers want the module's own wording and nothing else.</para>
-/// </remarks>
+/// <summary>Every sentence a settings panel renders, composed from live state. Pure: the instant is
+/// passed in rather than read from a clock, and no call here touches a socket, a store or a control.</summary>
+/// <remarks><see cref="MqttStatusText"/> is the static facade over <see cref="Default"/>.</remarks>
 public sealed class MqttPanelText
 {
-    /// <summary>The module's own en-GB.</summary>
-    public static MqttPanelText Default { get; } = new(MqttStrings.Default);
+    /// <summary>The module's own texts, with no host localizer in front of them.</summary>
+    public static MqttPanelText Default { get; } = new(host: null);
 
-    private readonly MqttStrings _text;
+    private readonly IStringLocalizer _text;
 
-    public MqttPanelText(MqttStrings text) => _text = text;
+    /// <param name="host">Asked first for every key; not found or blank falls back to the module's.</param>
+    public MqttPanelText(IStringLocalizer? host) => _text = MqttTexts.With(host);
 
-    public MqttPanelText(IMqttStringSource? source) : this(new MqttStrings(source)) { }
-
-    /// <summary>The strings behind this composer, for a caller that needs one the composer does not
-    /// itself assemble — a button label, a heading, a validation message.</summary>
-    public MqttStrings Strings => _text;
+    /// <summary>The texts behind this composer, host first, for a label it does not assemble.</summary>
+    public IStringLocalizer Strings => _text;
 
     // ------------------------------------------------------------------------------------------
     // Relative ages.
@@ -39,16 +31,14 @@ public sealed class MqttPanelText
         if (when is not { } stamp) return never;
 
         var age = now - stamp;
-        if (age < TimeSpan.FromMinutes(1)) return _text.Get("AgeJustNow");
-        if (age < TimeSpan.FromHours(1)) return _text.Format("AgeMinutes", (int)age.TotalMinutes);
-        if (age < TimeSpan.FromDays(1)) return Plural((int)age.TotalHours, "AgeHour", "AgeHours");
-        return Plural((int)age.TotalDays, "AgeDay", "AgeDays");
+        if (age < TimeSpan.FromMinutes(1)) return _text["AgeJustNow"].Value;
+        if (age < TimeSpan.FromHours(1)) return Counted("AgeMinutes", (int)age.TotalMinutes);
+        if (age < TimeSpan.FromDays(1)) return Counted("AgeHours", (int)age.TotalHours);
+        return Counted("AgeDays", (int)age.TotalDays);
     }
 
-    // Two forms, chosen in code. English needs exactly these two and .NET supplies neither, so the
-    // choice is a branch rather than a rule engine.
-    private string Plural(int n, string singular, string plural) =>
-        _text.Format(n == 1 ? singular : plural, n);
+    private string Counted(string key, int count) =>
+        MqttTexts.Count(_text, key, new Dictionary<string, object?> { ["count"] = count });
 
     // ------------------------------------------------------------------------------------------
     // The four Status values.
@@ -63,10 +53,10 @@ public sealed class MqttPanelText
         MqttEndpointRequest request, MqttEndpointMemory? memory,
         MqttConnectionState state, bool probing)
     {
-        if (string.IsNullOrWhiteSpace(request.Host)) return _text.Get("StatusNoHost");
+        if (string.IsNullOrWhiteSpace(request.Host)) return _text["StatusNoHost"].Value;
         // A probe in flight outranks the settled answer: it is the one thing on this row that is
         // happening rather than standing.
-        if (probing) return _text.Get("StatusProbing");
+        if (probing) return _text["StatusProbing"].Value;
         return state == MqttConnectionState.Connected ? Provenance(request, memory) : Name(state);
     }
 
@@ -75,12 +65,12 @@ public sealed class MqttPanelText
     /// a link can be downgraded with no user action and nothing else on the page would say so.</remarks>
     public string Provenance(MqttEndpointRequest request, MqttEndpointMemory? memory)
     {
-        string source = _text.Get(MqttEndpointPlan.Pinned(request) ? "ProvenanceManual" : "ProvenanceAutomatic");
+        string source = _text[MqttEndpointPlan.Pinned(request) ? "ProvenanceManual" : "ProvenanceAutomatic"].Value;
 
         return MqttEndpointPlan.EncryptionInForce(request, memory) switch
         {
-            true  => _text.Format("ProvenanceEncrypted", source),
-            false => _text.Format("ProvenanceNotEncrypted", source),
+            true  => _text["ProvenanceEncrypted", source].Value,
+            false => _text["ProvenanceNotEncrypted", source].Value,
             _     => source,
         };
     }
@@ -92,7 +82,7 @@ public sealed class MqttPanelText
     public string DescribeBroker(MqttEndpointRequest request, MqttEndpointMemory? memory)
     {
         string host = (request.Host ?? "").Trim();
-        if (host.Length == 0) return _text.Get("StatusBrokerNotSet");
+        if (host.Length == 0) return _text["StatusBrokerNotSet"].Value;
 
         var found = MqttEndpointPlan.Reusable(request, memory);
         int? port = request.Port ?? found?.Port;
@@ -105,15 +95,15 @@ public sealed class MqttPanelText
 
         // Half an answer is worse than none: "host:— over —" reads as a broken value rather than as
         // a question that has not been answered yet.
-        if (port is not { } p || transport is not { } t) return _text.Format("StatusBrokerUnsettled", host);
+        if (port is not { } p || transport is not { } t) return _text["StatusBrokerUnsettled", host].Value;
         // The port is an address, not a quantity: an invariant rendering keeps a group separator out
         // of it whatever the display culture does with four digits.
-        return _text.Format("StatusBrokerInUse", host, p.ToString(CultureInfo.InvariantCulture), Name(t));
+        return _text["StatusBrokerInUse", host, p.ToString(CultureInfo.InvariantCulture), Name(t)].Value;
     }
 
     /// <summary>The "Last publish" row.</summary>
     public string DescribeLastPublish(DateTimeOffset? last, DateTimeOffset now) =>
-        Relative(last, now, never: _text.Get("StatusNothingPublished"));
+        Relative(last, now, never: _text["StatusNothingPublished"].Value);
 
     /// <summary>The "Last command received" row — which command, and how long ago.
     /// <paramref name="label"/> turns an entity id into the name a user would recognise; without one
@@ -121,9 +111,9 @@ public sealed class MqttPanelText
     public string DescribeLastCommand(
         MqttCommandRecord? last, DateTimeOffset now, Func<string, string>? label = null) =>
         last is { } c
-            ? _text.Format("StatusLastCommand", label?.Invoke(c.EntityId) ?? c.EntityId,
-                           Relative(c.When, now, never: ""))
-            : _text.Get("StatusNothingReceived");
+            ? _text["StatusLastCommand", label?.Invoke(c.EntityId) ?? c.EntityId,
+                           Relative(c.When, now, never: "")].Value
+            : _text["StatusNothingReceived"].Value;
 
     // ------------------------------------------------------------------------------------------
     // Collapsed-section summaries.
@@ -150,7 +140,7 @@ public sealed class MqttPanelText
         MqttCertificateTrustMode trust)
     {
         string host = (request.Host ?? "").Trim();
-        if (host.Length == 0) return _text.Get("SummaryBrokerNotSet");
+        if (host.Length == 0) return _text["SummaryBrokerNotSet"].Value;
 
         var found = state == MqttConnectionState.Connected
             ? MqttEndpointPlan.Reusable(request, memory)
@@ -187,13 +177,13 @@ public sealed class MqttPanelText
             _ => Detected(found?.Encrypted is { } encrypted ? Encryption(encrypted) : null),
         };
 
-        string summary = _text.Format("SummaryBroker", host, port, transport, encryption);
+        string summary = _text["SummaryBroker", host, port, transport, encryption].Value;
 
         // The one mode that gives up proving which machine answered, so it is the one mode this line
         // says anything about. Wrapping the finished line rather than adding a fifth argument keeps
         // the platform's own trust byte-for-byte what it reads without it.
         return trust == MqttCertificateTrustMode.AcceptAny
-            ? _text.Format("SummaryBrokerTrustAny", summary)
+            ? _text["SummaryBrokerTrustAny", summary].Value
             : summary;
     }
 
@@ -205,18 +195,19 @@ public sealed class MqttPanelText
     /// the entity set, so a number for it could only be invented.</remarks>
     public string SummarisePublish(MqttPublishTally tally) =>
         tally.Declared == 0
-            ? _text.Get("SummaryPublishNoGroups")
-            : _text.Format("SummaryPublish", tally.SwitchedOn, tally.Declared);
+            ? _text["SummaryPublishNoGroups"].Value
+            : MqttTexts.Count(_text, "SummaryPublish",
+                new Dictionary<string, object?> { ["on"] = tally.SwitchedOn, ["total"] = tally.Declared });
 
     /// <summary>A value that was found rather than chosen, marked as such — or the bare instruction
     /// when nothing has found one yet. An empty bracket would read as a value that failed to render
     /// rather than as a question nothing has answered.</summary>
     private string Detected(string? value) => value is { Length: > 0 } found
-        ? _text.Format("SummaryDetected", found)
-        : _text.Get("OptionAutomatic");
+        ? _text["SummaryDetected", found].Value
+        : _text["OptionAutomatic"].Value;
 
     private string Encryption(bool on) =>
-        _text.Get(on ? "SummaryEncrypted" : "SummaryNotEncrypted");
+        _text[on ? "SummaryEncrypted" : "SummaryNotEncrypted"].Value;
 
     // ------------------------------------------------------------------------------------------
     // Vocabulary.
@@ -224,10 +215,10 @@ public sealed class MqttPanelText
 
     /// <summary>How a transport is named to the user.</summary>
     public string Name(MqttTransport transport) =>
-        _text.Get(transport == MqttTransport.Tcp ? "TransportTcp" : "TransportWebSocket");
+        _text[transport == MqttTransport.Tcp ? "TransportTcp" : "TransportWebSocket"].Value;
 
     /// <summary>How a connection state is named to the user.</summary>
-    public string Name(MqttConnectionState state) => _text.Get(state switch
+    public string Name(MqttConnectionState state) => _text[state switch
     {
         MqttConnectionState.Disabled   => "StateDisabled",
         MqttConnectionState.Searching  => "StateSearching",
@@ -235,7 +226,7 @@ public sealed class MqttPanelText
         MqttConnectionState.Connected  => "StateConnected",
         MqttConnectionState.Retrying   => "StateRetrying",
         _                              => "StateNotConnected",
-    });
+    }].Value;
 
     // ------------------------------------------------------------------------------------------
     // The probe: one candidate, the sweep as it happens, and the whole run.
@@ -245,14 +236,14 @@ public sealed class MqttPanelText
     /// under Automatic that is the answer the user came for.</summary>
     public string Describe(MqttProbeResult result, MqttTransport transport) => result.Outcome switch
     {
-        MqttProbeOutcome.Success        => _text.Format("ProbeSuccess", Name(transport)),
-        MqttProbeOutcome.Unreachable    => _text.Format("ProbeUnreachable", Name(transport), Detail(result)),
-        MqttProbeOutcome.TimedOut       => _text.Format("ProbeTimedOut", Name(transport), (int)MqttProbe.Timeout.TotalSeconds),
-        MqttProbeOutcome.AuthRejected   => _text.Format("ProbeAuthRejected", Name(transport), Detail(result)),
-        MqttProbeOutcome.Rejected       => _text.Format("ProbeRejected", Name(transport), Detail(result)),
-        MqttProbeOutcome.TlsUntrusted   => _text.Format("ProbeTlsUntrusted", Name(transport), Detail(result)),
-        MqttProbeOutcome.TlsUnsupported => _text.Format("ProbeTlsUnsupported", Name(transport), Detail(result)),
-        _                               => _text.Format("ProbeFailed", Name(transport), Detail(result)),
+        MqttProbeOutcome.Success        => _text["ProbeSuccess", Name(transport)].Value,
+        MqttProbeOutcome.Unreachable    => _text["ProbeUnreachable", Name(transport), Detail(result)].Value,
+        MqttProbeOutcome.TimedOut       => _text["ProbeTimedOut", Name(transport), (int)MqttProbe.Timeout.TotalSeconds].Value,
+        MqttProbeOutcome.AuthRejected   => _text["ProbeAuthRejected", Name(transport), Detail(result)].Value,
+        MqttProbeOutcome.Rejected       => _text["ProbeRejected", Name(transport), Detail(result)].Value,
+        MqttProbeOutcome.TlsUntrusted   => _text["ProbeTlsUntrusted", Name(transport), Detail(result)].Value,
+        MqttProbeOutcome.TlsUnsupported => _text["ProbeTlsUnsupported", Name(transport), Detail(result)].Value,
+        _                               => _text["ProbeFailed", Name(transport), Detail(result)].Value,
     };
 
     /// <summary>What the sweep is doing right now, as a panel shows it under the button that started
@@ -262,16 +253,16 @@ public sealed class MqttPanelText
     /// speaking MQTT — and the third is that candidate's own verdict.</summary>
     public string Describe(MqttSearchProgress progress)
     {
-        string endpoint = _text.Format("ProgressEndpoint", Name(progress.Transport),
-                                       progress.Port.ToString(CultureInfo.InvariantCulture));
+        string endpoint = _text["ProgressEndpoint", Name(progress.Transport),
+                                       progress.Port.ToString(CultureInfo.InvariantCulture)].Value;
         return progress.Stage switch
         {
-            MqttSearchStage.Port      => _text.Format("ProgressPort", endpoint),
-            MqttSearchStage.Transport => _text.Format("ProgressTransport", endpoint),
+            MqttSearchStage.Port      => _text["ProgressPort", endpoint].Value,
+            MqttSearchStage.Transport => _text["ProgressTransport", endpoint].Value,
             // Never reported without a result, but a missing one must not read as a success.
             _ => progress.Result is { } r
-                ? _text.Format("ProgressFinished", endpoint, Clause(r))
-                : _text.Format("ProgressNoAnswer", endpoint),
+                ? _text["ProgressFinished", endpoint, Clause(r)].Value
+                : _text["ProgressNoAnswer", endpoint].Value,
         };
     }
 
@@ -290,22 +281,22 @@ public sealed class MqttPanelText
     /// </remarks>
     public string Describe(MqttProbeReport report)
     {
-        if (report.Attempts.Count == 0) return _text.Get("ReportNoHost");
+        if (report.Attempts.Count == 0) return _text["ReportNoHost"].Value;
 
         var last = report.Attempts[^1];
 
         // The working configuration, which is the other half of "does this work": the port is an
         // address, so an invariant rendering keeps a group separator out of four digits.
         if (report.Succeeded)
-            return _text.Format("ReportConnected", Name(last.Candidate.Transport),
-                                last.Candidate.Port.ToString(CultureInfo.InvariantCulture));
+            return _text["ReportConnected", Name(last.Candidate.Transport),
+                                last.Candidate.Port.ToString(CultureInfo.InvariantCulture)].Value;
 
         if (report.Attempts.Count == 1 || MqttEndpointPlan.Answered(last.Outcome))
             return Describe(last.Result, last.Candidate.Transport);
 
-        return _text.Format("ReportNothingReached",
-            string.Join(_text.Get("ReportFragmentJoin"),
-                        report.Attempts.Select(Fragment).Distinct(StringComparer.Ordinal)));
+        return _text["ReportNothingReached",
+            string.Join(_text["ReportFragmentJoin"].Value,
+                        report.Attempts.Select(Fragment).Distinct(StringComparer.Ordinal))].Value;
     }
 
     /// <summary>Whether a result should be shown in the error colour rather than as plain status.</summary>
@@ -313,20 +304,20 @@ public sealed class MqttPanelText
 
     /// <summary>One attempt as a clause, for the sentences that name more than one transport.</summary>
     private string Fragment(MqttEndpointAttempt attempt) =>
-        _text.Format("ReportFragment", Name(attempt.Candidate.Transport), Clause(attempt.Result));
+        _text["ReportFragment", Name(attempt.Candidate.Transport), Clause(attempt.Result)].Value;
 
     /// <summary>What one endpoint did, with nothing naming the endpoint: the caller supplies that,
     /// so a summary clause and a progress line say the same thing about the same result.</summary>
     private string Clause(MqttProbeResult result) => result.Outcome switch
     {
-        MqttProbeOutcome.Success        => _text.Get("ClauseSuccess"),
-        MqttProbeOutcome.Unreachable    => _text.Format("ClauseUnreachable", Detail(result)),
-        MqttProbeOutcome.TimedOut       => _text.Get("ClauseTimedOut"),
-        MqttProbeOutcome.AuthRejected   => _text.Get("ClauseAuthRejected"),
-        MqttProbeOutcome.Rejected       => _text.Format("ClauseRejected", Detail(result)),
-        MqttProbeOutcome.TlsUntrusted   => _text.Format("ClauseTlsUntrusted", Detail(result)),
-        MqttProbeOutcome.TlsUnsupported => _text.Get("ClauseTlsUnsupported"),
-        _                               => _text.Format("ClauseFailed", Detail(result)),
+        MqttProbeOutcome.Success        => _text["ClauseSuccess"].Value,
+        MqttProbeOutcome.Unreachable    => _text["ClauseUnreachable", Detail(result)].Value,
+        MqttProbeOutcome.TimedOut       => _text["ClauseTimedOut"].Value,
+        MqttProbeOutcome.AuthRejected   => _text["ClauseAuthRejected"].Value,
+        MqttProbeOutcome.Rejected       => _text["ClauseRejected", Detail(result)].Value,
+        MqttProbeOutcome.TlsUntrusted   => _text["ClauseTlsUntrusted", Detail(result)].Value,
+        MqttProbeOutcome.TlsUnsupported => _text["ClauseTlsUnsupported"].Value,
+        _                               => _text["ClauseFailed", Detail(result)].Value,
     };
 
     // An exception message usually ends in its own full stop; the sentences above supply one.

@@ -19,12 +19,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The panel's resource file holds the same en-GB as MqttStrings.Builtin, in the form a WinUI
-         host loads. It lives in a Windows-only project this one cannot reference, so it is copied in
-         as data and the two are compared as text. Without that the .resw drifts silently: a reworded
-         string still passes every test while the panel keeps showing the old wording. -->
-    <None Include="..\..\src\ZeroZero.Mqtt.WinUI\Strings\en-GB\Resources.resw"
-          Link="Resources.resw" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The translator's files, read as data: the context notes are not compiled into the assembly. -->
+    <None Include="..\..\src\ZeroZero.Mqtt\Texts.resx" Link="Translations\Texts.resx" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ZeroZero.Mqtt\Texts.nb.resx" Link="Translations\Texts.nb.resx" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,6 +29,8 @@
          construction from a live connection is tested against the loopback broker. -->
     <Compile Include="..\..\src\ZeroZero.Mqtt.WinUI\MqttPanelSetup.cs" Link="Linked\MqttPanelSetup.cs" />
     <Compile Include="..\Shared\RecordingLogSink.cs" Link="Shared\RecordingLogSink.cs" />
+    <Compile Include="..\Shared\UiCulture.cs" Link="Shared\UiCulture.cs" />
+    <Compile Include="..\Shared\TranslationFiles.cs" Link="Shared\TranslationFiles.cs" />
   </ItemGroup>
 
 </Project>
