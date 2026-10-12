@@ -58,6 +58,14 @@ public interface IUpdatePrompts
 
     Task SayLaunchFailedAsync(PreparedUpdate update, LaunchResult result);
 
+    /// <summary>An install hold refused: nothing ran. The default only takes whatever is on screen
+    /// off it, so a surface that does not word it leaves no download stage on screen.</summary>
+    Task SayHeldAsync(ReleaseInfo release, string reason)
+    {
+        Dismiss();
+        return Task.CompletedTask;
+    }
+
     /// <summary>
     /// Takes whatever is on screen off it. Called once the installer is running and the application
     /// is about to exit for it, so nothing of the update is left in front of a person watching the

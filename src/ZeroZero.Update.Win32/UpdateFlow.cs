@@ -44,6 +44,10 @@ public enum UpdateFlowResult
     /// directory it was going into is gone, and nothing ran. Not a failure and nothing is
     /// reported: the person who stopped it knows what happened.</summary>
     DownloadCancelled,
+
+    /// <summary>One of <see cref="UpdateFlowOptions.Holds"/> held the install, before the question
+    /// or before the launch. Nothing ran, nothing downloaded is kept, and shutdown was not called.</summary>
+    Held,
 }
 
 /// <summary>What a run did, and what it found.</summary>
@@ -78,6 +82,10 @@ public sealed class UpdateFlowOptions
     /// when the flow is constructed.</summary>
     public SharedUpdateCheck? SharedCheck { get; init; }
 
+    /// <summary>Asked before the install question and again immediately before the launch. Null
+    /// holds nothing.</summary>
+    public InstallHolds? Holds { get; init; }
+
     public ILogSink Log { get; init; } = NullLogSink.Instance;
 }
 
@@ -92,6 +100,7 @@ public sealed class UpdateFlow
     private readonly ILogSink _log;
     private readonly SharedUpdateCheck _check;
     private int _installing;
+    private string? _holdLogged;
 
     public UpdateFlow(IUpdateService service, IUpdatePrompts prompts, UpdateFlowOptions options)
     {
@@ -145,7 +154,7 @@ public sealed class UpdateFlow
             return new UpdateFlowRun(UpdateFlowResult.UpdateAvailable, check, release);
         }
 
-        UpdateFlowRun installed = await GuardedInstallAsync(release, check.RunningVersion, cancellationToken);
+        UpdateFlowRun installed = await GuardedInstallAsync(release, check.RunningVersion, manual, cancellationToken);
         return installed with { Check = check };
     }
 
@@ -154,17 +163,19 @@ public sealed class UpdateFlow
     public Task<UpdateFlowRun> InstallAsync(ReleaseInfo release, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(release);
-        return GuardedInstallAsync(release, _service.RunningVersion, cancellationToken);
+        return GuardedInstallAsync(release, _service.RunningVersion, speak: true, cancellationToken);
     }
 
-    private async Task<UpdateFlowRun> GuardedInstallAsync(ReleaseInfo release, Version runningVersion, CancellationToken cancellationToken)
+    /// <param name="speak">Whether a hold before the question is said: a scheduled run nobody asked
+    /// for stays quiet rather than interrupt what the hold protects.</param>
+    private async Task<UpdateFlowRun> GuardedInstallAsync(ReleaseInfo release, Version runningVersion, bool speak, CancellationToken cancellationToken)
     {
         // One install at a time: a run that finds a question or a download on screen backs off.
         if (Interlocked.CompareExchange(ref _installing, 1, 0) != 0)
             return new UpdateFlowRun(UpdateFlowResult.AlreadyRunning, Release: release);
         try
         {
-            return await InstallCoreAsync(release, runningVersion, cancellationToken);
+            return await InstallCoreAsync(release, runningVersion, speak, cancellationToken);
         }
         finally
         {
@@ -172,8 +183,15 @@ public sealed class UpdateFlow
         }
     }
 
-    private async Task<UpdateFlowRun> InstallCoreAsync(ReleaseInfo release, Version runningVersion, CancellationToken cancellationToken)
+    private async Task<UpdateFlowRun> InstallCoreAsync(ReleaseInfo release, Version runningVersion, bool speak, CancellationToken cancellationToken)
     {
+        // Before the question, so the person is never asked something a hold would refuse.
+        if (HeldReason(release) is { } before)
+        {
+            if (speak) await _prompts.SayHeldAsync(release, before);
+            return new UpdateFlowRun(UpdateFlowResult.Held, Release: release);
+        }
+
         // Only Install goes on; a value no member names declines rather than downloading.
         InstallChoice choice = await _prompts.AskToInstallAsync(release, runningVersion);
         switch (choice)
@@ -224,6 +242,14 @@ public sealed class UpdateFlow
             return new UpdateFlowRun(UpdateFlowResult.DownloadCancelled, Release: release);
         }
 
+        // Again: a session may have started while the person was choosing or the file downloading.
+        if (HeldReason(release) is { } reason)
+        {
+            _service.Discard(prepared);
+            await _prompts.SayHeldAsync(release, reason);
+            return new UpdateFlowRun(UpdateFlowResult.Held, Release: release);
+        }
+
         LaunchResult launch = _service.Launch(prepared);
         if (!launch.Started)
         {
@@ -237,6 +263,24 @@ public sealed class UpdateFlow
         _prompts.Dismiss();
         _options.Shutdown();
         return new UpdateFlowRun(UpdateFlowResult.InstallerStarted, Release: release);
+    }
+
+    /// <summary>Why the application holds the install, or null. Logged once per reason.</summary>
+    private string? HeldReason(ReleaseInfo release)
+    {
+        InstallMoment moment = _options.Holds?.Ask(_log) ?? InstallMoment.Now;
+        if (moment.Accepted)
+        {
+            _holdLogged = null;
+            return null;
+        }
+
+        if (!string.Equals(_holdLogged, moment.Reason, StringComparison.Ordinal))
+        {
+            _holdLogged = moment.Reason;
+            _log.Info($"Not installing {release.TagName} now: {moment.Reason}.");
+        }
+        return moment.Reason;
     }
 
     /// <summary>The window's reporter and the application's as one. Either may be absent, and two
