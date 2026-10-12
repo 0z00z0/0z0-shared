@@ -1,4 +1,5 @@
 using Xunit;
+using ZeroZero.Tests;
 
 namespace ZeroZero.Mqtt.Tests;
 
@@ -135,5 +136,26 @@ public class MqttSocketBudgetTests
 
         Assert.True(MqttEndpointPlan.DowngradeBlocked(
             [new(new(1883, MqttTransport.Tcp, true), MqttProbeOutcome.TlsUntrusted)], plain));
+    }
+
+    /// <summary>The live connection keeps a socket-stage failure on the encrypted candidate as its
+    /// verdict, so the clear-text retry behind it is never tried. 0.0.0.0 fails the connect locally,
+    /// neither refused nor silent.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task ASocketThatFailedToOpen_NeverOpensTheClearTextRetry()
+    {
+        var log = new RecordingLogSink();
+        using var connection = new MqttConnection(new() { TopicRoot = "exampleapp", Log = log });
+
+        await connection.ApplyAsync(new()
+        {
+            Enabled = true, Host = "0.0.0.0", Port = 1883, DeviceId = "desk01",
+            TransportMode = MqttTransportMode.Tcp, EncryptionMode = MqttEncryptionMode.Auto,
+        });
+
+        Assert.True(await FakeBroker.WaitAsync(() => log.Infos.Count > 0), "no round was reported");
+        string round = log.Infos[0];
+        Assert.Equal(1, round.Split("TCP:1883").Length - 1);
     }
 }
