@@ -50,21 +50,6 @@
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
-        <!-- Self-contained: a BasedOn naming a key the host never declared is a parse failure. -->
-        <Style x:Key="MqttSubHeaderStyle" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="{ThemeResource MqttPanelFontFamily}"/>
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="CharacterSpacing" Value="40"/>
-            <Setter Property="Foreground" Value="{ThemeResource MqttPanelHeadingBrush}"/>
-        </Style>
-        <!-- The gap sits above the rule, so a heading binds to the cards below it. -->
-        <Style x:Key="MqttSectionDividerStyle" TargetType="Border">
-            <Setter Property="Height" Value="1"/>
-            <Setter Property="Background" Value="{ThemeResource DividerStrokeColorDefaultBrush}"/>
-            <Setter Property="Margin" Value="0,24,0,12"/>
-        </Style>
-
         <!-- The Status block's own two tiers. The label is the elastic half and gives way first; the
              value is the field width every other row on this panel uses, so the right edge is the
              panel's right edge here too. -->
@@ -122,12 +107,8 @@
              reading, and none of it has an answer until the feature is on. -->
         <StackPanel x:Name="DetailPanel" Spacing="4">
 
-            <Border Style="{StaticResource MqttSectionDividerStyle}"/>
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock x:Name="StatusHeading" Style="{StaticResource MqttSubHeaderStyle}"
-                           VerticalAlignment="Center"/>
-                <shared:InfoIcon x:Name="StatusInfoIcon"/>
-            </StackPanel>
+            <shared:SettingsSectionHeader x:Name="StatusHeader"
+                                          Foreground="{ThemeResource MqttPanelHeadingBrush}"/>
 
             <!-- Not SettingsCards: a card with unbounded content collapses its header to zero width
                  and grows without bound. See docs/consume-mqtt-settings-panel.md, "Inside the panel". -->
@@ -192,12 +173,8 @@
                  cosmetic and commits on its own; the id is destructive and changes only through its
                  own confirmation dialogue. Neither rides the Apply batch, so neither can be lost
                  behind a collapsed group. -->
-            <Border Style="{StaticResource MqttSectionDividerStyle}"/>
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock x:Name="DeviceHeading" Style="{StaticResource MqttSubHeaderStyle}"
-                           VerticalAlignment="Center"/>
-                <shared:InfoIcon x:Name="DeviceInfoIcon"/>
-            </StackPanel>
+            <shared:SettingsSectionHeader x:Name="DeviceHeader"
+                                          Foreground="{ThemeResource MqttPanelHeadingBrush}"/>
 
             <controls:SettingsCard x:Name="DeviceNameCard">
                 <controls:SettingsCard.Description>
@@ -236,15 +213,14 @@
                  The unapplied marker sits beside the heading, OUTSIDE the expander: a staged edit
                  that only a collapsed group can show is an edit that is lost at the next reload with
                  nothing on screen having said so. -->
-            <Border Style="{StaticResource MqttSectionDividerStyle}"/>
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock x:Name="BrokerHeading" Style="{StaticResource MqttSubHeaderStyle}"
-                           VerticalAlignment="Center"/>
-                <shared:InfoIcon x:Name="BrokerInfoIcon"/>
-                <TextBlock x:Name="BrokerDirtyText" Style="{StaticResource MqttHintStyle}"
-                           Foreground="{ThemeResource MqttPanelAccentBrush}"
-                           VerticalAlignment="Center" Visibility="Collapsed"/>
-            </StackPanel>
+            <shared:SettingsSectionHeader x:Name="BrokerHeader"
+                                          Foreground="{ThemeResource MqttPanelHeadingBrush}">
+                <shared:SettingsSectionHeader.Trailing>
+                    <TextBlock x:Name="BrokerDirtyText" Style="{StaticResource MqttHintStyle}"
+                               Foreground="{ThemeResource MqttPanelAccentBrush}"
+                               VerticalAlignment="Center" Visibility="Collapsed"/>
+                </shared:SettingsSectionHeader.Trailing>
+            </shared:SettingsSectionHeader>
 
             <controls:SettingsExpander x:Name="BrokerExpander" IsExpanded="False">
                 <controls:SettingsExpander.Description>
@@ -413,14 +389,8 @@
             <!-- Last, and closed: each group is named by the application that declared it, so what a
                  toggle covers needs no explaining beyond its own name, and the set is changed far
                  less often than anything above it. -->
-            <Border Style="{StaticResource MqttSectionDividerStyle}"/>
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock x:Name="PublishHeading" Style="{StaticResource MqttSubHeaderStyle}"
-                           VerticalAlignment="Center"/>
-                <!-- Consumer-owned, and collapsed when the consumer supplied nothing: an icon that
-                     opens on an empty flyout is worse than no icon. -->
-                <shared:InfoIcon x:Name="PublishGroupsInfoIcon" Visibility="Collapsed"/>
-            </StackPanel>
+            <shared:SettingsSectionHeader x:Name="PublishHeader"
+                                          Foreground="{ThemeResource MqttPanelHeadingBrush}"/>
 
             <!-- The rows are built in code from MqttPanelSetup.Groups: the panel renders the
                  application's group vocabulary and declares none of its own. Empty Items here, one

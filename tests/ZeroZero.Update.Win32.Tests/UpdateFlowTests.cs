@@ -13,9 +13,10 @@ public class UpdateFlowTests
     private readonly List<Uri> _opened = [];
     private int _shutdowns;
 
-    private UpdateFlow Flow(IProgress<DownloadProgress>? progress = null) => new(_service, _prompts, new UpdateFlowOptions
+    private UpdateFlow Flow(IProgress<DownloadProgress>? progress = null, InstallHolds? holds = null) => new(_service, _prompts, new UpdateFlowOptions
     {
         Progress = progress,
+        Holds = holds,
         Shutdown = () =>
         {
             _shutdowns++;
@@ -179,6 +180,61 @@ public class UpdateFlowTests
         // The window is handed the download and taken off the screen before the application goes.
         Assert.Equal(1, _prompts.Downloads);
         Assert.Equal(1, _prompts.Dismissals);
+    }
+
+    /// <summary>A hold before the question: nothing is asked, downloaded or started, on every route
+    /// to an install. Only a scheduled run, which nobody asked for, stays quiet about it.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Theory]
+    [InlineData("manual", true)]
+    [InlineData("scheduled", false)]
+    [InlineData("install", true)]
+    public async Task AHoldBeforeTheQuestion_AsksNothingAndStartsNothing(string route, bool said)
+    {
+        _service.CheckResult = Available();
+        var holds = new InstallHolds();
+        holds.Hold("a focus session is running");
+        UpdateFlow flow = Flow(holds: holds);
+
+        for (int run = 0; run < 2; run++)
+        {
+            UpdateFlowRun result = route switch
+            {
+                "manual" => await flow.RunAsync(UpdateTrigger.Manual),
+                "scheduled" => await flow.RunAsync(UpdateTrigger.Scheduled),
+                _ => await flow.InstallAsync(FakeUpdateService.Release),
+            };
+            Assert.Equal(UpdateFlowResult.Held, result.Result);
+        }
+
+        Assert.Empty(_prompts.Asked);
+        Assert.Equal(0, _service.Prepares);
+        Assert.Equal(0, _service.Launches);
+        Assert.Equal(0, _shutdowns);
+        string[] expected = said ? ["a focus session is running", "a focus session is running"] : [];
+        Assert.Equal(expected, _prompts.Held);
+        Assert.Single(_log.Infos, line => line.StartsWith("Not installing", StringComparison.Ordinal));
+    }
+
+    /// <summary>A hold that begins while the file downloads: the verified installer is discarded,
+    /// nothing starts and the application stays up.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task AHoldBeforeTheLaunch_DiscardsTheDownloadAndStartsNothing()
+    {
+        _service.CheckResult = Available();
+        var holds = new InstallHolds();
+        holds.Hold(() => _service.Prepares > 0 ? "a focus session is running" : null);
+
+        UpdateFlowRun run = await Flow(holds: holds).RunAsync(UpdateTrigger.Manual);
+
+        Assert.Equal(UpdateFlowResult.Held, run.Result);
+        Assert.Single(_prompts.Asked);
+        Assert.Equal(1, _service.Prepares);
+        Assert.Equal(0, _service.Launches);
+        Assert.Same(_service.Prepared, Assert.Single(_service.Discarded));
+        Assert.Equal(["a focus session is running"], _prompts.Held);
+        Assert.Equal(0, _shutdowns);
     }
 
     /// <summary>The application's reporter is fed during the download, beside the window's bar.</summary>

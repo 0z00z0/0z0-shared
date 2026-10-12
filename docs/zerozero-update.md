@@ -107,7 +107,9 @@ This guide is complete for adoption: the component's own source and tests need n
   window still in front of them. The three answers to a check with nothing to install are asked for
   under `Manual` only, `SayCannotInstallAsync` and `SayLaunchFailedAsync` on every path to an
   install, and `Dismiss` once the installer runs, before the shutdown callback; a default
-  `DownloadSurface` reports nowhere and never cancels.
+  `DownloadSurface` reports nowhere and never cancels. `SayHeldAsync` reports an install a hold
+  refused; its default implementation calls `Dismiss` and says nothing, so a surface need not
+  implement it.
 - **`UpdateFlow`** — `RunAsync(trigger)`: check, ask, prepare, launch, then call the application's
   shutdown, returning an `UpdateFlowRun` carrying the result, the check it read and the release
   where there is one. A manual run reports every outcome; a scheduled one speaks only when there is
@@ -117,8 +119,9 @@ This guide is complete for adoption: the component's own source and tests need n
   time: a caller arriving while a check is in flight joins it and reads its result.
   `UpdateFlowOptions.Progress` is where a host's own progress goes, alongside the window's bar.
   `UpdateFlowOptions.SharedCheck` makes that one check shared with every other flow holding the
-  same `SharedUpdateCheck`; null keeps it to this flow's own runs. `Shutdown` is the one required
-  option; `OpenReleasePage`, the shell when null, opens only an `https` address.
+  same `SharedUpdateCheck`; null keeps it to this flow's own runs. `UpdateFlowOptions.Holds` is the
+  application's `InstallHolds`; a hold answers `Held`. `Shutdown` is the one required option;
+  `OpenReleasePage`, the shell when null, opens only an `https` address.
 - **`SharedUpdateCheck`** — one check at a time across every flow holding it, built once over the
   application's service. A run on any of those flows arriving while a check is in flight on any
   other joins it and reads its result. Only the check is shared: each run still speaks, asks or
@@ -132,16 +135,20 @@ This guide is complete for adoption: the component's own source and tests need n
   Passes run one at a time: a direct call arriving during another pass waits for it to end.
 - **`UnattendedUpdateOptions`** — what the application supplies: whether this happens at all, how
   often a check runs — periodically or once — the retry tick, the shutdown callback, the call the
-  component makes before a release is downloaded (`MayDownloadNow`), the call it makes immediately
-  before an installer starts (`MayInstallNow`), the callback every tick's result is reported to, and
-  the check the application's own flows share (`SharedCheck`). Absent, nothing of the kind happens.
-  `Shutdown` is required, the first tick comes `InitialDelay` (30 s) after `Start`, and a negative
-  delay or an interval of zero or less throws. Every other member is optional and null by default:
-  no call accepts every moment, and no shared check keeps the policy's check to itself.
+  component makes before a release is downloaded (`MayDownloadNow`), the application's holds asked
+  immediately before an installer starts (`Holds`), the callback every tick's result is reported
+  to, and the check the application's own flows share (`SharedCheck`). Absent, nothing of the kind
+  happens. `Shutdown` is required, the first tick comes `InitialDelay` (30 s) after `Start`, and a
+  negative delay or an interval of zero or less throws. Every other member is optional and null by
+  default: no call accepts every moment, no `Holds` holds nothing, and no shared check keeps the
+  policy's check to itself.
 - **`CheckCadence`** — `Periodic`, checking every `CheckInterval`, or `Once`, checking a single time
   after `InitialDelay` and never again for the life of the process. Governs checking only.
-- **`InstallMoment`** — the answer to either call: `InstallMoment.Now`, or `InstallMoment.NotNow`
-  with a few words for the log. It is about the moment it was asked and is never kept.
+- **`InstallMoment`** — the answer to `MayDownloadNow`: `InstallMoment.Now`, or
+  `InstallMoment.NotNow` with a few words for the log. It is about the moment it was asked and is
+  never kept.
+- **`InstallHolds`** — what the application has going on that no installer may interrupt, asked by
+  both paths. [Below](#holding-an-install) is the whole of it.
 - **`SilentUpdatePrompts`** — prompts that answer themselves and draw nothing, for a flow that must
   not reach a screen whatever its outcome. [Traps](#traps) has what they answer.
 
@@ -164,7 +171,8 @@ This guide is complete for adoption: the component's own source and tests need n
 One window, not several. The question, the download that follows it and the answer that follows
 that are one act, so pressing "Install now" leaves the window where it is and starts the download
 in it: nothing disappears and reappears in the middle of a gesture. The notice that nothing newer
-exists and a check that did not complete open the same window at its last stage.
+exists, a check that did not complete and an install a hold refused open the same window at its
+last stage.
 
 Each picture below is the capture script's output, so it shows the window as it renders rather than
 what the markup claims. Every one is at 175 per cent display scaling.
@@ -439,11 +447,47 @@ built over another service throws `ArgumentException` when it is constructed, si
 carries the running version it was checked against. One install at a time stays a rule of each flow:
 the shared check joins checks, not installs.
 
+## Holding an install
+
+An installer closes the application when it starts. An application with something running that
+must not be cut off — a session, a job, a wait — says so through one `InstallHolds`, built once and
+handed to `UpdateFlowOptions.Holds` on every flow and to `UnattendedUpdateOptions.Holds`:
+
+```csharp
+var holds = new InstallHolds();
+
+// Held until disposed.
+IDisposable session = holds.Hold("a focus session is running");
+session.Dispose();
+
+// Held while the function returns a reason, for a state read only at the moment of asking.
+holds.Hold(() => lidWait.IsRunning ? "the lid wait is running" : null);
+```
+
+- **The unattended policy asks once the machine-free rule has passed**, immediately before the
+  installer starts. A hold makes the tick `Refused` with the hold's reason; the next tick asks
+  again, and the verified installer stays in hand.
+- **A flow asks twice.** Before the install question, so nobody is asked something a hold would
+  refuse, and again immediately before the launch, where a hold discards the verified download.
+  Either way the run answers `UpdateFlowResult.Held`, nothing starts and `Shutdown` is not called.
+- **The person is told through `IUpdatePrompts.SayHeldAsync`**, worded by
+  `UpdateMessages.HeldHeadline` and `HeldText`: on a manual run, on `InstallAsync`, and before the
+  launch on any run. A scheduled run held before its question says nothing.
+- **The first hold in registration order gives the reason.** It is a few words, read after
+  "because", and the log is keyed on it: one wording per cause writes one line per cause.
+- **A function that throws holds**, with `InstallHolds.Unreadable` as its reason, and its exception
+  is logged once for that hold; a blank reason holds with the same wording. A function is called on
+  the asking thread at every ask.
+- **Null holds nothing.** Either option left null installs as though no hold existed.
+- **A hold never stops a check, a download or an installer already started.** One that is never
+  disposed stops every install for the life of the process, so the application disposes it when
+  its session ends. Disposing twice, or from any thread, is harmless.
+
 ## Installing without being asked
 
 An application may let updates install with nobody accepting anything. It switches that on, sets how
-often a check runs, and may answer two questions: whether a release found is worth downloading at
-all, and whether an installer may start just now. Everything else is the component's.
+often a check runs, may say whether a release found is worth downloading at all, and hands over its
+[holds](#holding-an-install). Everything else is the component's.
 
 ```csharp
 var policy = new UnattendedUpdatePolicy(service, new UnattendedUpdateOptions
@@ -451,7 +495,7 @@ var policy = new UnattendedUpdatePolicy(service, new UnattendedUpdateOptions
     Enabled = settings.InstallUpdatesUnattended,
     CheckInterval = TimeSpan.FromHours(24),
     MayDownloadNow = release => metered ? InstallMoment.NotNow("the connection is metered") : InstallMoment.Now,
-    MayInstallNow = release => busy ? InstallMoment.NotNow("a job is running") : InstallMoment.Now,
+    Holds = holds,
     Shutdown = () =>
     {
         lifecycle.MarkDeliberateExit();
@@ -478,9 +522,12 @@ and behaves exactly as above. `CheckCadence.Once` runs the single check after `I
 never again for the life of the process, whatever that check finds — something a periodic interval
 cannot express at any value, since even the longest one checks again eventually. The cadence governs
 checking only: a release already found keeps following `MayDownloadNow`, the machine-free rule,
-`MayInstallNow` and the retry when it could not start, so the ticks go on for as long as the
-scheduler runs and simply find no check due once the one check has run. A download that fails or
-does not verify lets the release go, so under `Once` nothing installs for the rest of the process.
+the holds and the retry when it could not start, so the ticks go on for as long as the
+scheduler runs and simply find no check due once the one check has run. A download that fails
+keeps the release, and every tick after it downloads again until one completes, under `Once` as
+under `Periodic`. A link that keeps failing therefore costs one download attempt every
+`RetryInterval`, not one a day. A download that does not verify, or a release that cannot be
+verified, lets the release go, so under `Once` that release never installs in this process.
 
 **The application is asked before anything is downloaded.** `MayDownloadNow` is called once a check
 has found a release and before a byte of it is fetched. An `InstallMoment.NotNow` keeps the release
@@ -495,11 +542,9 @@ screen is locked, or nothing has touched the keyboard or the mouse for ten minut
 `UnattendedUpdatePolicy.RequiredIdle` is the value, and it is fixed: an application refuses a moment
 and cannot permit one.
 
-**The application is then asked, immediately before the installer starts.** `MayInstallNow` is
-called once the installer has been downloaded and verified and the machine-free rule has passed, and
-an `InstallMoment.NotNow` stops that attempt and nothing further. The answer is about that moment
-alone: it is never stored, and the next tick asks again. An application that supplies no call accepts
-every moment.
+**The holds are then asked, immediately before the installer starts**, once it has been downloaded
+and verified and the machine-free rule has passed. A hold stops that attempt and nothing further,
+and the next tick asks again.
 
 **What was found is held between ticks**, so a refusal costs no second check and no second download:
 a release refused before its download is asked about again, and a verified installer refused before
@@ -543,7 +588,7 @@ Each tick says where it ended:
 | `CheckFailed` | The check did not complete and nothing is held. The cadence is not stamped, so the next tick checks again. With something held, the tick carries on with it instead. |
 | `NothingToInstall` | The check completed, there is nothing newer, and nothing is held. |
 | `DownloadRefused` | A release is held and `MayDownloadNow` refused its download at this moment. Nothing was downloaded, and the next tick asks again. |
-| `NotPrepared` | The release was not downloaded, or did not verify, and no verified installer is held. Nothing ran, the release is let go, and the next check decides again: under `CheckCadence.Once` there is none. |
+| `NotPrepared` | The release was not downloaded, or did not verify, and no verified installer is held. Nothing ran. A failed download (`DownloadFailed`) keeps the release and the next tick downloads it again, under either cadence. Any other refusal lets the release go, and the next check decides again: under `CheckCadence.Once` there is none. |
 | `Refused` | A verified installer is in hand and this moment was refused. `Reason` says which rule refused it. |
 | `LaunchFailed` | The installer did not start. The next tick downloads and verifies it again, or the newer release already waiting where a check found one. |
 | `InstallerStarted` | The installer is running and the shutdown callback has been called. Every tick after it answers the same and does nothing, so a tick landing while the application is still on its way out starts no second installer. |
@@ -631,9 +676,8 @@ does not wait for a report to be handled.
 - **Whether a release is worth downloading at all**, through `MayDownloadNow` — installing switched
   off for the whole run, a metered connection. The answer is only about that moment, and the
   release stays held without its download.
-- **Whether a particular moment suits**, through `MayInstallNow`. Why an application says no is its
-  own business — a job it is running, a lid it is waiting on, a session it does not want to
-  interrupt — and the answer is only about that moment.
+- **What must not be interrupted**, through one `InstallHolds` handed to both paths — a job it is
+  running, a lid it is waiting on, a session — and disposing each hold when that ends.
 - **Whether every tick reaches it**, through `TickReported`. Without it, a self-driven policy's
   ticks are visible only in the log lines it already writes on its own.
 - **The release-notes text**, where the application keeps its own rather than the release body,
@@ -650,6 +694,11 @@ does not wait for a report to be handled.
   executing one: the executing assembly is this library once the code is shared, and its version
   would silently stand in for the application's. A host with no entry assembly, or one whose
   version is not the product's, sets `RunningVersion`.
+- **The running version follows the tag's rule.** The commit after `+` is dropped, and what is
+  left must be a plain version, as a tag must. A pre-release such as `1.2.3-beta` is not read as
+  `1.2.3`: like an entry assembly reporting no version at all, it makes the `UpdateService`
+  constructor throw `InvalidOperationException`, and the host sets `RunningVersion` to check from
+  a pre-release build.
 - **Pin the next certificate one release ahead.** A certificate rotated in with the same release
   that first expects it is refused by every installed version, since none of them pins it. The
   release before the rotation carries both thumbprints. An application that accepts the publisher
@@ -663,8 +712,8 @@ does not wait for a report to be handled.
 - **A silent check that finds a release installs nothing.** It returns `UpdateAvailable` and the
   release; the install starts from `InstallAsync` when the person asks for it.
 - **`SilentUpdatePrompts` always answers "Install".** A flow wired to them under `Manual` or
-  `Scheduled` downloads and starts whatever release it finds, with neither the machine-idle rule nor
-  the question to the application: both live in `UnattendedUpdatePolicy`, not in the flow. An
+  `Scheduled` downloads and starts whatever release it finds without the machine-idle rule, which
+  lives in `UnattendedUpdatePolicy`, not in the flow; only the flow's own `Holds` still stop it. An
   install nobody asked for goes through the policy.
 - **Progress stops where the download does, and the install does not.** Verification runs after the
   last byte arrives and reports nothing, so a bar that has reached its end sits full while the hash
@@ -720,12 +769,12 @@ does not wait for a report to be handled.
   the setting off wires `UpdateScheduler` over `UpdateFlow` as well.
 - **`CheckCadence.Once` stops checking, not ticking.** The scheduler still runs every
   `RetryInterval` after the single check, because a release already found still needs
-  `MayDownloadNow`, the machine-free rule, `MayInstallNow` and the launch retry applied to it on
-  every tick. Under `Once`, a held release is never replaced: no later check runs to find a newer one.
+  `MayDownloadNow`, the download retry, the machine-free rule, the holds and the launch retry
+  applied to it on every tick. Under `Once`, a held release is never replaced: no later check runs to find a newer one.
 - **A held installer may still start while a newer release waits for its download.** Where
   `MayDownloadNow` refuses the newer release, the verified installer already in hand is still
   offered, so the older version can install and the newer one is found by the next process's first
-  check. An application that would rather wait refuses the older release in `MayInstallNow`.
+  check.
 - **An `IUpdateService` of the application's own removes nothing unless it implements `Discard`.**
   The default does nothing, so a replaced installer then stays in its directory until
   `SweepStaleDownloads` next runs.

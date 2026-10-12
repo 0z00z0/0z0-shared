@@ -729,7 +729,10 @@ removed. The text changes when the declaration does, on the next document.
 a `Description`, those `Extra` keys are written like any other.
 
 It never carries a value that changes between documents, never adds an attribute other than
-`description`, and is never shown in the entity's name or state.
+`description`, and is never shown in the entity's name or state. The receiver shows the text as the
+entity's `description` attribute, which a dashboard shows as the second line under the name with
+`secondary_info: description` on an entities-card row or `state_content: description` on a tile
+card; the receiver's own hover tooltip always shows the entity name and cannot carry it.
 
 **`Include` may fail as well as answer.** It runs on the announcement thread and usually reads live
 hardware, so a throw is not a false: it says the capability could not be read, which is not the same
@@ -1024,6 +1027,11 @@ classification of what the encrypted attempt found:
 for the same reason: nothing was sent. A timeout and an unclassified failure block it, because
 neither says what was on offer.
 
+**A socket that never opened is never classified `TlsUnsupported`.** The live connection and the
+Test connection button both end a candidate on any verdict from opening its socket, and begin the
+handshake only once a socket is open, so a failed or timed-out socket keeps its own verdict and
+blocks the clear-text retry.
+
 The two TLS outcomes are separated by what the certificate trust setting made of the certificate,
 recorded as the handshake happens: none presented, accepted, or refused. They cannot be told apart
 from the exception: a broker with no TLS on its port reads a ClientHello as a malformed packet and
@@ -1058,7 +1066,8 @@ Choosing `AcceptAny` shows one line saying what it gives up.
 
 `MqttEndpointPlan` is pure — the staged settings, what last worked and the attempts so far go in, a
 candidate or "nothing left to try" comes out. The live connection and the Test connection button
-both walk it, so the button's verdict is about the connection that will actually be made.
+both walk it under the same socket-stage rule, so the button's verdict is about the connection that
+will actually be made.
 
 TCP leads under `Auto` because it is the internal path and the cheaper one. Ports are `1883, 8883`
 for TCP and `443, 9001, 8083, 8084, 8080, 80` for WebSocket — the WebSocket list is the front door's

@@ -194,11 +194,9 @@ public static class MqttProbe
 
         progress?.Report(new(MqttSearchStage.Port, address.Port, candidate.Transport));
 
-        // Nested inside the candidate's own budget, so the socket stage is the shorter of the two and
-        // both stages together still cost no more than one candidate is allowed.
-        using var socket = CancellationTokenSource.CreateLinkedTokenSource(budget);
-        socket.CancelAfter(socketBudget);
-        if (await ProbeTcpAsync(address.Host, address.Port, socket.Token, ct).ConfigureAwait(false)
+        // Nested inside the candidate's own budget, so both stages together still cost no more than
+        // one candidate is allowed.
+        if (await SocketStageAsync(address, socketBudget, budget, ct).ConfigureAwait(false)
             is { } closed)
         {
             progress?.Report(new(MqttSearchStage.Finished, address.Port, candidate.Transport, closed));
@@ -217,7 +215,18 @@ public static class MqttProbe
     private static readonly MqttProbeResult Silent =
         new(MqttProbeOutcome.Unreachable, "nothing answered on that port");
 
-    /// <summary>Stage 1 — can a socket be opened at all. Returns null when it can (i.e. carry on).</summary>
+    /// <summary>Stage 1, shared with the live connection: any verdict here ends the candidate, so a
+    /// socket that never opened is never read as "no TLS there" and never opens the clear-text retry.
+    /// Null means the handshake comes next.</summary>
+    internal static async Task<MqttProbeResult?> SocketStageAsync(
+        MqttEndpointAddress address, TimeSpan socketBudget, CancellationToken budget, CancellationToken ct)
+    {
+        using var socket = CancellationTokenSource.CreateLinkedTokenSource(budget);
+        socket.CancelAfter(socketBudget);
+        return await ProbeTcpAsync(address.Host, address.Port, socket.Token, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Whether a socket can be opened at all. Returns null when it can.</summary>
     /// <remarks>An expired <paramref name="budget"/> is <see cref="MqttProbeOutcome.Unreachable"/> and
     /// not <see cref="MqttProbeOutcome.TimedOut"/>. Nothing has answered at this stage, so nothing is
     /// known to be at the address, which is the distinction the two outcomes are drawn on. It is also

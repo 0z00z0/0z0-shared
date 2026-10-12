@@ -475,9 +475,7 @@ public class UpdateServiceTests(SignedFileFactory files) : IClassFixture<SignedF
         });
 
         Assembly entry = Assembly.GetEntryAssembly()!;
-        string text = AssemblyVersionText.Read(entry);
-        int cut = text.IndexOfAny(['+', '-']);
-        Version expected = VersionTag.Normalise(Version.Parse(cut >= 0 ? text[..cut] : text));
+        Assert.True(VersionTag.TryParseRunning(AssemblyVersionText.Read(entry), out Version expected));
 
         Assert.Equal(expected, service.RunningVersion);
         Assert.NotEqual(VersionTag.Normalise(typeof(UpdateService).Assembly.GetName().Version!), service.RunningVersion);

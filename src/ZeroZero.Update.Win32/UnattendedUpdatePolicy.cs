@@ -21,10 +21,9 @@ public enum UnattendedOutcome
     /// <summary>The check completed, there is nothing newer to install, and nothing is held.</summary>
     NothingToInstall,
 
-    /// <summary>The release was not downloaded, or did not verify, and no verified installer is
-    /// held. Nothing ran, the release is let go, and the next check decides again: under
-    /// <see cref="CheckCadence.Once"/> there is none, so nothing installs for the rest of the
-    /// process.</summary>
+    /// <summary>Not downloaded, or not verified, and no verified installer is held; nothing ran. A failed
+    /// download is kept and tried again every tick, under either cadence; any other refusal lets the
+    /// release go, and the next check decides again.</summary>
     NotPrepared,
 
     /// <summary>A verified installer is in hand and this moment was refused. Nothing ran; the next
@@ -60,8 +59,8 @@ public sealed record UnattendedTick(UnattendedOutcome Outcome, string Reason = "
 /// and a strictly newer release takes the held one's place once it has been downloaded and
 /// verified, or at once where nothing of the held one was downloaded. <see cref="CheckCadence"/>
 /// governs checking only: under <see cref="CheckCadence.Once"/> the ticks go on for as long as the
-/// scheduler runs, retrying a moment that was refused or an installer that could not start, and
-/// simply find no check due once the one check has run.
+/// scheduler runs, retrying a download that failed, a moment that was refused or an installer that
+/// could not start, and simply find no check due once the one check has run.
 /// </remarks>
 public sealed class UnattendedUpdatePolicy : IDisposable
 {
@@ -195,7 +194,9 @@ public sealed class UnattendedUpdatePolicy : IDisposable
             {
                 _downloadRefusal = null;
                 PreparedUpdate prepared = await _service.PrepareAsync(waiting, progress: null, cancellationToken).ConfigureAwait(false);
-                _release = null;
+                // A download that did not complete says nothing against the release, so it stays for
+                // the next tick; one that did not verify, or cannot be verified, is let go.
+                if (prepared.Outcome != PrepareOutcome.DownloadFailed) _release = null;
                 if (prepared.IsReady)
                 {
                     // Held first, discarded second: a removal that throws leaves the new one held.
@@ -221,7 +222,7 @@ public sealed class UnattendedUpdatePolicy : IDisposable
         InstallMoment free = MachineFree();
         if (!free.Accepted) return Refuse(free, release);
 
-        InstallMoment moment = _options.MayInstallNow?.Invoke(release) ?? InstallMoment.Now;
+        InstallMoment moment = _options.Holds?.Ask(_log) ?? InstallMoment.Now;
         if (!moment.Accepted) return Refuse(moment, release);
 
         _refusal = null;

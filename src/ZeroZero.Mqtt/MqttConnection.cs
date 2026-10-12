@@ -234,10 +234,13 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             var address = MqttEndpoint.Resolve(parameters.Host, candidate);
             MqttProbeResult result;
 
-            if (await CheckListenerAsync(address, socketBudget, ct).ConfigureAwait(false)
-                is { } unreachable)
+            var closed = await MqttProbe
+                .SocketStageAsync(address, socketBudget, ct, ct).ConfigureAwait(false);
+            // The loop's own cancellation ends the round instead of being recorded against a candidate.
+            ct.ThrowIfCancellationRequested();
+            if (closed is { } verdict)
             {
-                attempts.Add(new(candidate, unreachable));
+                attempts.Add(new(candidate, verdict));
                 continue;
             }
 
@@ -314,33 +317,6 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
     /// round after, and the endpoint it connected on then leads the sweep.</remarks>
     public static bool ShouldEscalateSocketBudget(IReadOnlyList<MqttEndpointAttempt> attempts) =>
         attempts.Count > 0 && !attempts.Any(a => MqttEndpointPlan.Answered(a.Outcome));
-
-    /// <summary>Whether nothing is listening on a candidate at all, so the sweep may write it off
-    /// without speaking MQTT to it. Null means carry on and speak MQTT.</summary>
-    /// <remarks>
-    /// <para>Every candidate, not only an encrypted one under Automatic. A far end that drops the
-    /// packet rather than refusing it says nothing and costs the whole connect budget doing it, and a
-    /// candidate that has said nothing whatsoever is the least likely to be the right one — a broker
-    /// that is there answers a socket quickly on a LAN and quickly enough over a WAN.
-    /// <paramref name="budget"/> is what bounds this stage, and is short exactly where there is
-    /// another candidate to move on to.</para>
-    /// <para>An <see cref="MqttProbeOutcome.Unreachable"/> verdict is the only one that short-circuits
-    /// the candidate. Everything else falls through to the handshake, so a TLS failure is reported as
-    /// a TLS failure and never as an empty port — which is what decides whether the plain candidate
-    /// behind an encrypted one may be tried at all, and reading one as the other is what would send
-    /// the password to the broker in clear text.</para>
-    /// </remarks>
-    private static async Task<MqttProbeResult?> CheckListenerAsync(
-        MqttEndpointAddress address, TimeSpan budget, CancellationToken ct)
-    {
-        using var socket = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        socket.CancelAfter(budget);
-        var result = await MqttProbe
-            .ProbeTcpAsync(address.Host, address.Port, socket.Token, ct).ConfigureAwait(false);
-
-        // Anything other than "nothing is there" is left to the handshake to report properly.
-        return result is { Outcome: MqttProbeOutcome.Unreachable } ? result : null;
-    }
 
     private MqttClientOptions BuildOptions(
         MqttConnectParameters parameters, MqttEndpointAddress address, MqttHandshakeWitness? witness)

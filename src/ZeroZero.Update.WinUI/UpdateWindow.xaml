@@ -16,12 +16,14 @@
     <Grid x:Name="Root">
         <Grid.Resources>
             <ResourceDictionary>
-                <!-- The brand face, addressed under the brand assembly's own folder: the one
-                     location both reference routes produce. An implicit style carries it to every
-                     text block, which a Grid has no FontFamily to inherit from. -->
-                <FontFamily x:Key="BrandFont">ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
+                <!-- The brand face from the brand component's own font dictionary, merged here so a
+                     host merges nothing. An implicit style carries it to every text block, which a
+                     Grid has no FontFamily to inherit from. -->
+                <ResourceDictionary.MergedDictionaries>
+                    <ResourceDictionary Source="ms-appx:///ZeroZero.Brand.WinUI/Themes/BrandFont.xaml"/>
+                </ResourceDictionary.MergedDictionaries>
                 <Style TargetType="TextBlock">
-                    <Setter Property="FontFamily" Value="{StaticResource BrandFont}"/>
+                    <Setter Property="FontFamily" Value="{StaticResource BrandFontFamily}"/>
                 </Style>
 
                 <ResourceDictionary.ThemeDictionaries>
@@ -109,7 +111,7 @@
         <Button x:Name="DismissButton" Grid.Row="0" Grid.RowSpan="2"
                 Content="&#x00D7;" Width="28" Height="28"
                 Padding="0" FontSize="10"
-                FontFamily="{StaticResource BrandFont}"
+                FontFamily="{StaticResource BrandFontFamily}"
                 Background="Transparent"
                 BorderBrush="Transparent"
                 Foreground="{ThemeResource TextFillColorTertiaryBrush}"

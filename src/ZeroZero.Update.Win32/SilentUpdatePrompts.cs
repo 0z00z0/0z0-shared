@@ -23,5 +23,7 @@ public sealed class SilentUpdatePrompts : IUpdatePrompts
 
     public Task SayLaunchFailedAsync(PreparedUpdate update, LaunchResult result) => Task.CompletedTask;
 
+    public Task SayHeldAsync(ReleaseInfo release, string reason) => Task.CompletedTask;
+
     public void Dismiss() { }
 }

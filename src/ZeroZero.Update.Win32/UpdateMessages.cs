@@ -151,6 +151,20 @@ public static class UpdateMessages
         return $"The installer could not be started: {result.Detail}.{Environment.NewLine}{Environment.NewLine}{RefusalAdvice}";
     }
 
+    /// <summary>The headline over an install an application's hold refused.</summary>
+    public static string HeldHeadline(ReleaseInfo release)
+    {
+        ArgumentNullException.ThrowIfNull(release);
+        return $"Version {release.VersionText} cannot be installed now";
+    }
+
+    /// <summary>Why, in the hold's own words.</summary>
+    public static string HeldText(string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        return $"The update did not start because {reason}. Try again once that has finished.";
+    }
+
     /// <summary>A refusal by verification, worded per verdict. The verifier's own sentence is
     /// carried where it names something — a hash, a publisher, a thumbprint, a Windows code — and
     /// left out where it would only repeat the sentence above it.</summary>

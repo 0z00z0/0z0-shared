@@ -31,6 +31,7 @@
     <!-- The panel's setup object needs nothing from WinUI, so its source is compiled in here and the
          construction from a live connection is tested against the loopback broker. -->
     <Compile Include="..\..\src\ZeroZero.Mqtt.WinUI\MqttPanelSetup.cs" Link="Linked\MqttPanelSetup.cs" />
+    <Compile Include="..\Shared\RecordingLogSink.cs" Link="Shared\RecordingLogSink.cs" />
   </ItemGroup>
 
 </Project>

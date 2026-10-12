@@ -5,25 +5,15 @@ namespace ZeroZero.Controls.Tests;
 
 /// <summary>
 /// The controls' markup read as data and held against what the plan says each control is: the
-/// section header is the panel's sub-header and rule lifted, the row keeps its bubble to the left
-/// of its field, and the prompt keeps its confirm on the right of an equal-width pair.
+/// section header's rule sits above a heading whose colour and face are the host's, the row keeps
+/// its bubble to the left of its field, and the prompt keeps its confirm on the right of an
+/// equal-width pair.
 /// </summary>
 public class MarkupTests
 {
     private static readonly XNamespace P = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
     private static readonly XNamespace X = "http://schemas.microsoft.com/winfx/2006/xaml";
     private static readonly XNamespace Local = "using:ZeroZero.Controls.WinUI";
-
-    [Fact]
-    public void SectionHeaderRepeatsThePanelsSubHeaderTypography()
-    {
-        var setters = Setters(Load("MqttSettingsPanel.xaml"), "MqttSubHeaderStyle");
-        var heading = Named(Load("SettingsSectionHeader.xaml"), P + "TextBlock", "HeadingText");
-
-        Assert.Equal(setters["FontSize"], heading.Attribute("FontSize")?.Value);
-        Assert.Equal(setters["FontWeight"], heading.Attribute("FontWeight")?.Value);
-        Assert.Equal(setters["CharacterSpacing"], heading.Attribute("CharacterSpacing")?.Value);
-    }
 
     [Fact]
     public void SectionHeaderLeavesColourAndFaceToTheHost()
@@ -34,16 +24,6 @@ public class MarkupTests
 
         Assert.Null(heading.Attribute("Foreground"));
         Assert.Null(heading.Attribute("FontFamily"));
-    }
-
-    [Fact]
-    public void SectionHeaderRuleIsThePanelsDivider()
-    {
-        var setters = Setters(Load("MqttSettingsPanel.xaml"), "MqttSectionDividerStyle");
-        var rule = Named(Load("SettingsSectionHeader.xaml"), P + "Border", "Divider");
-
-        Assert.Equal(setters["Height"], rule.Attribute("Height")?.Value);
-        Assert.Equal(setters["Background"], rule.Attribute("Background")?.Value);
     }
 
     [Fact]
@@ -105,9 +85,4 @@ public class MarkupTests
 
     private static XElement Named(XDocument doc, XName element, string name) =>
         doc.Descendants(element).Single(e => e.Attribute(X + "Name")?.Value == name);
-
-    private static Dictionary<string, string> Setters(XDocument doc, string styleKey) =>
-        doc.Descendants(P + "Style").Single(s => s.Attribute(X + "Key")?.Value == styleKey)
-            .Elements(P + "Setter")
-            .ToDictionary(s => s.Attribute("Property")!.Value, s => s.Attribute("Value")!.Value);
 }
