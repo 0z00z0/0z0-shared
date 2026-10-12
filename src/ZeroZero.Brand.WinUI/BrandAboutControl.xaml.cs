@@ -171,7 +171,7 @@ public sealed partial class BrandAboutControl : UserControl
         {
             Content    = content,
             FontSize   = 11,
-            FontFamily = (FontFamily)Resources["BrandFont"],
+            FontFamily = (FontFamily)Resources["BrandFontFamily"],
         };
         if (name is not null) button.Name = name;
         return button;

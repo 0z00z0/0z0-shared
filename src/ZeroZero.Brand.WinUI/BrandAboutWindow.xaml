@@ -15,11 +15,13 @@
          in-navigation page with none of this chrome (see BrandAboutControl's class doc). -->
     <Grid x:Name="Root">
         <Grid.Resources>
-            <!-- Own copy of the brand font resource: it doesn't cascade out of the hosted
-                 UserControl's resource scope into this window's chrome elements (close/update).
-                 Assembly-scoped URI, as in BrandAboutControl: the output root holds the font only
-                 under a project reference. -->
-            <FontFamily x:Key="BrandFont">ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
+            <!-- Merged again here: the hosted control's resources do not cascade out to this
+                 window's own close and update buttons. -->
+            <ResourceDictionary>
+                <ResourceDictionary.MergedDictionaries>
+                    <ResourceDictionary Source="ms-appx:///ZeroZero.Brand.WinUI/Themes/BrandFont.xaml"/>
+                </ResourceDictionary.MergedDictionaries>
+            </ResourceDictionary>
         </Grid.Resources>
 
         <StackPanel>
@@ -31,7 +33,7 @@
             <StackPanel Padding="16,12,16,16">
                 <Button x:Name="UpdateBtn"
                         Content="Check for Updates"
-                        FontSize="11" FontFamily="{StaticResource BrandFont}"
+                        FontSize="11" FontFamily="{StaticResource BrandFontFamily}"
                         HorizontalAlignment="Stretch"/>
             </StackPanel>
         </StackPanel>
@@ -44,7 +46,7 @@
         <Button x:Name="CloseBtn"
                 Content="&#x00D7;" Width="32" Height="32"
                 Padding="0" FontSize="11"
-                FontFamily="{StaticResource BrandFont}"
+                FontFamily="{StaticResource BrandFontFamily}"
                 Background="Transparent"
                 BorderBrush="Transparent"
                 Foreground="#80FFFFFF"

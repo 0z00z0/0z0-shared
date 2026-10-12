@@ -83,10 +83,7 @@ public sealed class BrandFontPathTests(PackedBrand brand)
     /// <summary>The markup files that name the face, and the number of URIs each must contribute.</summary>
     private static readonly (string File, int Count)[] Sources =
     [
-        (Path.Combine("src", "ZeroZero.Brand.WinUI", "BrandAboutControl.xaml"), 1),
-        (Path.Combine("src", "ZeroZero.Brand.WinUI", "BrandAboutWindow.xaml"), 1),
-        (Path.Combine("src", "ZeroZero.Brand.WinUI", "Themes", "BrandResources.xaml"), 1),
-        (Path.Combine("src", "ZeroZero.Brand.WinUI", "BrandBracketButton.xaml"), 1),
+        (Path.Combine("src", "ZeroZero.Brand.WinUI", "Themes", "BrandFont.xaml"), 1),
         (Path.Combine("src", "ZeroZero.Update.WinUI", "UpdateWindow.xaml"), 1),
     ];
 
