@@ -4,8 +4,8 @@ namespace ZeroZero.Mqtt;
 /// the attempts so far go in, a candidate or "nothing left to try" comes out — no client, no socket,
 /// no clock.</summary>
 /// <remarks>
-/// Both the live publisher and the connection check walk this, so what a Test button reports is what
-/// the connection will do. TCP leads in Auto because it is the internal path and the cheaper one: on
+/// Both the live publisher and the connection check walk this, and both end a candidate on any verdict
+/// from the socket stage, so what a Test button reports is what the connection will do. TCP leads in Auto because it is the internal path and the cheaper one: on
 /// the internal network it answers at once and WebSocket is never attempted, while from outside it
 /// costs a connect timeout per candidate before the fallback. The remembered endpoint takes that cost
 /// off every later connect — a laptop that moves pays the full sweep once per move, not once per

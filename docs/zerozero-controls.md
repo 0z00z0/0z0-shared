@@ -48,8 +48,8 @@ This guide is complete for adoption: the component's own source and tests need n
   above the heading and carries the gap between groups, so a heading binds downwards to its own
   cards; `ShowDivider`, on by default, is turned off for the first group on a page. `Heading`, `Info`
   and `InfoSubject` are the bubble's inputs, the bubble shows only when `Info` holds text, and the subject defaults
-  to the heading. Size, weight and spacing are the heading's own — the MQTT panel's sub-header,
-  lifted — while colour and face are inherited: a host restyles by setting `Foreground` or
+  to the heading. Size, weight and spacing are the heading's own — the MQTT panel's four
+  section headings are instances of it — while colour and face are inherited: a host restyles by setting `Foreground` or
   `FontFamily` on the instance, and nothing in the control outranks that.
 - **`SettingsRow`** — one settings row on the toolkit's card: `Header` and `Description` (a string
   or an element each), `Info` and `InfoSubject` for the bubble, and `Field`, the control that edits
@@ -204,8 +204,8 @@ a WinUI control needs the XAML runtime, and the Windows App SDK bootstrapper han
 no desktop session rather than failing it (issue #13). What can be tested without the runtime is:
 the title-bar enum and palette, compiled in as linked source and pinned — opaque throughout,
 grounds the window colour, glyph and fill ordering, no value shared between the two sets — and
-the controls' markup read as data beside the panel's, so the section header keeps the panel's
-sub-header typography and rule, the row keeps its bubble before its field, and the prompt keeps
+the controls' markup read as data, so the section header keeps its rule above a heading whose
+colour and face are the host's, the row keeps its bubble before its field, and the prompt keeps
 its confirm on the right of two equal columns. `ContentSizedPopup`'s arithmetic — rounding up, the
 200-unit fallback, the work-area cap and the centring — is linked in and tested; its window calls
 are looked at in the harness. `PopupWindowFit` is not covered there: it needs a

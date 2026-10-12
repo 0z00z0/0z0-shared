@@ -27,18 +27,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The controls' markup and the panel's, as data: the section header repeats the panel's
-         sub-header typography and rule, the row keeps its bubble before its field, and the prompt
-         keeps its confirm on the right. Each is a contract the plan states, and nothing in a build
-         holds it. -->
+    <!-- The controls' markup, as data: the section header's rule sits above its heading, the row
+         keeps its bubble before its field, and the prompt keeps its confirm on the right. Each is a
+         contract the plan states, and nothing in a build holds it. -->
     <None Include="..\..\src\ZeroZero.Controls.WinUI\SettingsSectionHeader.xaml"
           Link="SettingsSectionHeader.xaml" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\src\ZeroZero.Controls.WinUI\SettingsRow.xaml"
           Link="SettingsRow.xaml" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\src\ZeroZero.Controls.WinUI\TextPromptWindow.xaml"
           Link="TextPromptWindow.xaml" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\src\ZeroZero.Mqtt.WinUI\MqttSettingsPanel.xaml"
-          Link="MqttSettingsPanel.xaml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
