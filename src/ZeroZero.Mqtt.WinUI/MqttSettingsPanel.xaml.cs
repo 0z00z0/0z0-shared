@@ -360,98 +360,17 @@ public sealed partial class MqttSettingsPanel : UserControl
 
     private void RefreshDeviceIdText() => DeviceIdText.Text = EffectiveDeviceId();
 
-    /// <summary>The device ID's own confirmation dialogue. The id is the <c>unique_id</c> stem, the
-    /// device identifier and every topic segment, so changing it renames every published entity —
-    /// hence the separate dialogue, gated on a valid different id and an acknowledgement.</summary>
+    /// <summary>Renaming every published entity is not a side effect of an edit, so the id changes
+    /// only through its own dialogue.</summary>
     private async void OnChangeDeviceIdClicked(object sender, RoutedEventArgs e)
     {
         if (_setup is not { } setup) return;
 
         try
         {
-            string current = EffectiveDeviceId();
-
-            var idBox = new TextBox
-            {
-                Text = setup.Settings.Read().DeviceId,
-                PlaceholderText = MqttIdentity.Default(setup.TopicRoot, Environment.MachineName),
-            };
-            var errorText = new TextBlock
-            {
-                TextWrapping = TextWrapping.Wrap,
-                Visibility = Visibility.Collapsed,
-                Style = StyleFor("MqttResultErrorStyle"),
-            };
-            // Echoes the sanitised id that will be published; a style, so a host's theme keys reach it.
-            var previewText = new TextBlock { Style = StyleFor("MqttResultStyle") };
-            // Names the mechanism, not a consequence; a host adds its own through DeviceIdConsequence.
-            var ack = new CheckBox { Content = _strings.Get("DeviceIdAcknowledge") };
-
-            var body = new StackPanel { Spacing = 8, Width = 420 };
-            body.Children.Add(new TextBlock
-            {
-                Text = _strings.Format("DeviceIdCurrent", current),
-                TextWrapping = TextWrapping.Wrap,
-            });
-            body.Children.Add(new TextBlock
-            {
-                Text = _strings.Get("DeviceIdNew"),
-                Style = StyleFor("MqttResultStyle"),
-            });
-            body.Children.Add(idBox);
-            body.Children.Add(previewText);
-            body.Children.Add(errorText);
-            body.Children.Add(new TextBlock
-            {
-                Text = _strings.Get("DeviceIdWarning"),
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 4, 0, 0),
-            });
-            if (setup.DeviceIdConsequence is { Length: > 0 } consequence)
-                body.Children.Add(new TextBlock { Text = consequence, TextWrapping = TextWrapping.Wrap });
-            body.Children.Add(ack);
-
-            var dialog = new ContentDialog
-            {
-                XamlRoot = XamlRoot,
-                // The dialogue is rooted beside the page rather than inside it, so it does not
-                // inherit a RequestedTheme the host set on the subtree holding the panel.
-                RequestedTheme = ActualTheme,
-                Title = _strings.Get("DeviceIdTitle"),
-                Content = body,
-                PrimaryButtonText = _strings.Get("DeviceIdConfirm"),
-                CloseButtonText = _strings.Get("DeviceIdCancel"),
-                DefaultButton = ContentDialogButton.Close,
-                IsPrimaryButtonEnabled = false,
-            };
-
-            // The primary button is the only gate, so re-derive it from scratch on every edit rather
-            // than tracking a "was valid" flag that can go stale.
-            void Revalidate()
-            {
-                string raw = idBox.Text ?? "";
-                string? error = MqttIdentity.Validate(raw, _strings);
-                string candidate = MqttIdentity.Effective(raw, setup.TopicRoot, Environment.MachineName);
-
-                errorText.Text = error ?? "";
-                errorText.Visibility = error is null ? Visibility.Collapsed : Visibility.Visible;
-                previewText.Text = error is null ? _strings.Format("DeviceIdPreview", candidate) : "";
-
-                dialog.IsPrimaryButtonEnabled = error is null && candidate != current && ack.IsChecked == true;
-            }
-
-            idBox.TextChanged += (_, _) => Revalidate();
-            ack.Checked += (_, _) => Revalidate();
-            ack.Unchecked += (_, _) => Revalidate();
-            Revalidate();
-
-            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
-            if (_closed) return;
-
-            // Store the sanitised form: the card above shows the effective id and the two must not
-            // disagree. Blank stays blank — that is the "use the machine default" sentinel.
-            string entered = (idBox.Text ?? "").Trim();
-            string newId = entered.Length == 0 ? "" : MqttIdentity.Normalise(entered);
+            string? newId = await DeviceIdDialog.AskAsync(this, setup, _strings, EffectiveDeviceId(),
+                StyleFor("MqttResultStyle"), StyleFor("MqttResultErrorStyle"));
+            if (newId is null || _closed) return;
 
             setup.Settings.Update(s => s.DeviceId = newId);
             // The same callback Apply uses: the publisher evicts the superseded identity's retained
