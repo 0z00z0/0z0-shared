@@ -81,9 +81,13 @@ References `ZeroZero.Brand.Core`, `ZeroZero.Win32` and `ZeroZero.Controls.WinUI`
 - **`BrandBracketButtonColumn`** — several of those buttons stacked, all at the width of the widest,
   so their brackets line up. See [the bracket action button](#the-bracket-action-button).
 - **The brand typeface**, Cascadia Mono, with its OFL licence. Shipped as content so it travels with
-  the library into every consuming app's output, and the markup asks for it at
+  the library into every consuming app's output, at
   `ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf`. **That folder is the only one both
-  reference routes produce.** Where the font lands differs between them:
+  reference routes produce.** One dictionary, `Themes/BrandFont.xaml`, names that address under the
+  key `BrandFontFamily`, and every brand control merges it into its own resources, so a host merges
+  nothing for them. A control loads the dictionary as it is constructed, so a dictionary that is not
+  found fails the construction with an exception, unlike a font file that is not found. Where the font
+  lands differs between the routes:
 
   | Route | `Assets\Fonts\` at the output root | `ZeroZero.Brand.WinUI\Assets\Fonts\` |
   |---|---|---|
@@ -110,7 +114,8 @@ References `ZeroZero.Brand.Core`, `ZeroZero.Win32` and `ZeroZero.Controls.WinUI`
   the form XAML consumes. Ten colour keys, `BrandBackgroundColour`, `BrandBackgroundAltColour`,
   `BrandTealColour`, `BrandBlueColour`, `BrandPurpleColour`, `BrandIndigoColour`,
   `BrandAmberColour`, `BrandSteelBlueColour`, `BrandTerracottaColour` and `BrandOrangeColour`; a
-  brush per colour, `BrandTealBrush` and so on; and `BrandFontFamily`, the brand face. Light and dark
+  brush per colour, `BrandTealBrush` and so on; and `BrandFontFamily`, the brand face, merged in from
+  `Themes/BrandFont.xaml`. Light and dark
   carry the palette unchanged, because identity does not follow the theme; high contrast resolves
   every key to the system's own window and highlight colours, because that mode exists so the user's
   choice outranks the studio's. A test holds every colour to the constant in `Brand`, so the two
@@ -345,7 +350,7 @@ only its *rendering* moves to the shared control, not its data.
 wants one — a "Check for updates" under the About card on a settings page, say. The logo's square
 brackets stand at either end in the logo's teal-to-blue gradient, a symbol in the brand orange
 leads — a `>` chevron unless the host names another — and the label follows in the brand face. It
-carries its own colours and face, so it needs no merged dictionary.
+carries its own colours and merges the brand face itself, so the host merges no dictionary for it.
 
 **The button centres itself in the width the control is given.** The control sizes to its content,
 so a host that wants it at the start of that space sets `HorizontalAlignment="Left"` on the control

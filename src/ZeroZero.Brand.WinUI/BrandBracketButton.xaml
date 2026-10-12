@@ -7,8 +7,10 @@
 
     <UserControl.Resources>
         <ResourceDictionary>
-            <!-- Brand typeface, scoped to this assembly's folder as in BrandAboutControl. -->
-            <FontFamily x:Key="BracketFont">ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
+            <!-- Merged here rather than by the host, so an app that merges nothing still gets it. -->
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="ms-appx:///ZeroZero.Brand.WinUI/Themes/BrandFont.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
 
             <!-- Hover and press move the brackets from wherever they are; code sets From and To. -->
             <Storyboard x:Key="MoveBrackets">
@@ -154,11 +156,11 @@
                          otherwise, and a plain character in the brand face rather than a picture. -->
                     <Grid Width="14" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw">
                         <TextBlock x:Name="SymbolText" Text="&gt;"
-                                   FontFamily="{StaticResource BracketFont}" FontSize="14" FontWeight="Bold"
+                                   FontFamily="{StaticResource BrandFontFamily}" FontSize="14" FontWeight="Bold"
                                    Foreground="{ThemeResource BracketOrangeBrush}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         <TextBlock x:Name="Spinner" Text="|" Visibility="Collapsed"
-                                   FontFamily="{StaticResource BracketFont}" FontSize="14" FontWeight="Bold"
+                                   FontFamily="{StaticResource BrandFontFamily}" FontSize="14" FontWeight="Bold"
                                    Foreground="{ThemeResource BracketTealBrush}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         <Viewbox x:Name="Zero" Height="14" Visibility="Collapsed"
@@ -177,7 +179,7 @@
 
                     <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
                         <TextBlock x:Name="LabelText"
-                                   FontFamily="{StaticResource BracketFont}" FontSize="12"
+                                   FontFamily="{StaticResource BrandFontFamily}" FontSize="12"
                                    Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                    VerticalAlignment="Center"/>
                         <!-- The block caret. Opacity rather than Visibility, so the button keeps its

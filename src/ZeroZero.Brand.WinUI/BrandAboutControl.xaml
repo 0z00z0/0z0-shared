@@ -5,13 +5,15 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Cascadia Mono, the studio's UI face (Cascadia Code is for code surfaces only). Panels pass no
-         font down, so an implicit TextBlock style and an explicit BrandFont on each button carry it.
-         The URI is scoped to this assembly's folder, the one place the font exists on both routes. -->
+         font down, so an implicit TextBlock style and an explicit BrandFontFamily on each button
+         carry it. Merged here rather than by the host, so an app that merges nothing still gets it. -->
     <UserControl.Resources>
         <ResourceDictionary>
-            <FontFamily x:Key="BrandFont">ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="ms-appx:///ZeroZero.Brand.WinUI/Themes/BrandFont.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
             <Style TargetType="TextBlock">
-                <Setter Property="FontFamily" Value="{StaticResource BrandFont}"/>
+                <Setter Property="FontFamily" Value="{StaticResource BrandFontFamily}"/>
             </Style>
 
             <!-- The Donate cup, drawn: Cascadia Mono has no cup, and its fallback is a colour emoji.
@@ -199,7 +201,7 @@
                 <StackPanel x:Name="LibrariesGroup" Spacing="4">
                     <Button x:Name="LibrariesToggleBtn" Click="OnLibrariesToggle"
                             Content="External libraries ▾"
-                            FontSize="9" FontFamily="{StaticResource BrandFont}"
+                            FontSize="9" FontFamily="{StaticResource BrandFontFamily}"
                             Padding="0" MinWidth="0" MinHeight="0"
                             Background="Transparent" BorderBrush="Transparent"
                             HorizontalAlignment="Left"

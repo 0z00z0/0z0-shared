@@ -98,18 +98,21 @@ public class BrandResourcesTests
         }
     }
 
-    [Fact]
-    public void TheTypefaceKeyNamesTheFaceTheAboutControlUses()
+    /// <summary>A file that uses the face without merging the font dictionary fails to load at runtime.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Theory]
+    [InlineData("BrandResources.xaml")]
+    [InlineData("BrandAboutControl.xaml")]
+    [InlineData("BrandAboutWindow.xaml")]
+    [InlineData("BrandBracketButton.xaml")]
+    public void TheFaceIsDeclaredOnlyInTheFontDictionaryAndMergedWhereUsed(string file)
     {
-        string dictionaryFace = Dictionary().Root!
-            .Elements(Presentation + "FontFamily")
-            .Single(e => Key(e) == "BrandFontFamily").Value.Trim();
+        Assert.Equal("BrandFontFamily", Key(Markup("BrandFont.xaml").Root!.Elements(Presentation + "FontFamily").Single()));
 
-        var about = XDocument.Load(Path.Combine(AppContext.BaseDirectory, "BrandAboutControl.xaml"));
-        string controlFace = about.Descendants(Presentation + "FontFamily")
-            .Single(e => Key(e) == "BrandFont").Value.Trim();
-
-        Assert.Equal(controlFace, dictionaryFace);
+        var markup = Markup(file);
+        Assert.Empty(markup.Descendants(Presentation + "FontFamily"));
+        Assert.Contains(markup.Descendants(Presentation + "ResourceDictionary.MergedDictionaries").Elements(),
+                        e => e.Attribute("Source")?.Value == "ms-appx:///ZeroZero.Brand.WinUI/Themes/BrandFont.xaml");
     }
 
     /// <summary>The header band's lighter navy, which the palette has no constant for.</summary>
