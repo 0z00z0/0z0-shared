@@ -25,15 +25,16 @@ This guide is complete for adoption: the component's own source and tests need n
 | Broker | MQTT 5.0. The version is pinned, because a 5.0 CONNACK separates bad credentials from any other refusal and a 5.0 PUBACK says whether a publish was taken. |
 | Receiver | Home Assistant 2024.11.0 or later. Device-based discovery sets that floor: an older receiver never subscribes to the device topic and sees no entities at all. |
 | Panel | Windows 10 1809 (build 10.0.17763) or later, with the Windows App SDK. |
+| Licence notice | `ZeroZero.Mqtt` depends on `MessageFormat` (MIT, copyright 2014 Jeff Hansen), whose package ships no licence text. An application that ships the module carries that notice itself, for example as an external-library entry in its About box. |
 
 ## The assemblies
 
 | Assembly | Target | References | Knows about |
 |---|---|---|---|
-| `ZeroZero.Primitives` | `net10.0` | — | The log sink, the version reader, the coalescing gate |
+| `ZeroZero.Primitives` | `net10.0` | `Microsoft.Extensions.Localization.Abstractions` | The log sink, the version reader, the coalescing gate, a component's texts behind the host's localizer |
 | `ZeroZero.Config` | `net10.0` | — | Atomic JSON files, snapshot reads, mutation under one lock, quarantine of an unreadable file |
 | `ZeroZero.Controls.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Win32`, `ZeroZero.Primitives`, the Community Toolkit | The settings-row vocabulary, title-bar theming, the text prompt, the popup sized to its content |
-| `ZeroZero.Mqtt` | `net10.0` | `ZeroZero.Primitives`, `ZeroZero.Config`, `MQTTnet` | Topics, payloads, QoS, retain, the Last Will, transports, endpoint search, certificate trust, command routing, publish groups |
+| `ZeroZero.Mqtt` | `net10.0` | `ZeroZero.Primitives`, `ZeroZero.Config`, `MQTTnet`, `MessageFormat` | Topics, payloads, QoS, retain, the Last Will, transports, endpoint search, certificate trust, command routing, publish groups, the module's texts |
 | `ZeroZero.Mqtt.Discovery` | `net10.0` | `ZeroZero.Mqtt`, `ZeroZero.Primitives`, `ZeroZero.Config` | Entities, component types, the device document, availability, eviction |
 | `ZeroZero.Mqtt.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Mqtt`, `ZeroZero.Mqtt.Discovery`, `ZeroZero.Primitives`, `ZeroZero.Controls.WinUI` | Rendering the settings a user edits |
 
@@ -41,7 +42,7 @@ This guide is complete for adoption: the component's own source and tests need n
 part of the module: none carries MQTT vocabulary, none references a component, and each is
 documented on its own — [`zerozero-primitives.md`](zerozero-primitives.md),
 [`zerozero-config.md`](zerozero-config.md) and [`zerozero-controls.md`](zerozero-controls.md). The
-panel's reference to `ZeroZero.Controls.WinUI` carries `InfoIcon` and nothing else, and that
+panel's reference to `ZeroZero.Controls.WinUI` carries `InfoIcon` and `ResourceMapStringLocalizer`, and that
 assembly takes `ZeroZero.Win32` for its text prompt's placement and `ZeroZero.Primitives` for the
 log sink its popup sizer writes to, so the Win32 layer reaches an application through the module
 transitively; nothing in the module calls it. No brand assembly
@@ -118,9 +119,9 @@ the Windows App SDK nowhere still meets it, and the one alternative to this meta
 [`consume-build-kit.md`](consume-build-kit.md#a-process-wide-self-contained-property-fails-every-library-in-the-graph).
 
 **A consuming app that ships its own language-folder resources declares `DefaultLanguage` itself.**
-The panel declares `en-GB` for its own `.resw`, so nothing in the module raises the warning. An app that
-generates a merged PRI from resources of its own still has MakePRI comparing them against its
-`en-US` assumption, which is `PRI257`, and no library can declare that on the app's behalf:
+An app that generates a merged PRI from resources of its own — a `.resw` overriding module keys, for
+example — has MakePRI comparing them against its `en-US` assumption, which is `PRI257`, and no
+library can declare that on the app's behalf:
 
 ```xml
 <DefaultLanguage>en-GB</DefaultLanguage>
@@ -1245,8 +1246,8 @@ The entities behind the groups are never counted, because the panel is not shown
 Both lines compose through `MqttPanelText.SummariseBroker` and `MqttPanelText.SummarisePublish` in
 the plain `net10.0` assembly, with `MqttPublishRows.Tally` reducing a `PublishGroupSet` to the two
 numbers from one snapshot. The panel assembles no sentence of its own, so what a closed section says
-is testable without a window. A row's info icon has an English screen-reader subject whatever the
-translation.
+is testable without a window. `MqttPublishRow.InfoSubject` is the module's own text for the UI
+culture; the panel names each row's icon through the host's localizer instead.
 
 ### The info-text ownership split
 
@@ -1267,7 +1268,7 @@ icon rather than an empty one:
 | `DeviceIdConsequence` | An application-specific consequence, shown in the device-id dialogue under the module's own |
 
 A blank or whitespace-only `PublishTitle`, `PublishDescription` or `PublishInfo` keeps the module's own
-text, and so does a blank translation from an `IMqttStringSource`.
+text, and so does a blank answer from the host's localizer.
 
 ### Theming
 
@@ -1376,24 +1377,38 @@ consumer to override all six measures 11.07:1 on the status values and 14.47:1 o
 
 ### Translation
 
-Every user-facing string the module owns is in `MqttStrings`, keyed, with its en-GB text built in
-and exposed as `MqttStrings.Builtin` for a consumer generating a translation template. A consumer
-localises by adding a language folder alongside `Strings\en-GB\`, or by supplying an
-`IMqttStringSource` on the setup object. A consumer's own `.resw` entry for a module key outranks
-the module's: the merged index is asked for the application's map before the library's copy, the
-order `MqttResourceMaps` states. A lookup that finds nothing answers null and the built-in en-GB
-stands, so a resource map that fails to load leaves a readable panel rather than blank controls.
+The module's texts are two resource files compiled into `ZeroZero.Mqtt`: `Texts.resx`, the neutral
+en-GB, and `Texts.nb.resx`, Norwegian bokmål. The UI culture chooses: `nb-NO` and `nb` read bokmål,
+every other culture reads en-GB. The layout and the rules every component's texts follow are in
+[the primitives guide](zerozero-primitives.md#texts).
+
+- **The host's `IStringLocalizer` is asked first** for every key. An answer marked not found, or
+  blank, falls back to the module's file for the UI culture, then to en-GB; a key found nowhere
+  renders as its own name. `MqttPanelSetup.Strings`, the `MqttPanelText` constructor,
+  `MqttBrokerEdits` and `MqttIdentity.Validate` take the host's localizer.
+- **`MqttPanelSetup.Strings` left null asks the application's own `.resw` entries first**, through
+  `ResourceMapStringLocalizer` ([controls guide](zerozero-controls.md)). An application key with a
+  module key's name therefore overrides the module, whether or not that was meant.
+- **A language is added** by a host localizer that answers the keys in it, with no module release,
+  or by one more `Texts.<culture>.resx` in `ZeroZero.Mqtt`, released with the module. Each entry's
+  `<comment>` tells the translator what the text is, where it appears, what each placeholder holds
+  and which keys a fragment is joined with.
+- **Four texts are ICU MessageFormat patterns**, formatted by the `MessageFormat` package with the UI
+  culture's plural rules: `AgeMinutes`, `AgeHours` and `AgeDays` take `count`, `SummaryPublish` takes
+  `on` and `total`. A host localizer answering one of these keys answers with such a pattern. Every
+  other text is a .NET format string with `{0}`-style placeholders, formatted for the UI culture.
+- **Under `InvariantGlobalization` everything reads en-GB**, the counted texts included, which keep
+  the English singular for one.
 
 `MqttPanelText` composes every sentence the panel renders, and `MqttStatusText` is its static facade
-over the module's own en-GB — useful to a host rendering the same status outside the panel, in a
-tray tooltip or a log line. `MqttPanelSetup.Strings` left null reads the module's own `.resw`, and a
-key found nowhere reads as itself.
+over the module's own texts — useful to a host rendering the same status outside the panel, in a
+tray tooltip or a log line.
 
 **Every key is flat, and a key that changes name is a translation that silently stops being read**:
-the lookup finds nothing, answers null, and the built-in en-GB stands with no error anywhere. A
-translation is therefore checked against `MqttStrings.Builtin` after raising a pin, not only when a
-panel looks wrong. The module's own `.resw` is held to the same standard by test — same keys, same
-text — so the file a consumer copies as a template cannot drift from the text the fallback uses.
+the host's localizer is asked for a name nothing asks for, and the module's own text stands with no
+error anywhere. A host translation is therefore checked against `Texts.resx` after raising a pin.
+The module's own files are held to it by test: the same keys in every language, the same
+placeholders (ICU arguments by name), and a note on every entry.
 
 ---
 

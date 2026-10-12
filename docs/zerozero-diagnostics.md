@@ -3,7 +3,7 @@
 Crash diagnostics: what a process does with an exception nothing caught, the file that crash reaches
 when everything else has failed, the version line that says which build wrote the log, and the
 Windows Error Reporting registration that turns a crash into a dump file. Two assemblies, plain
-`net10.0`, no third-party package: `ZeroZero.Diagnostics` is the entry point and carries
+`net10.0`, no third-party package of their own: `ZeroZero.Diagnostics` is the entry point and carries
 `ZeroZero.Diagnostics.Dumps` with it. Both take `ZeroZero.Primitives` for the log sink and the version
 reader, and nothing else.
 

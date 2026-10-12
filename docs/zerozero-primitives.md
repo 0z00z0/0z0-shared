@@ -2,10 +2,12 @@
 
 `ZeroZero.Primitives` holds the pieces several components need and none of them owns: the
 two-member log sink and its no-op, the reader of the version an assembly reports and the form an
-About box shows, the coalescing gate, the timestamp-list file, and the source-revision stamp as build
-properties and targets.
-Plain `net10.0`, no package references, no project references, and no domain vocabulary — which is
-what makes it **foundation** rather than a component: any component may take it. The MQTT module
+About box shows, the coalescing gate, the timestamp-list file, a component's own texts with the
+host's localizer asked first, and the source-revision stamp as build properties and targets.
+Plain `net10.0`, no project references, no domain vocabulary, and one package reference: the
+localisation abstractions (`Microsoft.Extensions.Localization.Abstractions`, the `IStringLocalizer`
+interface alone, no dependency injection, logging or options). That is what makes it
+**foundation** rather than a component: any component may take it. The MQTT module
 does, for its log sink and for the gate under every retained channel; the diagnostics component
 does, for the sink and for the version reader beneath its startup line; the update component does,
 for the sink and for the version reader behind the running version; and the lifecycle and startup
@@ -62,6 +64,13 @@ This guide is complete for adoption: the component's own source and tests need n
   file that cannot be read or written throws the file system's own exception (`IOException`,
   `UnauthorizedAccessException`); what that means — allow, refuse, log — is the caller's. It never
   sorts, prunes or locks: two processes writing one file at once is the caller's to prevent.
+- **`LibraryStringLocalizer(resources, host)`** — an `IStringLocalizer` over a component's own
+  `ResourceManager`, with an optional host `IStringLocalizer` asked first. A host answer marked
+  `ResourceNotFound`, or blank, counts as missing; the component's resource file for the current UI
+  culture answers next, then its neutral en-GB; a key found nowhere comes back as its own name with
+  `ResourceNotFound` set. The indexer with arguments formats with `string.Format` in the current UI
+  culture. `GetAllStrings` lists the component's own keys, each answered as the indexer answers it.
+  How a component lays out its texts is under [Texts](#texts).
 - **The source-revision stamp** — `build/ZeroZero.Primitives.props` and
   `build/ZeroZero.Primitives.targets`. The targets file sets `SourceRevisionId` to the short
   seven-character commit of the consuming project's own repository, so `AssemblyInformationalVersion`
@@ -70,6 +79,36 @@ This guide is complete for adoption: the component's own source and tests need n
   file's own, which as a package sits in the package cache and in no repository. A tree with no git
   available stamps nothing and the assembly reports the bare number; a failed git call never fails
   the build. A `SourceRevisionId` the project or command line sets itself is kept.
+
+## Texts
+
+Every component that writes text for a person keeps it in standard `.resx` files in its own
+project, read through `LibraryStringLocalizer`:
+
+- **`<Name>.resx` is the neutral language, en-GB**, compiled into the assembly; the kit's
+  `NeutralLanguage` en-GB marks it. **`<Name>.<culture>.resx`** is a translation, compiled into a
+  satellite assembly that packs as `lib/<tfm>/<culture>/<Assembly>.resources.dll`. Norwegian bokmål
+  is `<Name>.nb.resx`: .NET's fallback reads it for `nb-NO` and `nb`; `nn` and `no` fall to en-GB.
+- **Adding a language** is one more `<Name>.<culture>.resx` per component, released with it. A host
+  adds or overrides a language without a release by passing its own `IStringLocalizer`, which every
+  component that writes text accepts.
+- **Every entry carries a context note** in its `<comment>`: the kind of text, where it appears,
+  what each placeholder holds, and anything the string cannot show — a button's width, which keys a
+  fragment is joined with and in what order. Two short sentences at most, en-GB. The `.resx` is the
+  translator's file; there is no other.
+- **Placeholders** are .NET format items, `{0}`, formatted for the UI culture; a component with
+  counted texts may use ICU MessageFormat patterns instead and says so in its own guide. A
+  translation carries exactly the placeholders of the neutral text.
+- **Tests** in this repository link `tests/Shared/TranslationFiles.cs` and hold every translation to
+  the neutral file's keys and placeholders, and every entry to a non-blank note; the release
+  verification packs each translated component and requires its satellite assemblies.
+
+Two traps:
+
+- **With `InvariantGlobalization` the UI culture is invariant, so every text shows in en-GB**,
+  whatever the machine's language.
+- **A literal line break inside a `.resx` value compiles as the checkout's line ending**, a
+  carriage return and line feed on a Windows checkout. A paragraph break is written as the character reference `&#xA;`.
 
 ## Traps
 
@@ -97,7 +136,7 @@ properties of a logging framework behind `ILogSink` generally, not of that one h
 ## Take the reference
 
 Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Primitives` itself;
-there is nothing beneath it. An application taking a component that already references it — the
+beneath it is the localisation abstractions package alone. An application taking a component that already references it — the
 MQTT module does — has the types transitively and adds nothing for them.
 
 **The stamp is taken by a direct reference.** On the package route NuGet imports the two build

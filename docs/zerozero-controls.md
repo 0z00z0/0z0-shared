@@ -2,8 +2,8 @@
 
 `ZeroZero.Controls.WinUI` holds the WinUI controls that carry no studio identity: the settings-row
 vocabulary — info bubble, section header, card row — title-bar theming, the single-line text
-prompt, the sizing of a popup window to its own content, and a taskbar-and-Alt+Tab setter that
-survives a start before the taskbar exists.
+prompt, the sizing of a popup window to its own content, a taskbar-and-Alt+Tab setter that
+survives a start before the taskbar exists, and a localizer over the application's own `.resw`.
 `net10.0-windows10.0.26100.0`, the Windows App SDK, the Community Toolkit's settings
 controls, `ZeroZero.Win32` and `ZeroZero.Primitives`; no font pack, no palette, and no toolkit type
 in a public signature.
@@ -127,6 +127,18 @@ This guide is complete for adoption: the component's own source and tests need n
   optional, and without one nothing is written and the once-per-process line stays unspent.
   `ContentSizedPopup` sets it this way, and the About window, the update window and the text prompt
   are built on it.
+- **`ResourceMapStringLocalizer(library)`** — an `IStringLocalizer` over the application's own
+  `.resw` entries, for a host that wants its resource files to override a library's texts. Optional:
+  a host passes it where a component takes a localizer, and the MQTT panel uses it when its setup
+  supplies none. `library` is the library's assembly name. Several maps are asked, because where
+  resources land in the index depends on how the application builds: the application's merged index
+  and then `<library>.pri` beside the executable, and under each the `Resources` map, then
+  `<library>/Resources`, then `<library>`, then the root. **The application's own `Resources` map is
+  asked first, so any application key with the same name as a library key overrides it**, meant or
+  not. An index that fails to open leaves fewer places to ask, never an exception; an empty answer
+  counts as none, and a key nothing answers comes back not found, so the library's own text stands.
+  `GetAllStrings` returns nothing. The application's own resources need `DefaultLanguage` en-GB in
+  its project ([`consuming.md`](consuming.md)).
 
 Not here, by design: anything carrying the studio's face or palette. Those are the brand component's
 ([`zerozero-brand.md`](zerozero-brand.md)), which a component takes when it needs them and says so.
@@ -206,7 +218,9 @@ the title-bar enum and palette, compiled in as linked source and pinned — opaq
 grounds the window colour, glyph and fill ordering, no value shared between the two sets — and
 the controls' markup read as data, so the section header keeps its rule above a heading whose
 colour and face are the host's, the row keeps its bubble before its field, and the prompt keeps
-its confirm on the right of two equal columns. `ContentSizedPopup`'s arithmetic — rounding up, the
+its confirm on the right of two equal columns. The order `ResourceMapStringLocalizer` asks its
+maps in is linked in and driven over supplied maps; opening a real index needs the runtime and is
+not covered. `ContentSizedPopup`'s arithmetic — rounding up, the
 200-unit fallback, the work-area cap and the centring — is linked in and tested; its window calls
 are looked at in the harness. `PopupWindowFit` is not covered there: it needs a
 live window and a laid-out panel. The arithmetic it defers to is covered in

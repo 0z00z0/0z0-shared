@@ -19,9 +19,8 @@ holds a direct reference at that version, and a direct reference below a transit
 an error. Raise both or neither.
 
 An app that ships its own language-folder resources declares `<DefaultLanguage>en-GB</DefaultLanguage>`
-in its own project. The panel declares it for its own `.resw`, but a merged app PRI is built from the
-app's resources and no library can declare the default on its behalf — without it MakePRI compares
-them against `en-US` and warns `PRI257`.
+in its own project. A merged app PRI is built from the app's resources and no library can declare
+the default on its behalf — without it MakePRI compares them against `en-US` and warns `PRI257`.
 
 ## Host it
 
@@ -262,13 +261,16 @@ an extreme palette for the same purpose.
 
 ## Translation
 
-One `.resw` under `Strings\en-GB\`, read through the Windows App SDK's `ResourceManager` and the
-`ResourceMap`s below it — several are tried, because where a library's strings land in the index
-depends on how the consuming application builds. The application's own map is asked before the
-library's copy, so a host's `.resw` entry for a module key is the one the panel renders. A consumer
-localises by adding a language folder; a host with its own resource system supplies an
-`IMqttStringSource` on the setup object instead. Everything falls back to the module's built-in
-en-GB, so a resource map that fails to load leaves a readable panel rather than blank controls.
+The panel speaks en-GB and Norwegian bokmål out of the box, chosen by the UI culture: `nb-NO` and
+`nb` read bokmål, every other culture en-GB.
+
+- **Override a key or add a language** with an `IStringLocalizer` on `MqttPanelSetup.Strings`. It is
+  asked first for every key; a key it does not hold, or holds blank, falls back to the module.
+- **Left null, the application's own `.resw` is asked first**: an entry named like a module key
+  overrides it, so an application keeps no copies of module texts it does not mean to change.
+- **The keys and what each text is** are in `Texts.resx` in `ZeroZero.Mqtt`; every entry's comment
+  says where the text appears and what its placeholders hold. The full rules are in
+  [`zerozero-mqtt.md`](zerozero-mqtt.md#translation).
 
 ## Inside the panel
 
@@ -277,8 +279,8 @@ The rules the markup and code-behind keep, for anyone changing the panel itself.
 - **Alignment.** Every field is one width (`MqttFieldWidth`), every card right-aligns its content,
   and an info icon always sits to the left of the field it explains. No adornment can then displace
   a right edge, and the whole column lands on one line without a per-card measurement.
-- **No user-facing text in the markup.** Every string comes from `MqttStrings`, so the module's
-  prose has one home, one fallback and one translation route.
+- **No user-facing text in the markup.** Every text comes from the module's resource files behind
+  the host's localizer, so the module's prose has one home and one translation route.
 - **The font is set on the root, and every keyed style that renders text repeats the key.** Rows
   built in code inherit it; an element with an explicit style takes the style's value over the
   inherited one, so a style without the key would fall back to the stock face.

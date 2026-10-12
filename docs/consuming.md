@@ -249,9 +249,9 @@ token every restore then needs.
 ## Traps
 
 - **`DefaultLanguage`.** An app that ships its own language-folder resources declares
-  `<DefaultLanguage>en-GB</DefaultLanguage>` in its own project. A library declares it for its own
-  `.resw`, but a merged app PRI is built from the app's resources and no library can declare the
-  default on the app's behalf — without it MakePRI compares them against `en-US` and warns `PRI257`.
+  `<DefaultLanguage>en-GB</DefaultLanguage>` in its own project. A merged app PRI is built from the
+  app's resources and no library can declare the default on the app's behalf — without it MakePRI
+  compares them against `en-US` and warns `PRI257`.
 - **`UndefineProperties`** on the sibling route, above.
 - **`PerMonitorV2`.** The consuming app's `app.manifest` declares per-monitor-v2 DPI awareness, so
   every shared window renders sharp on a high-DPI display rather than being bitmap-stretched.
