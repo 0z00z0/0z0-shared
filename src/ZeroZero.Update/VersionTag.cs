@@ -16,6 +16,15 @@ public static class VersionTag
         return true;
     }
 
+    /// <summary>The running version as the entry assembly reports it, read by the tag's rule once the
+    /// commit stamp after <c>+</c> is dropped: a pre-release suffix is refused on both sides.</summary>
+    internal static bool TryParseRunning(string text, out Version version)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        int plus = text.IndexOf('+');
+        return TryParse(plus >= 0 ? text[..plus] : text, out version);
+    }
+
     /// <summary>The tag without its <c>v</c>, trimmed: what the installer file name carries.</summary>
     public static string NumberOf(string tag)
     {

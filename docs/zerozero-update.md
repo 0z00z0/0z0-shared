@@ -650,6 +650,11 @@ does not wait for a report to be handled.
   executing one: the executing assembly is this library once the code is shared, and its version
   would silently stand in for the application's. A host with no entry assembly, or one whose
   version is not the product's, sets `RunningVersion`.
+- **The running version follows the tag's rule.** The commit after `+` is dropped, and what is
+  left must be a plain version, as a tag must. A pre-release such as `1.2.3-beta` is not read as
+  `1.2.3`: like an entry assembly reporting no version at all, it makes the `UpdateService`
+  constructor throw `InvalidOperationException`, and the host sets `RunningVersion` to check from
+  a pre-release build.
 - **Pin the next certificate one release ahead.** A certificate rotated in with the same release
   that first expects it is refused by every installed version, since none of them pins it. The
   release before the rotation carries both thumbprints. An application that accepts the publisher

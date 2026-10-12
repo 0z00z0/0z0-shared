@@ -280,11 +280,9 @@ public sealed class UpdateService : IUpdateService, IDisposable
         Assembly entry = Assembly.GetEntryAssembly()
             ?? throw new InvalidOperationException("The running version is unknown: there is no entry assembly to read it from. Set UpdateOptions.RunningVersion.");
         string text = AssemblyVersionText.Read(entry);
-        int cut = text.IndexOfAny(['+', '-']);
-        string number = cut >= 0 ? text[..cut] : text;
-        if (!Version.TryParse(number, out Version? version))
-            throw new InvalidOperationException($"The entry assembly reports '{text}', which is not a version. Set UpdateOptions.RunningVersion.");
-        return VersionTag.Normalise(version);
+        if (!VersionTag.TryParseRunning(text, out Version version))
+            throw new InvalidOperationException($"The entry assembly reports '{text}', which is not a plain version. Set UpdateOptions.RunningVersion.");
+        return version;
     }
 
     private static HttpClient NewClient(UpdateOptions options, Version running, string accept)

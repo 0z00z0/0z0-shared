@@ -16,7 +16,9 @@ public sealed class UpdateOptions
     public required string ProductName { get; init; }
 
     /// <summary>The version the application is running. Null reads the entry assembly — the
-    /// application, never this library — through <see cref="AssemblyVersionText"/>.</summary>
+    /// application, never this library — through <see cref="AssemblyVersionText"/>, by the same rule
+    /// as a release tag once the commit after <c>+</c> is dropped. A pre-release suffix or anything
+    /// else that is not a plain version makes the service's constructor throw.</summary>
     public Version? RunningVersion { get; init; }
 
     /// <summary>Who must have signed the installer. The only input to the signature check; neither
