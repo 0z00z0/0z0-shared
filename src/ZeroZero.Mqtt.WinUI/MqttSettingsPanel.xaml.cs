@@ -195,8 +195,7 @@ public sealed partial class MqttSettingsPanel : UserControl
         EnabledToggle.OnContent = _strings.Get("ToggleOn");
         EnabledToggle.OffContent = _strings.Get("ToggleOff");
 
-        StatusHeading.Text = _strings.Get("HeadingStatus");
-        SetInfo(StatusInfoIcon, _strings.Get("SubjectStatus"), _strings.Get("InfoStatus"));
+        SetHeader(StatusHeader, "HeadingStatus", "SubjectStatus", _strings.Get("InfoStatus"));
         ConnectionLabel.Text = _strings.Get("RowConnection");
         SetInfo(ConnectionInfoIcon, _strings.Get("SubjectConnection"), _strings.Get("InfoConnection"));
         BrokerInUseLabel.Text = _strings.Get("RowBrokerInUse");
@@ -207,8 +206,7 @@ public sealed partial class MqttSettingsPanel : UserControl
         LastCommandLabel.Text = _strings.Get("RowLastCommand");
         SetInfo(LastCommandInfoIcon, _strings.Get("SubjectLastCommand"), _strings.Get("InfoLastCommand"));
 
-        DeviceHeading.Text = _strings.Get("HeadingDevice");
-        SetInfo(DeviceInfoIcon, _strings.Get("SubjectDevice"), _strings.Get("InfoDevice"));
+        SetHeader(DeviceHeader, "HeadingDevice", "SubjectDevice", _strings.Get("InfoDevice"));
         DeviceNameCard.Header = _strings.Get("RowDeviceName");
         DeviceNameDescription.Text = _strings.Get("DescDeviceName");
         SetInfo(DeviceNameInfoIcon, _strings.Get("SubjectDeviceName"), _strings.Get("InfoDeviceName"));
@@ -219,8 +217,7 @@ public sealed partial class MqttSettingsPanel : UserControl
                 _strings.Format("InfoDeviceId", MqttIdentity.MaxLength));
         ChangeDeviceIdBtn.Content = _strings.Get("ButtonChangeDeviceId");
 
-        BrokerHeading.Text = _strings.Get("HeadingBroker");
-        SetInfo(BrokerInfoIcon, _strings.Get("SubjectBroker"), _strings.Get("InfoBroker"));
+        SetHeader(BrokerHeader, "HeadingBroker", "SubjectBroker", _strings.Get("InfoBroker"));
         BrokerDirtyText.Text = _strings.Get("NotApplied");
         // The two expander summaries are not set here: they are composed from live state, in
         // RefreshSummaries, exactly as the Status rows are.
@@ -258,7 +255,9 @@ public sealed partial class MqttSettingsPanel : UserControl
         AppliedText.Text = _strings.Get("Applied");
         SetInfo(TestInfoIcon, _strings.Get("SubjectTest"), _strings.Get("InfoTest"));
 
-        PublishHeading.Text = _strings.Get("HeadingPublish");
+        // The bubble text is the host's, set in ApplyHostText.
+        PublishHeader.Heading = _strings.Get("HeadingPublish");
+        PublishHeader.InfoSubject = _strings.Get("SubjectPublishGroups");
     }
 
     /// <summary>The strings the host owns. What an application publishes is the one thing the module
@@ -272,17 +271,21 @@ public sealed partial class MqttSettingsPanel : UserControl
         if (setup.PublishInfo is { } info && !string.IsNullOrWhiteSpace(info))
             SetInfo(PublishInfoIcon, _strings.Get("SubjectPublishSwitch"), WithModuleVersion(info));
 
-        // No fallback here on purpose: an icon opening on nothing is worse than no icon.
-        bool hasGroupsInfo = !string.IsNullOrWhiteSpace(setup.PublishGroupsInfo);
-        if (hasGroupsInfo)
-            SetInfo(PublishGroupsInfoIcon, _strings.Get("SubjectPublishGroups"), setup.PublishGroupsInfo!);
-        PublishGroupsInfoIcon.Visibility = hasGroupsInfo ? Visibility.Visible : Visibility.Collapsed;
+        // No module fallback: the header hides a blank bubble.
+        PublishHeader.Info = setup.PublishGroupsInfo ?? "";
     }
 
     private static void SetInfo(InfoIcon icon, string subject, string info)
     {
         icon.Subject = subject;
         icon.Info = info;
+    }
+
+    private void SetHeader(SettingsSectionHeader header, string headingKey, string subjectKey, string info)
+    {
+        header.Heading = _strings.Get(headingKey);
+        header.InfoSubject = _strings.Get(subjectKey);
+        header.Info = info;
     }
 
     /// <summary>The publish switch's text with the module build in force appended.</summary>
