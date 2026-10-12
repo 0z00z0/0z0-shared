@@ -49,9 +49,9 @@ public sealed class UnattendedUpdateOptions
     /// Ignored under <see cref="CheckCadence.Once"/>.</summary>
     public TimeSpan CheckInterval { get; init; } = UpdateScheduler.DefaultCheckInterval;
 
-    /// <summary>How often the policy looks again between checks. A check that did not complete and
-    /// an installer that could not start are both retried on this tick rather than waiting for the
-    /// next check.</summary>
+    /// <summary>How often the policy looks again between checks. A check that did not complete, a
+    /// download that failed and an installer that could not start are retried on this tick rather
+    /// than waiting for the next check.</summary>
     public TimeSpan RetryInterval { get; init; } = TimeSpan.FromMinutes(10);
 
     /// <summary>What the application does once the installer is running: mark its exit deliberate

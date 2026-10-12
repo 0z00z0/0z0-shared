@@ -479,8 +479,11 @@ never again for the life of the process, whatever that check finds — something
 cannot express at any value, since even the longest one checks again eventually. The cadence governs
 checking only: a release already found keeps following `MayDownloadNow`, the machine-free rule,
 `MayInstallNow` and the retry when it could not start, so the ticks go on for as long as the
-scheduler runs and simply find no check due once the one check has run. A download that fails or
-does not verify lets the release go, so under `Once` nothing installs for the rest of the process.
+scheduler runs and simply find no check due once the one check has run. A download that fails
+keeps the release, and every tick after it downloads again until one completes, under `Once` as
+under `Periodic`. A link that keeps failing therefore costs one download attempt every
+`RetryInterval`, not one a day. A download that does not verify, or a release that cannot be
+verified, lets the release go, so under `Once` that release never installs in this process.
 
 **The application is asked before anything is downloaded.** `MayDownloadNow` is called once a check
 has found a release and before a byte of it is fetched. An `InstallMoment.NotNow` keeps the release
@@ -543,7 +546,7 @@ Each tick says where it ended:
 | `CheckFailed` | The check did not complete and nothing is held. The cadence is not stamped, so the next tick checks again. With something held, the tick carries on with it instead. |
 | `NothingToInstall` | The check completed, there is nothing newer, and nothing is held. |
 | `DownloadRefused` | A release is held and `MayDownloadNow` refused its download at this moment. Nothing was downloaded, and the next tick asks again. |
-| `NotPrepared` | The release was not downloaded, or did not verify, and no verified installer is held. Nothing ran, the release is let go, and the next check decides again: under `CheckCadence.Once` there is none. |
+| `NotPrepared` | The release was not downloaded, or did not verify, and no verified installer is held. Nothing ran. A failed download (`DownloadFailed`) keeps the release and the next tick downloads it again, under either cadence. Any other refusal lets the release go, and the next check decides again: under `CheckCadence.Once` there is none. |
 | `Refused` | A verified installer is in hand and this moment was refused. `Reason` says which rule refused it. |
 | `LaunchFailed` | The installer did not start. The next tick downloads and verifies it again, or the newer release already waiting where a check found one. |
 | `InstallerStarted` | The installer is running and the shutdown callback has been called. Every tick after it answers the same and does nothing, so a tick landing while the application is still on its way out starts no second installer. |
@@ -725,8 +728,8 @@ does not wait for a report to be handled.
   the setting off wires `UpdateScheduler` over `UpdateFlow` as well.
 - **`CheckCadence.Once` stops checking, not ticking.** The scheduler still runs every
   `RetryInterval` after the single check, because a release already found still needs
-  `MayDownloadNow`, the machine-free rule, `MayInstallNow` and the launch retry applied to it on
-  every tick. Under `Once`, a held release is never replaced: no later check runs to find a newer one.
+  `MayDownloadNow`, the download retry, the machine-free rule, `MayInstallNow` and the launch retry
+  applied to it on every tick. Under `Once`, a held release is never replaced: no later check runs to find a newer one.
 - **A held installer may still start while a newer release waits for its download.** Where
   `MayDownloadNow` refuses the newer release, the verified installer already in hand is still
   offered, so the older version can install and the newer one is found by the next process's first

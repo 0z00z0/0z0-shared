@@ -318,6 +318,30 @@ public class UnattendedUpdatePolicyTests
         Assert.Equal(1, _service.Checks);
     }
 
+    /// <summary>A failed download does not end unattended updating, even with no check left to find
+    /// the release again; a download that did not verify is not fetched again every tick.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Theory]
+    [InlineData(PrepareOutcome.DownloadFailed, true)]
+    [InlineData(PrepareOutcome.Refused, false)]
+    public async Task NotPrepared_UnderOnce_OnlyAFailedDownloadIsTriedAgain(PrepareOutcome outcome, bool triedAgain)
+    {
+        ReleaseIsWaiting();
+        _idle.ScreenLocked = true;
+        _service.Prepared = FakeUpdateService.NotReady(outcome, outcome == PrepareOutcome.Refused ? VerificationVerdict.HashMismatch : null);
+        UnattendedUpdatePolicy policy = Policy(cadence: CheckCadence.Once);
+
+        UnattendedTick failed = await policy.TickAsync();
+        Assert.Equal(UnattendedOutcome.NotPrepared, failed.Outcome);
+
+        _service.Prepared = FakeUpdateService.Ready(FakeUpdateService.Release);
+        UnattendedTick next = await policy.TickAsync();
+
+        Assert.Equal(triedAgain ? UnattendedOutcome.InstallerStarted : UnattendedOutcome.NotDue, next.Outcome);
+        Assert.Equal(triedAgain ? 2 : 1, _service.Prepares);
+        Assert.Equal(1, _service.Checks);
+    }
+
     /// <summary>The gap <c>TickReported</c> closes: a policy driving itself through <see
     /// cref="UnattendedUpdatePolicy.Start"/> hands every tick's result to the callback, because the
     /// scheduler calls <see cref="UnattendedUpdatePolicy.TickAsync"/> internally and otherwise keeps
