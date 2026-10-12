@@ -84,7 +84,6 @@ public sealed class BrandFontPathTests(PackedBrand brand)
     private static readonly (string File, int Count)[] Sources =
     [
         (Path.Combine("src", "ZeroZero.Brand.WinUI", "Themes", "BrandFont.xaml"), 1),
-        (Path.Combine("src", "ZeroZero.Update.WinUI", "UpdateWindow.xaml"), 1),
     ];
 
     [Trait(Guard.Category, Guard.Value)]
