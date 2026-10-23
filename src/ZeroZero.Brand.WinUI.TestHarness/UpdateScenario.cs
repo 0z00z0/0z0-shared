@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -57,10 +56,6 @@ internal static class UpdateScenario
     /// for the capture; nothing answers them.</summary>
     internal static void ShowStage(string stage)
     {
-        // --culture nb-NO shows the window in that language, whatever the machine's own.
-        if (HarnessArguments.ValueAfter(Environment.GetCommandLineArgs(), "--culture") is { } culture)
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
-
         var (workArea, scale) = MonitorMetrics.ForCursor();
 
         foreach (ElementTheme theme in new[] { ElementTheme.Light, ElementTheme.Dark })
