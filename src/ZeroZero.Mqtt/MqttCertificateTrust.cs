@@ -26,7 +26,7 @@ public readonly record struct MqttPresentedCertificate(bool SystemTrusted)
         new(certificate is not null && errors == SslPolicyErrors.None);
 }
 
-/// <summary>Which certificate an encrypted link trusts. A setting rather than a hook, because
+/// <summary>Which certificate an encrypted link trusts. A setting rather than a callback, because
 /// encryption forced on against a broker with a self-signed certificate cannot connect without
 /// one, and the failure otherwise reads as "the connection failed" with no route to a fix.</summary>
 /// <remarks>

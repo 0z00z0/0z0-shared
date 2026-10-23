@@ -564,8 +564,7 @@ Mqtt.Initialise(new MqttPanelSetup(connection)
     DefaultDeviceName   = $"Example App ({Environment.MachineName})",
     PublishTitle        = "Publish to MQTT",
     PublishDescription  = "Publishes this application's state to an MQTT broker.",
-    PublishGroupsInfo   = "Each group is a set of entities. Switching one off stops it publishing "
-                        + "and marks its entities unavailable; nothing is deleted.",
+    OfferRemoval        = true,
     DeviceIdConsequence = "Any dashboard card pointing at the old entities has to be repointed.",
     CommandLabel        = id => entities.NameOf(id),
     Log                 = log,
@@ -615,7 +614,13 @@ Mqtt.Initialise(new MqttPanelSetup
 does not catch a missing one. `RecallEndpoint` stays optional; it is the same accessor the
 connection is given through `MqttConnectionSetup.RecallEndpoint`, and without it the Broker in use
 row and the closed Broker line never show a detected endpoint while the Connection row still reads
-the live state.
+the live state. **Such a host calls `NotifyConnectionStateChanged()` on the setup whenever the
+state changes**, from any thread; a setup built from the connection follows `StateChanged` itself.
+Without either, the Status rows and the closed Broker line are redrawn only when the page is.
+
+**A stored endpoint keeps all five fields.** `MqttEndpointMemory.Encrypted` defaults to null, which
+means "not recorded": the sweep tries both schemes on that endpoint, cipher first, and nothing can
+report the encryption in force from it. A host that writes four fields back gets that for good.
 
 **Two obligations the panel's own copy depends on.** `ConnectionChanged` must run the connection's
 apply path, because the device-id dialogue promises the old entities are removed and the ledger is
@@ -626,9 +631,9 @@ state, because the announced entity set is baked into the retained document.
 |---|---|
 | `Initialise(setup)` | Once, on the UI thread, before anything else. |
 | `Reload()` | Whenever the host re-shows the page and the store may have changed while it was away — a write the panel did not make. Re-reads the store; keeps whatever is being typed. Throws before `Initialise`. |
-| `Refresh()` | When the page comes back on screen with nothing edited and the store as the panel left it: re-reads the live connection only. Under the settings shell, the section's `Enter` hook — or `Reload` there, in an application whose settings change outside the panel. |
+| `Refresh()` | When the page comes back on screen with nothing edited and the store as the panel left it: re-reads the live connection only. Under the settings shell, the section's `Enter` callback, which runs each time the section is shown — or `Reload` there, in an application whose settings change outside the panel. |
 | `Revert()` | Only behind an explicit control: it discards staged broker edits. Throws before `Initialise`. |
-| `Cancel()` | On window close only — an in-flight probe outlives the window. Final: the panel never touches its controls again, so a host that keeps the page for the next visit, as the settings shell does, calls it from the window's `Closed` and never from a leave hook. |
+| `Cancel()` | On window close only — an in-flight probe outlives the window. Final: the panel never touches its controls again, so a host that keeps the page for the next visit, as the settings shell does, calls it from the window's `Closed` and never from the callback that runs on leaving the page. |
 
 **`Reload` and `Revert` throw an `InvalidOperationException` if the panel has not been initialised**,
 naming the ordering. Both read the settings store the panel is handed on `Initialise`, so neither
@@ -914,9 +919,10 @@ user declined.
 **Removing the device outright is a separate, explicit operation** — `MqttConnection.RemoveDeviceAsync`.
 It empties the document, both availability topics, every state topic and every command topic, then
 stops the connection, and it deletes every registry entry the device owns along with the names,
-entity ids and areas the user chose. Nothing a user does to the settings can reach it. Switching
-publishing off, or blanking the host so the configuration stops being complete, publishes offline and
-leaves everything standing.
+entity ids and areas the user chose. The settings panel reaches it only where the application sets
+`MqttPanelSetup.OfferRemoval`, and only behind a confirmation; no other settings change reaches it.
+Switching publishing off, or blanking the host so the configuration stops being complete, publishes
+offline and leaves everything standing.
 
 - **`DiscoveryPublisher.RemoveDeviceAsync` withdraws without stopping the connection.** The channels
   go on publishing and refill the emptied state topics, and the next reconnect announces the device
@@ -1045,7 +1051,7 @@ itself — `Failed` with the exception's type and message, `TlsUntrusted` only w
 an authentication failure — and the clear-text retry stays blocked either way, because encryption
 was on offer.
 
-**Certificate trust** is a setting rather than a hook, because encryption forced on against a broker
+**Certificate trust** is a setting rather than a callback the application supplies, because encryption forced on against a broker
 with a self-signed certificate cannot connect under system trust alone, and the failure otherwise
 reads as "the connection failed" with no route to a fix. `MqttCertificateTrustMode` has two values:
 
@@ -1134,7 +1140,7 @@ Three rules move it:
   continuous by having each connect read as a success.
 - **A session that outlives thirty seconds is stable**, and drops the ladder back to the floor, so
   one bad minute does not leave a healthy link reconnecting a minute late for the rest of the
-  session. A resume from standby does the same, because the suspend killed the socket and the
+  session. A resume from standby does the same, because the suspend ended the socket and the
   session that ended with it was not the broker's doing. So does a changed parameter set, because a
   wait earned under the old values says nothing about the new ones: the loop reconnects with them
   at once, link up or down. `ApplyAsync` returns before that reconnect has happened.
@@ -1179,7 +1185,8 @@ is dead — is one Error line per send.
 ## The panel
 
 `MqttSettingsPanel` renders five sections: the master switch, a live Status block, the device
-identity, a staged Broker block behind an Apply, and one row per declared publish group. It knows no
+identity, a staged Broker block behind an Apply, and one row per declared publish group — and a sixth,
+removing the published device, where the application sets `OfferRemoval`. It knows no
 application's subject matter; everything domain-shaped arrives through `MqttPanelSetup` and every
 edit reports back as a callback.
 
@@ -1221,8 +1228,15 @@ configuration readable without opening the group.
 | The field is | The line shows | Example |
 |---|---|---|
 | set by hand | the value, unqualified | `8883` |
-| on Automatic, with a live connection behind it | the value in force, marked | `8883 (detected)` |
+| on Automatic, with a live connection behind it | the value in force, followed by a small magnifier | `8883` and the magnifier |
 | on Automatic, with nothing found yet | the instruction itself | `Automatic` |
+
+**The magnifier is drawn, not a character:** a vector shape in the line's own text brush, so it
+follows the theme and high contrast. The Broker heading's info bubble explains it once, in its own
+paragraph (`InfoDetectedMark`); a screen reader hears `NameDetectedValue`, "detected value", after
+each marked value. `MqttPanelText.SummariseBroker` returns an `MqttBrokerSummary`: the plain `Text`
+and `DetectedAt`, each position in it straight after a found value, where a panel draws its mark.
+The mark travels with its value, so a translation of `SummaryBroker` may reorder the parts freely.
 
 The marking exists because on a typical installation only the host is set and everything else is
 left on Automatic. A summary of what is merely *configured* would read `host · Automatic ·
@@ -1255,20 +1269,20 @@ culture; the panel names each row's icon through the host's localizer instead.
 what Automatic does about encryption, what the endpoint search remembers — identical for every
 consumer, and no host writes any of it.
 
-**What an application publishes is the host's.** The module knows none of it. Four members carry it,
-and `PublishGroupsInfo` deliberately has no fallback, so an unset one leaves the heading with no
-icon rather than an empty one:
+**What an application publishes is the host's.** The module knows none of it, so these members
+carry it:
 
 | Member | Where it renders |
 |---|---|
 | `PublishTitle` | The master switch card's header |
 | `PublishDescription` | The one line under the master switch — the only place the panel says what this application publishes |
 | `PublishInfo` | The master switch's info icon |
-| `PublishGroupsInfo` | The "What to publish" heading's icon. No fallback. |
+| `PublishGroupsInfo` | The "What to publish" heading's icon |
 | `DeviceIdConsequence` | An application-specific consequence, shown in the device-id dialogue under the module's own |
 
-A blank or whitespace-only `PublishTitle`, `PublishDescription` or `PublishInfo` keeps the module's own
-text, and so does a blank answer from the host's localizer.
+A blank or whitespace-only `PublishTitle`, `PublishDescription`, `PublishInfo` or `PublishGroupsInfo`
+keeps the module's own text, and so does a blank answer from the host's localizer. The module's
+`PublishGroupsInfo` text says what a group switch does, which is the same for every application.
 
 ### Theming
 

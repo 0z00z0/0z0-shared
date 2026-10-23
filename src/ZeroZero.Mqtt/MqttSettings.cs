@@ -29,7 +29,7 @@ public sealed class MqttSettings
     /// around, exactly as for the port and the transport.</summary>
     public MqttEncryptionMode EncryptionMode { get; set; } = MqttEncryptionMode.Auto;
 
-    /// <summary>Which certificate an encrypted link accepts. A setting rather than a hook: forcing
+    /// <summary>Which certificate an encrypted link accepts. A setting rather than a callback: forcing
     /// encryption on against a broker with a self-signed certificate cannot connect under system
     /// trust alone.</summary>
     public MqttCertificateTrust CertificateTrust { get; set; } = MqttCertificateTrust.SystemTrust;

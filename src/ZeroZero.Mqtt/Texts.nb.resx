@@ -454,15 +454,11 @@
   </data>
   <data name="SummaryBroker" xml:space="preserve">
     <value>{0} · {1} · {2} · {3}</value>
-    <comment>Line on the closed Broker section; {0} = host, {1} = port, {2} = transport, {3} = SummaryEncrypted or SummaryNotEncrypted. A value not chosen shows OptionAutomatic or SummaryDetected.</comment>
+    <comment>Line on the closed Broker section; {0} = host, {1} = port, {2} = transport, {3} = SummaryEncrypted or SummaryNotEncrypted. A value not chosen shows OptionAutomatic, or the value found followed by a drawn icon (see InfoDetectedMark).</comment>
   </data>
   <data name="SummaryBrokerTrustAny" xml:space="preserve">
     <value>{0} — alle sertifikater godtas</value>
     <comment>Wraps SummaryBroker when any certificate is accepted; {0} = the finished SummaryBroker line.</comment>
-  </data>
-  <data name="SummaryDetected" xml:space="preserve">
-    <value>{0} (funnet)</value>
-    <comment>A value found automatically rather than chosen, inside SummaryBroker; {0} = the value.</comment>
   </data>
   <data name="SummaryEncrypted" xml:space="preserve">
     <value>kryptert</value>
@@ -481,7 +477,7 @@
     <comment>Line on the closed publish section when the application declares no group.</comment>
   </data>
   <data name="InfoPublishSwitch" xml:space="preserve">
-    <value>Hovedbryteren for hele funksjonen. Ingenting på nettverket berøres mens den er av, og den virker umiddelbart.</value>
+    <value>Hovedbryteren for hele funksjonen, og den virker umiddelbart. Ingenting sendes mens den er av; når den slås av, meldes enheten frakoblet hos brokeren før tilkoblingen lukkes.</value>
     <comment>Info bubble text for the master switch, followed by ModuleVersion. Full sentences.</comment>
   </data>
   <data name="InfoStatus" xml:space="preserve">
@@ -549,8 +545,8 @@
     <comment>Info bubble text for the Password row.</comment>
   </data>
   <data name="InfoDiscoveryPrefix" xml:space="preserve">
-    <value>Entiteter kunngjøres etter Home Assistant MQTT Discovery-konvensjonen, en åpent publisert spesifikasjon som noen MQTT-mottakere følger og andre ignorerer. Endre prefikset bare for en mottaker som lytter et annet sted.</value>
-    <comment>Info bubble text for the Discovery prefix row. Home Assistant MQTT Discovery is a proper name.</comment>
+    <value>Entitetene kunngjøres i et åpent publisert discovery-format, som noen programmer leser og andre ignorerer.</value>
+    <comment>Info bubble text for the Discovery prefix row. Names no product: the format is read by more than one program.</comment>
   </data>
   <data name="InfoTest" xml:space="preserve">
     <value>Prøver verdiene i feltene over, også de som ikke er tatt i bruk ennå, over en egen midlertidig tilkobling. Ingenting lagres: verken feltene eller hvor brokeren svarte. Det som står på Automatisk kan kreve flere adresser før det finnes; resultatet nevner den som svarte, og lister opp det som ble prøvd bare når ingen svarte.</value>
@@ -651,5 +647,65 @@
   <data name="DeviceIdNoAlnum" xml:space="preserve">
     <value>En ID må inneholde minst én bokstav eller ett siffer.</value>
     <comment>Validation message in the change device ID dialogue.</comment>
+  </data>
+  <data name="InfoPublishGroups" xml:space="preserve">
+    <value>Hver bryter virker med en gang. Når en gruppe slås av, merkes entitetene som utilgjengelige uten å bli fjernet, slik at navnene og områdene som er valgt for dem, beholdes.</value>
+    <comment>Info bubble text for the What to publish heading, shown when the application supplies none. Full sentences.</comment>
+  </data>
+  <data name="HeadingRemoval" xml:space="preserve">
+    <value>Fjern fra brokeren</value>
+    <comment>Section heading above the device-removal card, last on the panel. Shown only in applications that offer removal.</comment>
+  </data>
+  <data name="RowRemoval" xml:space="preserve">
+    <value>Publisert enhet</value>
+    <comment>Row label of the device-removal card, under HeadingRemoval.</comment>
+  </data>
+  <data name="DescRemoval" xml:space="preserve">
+    <value>Tømmer alt denne enheten har publisert, og slår av publiseringen.</value>
+    <comment>Description under the Published device row label. One short line: a longer one widens the whole panel. Never restates the label.</comment>
+  </data>
+  <data name="ButtonRemoveDevice" xml:space="preserve">
+    <value>Fjern enheten…</value>
+    <comment>Button on the Published device row that opens the removal confirmation. Fits a button; the ellipsis says a question follows.</comment>
+  </data>
+  <data name="RemovalTitle" xml:space="preserve">
+    <value>Fjerne den publiserte enheten?</value>
+    <comment>Title of the removal confirmation dialogue. A question, answered by RemovalConfirm or RemovalCancel.</comment>
+  </data>
+  <data name="RemovalWarning" xml:space="preserve">
+    <value>Alt denne enheten har publisert, tømmes fra brokeren, og publiseringen slås av slik at ingenting kunngjør den igjen. Det som leser enheten, mister navnene, entitets-ID-ene og områdene som er valgt for entitetene, og en ny kunngjøring lager nye. Dette kan ikke angres.</value>
+    <comment>Body of the removal confirmation dialogue. States what is lost before the button that loses it.</comment>
+  </data>
+  <data name="RemovalConfirm" xml:space="preserve">
+    <value>Fjern</value>
+    <comment>Confirm button of the removal confirmation dialogue. Fits a button.</comment>
+  </data>
+  <data name="RemovalCancel" xml:space="preserve">
+    <value>Avbryt</value>
+    <comment>Cancel button of the removal confirmation dialogue; the default button. Fits a button.</comment>
+  </data>
+  <data name="RemovalRunning" xml:space="preserve">
+    <value>Fjerner…</value>
+    <comment>Status line on the Published device row while the removal runs.</comment>
+  </data>
+  <data name="RemovalDone" xml:space="preserve">
+    <value>Enheten er fjernet fra brokeren, og publiseringen er slått av.</value>
+    <comment>Status line on the Published device row after a removal. Full sentence; stays after the master switch is turned off.</comment>
+  </data>
+  <data name="RemovalNoConnection" xml:space="preserve">
+    <value>Ingenting ble fjernet, fordi det ikke er noen aktiv tilkobling til brokeren. Prøv igjen når den er tilkoblet.</value>
+    <comment>Status line on the Published device row, in the error colour, when the link was gone at the moment of removal.</comment>
+  </data>
+  <data name="RemovalFailed" xml:space="preserve">
+    <value>Fjerningen stoppet underveis, så brokeren kan fortsatt ha deler av enheten.</value>
+    <comment>Status line on the Published device row, in the error colour, when the removal failed part-way.</comment>
+  </data>
+  <data name="InfoDetectedMark" xml:space="preserve">
+    <value>På linjen under denne overskriften betyr et lite forstørrelsesglass etter en port, transport eller kryptering at verdien ble funnet automatisk, ikke satt for hånd.</value>
+    <comment>Own paragraph after InfoBroker in the info bubble on the Broker heading. Explains the icon drawn after a found value on the closed Broker line.</comment>
+  </data>
+  <data name="NameDetectedValue" xml:space="preserve">
+    <value>funnet verdi</value>
+    <comment>Screen-reader name of that icon, spoken straight after the value it follows. Lower case, no full stop.</comment>
   </data>
 </root>

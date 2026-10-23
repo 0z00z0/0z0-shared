@@ -17,7 +17,7 @@
     <comment>Relative age under a minute, in the last publish and last command rows. Lower case: it follows a dash in StatusLastCommand.</comment>
   </data>
   <data name="AgeMinutes" xml:space="preserve">
-    <value>{count, plural, one {# min ago} other {# min ago}}</value>
+    <value>{count, plural, one {# minute ago} other {# minutes ago}}</value>
     <comment>Relative age under an hour; count = whole minutes, 1 to 59. ICU plural, lower case: it follows a dash in StatusLastCommand.</comment>
   </data>
   <data name="AgeHours" xml:space="preserve">
@@ -393,7 +393,7 @@
     <comment>Button that opens the change device ID dialogue. Fits a button.</comment>
   </data>
   <data name="PlaceholderHost" xml:space="preserve">
-    <value>e.g. mqtt.example.com</value>
+    <value>for example mqtt.example.com</value>
     <comment>Grey example text in the empty host box; the address is an example, not a real host.</comment>
   </data>
   <data name="PlaceholderPort" xml:space="preserve">
@@ -433,7 +433,7 @@
     <comment>One-line description under the Device name row label. Never restates the label.</comment>
   </data>
   <data name="DescDeviceId" xml:space="preserve">
-    <value>Used in every topic and entity id. Changing it moves them all.</value>
+    <value>Used in every topic and entity ID. Changing it moves them all.</value>
     <comment>Description under the Device ID row label. Never restates the label.</comment>
   </data>
   <data name="DescApply" xml:space="preserve">
@@ -454,15 +454,11 @@
   </data>
   <data name="SummaryBroker" xml:space="preserve">
     <value>{0} · {1} · {2} · {3}</value>
-    <comment>Line on the closed Broker section; {0} = host, {1} = port, {2} = transport, {3} = SummaryEncrypted or SummaryNotEncrypted. A value not chosen shows OptionAutomatic or SummaryDetected.</comment>
+    <comment>Line on the closed Broker section; {0} = host, {1} = port, {2} = transport, {3} = SummaryEncrypted or SummaryNotEncrypted. A value not chosen shows OptionAutomatic, or the value found followed by a drawn icon (see InfoDetectedMark).</comment>
   </data>
   <data name="SummaryBrokerTrustAny" xml:space="preserve">
     <value>{0} — any certificate accepted</value>
     <comment>Wraps SummaryBroker when any certificate is accepted; {0} = the finished SummaryBroker line.</comment>
-  </data>
-  <data name="SummaryDetected" xml:space="preserve">
-    <value>{0} (detected)</value>
-    <comment>A value found automatically rather than chosen, inside SummaryBroker; {0} = the value.</comment>
   </data>
   <data name="SummaryEncrypted" xml:space="preserve">
     <value>encrypted</value>
@@ -481,7 +477,7 @@
     <comment>Line on the closed publish section when the application declares no group.</comment>
   </data>
   <data name="InfoPublishSwitch" xml:space="preserve">
-    <value>The master switch for the whole feature. Nothing on the network is touched while it is off, and it takes effect immediately.</value>
+    <value>The master switch for the whole feature, taking effect immediately. Nothing is sent while it is off; switching it off marks the device offline at the broker, then closes the connection.</value>
     <comment>Info bubble text for the master switch, followed by ModuleVersion. Full sentences.</comment>
   </data>
   <data name="InfoStatus" xml:space="preserve">
@@ -549,8 +545,8 @@
     <comment>Info bubble text for the Password row.</comment>
   </data>
   <data name="InfoDiscoveryPrefix" xml:space="preserve">
-    <value>Entities are announced using the Home Assistant MQTT Discovery convention, an openly published specification that some MQTT consumers follow and others ignore. Change the prefix only for a consumer that listens elsewhere.</value>
-    <comment>Info bubble text for the Discovery prefix row. Home Assistant MQTT Discovery is a proper name.</comment>
+    <value>Entities are announced in an openly published discovery format, which some programs read and others ignore.</value>
+    <comment>Info bubble text for the Discovery prefix row. Names no product: the format is read by more than one program.</comment>
   </data>
   <data name="InfoTest" xml:space="preserve">
     <value>Tries the values in the fields above, including ones not yet applied, over a throwaway connection of its own. It saves nothing at all: not the fields, and not where the broker answered. Anything left on Automatic may take several addresses to find; the result names the one that answered, and lists what was tried only when none of them did.</value>
@@ -645,11 +641,71 @@
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'. Names the Test connection button, so it matches ButtonTest.</comment>
   </data>
   <data name="DeviceIdTooLong" xml:space="preserve">
-    <value>An id can be at most {0} characters.</value>
+    <value>An ID can be at most {0} characters.</value>
     <comment>Validation message in the change device ID dialogue; {0} = maximum length (48).</comment>
   </data>
   <data name="DeviceIdNoAlnum" xml:space="preserve">
-    <value>An id must contain at least one letter or digit.</value>
+    <value>An ID must contain at least one letter or digit.</value>
     <comment>Validation message in the change device ID dialogue.</comment>
+  </data>
+  <data name="InfoPublishGroups" xml:space="preserve">
+    <value>Each switch takes effect at once. Switching a group off marks its entities unavailable without removing them, so the names and areas chosen for them are kept.</value>
+    <comment>Info bubble text for the What to publish heading, shown when the application supplies none. Full sentences.</comment>
+  </data>
+  <data name="HeadingRemoval" xml:space="preserve">
+    <value>Remove from the broker</value>
+    <comment>Section heading above the device-removal card, last on the panel. Shown only in applications that offer removal.</comment>
+  </data>
+  <data name="RowRemoval" xml:space="preserve">
+    <value>Published device</value>
+    <comment>Row label of the device-removal card, under HeadingRemoval.</comment>
+  </data>
+  <data name="DescRemoval" xml:space="preserve">
+    <value>Empties everything this device published, then switches publishing off.</value>
+    <comment>Description under the Published device row label. One short line: a longer one widens the whole panel. Never restates the label.</comment>
+  </data>
+  <data name="ButtonRemoveDevice" xml:space="preserve">
+    <value>Remove device…</value>
+    <comment>Button on the Published device row that opens the removal confirmation. Fits a button; the ellipsis says a question follows.</comment>
+  </data>
+  <data name="RemovalTitle" xml:space="preserve">
+    <value>Remove the published device?</value>
+    <comment>Title of the removal confirmation dialogue. A question, answered by RemovalConfirm or RemovalCancel.</comment>
+  </data>
+  <data name="RemovalWarning" xml:space="preserve">
+    <value>Everything this device published is emptied from the broker, and publishing is switched off so nothing announces it again. Anything reading the device loses the names, entity IDs and areas chosen for its entities, and announcing it again creates new ones. This cannot be undone.</value>
+    <comment>Body of the removal confirmation dialogue. States what is lost before the button that loses it.</comment>
+  </data>
+  <data name="RemovalConfirm" xml:space="preserve">
+    <value>Remove</value>
+    <comment>Confirm button of the removal confirmation dialogue. Fits a button.</comment>
+  </data>
+  <data name="RemovalCancel" xml:space="preserve">
+    <value>Cancel</value>
+    <comment>Cancel button of the removal confirmation dialogue; the default button. Fits a button.</comment>
+  </data>
+  <data name="RemovalRunning" xml:space="preserve">
+    <value>Removing…</value>
+    <comment>Status line on the Published device row while the removal runs.</comment>
+  </data>
+  <data name="RemovalDone" xml:space="preserve">
+    <value>The device has been removed from the broker, and publishing is off.</value>
+    <comment>Status line on the Published device row after a removal. Full sentence; stays after the master switch is turned off.</comment>
+  </data>
+  <data name="RemovalNoConnection" xml:space="preserve">
+    <value>Nothing was removed, because there is no live connection to the broker. Try again once it is connected.</value>
+    <comment>Status line on the Published device row, in the error colour, when the link was gone at the moment of removal.</comment>
+  </data>
+  <data name="RemovalFailed" xml:space="preserve">
+    <value>The removal stopped part-way, so the broker may still hold some of the device.</value>
+    <comment>Status line on the Published device row, in the error colour, when the removal failed part-way.</comment>
+  </data>
+  <data name="InfoDetectedMark" xml:space="preserve">
+    <value>On the line under this heading, a small magnifier after a port, transport or encryption means the value was found automatically, not set by hand.</value>
+    <comment>Own paragraph after InfoBroker in the info bubble on the Broker heading. Explains the icon drawn after a found value on the closed Broker line.</comment>
+  </data>
+  <data name="NameDetectedValue" xml:space="preserve">
+    <value>detected value</value>
+    <comment>Screen-reader name of that icon, spoken straight after the value it follows. Lower case, no full stop.</comment>
   </data>
 </root>

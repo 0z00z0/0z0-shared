@@ -44,7 +44,13 @@ public sealed class MqttPanelSetup
         ConnectionState = () => connection.State;
         RecallEndpoint = () => connection.RememberedEndpoint;
         PublishNow = connection.PublishNowAsync;
+        RemoveDevice = connection.RemoveDeviceAsync;
+        _connection = connection;
     }
+
+    private readonly MqttConnection? _connection;
+
+    private event Action? StateSignalled;
 
     /// <summary>The module's entire storage dependency. The panel reads through it and writes through
     /// it; it never sees a settings file or a host's own settings class.</summary>
@@ -114,9 +120,8 @@ public sealed class MqttPanelSetup
     /// <summary>The master switch's info icon.</summary>
     public string? PublishInfo { get; init; }
 
-    /// <summary>The "What to publish" heading's info icon. Consumer-owned with no fallback: the
-    /// module knows nothing about what an application publishes, including how to describe the
-    /// section as a whole. Left unset, the heading carries no icon rather than an empty one.</summary>
+    /// <summary>The "What to publish" heading's info icon. Left unset or blank, the module's own text
+    /// says what a group switch does, which is the same for every application.</summary>
     public string? PublishGroupsInfo { get; init; }
 
     /// <summary>An application-specific consequence of renaming the device, shown in the change
@@ -127,6 +132,30 @@ public sealed class MqttPanelSetup
     /// <summary>Turns an entity id into the name a user would recognise, for the last-command row.
     /// Without one the entity id stands, which is what the wire actually carried.</summary>
     public Func<string, string>? CommandLabel { get; init; }
+
+    /// <summary>Offers removing the published device from the broker, behind a confirmation. Off by
+    /// default; needs a setup built from the connection, whose own removal it runs.</summary>
+    public bool OfferRemoval { get; init; }
+
+    // Set only by the connection constructor, so the card cannot skip the connection's gate.
+    internal Func<CancellationToken, Task<bool>>? RemoveDevice { get; }
+
+    /// <summary>Redraws an open panel's Status rows and Broker line at once; safe from any thread.
+    /// Needed only without the connection constructor, which follows the connection itself.</summary>
+    public void NotifyConnectionStateChanged() => StateSignalled?.Invoke();
+
+    /// <summary>Runs <paramref name="changed"/> on every state change until the returned undo runs.</summary>
+    internal Action FollowConnectionState(Action changed)
+    {
+        Action<MqttConnectionState> relay = _ => changed();
+        StateSignalled += changed;
+        if (_connection is { } connection) connection.StateChanged += relay;
+        return () =>
+        {
+            StateSignalled -= changed;
+            if (_connection is { } connection) connection.StateChanged -= relay;
+        };
+    }
 
     /// <summary>The host's localizer, asked before the module's own texts for every key. Null asks the
     /// application's own resource map instead; a key neither of them answers falls back to the module.</summary>
@@ -143,9 +172,16 @@ public sealed class MqttPanelSetup
     /// <summary>Refuses a setup built without the connection whose three non-optional connection
     /// members are not all set, naming the first one missing. Loud at Initialise rather than a null
     /// dereference on the first Status refresh or the first press of Publish now.</summary>
-    /// <exception cref="ArgumentException">One of the three is unset.</exception>
+    /// <exception cref="ArgumentException">One of the three is unset, or <see cref="OfferRemoval"/> is
+    /// set on a setup built without the connection.</exception>
     internal void EnsureConnectionMembers(string paramName)
     {
+        if (OfferRemoval && RemoveDevice is null)
+            throw new ArgumentException(
+                "MqttPanelSetup.OfferRemoval needs the setup built from the live connection, "
+                + "new MqttPanelSetup(connection), whose own removal it runs.",
+                paramName);
+
         string? missing =
             Activity is null ? nameof(Activity)
             : ConnectionState is null ? nameof(ConnectionState)

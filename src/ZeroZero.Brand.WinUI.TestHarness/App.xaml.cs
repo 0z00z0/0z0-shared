@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -37,6 +38,9 @@ public partial class App : Application
         // One scenario per run: windows of unrelated scenarios would land on top of each other.
         // Read from the process, because an unpackaged launch carries no activation arguments.
         var commandLine = Environment.GetCommandLineArgs();
+        if (ValueAfter(commandLine, "--culture") is { Length: > 0 } culture)
+            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+
         if (Has(commandLine, "--tray"))
         {
             if (Has(commandLine, "--anchor")) ShowAnchor();

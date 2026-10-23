@@ -670,7 +670,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
 
     /// <summary>Removes the device from the broker and then stops: the document, the availability
     /// topics, every value and every command topic. Explicit and separate, because it takes the whole
-    /// device off the receiver, which nothing a user does to the settings should.</summary>
+    /// device off the receiver, which no ordinary settings change should.</summary>
     /// <returns>False when there was no live link to do it over, so nothing was removed.</returns>
     /// <remarks>Holds the gate, so an apply arriving during the removal waits for it to finish. The
     /// stored parameters still say publishing is on: any later apply starts it again.</remarks>

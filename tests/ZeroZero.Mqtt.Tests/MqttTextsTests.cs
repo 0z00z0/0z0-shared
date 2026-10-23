@@ -169,6 +169,21 @@ public class MqttTextsTests
     }
 
     [Fact]
+    public void NoTextIsAbbreviated()
+    {
+        // A word that does not fit gets a shorter whole word. Case-sensitive for "id", so the
+        // abbreviation ID itself is allowed and a lower-case stand-in for it is not.
+        foreach (var (texts, banned) in new[]
+                 {
+                     (Neutral, new[] { @"\be\.g\.", @"\bi\.e\.", @"\betc\.", @"\bapprox\b", @"\bmins?\b", @"\bsecs?\b", @"\binfo\b", @"\bid\b" }),
+                     (Norwegian, new[] { @"\bf\.eks\.", @"\bbl\.a\.", @"\bca\.", @"\bosv\.", @"\bdvs\.", @"\bmin\.", @"\bsek\." }),
+                 })
+            foreach (var (key, value) in texts)
+                foreach (string pattern in banned)
+                    Assert.False(Regex.IsMatch(value, pattern), $"{key} abbreviates: {value}");
+    }
+
+    [Fact]
     public void ARowWhoseDescriptionCouldOnlyRestateItsLabelHasNone()
     {
         // Host is the worked example: a description exists only where it adds something.

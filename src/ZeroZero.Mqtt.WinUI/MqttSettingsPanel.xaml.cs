@@ -1,8 +1,11 @@
 using System.Globalization;
 using Microsoft.Extensions.Localization;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Windows.System;
 using ZeroZero.Controls.WinUI;
 
@@ -50,12 +53,17 @@ public sealed partial class MqttSettingsPanel : UserControl
     // True while a manual publish is in flight. A second click is dropped rather than queued.
     private bool _publishing;
 
+    private bool _removing;
+
     private readonly Dictionary<string, ToggleSwitch> _groupToggles = [];
 
     private CancellationTokenSource? _probeCts;
 
     // Moves the two ages on while nothing happens; runs only while the page is on screen.
     private readonly DispatcherTimer _ageTick = new() { Interval = TimeSpan.FromSeconds(20) };
+
+    // Stops following the connection's state; set while the page is on screen.
+    private Action? _unfollowState;
 
     public MqttSettingsPanel()
     {
@@ -94,6 +102,7 @@ public sealed partial class MqttSettingsPanel : UserControl
         ApplyHostText(setup);
         BuildGroupRows(setup);
         Reload();
+        UpdateAgeTick();
     }
 
     /// <summary>Re-reads everything the store holds, without discarding what is being typed. A field
@@ -146,7 +155,7 @@ public sealed partial class MqttSettingsPanel : UserControl
     public void Cancel()
     {
         _closed = true;
-        _ageTick.Stop();
+        UpdateAgeTick();
         CancelProbe();
     }
 
@@ -223,7 +232,8 @@ public sealed partial class MqttSettingsPanel : UserControl
                 _strings["InfoDeviceId", MqttIdentity.MaxLength].Value);
         ChangeDeviceIdBtn.Content = _strings["ButtonChangeDeviceId"].Value;
 
-        SetHeader(BrokerHeader, "HeadingBroker", "SubjectBroker", _strings["InfoBroker"].Value);
+        SetHeader(BrokerHeader, "HeadingBroker", "SubjectBroker",
+                  $"{_strings["InfoBroker"].Value}\n\n{_strings["InfoDetectedMark"].Value}");
         BrokerDirtyText.Text = _strings["NotApplied"].Value;
         // The two expander summaries are not set here: they are composed from live state, in
         // RefreshSummaries, exactly as the Status rows are.
@@ -264,6 +274,11 @@ public sealed partial class MqttSettingsPanel : UserControl
         // The bubble text is the host's, set in ApplyHostText.
         PublishHeader.Heading = _strings["HeadingPublish"].Value;
         PublishHeader.InfoSubject = _strings["SubjectPublishGroups"].Value;
+
+        RemovalHeader.Heading = _strings["HeadingRemoval"].Value;
+        RemovalCard.Header = _strings["RowRemoval"].Value;
+        RemovalDescription.Text = _strings["DescRemoval"].Value;
+        RemoveDeviceBtn.Content = _strings["ButtonRemoveDevice"].Value;
     }
 
     /// <summary>The strings the host owns. What an application publishes is the one thing the module
@@ -277,8 +292,9 @@ public sealed partial class MqttSettingsPanel : UserControl
         if (setup.PublishInfo is { } info && !string.IsNullOrWhiteSpace(info))
             SetInfo(PublishInfoIcon, _strings["SubjectPublishSwitch"].Value, WithModuleVersion(info));
 
-        // No module fallback: the header hides a blank bubble.
-        PublishHeader.Info = setup.PublishGroupsInfo ?? "";
+        PublishHeader.Info = setup.PublishGroupsInfo is { } groupsInfo && !string.IsNullOrWhiteSpace(groupsInfo)
+            ? groupsInfo
+            : _strings["InfoPublishGroups"].Value;
     }
 
     private static void SetInfo(InfoIcon icon, string subject, string info)
@@ -309,6 +325,9 @@ public sealed partial class MqttSettingsPanel : UserControl
     private void RefreshDetailVisibility()
     {
         DetailPanel.Visibility = EnabledToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
+        bool removal = _setup?.OfferRemoval == true
+                    && (EnabledToggle.IsOn || RemovalResultText.Visibility == Visibility.Visible);
+        RemovalPanel.Visibility = removal ? Visibility.Visible : Visibility.Collapsed;
         RefreshPublishNowEnabled();
     }
 
@@ -319,6 +338,7 @@ public sealed partial class MqttSettingsPanel : UserControl
 
         bool on = EnabledToggle.IsOn;
         setup.Settings.Update(s => s.Enabled = on);
+        RemovalResultText.Visibility = Visibility.Collapsed;   // about a removal this flip supersedes
         RefreshDetailVisibility();
         // Switching publishing on is not a broker setting changing, so it probes nothing; switching
         // off must abandon a probe already in flight, because off means no network at all.
@@ -621,8 +641,53 @@ public sealed partial class MqttSettingsPanel : UserControl
         MqttConnectionState state)
     {
         var trust = setup.Settings.Read().CertificateTrust.Mode;
-        SetSummary(BrokerExpanderDescription, _text.SummariseBroker(request, memory, state, trust));
+        SetBrokerSummary(_text.SummariseBroker(request, memory, state, trust));
         SetSummary(PublishExpanderDescription, _text.SummarisePublish(MqttPublishRows.Tally(setup.Groups)));
+    }
+
+    /// <summary>The closed Broker line with a magnifier after each value found rather than set, on
+    /// the line and on its hover tip alike; a screen reader hears the mark's name in its place.</summary>
+    private void SetBrokerSummary(MqttBrokerSummary summary)
+    {
+        string markName = _strings["NameDetectedValue"].Value;
+        FillMarked(BrokerExpanderDescription, summary, markName);
+
+        var tip = new RichTextBlock { Style = StyleFor("MqttHintRichStyle") };
+        FillMarked(tip, summary, markName);
+        ToolTipService.SetToolTip(BrokerExpanderDescription, tip);
+
+        string spoken = summary.Text;
+        foreach (int at in summary.DetectedAt.Reverse()) spoken = spoken.Insert(at, " " + markName);
+        AutomationProperties.SetName(BrokerExpanderDescription, spoken);
+    }
+
+    private void FillMarked(RichTextBlock target, MqttBrokerSummary summary, string markName)
+    {
+        var line = new Paragraph();
+        int from = 0;
+        foreach (int at in summary.DetectedAt)
+        {
+            line.Inlines.Add(new Run { Text = summary.Text[from..at] });
+            var mark = new Microsoft.UI.Xaml.Shapes.Path
+            {
+                Style = StyleFor("MqttDetectedMarkStyle"),
+                Data = new GeometryGroup
+                {
+                    Children =
+                    {
+                        new EllipseGeometry { Center = new(4, 4), RadiusX = 3, RadiusY = 3 },
+                        new LineGeometry { StartPoint = new(6.2, 6.2), EndPoint = new(9.2, 9.2) },
+                    },
+                },
+            };
+            AutomationProperties.SetName(mark, markName);
+            line.Inlines.Add(new InlineUIContainer { Child = mark });
+            from = at;
+        }
+        line.Inlines.Add(new Run { Text = summary.Text[from..] });
+
+        target.Blocks.Clear();
+        target.Blocks.Add(line);
     }
 
     /// <summary>Writes one collapsed summary: the line on screen, and the whole string on the hover
@@ -648,20 +713,35 @@ public sealed partial class MqttSettingsPanel : UserControl
         RefreshPublishNowEnabled();
     }
 
-    /// <summary>Runs the age tick only while the page is on screen. A settings page nobody is looking
-    /// at must not cost a consuming application a timer.</summary>
+    /// <summary>Runs the age tick, and follows the connection's state, only while the page is on
+    /// screen. A settings page nobody is looking at must not cost a consuming application a timer, and
+    /// a long-lived connection must not hold a panel that has gone.</summary>
     private void UpdateAgeTick()
     {
         bool wanted = !_closed && IsLoaded && Visibility == Visibility.Visible;
         if (wanted && !_ageTick.IsEnabled) _ageTick.Start();
         else if (!wanted && _ageTick.IsEnabled) _ageTick.Stop();
+
+        if (wanted && _unfollowState is null && _setup is { } setup)
+        {
+            _unfollowState = setup.FollowConnectionState(() => RunOnUi(RefreshStatus));
+            RefreshStatus();   // a change while not followed was missed
+        }
+        else if (!wanted && _unfollowState is { } unfollow)
+        {
+            _unfollowState = null;
+            unfollow();
+        }
     }
 
     /// <summary>Live only when there is somewhere to publish to — the feature on, a broker connected,
-    /// and nothing already in flight.</summary>
-    private void RefreshPublishNowEnabled() =>
-        PublishNowBtn.IsEnabled = !_publishing && EnabledToggle.IsOn
-                               && _setup?.ConnectionState() == MqttConnectionState.Connected;
+    /// and nothing already in flight. The removal button follows the same rule.</summary>
+    private void RefreshPublishNowEnabled()
+    {
+        bool live = EnabledToggle.IsOn && _setup?.ConnectionState() == MqttConnectionState.Connected;
+        PublishNowBtn.IsEnabled = live && !_publishing;
+        RemoveDeviceBtn.IsEnabled = live && !_removing;
+    }
 
     /// <summary>Republishes the current state on demand; no config topic is rewritten. Awaited on the
     /// UI thread: a raw dispatcher callback that throws ends the process as a stowed exception.</summary>
@@ -850,6 +930,69 @@ public sealed partial class MqttSettingsPanel : UserControl
         setup.PublishSetChanged();
         // The count in the closed section's summary is one of the facts this toggle just changed.
         RefreshStatus();
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Removing the published device. Offered only when the application asks for it.
+    // ---------------------------------------------------------------------------------------------
+
+    private async void OnRemoveDeviceClicked(object sender, RoutedEventArgs e)
+    {
+        if (_removing || _setup is not { RemoveDevice: { } remove } setup) return;
+
+        _removing = true;
+        try
+        {
+            RefreshPublishNowEnabled();
+            if (!await ConfirmRemovalAsync() || _closed) return;
+
+            ShowRemovalResult("RemovalRunning", error: false);
+            bool removed = await remove(CancellationToken.None);
+            if (_closed) return;
+
+            ShowRemovalResult(removed ? "RemovalDone" : "RemovalNoConnection", error: !removed);
+            if (removed)
+            {
+                setup.Settings.Update(s => s.Enabled = false);
+                WithUpdatingSuppressed(() => EnabledToggle.IsOn = false);
+                CancelProbe();
+                RefreshDetailVisibility();
+                setup.ConnectionChanged();
+                RefreshStatus();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log("MqttSettingsPanel.OnRemoveDeviceClicked", ex);
+            if (!_closed) ShowRemovalResult("RemovalFailed", error: true);
+        }
+        finally
+        {
+            _removing = false;
+            if (!_closed) RefreshPublishNowEnabled();
+        }
+    }
+
+    private async Task<bool> ConfirmRemovalAsync()
+    {
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            RequestedTheme = ActualTheme,
+            Title = _strings["RemovalTitle"].Value,
+            Content = new TextBlock { Text = _strings["RemovalWarning"].Value, TextWrapping = TextWrapping.Wrap },
+            PrimaryButtonText = _strings["RemovalConfirm"].Value,
+            CloseButtonText = _strings["RemovalCancel"].Value,
+            DefaultButton = ContentDialogButton.Close,
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
+    private void ShowRemovalResult(string key, bool error)
+    {
+        RemovalResultText.Text = _strings[key].Value;
+        RemovalResultText.Style = StyleFor(error ? "MqttResultErrorStyle" : "MqttResultStyle");
+        RemovalResultText.Visibility = Visibility.Visible;
     }
 
     // ---------------------------------------------------------------------------------------------

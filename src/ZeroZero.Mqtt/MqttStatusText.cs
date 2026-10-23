@@ -9,7 +9,7 @@ namespace ZeroZero.Mqtt;
 /// wants the module's own wording, and this is the shorter way to ask for it.</remarks>
 public static class MqttStatusText
 {
-    /// <summary>"just now" / "5 min ago" / "3 hours ago" / "2 days ago", or <paramref name="never"/>
+    /// <summary>"just now" / "5 minutes ago" / "3 hours ago" / "2 days ago", or <paramref name="never"/>
     /// when there is nothing to render. A future timestamp reads as "just now", not a negative age.</summary>
     public static string Relative(DateTimeOffset? when, DateTimeOffset now, string never) =>
         MqttPanelText.Default.Relative(when, now, never);
@@ -20,8 +20,8 @@ public static class MqttStatusText
         MqttPanelText.Default.DescribeBroker(request, memory);
 
     /// <summary>The Broker section's line while it is closed: what the connection is configured
-    /// with, a value left on Automatic marked as detected rather than chosen. Pure.</summary>
-    public static string SummariseBroker(
+    /// with, and where each value left on Automatic but found ends. Pure.</summary>
+    public static MqttBrokerSummary SummariseBroker(
         MqttEndpointRequest request, MqttEndpointMemory? memory, MqttConnectionState state,
         MqttCertificateTrustMode trust) =>
         MqttPanelText.Default.SummariseBroker(request, memory, state, trust);
