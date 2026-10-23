@@ -614,7 +614,9 @@ Mqtt.Initialise(new MqttPanelSetup
 does not catch a missing one. `RecallEndpoint` stays optional; it is the same accessor the
 connection is given through `MqttConnectionSetup.RecallEndpoint`, and without it the Broker in use
 row and the closed Broker line never show a detected endpoint while the Connection row still reads
-the live state.
+the live state. **Such a host calls `NotifyConnectionStateChanged()` on the setup whenever the
+state changes**, from any thread; a setup built from the connection follows `StateChanged` itself.
+Without either, the Status rows and the closed Broker line are redrawn only when the page is.
 
 **Two obligations the panel's own copy depends on.** `ConnectionChanged` must run the connection's
 apply path, because the device-id dialogue promises the old entities are removed and the ledger is

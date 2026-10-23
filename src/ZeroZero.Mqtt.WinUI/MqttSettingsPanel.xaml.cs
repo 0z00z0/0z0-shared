@@ -59,6 +59,9 @@ public sealed partial class MqttSettingsPanel : UserControl
     // Moves the two ages on while nothing happens; runs only while the page is on screen.
     private readonly DispatcherTimer _ageTick = new() { Interval = TimeSpan.FromSeconds(20) };
 
+    // Stops following the connection's state; set while the page is on screen.
+    private Action? _unfollowState;
+
     public MqttSettingsPanel()
     {
         EnsureThemeResources();
@@ -96,6 +99,7 @@ public sealed partial class MqttSettingsPanel : UserControl
         ApplyHostText(setup);
         BuildGroupRows(setup);
         Reload();
+        UpdateAgeTick();
     }
 
     /// <summary>Re-reads everything the store holds, without discarding what is being typed. A field
@@ -148,7 +152,7 @@ public sealed partial class MqttSettingsPanel : UserControl
     public void Cancel()
     {
         _closed = true;
-        _ageTick.Stop();
+        UpdateAgeTick();
         CancelProbe();
     }
 
@@ -660,13 +664,25 @@ public sealed partial class MqttSettingsPanel : UserControl
         RefreshPublishNowEnabled();
     }
 
-    /// <summary>Runs the age tick only while the page is on screen. A settings page nobody is looking
-    /// at must not cost a consuming application a timer.</summary>
+    /// <summary>Runs the age tick, and follows the connection's state, only while the page is on
+    /// screen. A settings page nobody is looking at must not cost a consuming application a timer, and
+    /// a long-lived connection must not hold a panel that has gone.</summary>
     private void UpdateAgeTick()
     {
         bool wanted = !_closed && IsLoaded && Visibility == Visibility.Visible;
         if (wanted && !_ageTick.IsEnabled) _ageTick.Start();
         else if (!wanted && _ageTick.IsEnabled) _ageTick.Stop();
+
+        if (wanted && _unfollowState is null && _setup is { } setup)
+        {
+            _unfollowState = setup.FollowConnectionState(() => RunOnUi(RefreshStatus));
+            RefreshStatus();   // a change while not followed was missed
+        }
+        else if (!wanted && _unfollowState is { } unfollow)
+        {
+            _unfollowState = null;
+            unfollow();
+        }
     }
 
     /// <summary>Live only when there is somewhere to publish to — the feature on, a broker connected,

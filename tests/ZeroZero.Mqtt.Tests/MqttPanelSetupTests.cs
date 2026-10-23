@@ -70,6 +70,49 @@ public class MqttPanelSetupTests
         Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(topic) == 2));
     }
 
+    /// <summary>The panel redraws the Status rows and the Broker line only when it hears of a state
+    /// change: from the connection, or from the host's own signal. Hearing nothing left the line on
+    /// Automatic after the link came up.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task APanelHearsOfEveryStateChangeUntilItStopsFollowing()
+    {
+        using var broker = new FakeBroker();
+        using var connection = new MqttConnection(new MqttConnectionSetup { TopicRoot = Root });
+        var setup = FromConnection(connection);
+        int heard = 0;
+        bool heardConnected = false;
+        var unfollow = setup.FollowConnectionState(() =>
+        {
+            Interlocked.Increment(ref heard);
+            if (connection.State == MqttConnectionState.Connected) Volatile.Write(ref heardConnected, true);
+        });
+
+        var parameters = new MqttConnectParameters
+        {
+            Enabled = true,
+            Host = "127.0.0.1",
+            Port = broker.Port,
+            TransportMode = MqttTransportMode.Tcp,
+            EncryptionMode = MqttEncryptionMode.Off,
+            DeviceId = "desk01",
+        };
+        await connection.ApplyAsync(parameters);
+        Assert.True(await FakeBroker.WaitAsync(() => Volatile.Read(ref heardConnected)),
+            "the link came up and nothing was heard");
+
+        int beforeSignal = Volatile.Read(ref heard);
+        setup.NotifyConnectionStateChanged();
+        Assert.True(Volatile.Read(ref heard) > beforeSignal, "the host's own signal was not heard");
+
+        unfollow();
+        int afterUnfollow = Volatile.Read(ref heard);
+        await connection.ApplyAsync(parameters with { Enabled = false });
+        setup.NotifyConnectionStateChanged();
+        Assert.Equal(MqttConnectionState.Disabled, connection.State);
+        Assert.Equal(afterUnfollow, Volatile.Read(ref heard));
+    }
+
     /// <summary>Removal is off unless an application asks, and when asked it runs the connection's
     /// own removal or is refused before the panel draws anything.</summary>
     [Trait(Guard.Category, Guard.Value)]

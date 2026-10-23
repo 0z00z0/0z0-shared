@@ -45,7 +45,12 @@ public sealed class MqttPanelSetup
         RecallEndpoint = () => connection.RememberedEndpoint;
         PublishNow = connection.PublishNowAsync;
         RemoveDevice = connection.RemoveDeviceAsync;
+        _connection = connection;
     }
+
+    private readonly MqttConnection? _connection;
+
+    private event Action? StateSignalled;
 
     /// <summary>The module's entire storage dependency. The panel reads through it and writes through
     /// it; it never sees a settings file or a host's own settings class.</summary>
@@ -134,6 +139,23 @@ public sealed class MqttPanelSetup
 
     // Set only by the connection constructor, so the card cannot skip the connection's gate.
     internal Func<CancellationToken, Task<bool>>? RemoveDevice { get; }
+
+    /// <summary>Redraws an open panel's Status rows and Broker line at once; safe from any thread.
+    /// Needed only without the connection constructor, which follows the connection itself.</summary>
+    public void NotifyConnectionStateChanged() => StateSignalled?.Invoke();
+
+    /// <summary>Runs <paramref name="changed"/> on every state change until the returned undo runs.</summary>
+    internal Action FollowConnectionState(Action changed)
+    {
+        Action<MqttConnectionState> relay = _ => changed();
+        StateSignalled += changed;
+        if (_connection is { } connection) connection.StateChanged += relay;
+        return () =>
+        {
+            StateSignalled -= changed;
+            if (_connection is { } connection) connection.StateChanged -= relay;
+        };
+    }
 
     /// <summary>The host's localizer, asked before the module's own texts for every key. Null asks the
     /// application's own resource map instead; a key neither of them answers falls back to the module.</summary>

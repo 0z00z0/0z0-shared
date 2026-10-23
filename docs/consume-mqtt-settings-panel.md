@@ -60,6 +60,16 @@ Optional: the texts under [Which texts the application supplies](#which-texts-th
 first one missing. `RecallEndpoint` is then the same accessor the connection is given, and without
 it the Status rows never show where the connection landed.
 
+**The panel redraws the Status rows, the closed Broker line and the Publish now button the moment
+the connection's state changes.**
+
+- **Built from the connection, nothing is needed:** the setup follows `MqttConnection.StateChanged`.
+- **Built without it, call `setup.NotifyConnectionStateChanged()` on every state change**, from any
+  thread; the panel moves the redraw to its own. Without the call those rows keep what they read
+  when the page last drew, and a link that comes up meanwhile leaves the Broker line on Automatic.
+- **The panel follows only while it is loaded and visible**, and catches up once when it is shown
+  again, so a page kept for the next visit costs nothing and is never held alive by the connection.
+
 **If the application already stores MQTT settings of its own, carry them into the store before the
 panel is first shown.** The module reads only its own file, so an upgrading user otherwise opens the
 panel to an empty broker host with their existing configuration still sitting unread in the old
