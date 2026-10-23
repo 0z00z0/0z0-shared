@@ -52,8 +52,8 @@ the same link.
 Required on top: the settings store, the declared publish groups, the topic root, and the two change
 callbacks.
 
-Optional and worth supplying: `DefaultDeviceName`, the master card's title, description and info
-text, `PublishGroupsInfo`, `DeviceIdConsequence`, `CommandLabel`, and `Log`.
+Optional: the texts under [Which texts the application supplies](#which-texts-the-application-supplies),
+`OfferRemoval`, `Strings` and `Log`.
 
 **A host with no `MqttConnection` to hand** uses `new MqttPanelSetup { ... }` and sets `Activity`,
 `ConnectionState` and `PublishNow` itself; `Initialise` throws an `ArgumentException` naming the
@@ -278,15 +278,24 @@ fell back reads as the module's own default, which is exactly what the measureme
 palette that is merely poor. `scripts/Capture 'MQTT panel' screenshots.ps1 -Branded` renders the panel under
 an extreme palette for the same purpose.
 
-## Translation
+## Which texts the application supplies
 
 The panel speaks en-GB and Norwegian bokmål out of the box, chosen by the UI culture: `nb-NO` and
 `nb` read bokmål, every other culture en-GB.
 
-- **Override a key or add a language** with an `IStringLocalizer` on `MqttPanelSetup.Strings`. It is
-  asked first for every key; a key it does not hold, or holds blank, falls back to the module.
-- **Left null, the application's own `.resw` is asked first**: an entry named like a module key
-  overrides it, so an application keeps no copies of module texts it does not mean to change.
+- **The application supplies only what the module cannot know**, through the setup:
+  `DefaultDeviceName`, `PublishTitle`, `PublishDescription`, `PublishInfo`, `PublishGroupsInfo`,
+  `DeviceIdConsequence` and `CommandLabel`. Each is optional. Left unset, the module's own text stands
+  for the title, description and the two info texts, `DeviceIdConsequence` adds nothing, and the
+  last-command row shows the entity ID.
+- **Every other text on the panel is the module's**: headings, rows, buttons, status lines, the
+  device-ID dialogue, and the removal card and its confirmation. `OfferRemoval` carries no text.
+- **With `Strings` left null, the application's own `.resw` is asked first**, so an entry named like
+  a module key overrides the module. Copies of module texts in an application's resources are
+  therefore deleted, unless they are deliberate translations.
+- **Override one text, or add a language,** with an `IStringLocalizer` on `MqttPanelSetup.Strings`.
+  It is asked first for every key, in place of the `.resw`; a key it does not hold, or holds blank,
+  falls back to the module's file for the UI culture, then to en-GB.
 - **The keys and what each text is** are in `Texts.resx` in `ZeroZero.Mqtt`; every entry's comment
   says where the text appears and what its placeholders hold. The full rules are in
   [`zerozero-mqtt.md`](zerozero-mqtt.md#translation).
