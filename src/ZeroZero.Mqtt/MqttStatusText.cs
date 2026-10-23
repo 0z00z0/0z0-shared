@@ -20,8 +20,8 @@ public static class MqttStatusText
         MqttPanelText.Default.DescribeBroker(request, memory);
 
     /// <summary>The Broker section's line while it is closed: what the connection is configured
-    /// with, a value left on Automatic marked as detected rather than chosen. Pure.</summary>
-    public static string SummariseBroker(
+    /// with, and where each value left on Automatic but found ends. Pure.</summary>
+    public static MqttBrokerSummary SummariseBroker(
         MqttEndpointRequest request, MqttEndpointMemory? memory, MqttConnectionState state,
         MqttCertificateTrustMode trust) =>
         MqttPanelText.Default.SummariseBroker(request, memory, state, trust);

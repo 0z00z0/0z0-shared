@@ -454,15 +454,11 @@
   </data>
   <data name="SummaryBroker" xml:space="preserve">
     <value>{0} · {1} · {2} · {3}</value>
-    <comment>Line on the closed Broker section; {0} = host, {1} = port, {2} = transport, {3} = SummaryEncrypted or SummaryNotEncrypted. A value not chosen shows OptionAutomatic or SummaryDetected.</comment>
+    <comment>Line on the closed Broker section; {0} = host, {1} = port, {2} = transport, {3} = SummaryEncrypted or SummaryNotEncrypted. A value not chosen shows OptionAutomatic, or the value found followed by a drawn icon (see InfoDetectedMark).</comment>
   </data>
   <data name="SummaryBrokerTrustAny" xml:space="preserve">
     <value>{0} — alle sertifikater godtas</value>
     <comment>Wraps SummaryBroker when any certificate is accepted; {0} = the finished SummaryBroker line.</comment>
-  </data>
-  <data name="SummaryDetected" xml:space="preserve">
-    <value>{0} (funnet)</value>
-    <comment>A value found automatically rather than chosen, inside SummaryBroker; {0} = the value.</comment>
   </data>
   <data name="SummaryEncrypted" xml:space="preserve">
     <value>kryptert</value>
@@ -703,5 +699,13 @@
   <data name="RemovalFailed" xml:space="preserve">
     <value>Fjerningen stoppet underveis, så brokeren kan fortsatt ha deler av enheten.</value>
     <comment>Status line on the Published device row, in the error colour, when the removal failed part-way.</comment>
+  </data>
+  <data name="InfoDetectedMark" xml:space="preserve">
+    <value>På linjen under denne overskriften betyr et lite forstørrelsesglass etter en port, transport eller kryptering at verdien ble funnet automatisk, ikke satt for hånd.</value>
+    <comment>Own paragraph after InfoBroker in the info bubble on the Broker heading. Explains the icon drawn after a found value on the closed Broker line.</comment>
+  </data>
+  <data name="NameDetectedValue" xml:space="preserve">
+    <value>funnet verdi</value>
+    <comment>Screen-reader name of that icon, spoken straight after the value it follows. Lower case, no full stop.</comment>
   </data>
 </root>

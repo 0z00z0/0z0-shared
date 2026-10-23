@@ -135,12 +135,12 @@ public sealed class MqttPanelText
     /// it reads without this parameter, because it still proves which machine answered and a summary
     /// that grew for it would be crying wolf.</para>
     /// </remarks>
-    public string SummariseBroker(
+    public MqttBrokerSummary SummariseBroker(
         MqttEndpointRequest request, MqttEndpointMemory? memory, MqttConnectionState state,
         MqttCertificateTrustMode trust)
     {
-        string host = (request.Host ?? "").Trim();
-        if (host.Length == 0) return _text["SummaryBrokerNotSet"].Value;
+        string host = (request.Host ?? "").Trim().Replace(MqttBrokerSummary.Mark.ToString(), "");
+        if (host.Length == 0) return new(_text["SummaryBrokerNotSet"].Value, []);
 
         var found = state == MqttConnectionState.Connected
             ? MqttEndpointPlan.Reusable(request, memory)
@@ -182,9 +182,9 @@ public sealed class MqttPanelText
         // The one mode that gives up proving which machine answered, so it is the one mode this line
         // says anything about. Wrapping the finished line rather than adding a fifth argument keeps
         // the platform's own trust byte-for-byte what it reads without it.
-        return trust == MqttCertificateTrustMode.AcceptAny
+        return MqttBrokerSummary.FromMarked(trust == MqttCertificateTrustMode.AcceptAny
             ? _text["SummaryBrokerTrustAny", summary].Value
-            : summary;
+            : summary);
     }
 
     /// <summary>The publish section's line while it is closed: how many declared groups are switched
@@ -200,10 +200,10 @@ public sealed class MqttPanelText
                 new Dictionary<string, object?> { ["on"] = tally.SwitchedOn, ["total"] = tally.Declared });
 
     /// <summary>A value that was found rather than chosen, marked as such — or the bare instruction
-    /// when nothing has found one yet. An empty bracket would read as a value that failed to render
-    /// rather than as a question nothing has answered.</summary>
+    /// when nothing has found one yet. The mark travels with the value, so a translation may reorder
+    /// the line freely.</summary>
     private string Detected(string? value) => value is { Length: > 0 } found
-        ? _text["SummaryDetected", found].Value
+        ? found + MqttBrokerSummary.Mark
         : _text["OptionAutomatic"].Value;
 
     private string Encryption(bool on) =>

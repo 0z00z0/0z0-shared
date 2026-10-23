@@ -1224,8 +1224,15 @@ configuration readable without opening the group.
 | The field is | The line shows | Example |
 |---|---|---|
 | set by hand | the value, unqualified | `8883` |
-| on Automatic, with a live connection behind it | the value in force, marked | `8883 (detected)` |
+| on Automatic, with a live connection behind it | the value in force, followed by a small magnifier | `8883` and the magnifier |
 | on Automatic, with nothing found yet | the instruction itself | `Automatic` |
+
+**The magnifier is drawn, not a character:** a vector shape in the line's own text brush, so it
+follows the theme and high contrast. The Broker heading's info bubble explains it once, in its own
+paragraph (`InfoDetectedMark`); a screen reader hears `NameDetectedValue`, "detected value", after
+each marked value. `MqttPanelText.SummariseBroker` returns an `MqttBrokerSummary`: the plain `Text`
+and `DetectedAt`, each position in it straight after a found value, where a panel draws its mark.
+The mark travels with its value, so a translation of `SummaryBroker` may reorder the parts freely.
 
 The marking exists because on a typical installation only the host is set and everything else is
 left on Automatic. A summary of what is merely *configured* would read `host · Automatic ·

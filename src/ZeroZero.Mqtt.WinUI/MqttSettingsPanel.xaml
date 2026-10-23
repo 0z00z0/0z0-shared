@@ -49,6 +49,24 @@
             <Setter Property="Foreground" Value="{ThemeResource MqttPanelSecondaryBrush}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
+        <!-- The same tier for the closed Broker line, which holds drawn marks a TextBlock cannot. -->
+        <Style x:Key="MqttHintRichStyle" TargetType="RichTextBlock">
+            <Setter Property="FontFamily" Value="{ThemeResource MqttPanelFontFamily}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{ThemeResource MqttPanelSecondaryBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="IsTextSelectionEnabled" Value="False"/>
+        </Style>
+        <!-- A magnifier after a value found rather than set; drawn in the line's own brush. -->
+        <Style x:Key="MqttDetectedMarkStyle" TargetType="Path">
+            <Setter Property="Stroke" Value="{ThemeResource MqttPanelSecondaryBrush}"/>
+            <Setter Property="StrokeThickness" Value="1.25"/>
+            <Setter Property="StrokeStartLineCap" Value="Round"/>
+            <Setter Property="StrokeEndLineCap" Value="Round"/>
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Height" Value="10"/>
+            <Setter Property="Margin" Value="2,0,0,0"/>
+        </Style>
 
         <!-- The Status block's own two tiers. The label is the elastic half and gives way first; the
              value is the field width every other row on this panel uses, so the right edge is the
@@ -224,7 +242,7 @@
 
             <controls:SettingsExpander x:Name="BrokerExpander" IsExpanded="False">
                 <controls:SettingsExpander.Description>
-                    <TextBlock x:Name="BrokerExpanderDescription" Style="{StaticResource MqttHintStyle}"/>
+                    <RichTextBlock x:Name="BrokerExpanderDescription" Style="{StaticResource MqttHintRichStyle}"/>
                 </controls:SettingsExpander.Description>
 
                 <controls:SettingsExpander.Items>

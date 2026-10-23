@@ -24,7 +24,15 @@ public class MqttSummaryTextTests
         MqttEndpointRequest request, MqttEndpointMemory? memory = null,
         MqttConnectionState state = MqttConnectionState.Connected,
         MqttCertificateTrustMode trust = MqttCertificateTrustMode.System) =>
-        Text.SummariseBroker(request, memory, state, trust);
+        Shown(Text.SummariseBroker(request, memory, state, trust));
+
+    // ^ stands where the panel draws the detected-value icon.
+    private static string Shown(MqttBrokerSummary summary)
+    {
+        string text = summary.Text;
+        foreach (int at in summary.DetectedAt.Reverse()) text = text.Insert(at, "^");
+        return text;
+    }
 
     // ------------------------------------------------------------------------------------------
     // The Broker section: what is configured, never what a sweep settled on.
@@ -74,7 +82,7 @@ public class MqttSummaryTextTests
     public void AFieldLeftOnAutomaticShowsTheValueInForceMarkedAsDetected()
     {
         // The whole point of the marking: the value is real, and it was found rather than chosen.
-        Assert.Equal("broker.invalid · 8883 (detected) · TCP (detected) · encrypted (detected)",
+        Assert.Equal("broker.invalid · 8883^ · TCP^ · encrypted^",
                      Summary(Request(), Memory()));
     }
 
@@ -84,7 +92,7 @@ public class MqttSummaryTextTests
         var request = Request(port: 1883);
         var memory = Memory(port: 1883, transport: MqttTransport.WebSocket, encrypted: false);
 
-        Assert.Equal("broker.invalid · 1883 · WebSocket (detected) · not encrypted (detected)",
+        Assert.Equal("broker.invalid · 1883 · WebSocket^ · not encrypted^",
                      Summary(request, memory));
     }
 
@@ -161,7 +169,7 @@ public class MqttSummaryTextTests
                               encryption: MqttEncryptionMode.Off);
         var memory = Memory(port: 443, transport: MqttTransport.WebSocket, encrypted: true);
 
-        Assert.Equal("broker.invalid · 443 (detected) · WebSocket · encrypted", Summary(request, memory));
+        Assert.Equal("broker.invalid · 443^ · WebSocket · encrypted", Summary(request, memory));
     }
 
     [Fact]
@@ -214,7 +222,7 @@ public class MqttSummaryTextTests
             {
                 CultureInfo.CurrentCulture = new CultureInfo(name);
 
-                Assert.Equal("broker.invalid · 8883 (detected) · TCP (detected) · encrypted (detected)",
+                Assert.Equal("broker.invalid · 8883^ · TCP^ · encrypted^",
                              Summary(Request(), Memory()));
                 Assert.Equal("broker.invalid · 1883 · TCP · encrypted",
                              Summary(Request(port: 1883, transport: MqttTransportMode.Tcp,
@@ -246,8 +254,18 @@ public class MqttSummaryTextTests
                               encryption: MqttEncryptionMode.On);
 
         Assert.Equal("TCP encrypted broker.invalid:8883",
-                     new MqttPanelText(strings).SummariseBroker(
-                         request, null, MqttConnectionState.Connected, MqttCertificateTrustMode.System));
+                     Shown(new MqttPanelText(strings).SummariseBroker(
+                         request, null, MqttConnectionState.Connected, MqttCertificateTrustMode.System)));
+    }
+
+    [Fact]
+    public void EachDetectedMarkFollowsItsOwnValueWhenATranslationReorders()
+    {
+        var strings = new FixedLocalizer(new() { ["SummaryBroker"] = "{3}, {2} {0}:{1}" });
+
+        Assert.Equal("encrypted^, TCP^ broker.invalid:8883^ — any certificate accepted",
+                     Shown(new MqttPanelText(strings).SummariseBroker(
+                         Request(), Memory(), MqttConnectionState.Connected, MqttCertificateTrustMode.AcceptAny)));
     }
 
     // ------------------------------------------------------------------------------------------
@@ -300,9 +318,9 @@ public class MqttSummaryTextTests
     [Fact]
     public void TheStaticFacadeComposesTheSameTwoLines()
     {
-        Assert.Equal("broker.invalid · 8883 (detected) · TCP (detected) · encrypted (detected)",
-                     MqttStatusText.SummariseBroker(
-                         Request(), Memory(), MqttConnectionState.Connected, MqttCertificateTrustMode.System));
+        Assert.Equal("broker.invalid · 8883^ · TCP^ · encrypted^",
+                     Shown(MqttStatusText.SummariseBroker(
+                         Request(), Memory(), MqttConnectionState.Connected, MqttCertificateTrustMode.System)));
         Assert.Equal("1 of 2 switched on", MqttStatusText.SummarisePublish(new MqttPublishTally(1, 2)));
     }
 }

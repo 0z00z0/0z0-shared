@@ -1,8 +1,11 @@
 using System.Globalization;
 using Microsoft.Extensions.Localization;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Windows.System;
 using ZeroZero.Controls.WinUI;
 
@@ -229,7 +232,8 @@ public sealed partial class MqttSettingsPanel : UserControl
                 _strings["InfoDeviceId", MqttIdentity.MaxLength].Value);
         ChangeDeviceIdBtn.Content = _strings["ButtonChangeDeviceId"].Value;
 
-        SetHeader(BrokerHeader, "HeadingBroker", "SubjectBroker", _strings["InfoBroker"].Value);
+        SetHeader(BrokerHeader, "HeadingBroker", "SubjectBroker",
+                  $"{_strings["InfoBroker"].Value}\n\n{_strings["InfoDetectedMark"].Value}");
         BrokerDirtyText.Text = _strings["NotApplied"].Value;
         // The two expander summaries are not set here: they are composed from live state, in
         // RefreshSummaries, exactly as the Status rows are.
@@ -637,8 +641,53 @@ public sealed partial class MqttSettingsPanel : UserControl
         MqttConnectionState state)
     {
         var trust = setup.Settings.Read().CertificateTrust.Mode;
-        SetSummary(BrokerExpanderDescription, _text.SummariseBroker(request, memory, state, trust));
+        SetBrokerSummary(_text.SummariseBroker(request, memory, state, trust));
         SetSummary(PublishExpanderDescription, _text.SummarisePublish(MqttPublishRows.Tally(setup.Groups)));
+    }
+
+    /// <summary>The closed Broker line with a magnifier after each value found rather than set, on
+    /// the line and on its hover tip alike; a screen reader hears the mark's name in its place.</summary>
+    private void SetBrokerSummary(MqttBrokerSummary summary)
+    {
+        string markName = _strings["NameDetectedValue"].Value;
+        FillMarked(BrokerExpanderDescription, summary, markName);
+
+        var tip = new RichTextBlock { Style = StyleFor("MqttHintRichStyle") };
+        FillMarked(tip, summary, markName);
+        ToolTipService.SetToolTip(BrokerExpanderDescription, tip);
+
+        string spoken = summary.Text;
+        foreach (int at in summary.DetectedAt.Reverse()) spoken = spoken.Insert(at, " " + markName);
+        AutomationProperties.SetName(BrokerExpanderDescription, spoken);
+    }
+
+    private void FillMarked(RichTextBlock target, MqttBrokerSummary summary, string markName)
+    {
+        var line = new Paragraph();
+        int from = 0;
+        foreach (int at in summary.DetectedAt)
+        {
+            line.Inlines.Add(new Run { Text = summary.Text[from..at] });
+            var mark = new Microsoft.UI.Xaml.Shapes.Path
+            {
+                Style = StyleFor("MqttDetectedMarkStyle"),
+                Data = new GeometryGroup
+                {
+                    Children =
+                    {
+                        new EllipseGeometry { Center = new(4, 4), RadiusX = 3, RadiusY = 3 },
+                        new LineGeometry { StartPoint = new(6.2, 6.2), EndPoint = new(9.2, 9.2) },
+                    },
+                },
+            };
+            AutomationProperties.SetName(mark, markName);
+            line.Inlines.Add(new InlineUIContainer { Child = mark });
+            from = at;
+        }
+        line.Inlines.Add(new Run { Text = summary.Text[from..] });
+
+        target.Blocks.Clear();
+        target.Blocks.Add(line);
     }
 
     /// <summary>Writes one collapsed summary: the line on screen, and the whole string on the hover
