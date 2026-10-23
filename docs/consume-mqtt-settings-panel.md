@@ -73,6 +73,25 @@ Two obligations the panel's own copy depends on:
 - **`PublishSetChanged` must republish the discovery document**, not merely the state. The announced
   entity set is baked into the retained document.
 
+## Removing the published device
+
+`OfferRemoval = true` adds a last section, "Remove from the broker": one card whose button opens a
+confirmation stating what is lost, with Cancel as the default.
+
+- **It is off unless the application sets it**, and it needs a setup built from the connection:
+  `Initialise` throws an `ArgumentException` for a setup built without one.
+- **Confirmed, it runs the connection's own `RemoveDeviceAsync`**, under the connection's gate, so an
+  apply arriving meanwhile waits for it.
+- **After a removal the panel writes publishing off through the store and raises
+  `ConnectionChanged`.** That is how the application learns of it; no other callback exists. The
+  outcome stays on the card while the detail sections hide.
+- **The button is disabled while publishing is off, while the connection reads anything but
+  connected, and while a removal runs.** The section is hidden while publishing is off, except to
+  show the outcome of a removal just made.
+- **A link lost at the moment of removal removes nothing and writes nothing**, and the card says so.
+- **It never removes on its own**: not on switching publishing off, not on any other settings
+  change, and not without a person confirming.
+
 ## Declare the publish groups
 
 `PublishGroup` carries a key, a label, an optional card description, a default state and an optional
@@ -322,5 +341,6 @@ The rules the markup and code-behind keep, for anyone changing the panel itself.
 - **Apply does not repeat a test that has just passed.** When the newest test passed on exactly
   the values being applied — host, port, transport, encryption, username, password, certificate
   trust and device id — Apply shows that pass again and opens no connection.
+- **It never removes the device** unless the application sets `OfferRemoval` and a person confirms.
 - Nothing in the Broker group takes effect until Apply, and an unapplied edit is marked beside the
   section heading rather than inside the group that holds the fields.

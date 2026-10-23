@@ -401,5 +401,21 @@
                 </controls:SettingsExpander.Description>
             </controls:SettingsExpander>
         </StackPanel>
+
+        <!-- Outside the detail sections: a removal switches publishing off, and its outcome stays on screen. -->
+        <StackPanel x:Name="RemovalPanel" Spacing="4" Visibility="Collapsed">
+            <shared:SettingsSectionHeader x:Name="RemovalHeader"
+                                          Foreground="{ThemeResource MqttPanelHeadingBrush}"/>
+            <controls:SettingsCard x:Name="RemovalCard">
+                <controls:SettingsCard.Description>
+                    <StackPanel Spacing="4">
+                        <TextBlock x:Name="RemovalDescription" Style="{StaticResource MqttHintStyle}"/>
+                        <TextBlock x:Name="RemovalResultText" Style="{StaticResource MqttResultStyle}"
+                                   Visibility="Collapsed"/>
+                    </StackPanel>
+                </controls:SettingsCard.Description>
+                <Button x:Name="RemoveDeviceBtn" Click="OnRemoveDeviceClicked"/>
+            </controls:SettingsCard>
+        </StackPanel>
     </StackPanel>
 </UserControl>

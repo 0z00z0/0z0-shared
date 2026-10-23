@@ -564,8 +564,7 @@ Mqtt.Initialise(new MqttPanelSetup(connection)
     DefaultDeviceName   = $"Example App ({Environment.MachineName})",
     PublishTitle        = "Publish to MQTT",
     PublishDescription  = "Publishes this application's state to an MQTT broker.",
-    PublishGroupsInfo   = "Each group is a set of entities. Switching one off stops it publishing "
-                        + "and marks its entities unavailable; nothing is deleted.",
+    OfferRemoval        = true,
     DeviceIdConsequence = "Any dashboard card pointing at the old entities has to be repointed.",
     CommandLabel        = id => entities.NameOf(id),
     Log                 = log,
@@ -914,9 +913,10 @@ user declined.
 **Removing the device outright is a separate, explicit operation** — `MqttConnection.RemoveDeviceAsync`.
 It empties the document, both availability topics, every state topic and every command topic, then
 stops the connection, and it deletes every registry entry the device owns along with the names,
-entity ids and areas the user chose. Nothing a user does to the settings can reach it. Switching
-publishing off, or blanking the host so the configuration stops being complete, publishes offline and
-leaves everything standing.
+entity ids and areas the user chose. The settings panel reaches it only where the application sets
+`MqttPanelSetup.OfferRemoval`, and only behind a confirmation; no other settings change reaches it.
+Switching publishing off, or blanking the host so the configuration stops being complete, publishes
+offline and leaves everything standing.
 
 - **`DiscoveryPublisher.RemoveDeviceAsync` withdraws without stopping the connection.** The channels
   go on publishing and refill the emptied state topics, and the next reconnect announces the device
@@ -1179,7 +1179,8 @@ is dead — is one Error line per send.
 ## The panel
 
 `MqttSettingsPanel` renders five sections: the master switch, a live Status block, the device
-identity, a staged Broker block behind an Apply, and one row per declared publish group. It knows no
+identity, a staged Broker block behind an Apply, and one row per declared publish group — and a sixth,
+removing the published device, where the application sets `OfferRemoval`. It knows no
 application's subject matter; everything domain-shaped arrives through `MqttPanelSetup` and every
 edit reports back as a callback.
 

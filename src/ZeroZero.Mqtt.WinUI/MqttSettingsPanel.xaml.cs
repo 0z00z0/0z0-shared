@@ -50,6 +50,8 @@ public sealed partial class MqttSettingsPanel : UserControl
     // True while a manual publish is in flight. A second click is dropped rather than queued.
     private bool _publishing;
 
+    private bool _removing;
+
     private readonly Dictionary<string, ToggleSwitch> _groupToggles = [];
 
     private CancellationTokenSource? _probeCts;
@@ -264,6 +266,11 @@ public sealed partial class MqttSettingsPanel : UserControl
         // The bubble text is the host's, set in ApplyHostText.
         PublishHeader.Heading = _strings["HeadingPublish"].Value;
         PublishHeader.InfoSubject = _strings["SubjectPublishGroups"].Value;
+
+        RemovalHeader.Heading = _strings["HeadingRemoval"].Value;
+        RemovalCard.Header = _strings["RowRemoval"].Value;
+        RemovalDescription.Text = _strings["DescRemoval"].Value;
+        RemoveDeviceBtn.Content = _strings["ButtonRemoveDevice"].Value;
     }
 
     /// <summary>The strings the host owns. What an application publishes is the one thing the module
@@ -310,6 +317,9 @@ public sealed partial class MqttSettingsPanel : UserControl
     private void RefreshDetailVisibility()
     {
         DetailPanel.Visibility = EnabledToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
+        bool removal = _setup?.OfferRemoval == true
+                    && (EnabledToggle.IsOn || RemovalResultText.Visibility == Visibility.Visible);
+        RemovalPanel.Visibility = removal ? Visibility.Visible : Visibility.Collapsed;
         RefreshPublishNowEnabled();
     }
 
@@ -320,6 +330,7 @@ public sealed partial class MqttSettingsPanel : UserControl
 
         bool on = EnabledToggle.IsOn;
         setup.Settings.Update(s => s.Enabled = on);
+        RemovalResultText.Visibility = Visibility.Collapsed;   // about a removal this flip supersedes
         RefreshDetailVisibility();
         // Switching publishing on is not a broker setting changing, so it probes nothing; switching
         // off must abandon a probe already in flight, because off means no network at all.
@@ -659,10 +670,13 @@ public sealed partial class MqttSettingsPanel : UserControl
     }
 
     /// <summary>Live only when there is somewhere to publish to — the feature on, a broker connected,
-    /// and nothing already in flight.</summary>
-    private void RefreshPublishNowEnabled() =>
-        PublishNowBtn.IsEnabled = !_publishing && EnabledToggle.IsOn
-                               && _setup?.ConnectionState() == MqttConnectionState.Connected;
+    /// and nothing already in flight. The removal button follows the same rule.</summary>
+    private void RefreshPublishNowEnabled()
+    {
+        bool live = EnabledToggle.IsOn && _setup?.ConnectionState() == MqttConnectionState.Connected;
+        PublishNowBtn.IsEnabled = live && !_publishing;
+        RemoveDeviceBtn.IsEnabled = live && !_removing;
+    }
 
     /// <summary>Republishes the current state on demand; no config topic is rewritten. Awaited on the
     /// UI thread: a raw dispatcher callback that throws ends the process as a stowed exception.</summary>
@@ -851,6 +865,69 @@ public sealed partial class MqttSettingsPanel : UserControl
         setup.PublishSetChanged();
         // The count in the closed section's summary is one of the facts this toggle just changed.
         RefreshStatus();
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Removing the published device. Offered only when the application asks for it.
+    // ---------------------------------------------------------------------------------------------
+
+    private async void OnRemoveDeviceClicked(object sender, RoutedEventArgs e)
+    {
+        if (_removing || _setup is not { RemoveDevice: { } remove } setup) return;
+
+        _removing = true;
+        try
+        {
+            RefreshPublishNowEnabled();
+            if (!await ConfirmRemovalAsync() || _closed) return;
+
+            ShowRemovalResult("RemovalRunning", error: false);
+            bool removed = await remove(CancellationToken.None);
+            if (_closed) return;
+
+            ShowRemovalResult(removed ? "RemovalDone" : "RemovalNoConnection", error: !removed);
+            if (removed)
+            {
+                setup.Settings.Update(s => s.Enabled = false);
+                WithUpdatingSuppressed(() => EnabledToggle.IsOn = false);
+                CancelProbe();
+                RefreshDetailVisibility();
+                setup.ConnectionChanged();
+                RefreshStatus();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log("MqttSettingsPanel.OnRemoveDeviceClicked", ex);
+            if (!_closed) ShowRemovalResult("RemovalFailed", error: true);
+        }
+        finally
+        {
+            _removing = false;
+            if (!_closed) RefreshPublishNowEnabled();
+        }
+    }
+
+    private async Task<bool> ConfirmRemovalAsync()
+    {
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            RequestedTheme = ActualTheme,
+            Title = _strings["RemovalTitle"].Value,
+            Content = new TextBlock { Text = _strings["RemovalWarning"].Value, TextWrapping = TextWrapping.Wrap },
+            PrimaryButtonText = _strings["RemovalConfirm"].Value,
+            CloseButtonText = _strings["RemovalCancel"].Value,
+            DefaultButton = ContentDialogButton.Close,
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
+    private void ShowRemovalResult(string key, bool error)
+    {
+        RemovalResultText.Text = _strings[key].Value;
+        RemovalResultText.Style = StyleFor(error ? "MqttResultErrorStyle" : "MqttResultStyle");
+        RemovalResultText.Visibility = Visibility.Visible;
     }
 
     // ---------------------------------------------------------------------------------------------

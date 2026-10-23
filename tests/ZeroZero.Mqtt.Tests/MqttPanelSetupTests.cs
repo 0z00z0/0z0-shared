@@ -70,6 +70,44 @@ public class MqttPanelSetupTests
         Assert.True(await FakeBroker.WaitAsync(() => broker.CountOn(topic) == 2));
     }
 
+    /// <summary>Removal is off unless an application asks, and when asked it runs the connection's
+    /// own removal or is refused before the panel draws anything.</summary>
+    [Trait(Guard.Category, Guard.Value)]
+    [Fact]
+    public async Task RemovalIsOptInAndRunsOnlyThroughTheConnection()
+    {
+        using var connection = new MqttConnection(new MqttConnectionSetup { TopicRoot = Root });
+        Assert.False(FromConnection(connection).OfferRemoval);
+
+        var store = new RecordingSettingsStore();
+        var offered = new MqttPanelSetup(connection)
+        {
+            Settings = store,
+            Groups = new PublishGroupSet(store, []),
+            TopicRoot = Root,
+            ConnectionChanged = () => { },
+            PublishSetChanged = () => { },
+            OfferRemoval = true,
+        };
+        offered.EnsureConnectionMembers("setup");
+        Assert.False(await offered.RemoveDevice!(CancellationToken.None), "nothing is connected, so nothing can be removed");
+
+        var manual = new MqttPanelSetup
+        {
+            Settings = store,
+            Groups = new PublishGroupSet(store, []),
+            TopicRoot = Root,
+            ConnectionChanged = () => { },
+            PublishSetChanged = () => { },
+            Activity = new MqttActivity(),
+            ConnectionState = () => MqttConnectionState.Connected,
+            PublishNow = () => Task.FromResult(true),
+            OfferRemoval = true,
+        };
+        var refusal = Assert.Throws<ArgumentException>(() => manual.EnsureConnectionMembers("setup"));
+        Assert.Contains("MqttPanelSetup.OfferRemoval ", refusal.Message, StringComparison.Ordinal);
+    }
+
     /// <summary>The compiler does not enforce the three connection members a panel cannot run without,
     /// so Initialise refuses a setup missing one, naming it — rather than a null dereference on the
     /// first Status refresh or the first press of Publish now.</summary>

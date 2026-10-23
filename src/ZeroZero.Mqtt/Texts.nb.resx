@@ -656,4 +656,52 @@
     <value>Hver bryter virker med en gang. Når en gruppe slås av, merkes entitetene som utilgjengelige uten å bli fjernet, slik at navnene og områdene som er valgt for dem, beholdes.</value>
     <comment>Info bubble text for the What to publish heading, shown when the application supplies none. Full sentences.</comment>
   </data>
+  <data name="HeadingRemoval" xml:space="preserve">
+    <value>Fjern fra brokeren</value>
+    <comment>Section heading above the device-removal card, last on the panel. Shown only in applications that offer removal.</comment>
+  </data>
+  <data name="RowRemoval" xml:space="preserve">
+    <value>Publisert enhet</value>
+    <comment>Row label of the device-removal card, under HeadingRemoval.</comment>
+  </data>
+  <data name="DescRemoval" xml:space="preserve">
+    <value>Tømmer alt denne enheten har publisert, og slår av publiseringen.</value>
+    <comment>Description under the Published device row label. One short line: a longer one widens the whole panel. Never restates the label.</comment>
+  </data>
+  <data name="ButtonRemoveDevice" xml:space="preserve">
+    <value>Fjern enheten…</value>
+    <comment>Button on the Published device row that opens the removal confirmation. Fits a button; the ellipsis says a question follows.</comment>
+  </data>
+  <data name="RemovalTitle" xml:space="preserve">
+    <value>Fjerne den publiserte enheten?</value>
+    <comment>Title of the removal confirmation dialogue. A question, answered by RemovalConfirm or RemovalCancel.</comment>
+  </data>
+  <data name="RemovalWarning" xml:space="preserve">
+    <value>Alt denne enheten har publisert, tømmes fra brokeren, og publiseringen slås av slik at ingenting kunngjør den igjen. Det som leser enheten, mister navnene, entitets-ID-ene og områdene som er valgt for entitetene, og en ny kunngjøring lager nye. Dette kan ikke angres.</value>
+    <comment>Body of the removal confirmation dialogue. States what is lost before the button that loses it.</comment>
+  </data>
+  <data name="RemovalConfirm" xml:space="preserve">
+    <value>Fjern</value>
+    <comment>Confirm button of the removal confirmation dialogue. Fits a button.</comment>
+  </data>
+  <data name="RemovalCancel" xml:space="preserve">
+    <value>Avbryt</value>
+    <comment>Cancel button of the removal confirmation dialogue; the default button. Fits a button.</comment>
+  </data>
+  <data name="RemovalRunning" xml:space="preserve">
+    <value>Fjerner…</value>
+    <comment>Status line on the Published device row while the removal runs.</comment>
+  </data>
+  <data name="RemovalDone" xml:space="preserve">
+    <value>Enheten er fjernet fra brokeren, og publiseringen er slått av.</value>
+    <comment>Status line on the Published device row after a removal. Full sentence; stays after the master switch is turned off.</comment>
+  </data>
+  <data name="RemovalNoConnection" xml:space="preserve">
+    <value>Ingenting ble fjernet, fordi det ikke er noen aktiv tilkobling til brokeren. Prøv igjen når den er tilkoblet.</value>
+    <comment>Status line on the Published device row, in the error colour, when the link was gone at the moment of removal.</comment>
+  </data>
+  <data name="RemovalFailed" xml:space="preserve">
+    <value>Fjerningen stoppet underveis, så brokeren kan fortsatt ha deler av enheten.</value>
+    <comment>Status line on the Published device row, in the error colour, when the removal failed part-way.</comment>
+  </data>
 </root>
