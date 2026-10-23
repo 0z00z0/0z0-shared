@@ -75,12 +75,16 @@ public class LibraryStringLocalizerTests
         Assert.True(text.ResourceNotFound);
     }
 
+    [Trait(Guard.Category, Guard.Value)]
     [Fact]
-    public void ArgumentsAreFormattedForTheUiCulture()
+    public void TheUiCulturePicksTheWordsAndTheRegionalFormatPicksTheNumber()
     {
         var texts = new LibraryStringLocalizer(Sample);
+        string Amount(string language, CultureInfo format) =>
+            UiCulture.Run(CultureInfo.GetCultureInfo(language), format, () => texts["Amount", 1.5]);
 
-        Assert.Equal("1,5 igjen", In("nb-NO", () => texts["Amount", 1.5]));
-        Assert.Equal("1.5 left", In("en-GB", () => texts["Amount", 1.5]));
+        Assert.Equal("1.5 igjen", Amount("nb-NO", CultureInfo.GetCultureInfo("en-GB")));
+        Assert.Equal("1,5 left", Amount("en-GB", CultureInfo.GetCultureInfo("nb-NO")));
+        Assert.Equal("1,5 left", Amount("en-GB", UiCulture.EnGbWithDecimalComma()));
     }
 }

@@ -96,7 +96,9 @@ project, read through `LibraryStringLocalizer`:
   what each placeholder holds, and anything the string cannot show — a button's width, which keys a
   fragment is joined with and in what order. Two short sentences at most, en-GB. The `.resx` is the
   translator's file; there is no other.
-- **Placeholders** are .NET format items, `{0}`, formatted for the UI culture; a component with
+- **Placeholders** are .NET format items, `{0}`. The UI culture picks the text, and a number, size
+  or time inserted into it follows the regional format, `CurrentCulture` with the person's own
+  changes; a port or a version is formatted invariantly by the caller. A component with
   counted texts may use ICU MessageFormat patterns instead and says so in its own guide. A
   translation carries exactly the placeholders of the neutral text.
 - **Tests** in this repository link `tests/Shared/TranslationFiles.cs` and hold every translation to

@@ -15,13 +15,15 @@ public sealed class LibraryStringLocalizer(ResourceManager resources, IStringLoc
                 ? new(name, own)
                 : new(name, name, resourceNotFound: true);
 
-    /// <summary>Formatted with the UI culture, the culture the text itself was chosen for.</summary>
+    /// <summary>The UI culture picks the text; numbers, sizes and times inserted into it follow the
+    /// regional format, the current culture with the person's own changes. A caller that inserts an
+    /// identifier such as a port or a version formats it invariantly itself.</summary>
     public LocalizedString this[string name, params object[] arguments]
     {
         get
         {
             var text = this[name];
-            return new(name, string.Format(CultureInfo.CurrentUICulture, text.Value, arguments), text.ResourceNotFound);
+            return new(name, string.Format(CultureInfo.CurrentCulture, text.Value, arguments), text.ResourceNotFound);
         }
     }
 

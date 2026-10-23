@@ -707,7 +707,8 @@ does not wait for a report to be handled.
 
 Every text the update shows is in `ZeroZero.Update.Win32`'s `Texts.resx` (en-GB) with Norwegian
 bokmål built in (`Texts.nb.resx`), chosen by the UI culture; `docs/zerozero-primitives.md` has the
-file layout. Sizes and the rate-limit time are formatted in the UI culture too.
+file layout. Sizes and the rate-limit time follow the regional format (`CurrentCulture`), so
+`--culture nb-NO` in the harness changes the words and not the decimal separator.
 
 - **Three places take the application's own `IStringLocalizer`**, asked first by key, each optional
   and null by default: `UpdateWindowOptions.Strings` for everything the window shows,

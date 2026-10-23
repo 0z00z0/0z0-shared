@@ -38,10 +38,18 @@ public class UpdateMessagesTests
 
     [Trait(Guard.Category, Guard.Value)]
     [Theory]
-    [InlineData("en-GB", "1.5 of 10.0 MB")]
-    [InlineData("nb-NO", "1,5 av 10,0 MB")]
-    public void TheUiCulturePicksTheLanguageAndTheNumberFormat(string culture, string expected) =>
-        Assert.Equal(expected, UiCulture.Run(CultureInfo.GetCultureInfo(culture), () => Messages.DownloadProgressText(1_572_864, 10_485_760)));
+    [InlineData("en-GB", "en-GB", "1.5 of 10.0 MB")]
+    [InlineData("nb-NO", "nb-NO", "1,5 av 10,0 MB")]
+    [InlineData("nb-NO", "en-GB", "1.5 av 10.0 MB")]
+    [InlineData("en-GB", "nb-NO", "1,5 of 10,0 MB")]
+    public void TheUiCulturePicksTheLanguageAndTheRegionalFormatTheNumber(string language, string format, string expected) =>
+        Assert.Equal(expected, UiCulture.Run(CultureInfo.GetCultureInfo(language), CultureInfo.GetCultureInfo(format),
+            () => Messages.DownloadProgressText(1_572_864, 10_485_760)));
+
+    [Fact]
+    public void ThePersonsOwnDecimalSeparatorReachesTheSizes() =>
+        Assert.Equal("17,8 of 46,0 MB", UiCulture.Run(CultureInfo.GetCultureInfo("en-GB"), UiCulture.EnGbWithDecimalComma(),
+            () => Messages.DownloadProgressText(18_664_652, 48_234_496)));
 
     [Fact]
     public void TheHostsTextOutranksTheComponentsOwn()

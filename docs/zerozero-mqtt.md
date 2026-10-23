@@ -1410,7 +1410,8 @@ every other culture reads en-GB. The layout and the rules every component's text
 - **Four texts are ICU MessageFormat patterns**, formatted by the `MessageFormat` package with the UI
   culture's plural rules: `AgeMinutes`, `AgeHours` and `AgeDays` take `count`, `SummaryPublish` takes
   `on` and `total`. A host localizer answering one of these keys answers with such a pattern. Every
-  other text is a .NET format string with `{0}`-style placeholders, formatted for the UI culture.
+  other text is a .NET format string with `{0}`-style placeholders; a number in it follows the
+  regional format (`CurrentCulture`), and ports are always written without separators.
 - **Under `InvariantGlobalization` everything reads en-GB**, the counted texts included, which keep
   the English singular for one.
 
