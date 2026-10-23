@@ -68,6 +68,13 @@ public sealed partial class MqttPanelWindow : Window
         }
     }
 
+    internal void OpenRemovalDialogue()
+    {
+        if (!HarnessTree.Press(Panel, button => button.Name == "RemoveDeviceBtn"))
+            File.WriteAllText(Path.Combine(Path.GetTempPath(), "mqtt-harness-dialogue.txt"),
+                              "Remove-device button or its invoke provider not found.");
+    }
+
     /// <summary>Opens the first info bubble's flyout, so a capture shows the bubble as a reader
     /// meets it and not only its glyph. The bubble's button is private to the control, so the rig
     /// walks the realised tree to it, as it does for every other part it reaches.</summary>

@@ -51,10 +51,16 @@ internal static class MqttPanelSample
         public event Action? Changed;
     }
 
+    /// <summary>Set by <c>--link-up</c>: the link starts searching and comes up this long after
+    /// construction, signalled from a background thread as a real connection does.</summary>
+    internal static TimeSpan? LinkComesUpAfter { get; set; }
+
     /// <summary>A panel wired to invented state: connected, publishing recently, and with a command
     /// received a couple of hours ago, so all four Status rows read as they would in use.</summary>
     public static MqttPanelSetup Build()
     {
+        var state = LinkComesUpAfter is null ? MqttConnectionState.Connected : MqttConnectionState.Searching;
+
         var store = new MemoryStore(new MqttSettings
         {
             Enabled = true,
@@ -88,14 +94,19 @@ internal static class MqttPanelSample
 
         var memory = new MqttEndpointMemory("mqtt.example.com", "harness", 8883, MqttTransport.Tcp, true);
 
-        return new MqttPanelSetup
+        // Never applied, so it opens nothing; only it can back the removal card, whose click then
+        // meets the real no-connection outcome.
+        var neverApplied = new MqttConnection(new MqttConnectionSetup { TopicRoot = "harness" });
+
+        var setup = new MqttPanelSetup(neverApplied)
         {
+            OfferRemoval = true,
             Log = new FileLog(),
             Settings = store,
             Groups = groups,
             TopicRoot = "harness",
             Activity = activity,
-            ConnectionState = () => MqttConnectionState.Connected,
+            ConnectionState = () => state,
             PublishNow = () => Task.FromResult(true),
             ConnectionChanged = () => { },
             PublishSetChanged = () => { },
@@ -108,5 +119,14 @@ internal static class MqttPanelSample
             DeviceIdConsequence = "This rig publishes nothing, so nothing here has a consequence.",
             CommandLabel = id => id == "quiet_mode" ? "Quiet mode" : id,
         };
+
+        if (LinkComesUpAfter is { } after)
+            _ = Task.Delay(after).ContinueWith(_ =>
+            {
+                state = MqttConnectionState.Connected;
+                setup.NotifyConnectionStateChanged();
+            }, TaskScheduler.Default);
+
+        return setup;
     }
 }
