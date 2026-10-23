@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Version" xml:space="preserve">
+    <value>versjon {0}</value>
+    <comment>Under the application name in the About header; {0} = version number. Small text on one line.</comment>
+  </data>
+  <data name="Website" xml:space="preserve">
+    <value>Nettsted</value>
+    <comment>Button in the About row that opens the studio website. Short: the row holds several buttons.</comment>
+  </data>
+  <data name="Donate" xml:space="preserve">
+    <value>Doner</value>
+    <comment>Button in the About row that opens the studio donation page; also its screen-reader name. Short: a drawn cup sits beside it.</comment>
+  </data>
+  <data name="WhatsNew" xml:space="preserve">
+    <value>Hva er nytt</value>
+    <comment>Button in the About row that shows the release notes of this version inside the window. Short: the row holds several buttons.</comment>
+  </data>
+  <data name="NotesFetching" xml:space="preserve">
+    <value>Henter versjonsmerknadene…</value>
+    <comment>Status sentence in the release notes panel while the notes download. Ends with an ellipsis.</comment>
+  </data>
+  <data name="NotesFetchFailed" xml:space="preserve">
+    <value>Versjonsmerknadene kunne ikke hentes.</value>
+    <comment>Status sentence in the release notes panel when the download failed for any reason. Full stop.</comment>
+  </data>
+  <data name="NotesEmpty" xml:space="preserve">
+    <value>Det er ingenting å vise for denne versjonen.</value>
+    <comment>Status sentence in the release notes panel when the published notes are empty. Full stop.</comment>
+  </data>
+  <data name="LibrariesCollapsed" xml:space="preserve">
+    <value>Eksterne biblioteker ▾</value>
+    <comment>Toggle above the credited libraries while the list is hidden; the arrow at the end points down. LibrariesExpanded is the same toggle open: same wording.</comment>
+  </data>
+  <data name="LibrariesExpanded" xml:space="preserve">
+    <value>Eksterne biblioteker ▴</value>
+    <comment>Toggle above the credited libraries while the list is shown; the arrow at the end points up. LibrariesCollapsed is the same toggle closed: same wording.</comment>
+  </data>
+  <data name="LibraryCredit" xml:space="preserve">
+    <value>{0} — {1} — {2} ({3})</value>
+    <comment>One line per credited library; {0} = library name (a link when it has an address), {1} = author, {2} = what it is used for, {3} = licence identifier. Keep {0} where a reader meets the name first.</comment>
+  </data>
+  <data name="Footer" xml:space="preserve">
+    <value>Opphavsrett © {0} {1} · MIT-lisens</value>
+    <comment>Footer of the About card; {0} = year (digits), {1} = studio name. The middle dot separates the licence name.</comment>
+  </data>
+  <data name="CheckForUpdates" xml:space="preserve">
+    <value>Se etter oppdateringer</value>
+    <comment>Button under the About card that runs the application update check. Full width of a narrow window.</comment>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Lukk</value>
+    <comment>Screen-reader name of the About window close button, which shows only a cross.</comment>
+  </data>
+</root>

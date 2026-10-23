@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Localization;
+
 namespace ZeroZero.Brand.Core;
 
 /// <summary>
@@ -9,15 +11,18 @@ public static class ConsoleBanner
 {
     private const string Rule = "==========================================";
 
-    public static void Print(AboutInfo info)
+    /// <param name="info">The application's own data, printed as supplied.</param>
+    /// <param name="strings">Asked before the banner's own texts for every key; null asks nothing.</param>
+    public static void Print(AboutInfo info, IStringLocalizer? strings = null)
     {
         var w = Console.Out;
+        var texts = CoreTexts.With(strings);
 
         w.WriteLine(Rule);
         w.WriteLine($" {Brand.StudioName}");
         w.WriteLine($" {Brand.Tagline}");
         w.WriteLine(Rule);
-        w.WriteLine($" {info.AppName} v{info.Version}");
+        w.WriteLine($" {texts["AppVersion", info.AppName, info.Version]}");
         w.WriteLine($" {info.Description}");
         w.WriteLine();
         w.WriteLine($" {info.RepoUrl}");
@@ -27,7 +32,7 @@ public static class ConsoleBanner
         if (info.ExternalLibraries.Count > 0)
         {
             w.WriteLine();
-            w.WriteLine(" External libraries:");
+            w.WriteLine($" {texts["ExternalLibraries"]}");
             foreach (var lib in info.ExternalLibraries)
                 w.WriteLine($"   {lib.Name} ({lib.Author}) - {lib.Purpose} [{lib.License}]");
         }
