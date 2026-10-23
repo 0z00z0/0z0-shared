@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.Extensions.Localization;
+using ZeroZero.Primitives;
 
 namespace ZeroZero.Mqtt;
 
@@ -11,10 +12,13 @@ public sealed class MqttPanelText
     /// <summary>The module's own texts, with no host localizer in front of them.</summary>
     public static MqttPanelText Default { get; } = new(host: null);
 
-    private readonly IStringLocalizer _text;
+    private readonly LibraryStringLocalizer _text;
 
-    /// <param name="host">Asked first for every key; not found or blank falls back to the module's.</param>
+    /// <param name="host">Asked first for every key; not found, blank or unformattable falls back to the module's.</param>
     public MqttPanelText(IStringLocalizer? host) => _text = MqttTexts.With(host);
+
+    /// <param name="log">Told once per key when a text cannot be formatted.</param>
+    public MqttPanelText(IStringLocalizer? host, ILogSink log) => _text = MqttTexts.With(host, log);
 
     /// <summary>The texts behind this composer, host first, for a label it does not assemble.</summary>
     public IStringLocalizer Strings => _text;

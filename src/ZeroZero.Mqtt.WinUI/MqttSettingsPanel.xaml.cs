@@ -93,7 +93,7 @@ public sealed partial class MqttSettingsPanel : UserControl
         _setup = setup;
 
         var host = setup.Strings ?? ApplicationResources.Value;
-        _text = new MqttPanelText(host);
+        _text = new MqttPanelText(host, setup.Log);
         _strings = _text.Strings;
         _edits = new MqttBrokerEdits(host);
         _probe = new MqttProbeSession(_text);

@@ -66,6 +66,18 @@ public class LibraryStringLocalizerTests
         Assert.Equal(expected, In(culture, () => texts["Greeting"]));
     }
 
+    [Trait(Guard.Category, Guard.Value)]
+    [Theory]
+    [InlineData("{1} left")]
+    [InlineData("{count} left")]
+    [InlineData("{0 left")]
+    public void AHostTextTheArgumentsCannotFillGivesWayToTheComponentsOwn(string hostText)
+    {
+        var texts = new LibraryStringLocalizer(Sample, new Host(new() { ["Amount"] = hostText }));
+
+        Assert.Equal("1.5 left", In("en-GB", () => texts["Amount", 1.5]));
+    }
+
     [Fact]
     public void AKeyNothingDeclaresRendersAsItselfAndSaysSo()
     {

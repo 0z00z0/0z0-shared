@@ -314,6 +314,10 @@ The panel speaks en-GB and Norwegian bokmål out of the box, chosen by the UI cu
 - **Override one text, or add a language,** with an `IStringLocalizer` on `MqttPanelSetup.Strings`.
   It is asked first for every key, in place of the `.resw`; a key it does not hold, or holds blank,
   falls back to the module's file for the UI culture, then to en-GB.
+- **A host text that cannot be formatted with the module's arguments is ignored in favour of the
+  module's own text**, whether it comes from `Strings` or the `.resw`, and the setup's `Log` is told
+  once per key. A counted text (`AgeMinutes`, `AgeHours`, `AgeDays`, `SummaryPublish`) is an ICU
+  pattern with named arguments, so a positional `{0}` there is one such text.
 - **The keys and what each text is** are in `Texts.resx` in `ZeroZero.Mqtt`; every entry's comment
   says where the text appears and what its placeholders hold. The full rules are in
   [`zerozero-mqtt.md`](zerozero-mqtt.md#translation).

@@ -68,8 +68,11 @@ This guide is complete for adoption: the component's own source and tests need n
   `ResourceManager`, with an optional host `IStringLocalizer` asked first. A host answer marked
   `ResourceNotFound`, or blank, counts as missing; the component's resource file for the current UI
   culture answers next, then its neutral en-GB; a key found nowhere comes back as its own name with
-  `ResourceNotFound` set. The indexer with arguments formats with `string.Format` in the current UI
-  culture. `GetAllStrings` lists the component's own keys, each answered as the indexer answers it.
+  `ResourceNotFound` set. The indexer with arguments formats with `string.Format` in the current
+  culture, the regional format; `Format(name, formatter)` applies any other formatter, such as an ICU
+  pattern's. A host text that cannot be formatted with the component's arguments is ignored in favour
+  of the component's own text, and an own text that fails too comes back unformatted: neither throws.
+  `Log`, optional, is told once per key when that happens. `GetAllStrings` lists the component's own keys, each answered as the indexer answers it.
   How a component lays out its texts is under [Texts](#texts).
 - **The source-revision stamp** — `build/ZeroZero.Primitives.props` and
   `build/ZeroZero.Primitives.targets`. The targets file sets `SourceRevisionId` to the short

@@ -11,10 +11,12 @@ internal static class MqttTexts
 {
     private static readonly ResourceManager Resources = new("ZeroZero.Mqtt.Texts", typeof(MqttTexts).Assembly);
 
-    public static IStringLocalizer With(IStringLocalizer? host) => new LibraryStringLocalizer(Resources, host);
+    public static LibraryStringLocalizer With(IStringLocalizer? host, ILogSink? log = null) =>
+        new(Resources, host) { Log = log };
 
-    /// <summary>A counted text: an ICU MessageFormat pattern, its plural chosen by the UI culture.</summary>
-    public static string Count(IStringLocalizer texts, string key, IReadOnlyDictionary<string, object?> arguments)
+    /// <summary>A counted text: an ICU MessageFormat pattern, its plural chosen by the UI culture. A
+    /// host pattern these named arguments cannot fill gives way to the module's own.</summary>
+    public static string Count(LibraryStringLocalizer texts, string key, IReadOnlyDictionary<string, object?> arguments)
     {
         var culture = CultureInfo.CurrentUICulture;
         var formatter = new MessageFormatter(useCache: false, culture);
@@ -22,6 +24,6 @@ internal static class MqttTexts
         // Under InvariantGlobalization en-GB cannot be created, so its one/other rule stands in.
         if (culture.Name.Length == 0) formatter.CardinalPluralizers![""] = n => n == 1 ? "one" : "other";
 
-        return formatter.FormatMessage(texts[key].Value, arguments);
+        return texts.Format(key, pattern => formatter.FormatMessage(pattern, arguments)).Value;
     }
 }
