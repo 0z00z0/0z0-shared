@@ -41,7 +41,7 @@ This guide is complete for adoption: the component's own source and tests need n
   binds them. The glyph names Segoe Fluent Icons with Segoe MDL2 Assets as its fallback, so it still
   draws on a Windows older than 11, and the foreground resolves a stock theme brush, so the bubble
   follows the host's theme with no key to declare. With no subject the name is plain "More
-  information". A bare bubble does not hide itself when `Info` is empty; the row and the section
+  information". Both names are the assembly's own texts ([Texts](#texts)). A bare bubble does not hide itself when `Info` is empty; the row and the section
   header hide theirs.
 - **`SettingsSectionHeader`** — the sub-heading that opens a group of rows: a rule, the heading,
   an optional bubble and a `Trailing` slot for a marker such as "Unapplied changes". The rule sits
@@ -79,13 +79,13 @@ This guide is complete for adoption: the component's own source and tests need n
   an equal-width cancel-and-confirm row with the confirm on the right. Resolves with the text on
   confirm and null on cancel, Escape from any control, or any other way out; Enter confirms from
   the field; the
-  confirm button waits for text unless `AllowEmpty` is set. Every string is the caller's —
-  `Confirm` says what the answer does, "Rename", not "OK" — and so is the theme, so an application
+  confirm button waits for text unless `AllowEmpty` is set. Every string but the default `Cancel`
+  is the caller's — `Confirm` says what the answer does, "Rename", not "OK" — and so is the theme, so an application
   pinned dark passes it. The prompt collapses the field's selection on every way out, Alt+F4
   included: closing while the field holds its opening selection crashes the process with an access
   violation in the XAML runtime.
   The text comes back untrimmed. `Title`, `Message` and `Confirm` are required; `Cancel` defaults to
-  "Cancel", `MaxLength` to 0 (no limit), and without `AllowEmpty` whitespace alone does not enable
+  the assembly's own "Cancel" ([Texts](#texts)), read when the options are made, `MaxLength` to 0 (no limit), and without `AllowEmpty` whitespace alone does not enable
   the confirm.
 - **`PopupWindowFit`** — a window sized to its own content and centred on the monitor it is on. The
   caller hands it the window, the scroller's content panel, and `PopupWindowFitOptions`: the fixed
@@ -144,6 +144,23 @@ Not here, by design: anything carrying the studio's face or palette. Those are t
 ([`zerozero-brand.md`](zerozero-brand.md)), which a component takes when it needs them and says so.
 No theme keys either: every control resolves stock brushes, and a host recolours a heading through
 the properties it inherits.
+
+## Texts
+
+The assembly writes three texts of its own: the info bubble's two screen-reader names (`InfoName`,
+`InfoNameAbout` with the subject as `{0}`) and the text prompt's default `PromptCancel`. They are in
+en-GB with Norwegian bokmål built in, in `src/ZeroZero.Controls.WinUI/Texts.resx` and
+`Texts.nb.resx`, laid out as [the primitives guide](zerozero-primitives.md#texts) describes; the UI
+culture picks the language.
+
+- **`ControlTexts.Strings`** — one optional `IStringLocalizer` for the whole application, asked first
+  for every key; null, the default, asks nothing. One static setting rather than a member per
+  control, because bubbles are also created inside other components, the settings rows and the MQTT
+  panel among them, where an application cannot reach them.
+- **Set it at start-up, before the first window opens.** A bubble reads it when its name is set and
+  a `TextPromptOptions` when it is made, so a later change reaches only bubbles and prompts created
+  after it.
+- A caller's own `Cancel` on `TextPromptOptions` is shown as given and never translated.
 
 ## Take the reference
 

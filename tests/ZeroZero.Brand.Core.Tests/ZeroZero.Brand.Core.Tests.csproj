@@ -23,6 +23,17 @@
   <ItemGroup>
     <!-- The About control's release-notes download, which names no WinUI type. -->
     <Compile Include="..\..\src\ZeroZero.Brand.WinUI\ReleaseNotesReader.cs" Link="Linked\ReleaseNotesReader.cs" />
+    <Compile Include="..\Shared\UiCulture.cs" Link="Shared\UiCulture.cs" />
+    <Compile Include="..\Shared\TranslationFiles.cs" Link="Shared\TranslationFiles.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The translator's files of both brand assemblies, read as data: the context notes are not
+         compiled, and the WinUI assembly cannot be referenced here. -->
+    <None Include="..\..\src\ZeroZero.Brand.Core\Texts.resx" Link="Translations\Core\Texts.resx" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ZeroZero.Brand.Core\Texts.nb.resx" Link="Translations\Core\Texts.nb.resx" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ZeroZero.Brand.WinUI\Texts.resx" Link="Translations\WinUI\Texts.resx" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ZeroZero.Brand.WinUI\Texts.nb.resx" Link="Translations\WinUI\Texts.nb.resx" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

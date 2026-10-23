@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="InfoName" xml:space="preserve">
+    <value>More information</value>
+    <comment>Screen-reader name of an information button (i) whose subject is unknown. InfoNameAbout is the same button with a subject.</comment>
+  </data>
+  <data name="InfoNameAbout" xml:space="preserve">
+    <value>More information about {0}</value>
+    <comment>Screen-reader name of an information button (i) beside a setting; {0} = what the information is about, often the setting label as written, capital letter included.</comment>
+  </data>
+  <data name="PromptCancel" xml:space="preserve">
+    <value>Cancel</value>
+    <comment>Cancel button of a one-line text prompt, left of the confirm button in two equal columns. Closes the prompt without changing anything.</comment>
+  </data>
+</root>

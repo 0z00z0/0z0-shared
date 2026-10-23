@@ -1,9 +1,11 @@
+using System.Globalization;
+using Microsoft.Extensions.Localization;
 using Xunit;
 
 namespace ZeroZero.Brand.Core.Tests;
 
 /// <summary>The CLI About banner. Every assertion drives the real
-/// <see cref="ConsoleBanner.Print(AboutInfo)"/> and reads what it actually wrote.</summary>
+/// <see cref="ConsoleBanner.Print(AboutInfo, IStringLocalizer?)"/> and reads what it actually wrote.</summary>
 public class ConsoleBannerTests
 {
     private const string Rule = "==========================================";
@@ -20,14 +22,14 @@ public class ConsoleBannerTests
     /// <summary>Captures what Print wrote. Console.Out is process-wide state, so every test that
     /// redirects it lives in this one class — xUnit runs a class's tests sequentially, which keeps
     /// one capture from swallowing another's output.</summary>
-    private static string Capture(AboutInfo info)
+    private static string Capture(AboutInfo info, IStringLocalizer? strings = null)
     {
         var original = Console.Out;
         try
         {
             using var writer = new StringWriter();
             Console.SetOut(writer);
-            ConsoleBanner.Print(info);
+            ConsoleBanner.Print(info, strings);
             return writer.ToString();
         }
         finally
@@ -107,12 +109,35 @@ public class ConsoleBannerTests
     /// <summary>The banner's whole reason for existing: it has to survive a legacy code page and
     /// redirected output, so no brand glyph and no box drawing may reach it.</summary>
     [Trait(Guard.Category, Guard.Value)]
-    [Fact]
-    public void Print_EmitsAsciiOnly_WhenTheSuppliedDataIsAscii()
+    [Theory]
+    [InlineData("en-GB")]
+    [InlineData("nb-NO")]
+    public void Print_EmitsAsciiOnly_WhenTheSuppliedDataIsAscii(string culture)
     {
-        var banner = Capture(Sample(new ExternalLibrary("NLog", "NLog contributors", "File logging", "BSD-3-Clause")));
+        var banner = UiCulture.Run(CultureInfo.GetCultureInfo(culture),
+            () => Capture(Sample(new ExternalLibrary("NLog", "NLog contributors", "File logging", "BSD-3-Clause"))));
 
         Assert.All(banner, c => Assert.InRange(c, (char)0x09, (char)0x7e));
+    }
+
+    [Fact]
+    public void Print_SpeaksTheUiCultureAndTheHostOutranksIt()
+    {
+        var info = Sample(new ExternalLibrary("NLog", "NLog contributors", "File logging", "BSD-3-Clause"));
+        var norwegian = Lines(UiCulture.Run(CultureInfo.GetCultureInfo("nb-NO"), () => Capture(info)));
+        var host = Lines(Capture(info, new Answering("ExternalLibraries", "Externe Bibliotheken:")));
+
+        Assert.Contains(" Eksterne biblioteker:", norwegian);
+        Assert.Contains(" Externe Bibliotheken:", host);
+    }
+
+    private sealed class Answering(string key, string value) : IStringLocalizer
+    {
+        public LocalizedString this[string name] => name == key ? new(name, value) : new(name, name, resourceNotFound: true);
+
+        public LocalizedString this[string name, params object[] arguments] => this[name];
+
+        public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
     }
 
     [Fact]

@@ -20,7 +20,7 @@ This guide is complete for adoption: the component's own source and tests need n
 | | |
 |---|---|
 | SDK | .NET 10 |
-| `ZeroZero.Brand.Core` | Plain `net10.0` — no WinUI, no Windows-specific dependencies, safe from a console app or any other .NET target. |
+| `ZeroZero.Brand.Core` | Plain `net10.0` — no WinUI, no Windows-specific dependencies, safe from a console app or any other .NET target. Its one dependency is `ZeroZero.Primitives`, which reads its texts. |
 | `ZeroZero.Brand.WinUI` | `net10.0-windows10.0.26100.0`, Windows 10 1809 (build 10.0.17763) or later, with the Windows App SDK. Unpackaged. |
 
 ## The assemblies
@@ -44,8 +44,9 @@ This guide is complete for adoption: the component's own source and tests need n
   `AppName`, `Version` — without a `v`, which both surfaces add — and `Description` are required;
   with no `ExternalLibraries` neither surface shows credits.
 - **`ConsoleBanner`** — prints a plain-ASCII "about" banner to the console for non-UI (CLI) tools,
-  built from an `AboutInfo`: `Print` writes to `Console.Out` and leaves out `ReleaseNotesUrl`,
-  `Buttons` and each credit's `Url`.
+  built from an `AboutInfo`: `Print(info, strings)` writes to `Console.Out` and leaves out
+  `ReleaseNotesUrl`, `Buttons` and each credit's `Url`. `strings` is the optional host localizer
+  described under [Texts](#texts).
 
 ### `ZeroZero.Brand.WinUI`
 
@@ -58,8 +59,8 @@ References `ZeroZero.Brand.Core`, `ZeroZero.Win32` and `ZeroZero.Controls.WinUI`
   the application's own buttons from `AboutInfo.Buttons`, each at its natural width in the row's own
   style; it wraps onto another line at narrow widths, and a hidden button takes neither width nor a
   gap. Owns no window chrome, sizing, or update/exit flow — hosts either inside `BrandAboutWindow` or
-  directly inside a host app's own in-navigation page. Call `SetInfo(AboutInfo)` after construction
-  to populate it (a method, not a settable property — the WinUI XAML compiler needs a parameterless
+  directly inside a host app's own in-navigation page. Call `SetInfo(info, strings)` after construction
+  to populate it, `strings` being the optional host localizer described under [Texts](#texts) (a method, not a settable property — the WinUI XAML compiler needs a parameterless
   constructor for any type exposed as a public property on a XAML class, which `AboutInfo`'s
   `required` members deliberately do not have). `ContentResized` is raised whenever its height may
   have changed; a page host inside a scroll viewer can ignore it.
@@ -73,8 +74,9 @@ References `ZeroZero.Brand.Core`, `ZeroZero.Win32` and `ZeroZero.Controls.WinUI`
   app's own `NativeMethods` class.
 - **`BrandAboutOptions`** — the parameters: an `AboutInfo`, an optional `OnCheckForUpdates` callback
   (omit it to hide the "Check for Updates" button entirely — a console-only tool or a build without
-  an update channel does not pass one), and an optional `OnBeforeExit` hook for apps that need to
-  self-exit cleanly before an installer-triggered relaunch.
+  an update channel does not pass one), an optional `OnBeforeExit` callback for apps that need to
+  exit cleanly before an installer-triggered relaunch, and the optional host localizer `Strings`
+  described under [Texts](#texts).
 - **`BrandBracketButton`** — a borderless action button in the brand's own shape, placed by a host on
   its own, with `BrandBracketButtonState` naming what it shows and `Symbol` the character before its
   label. See [the bracket action button](#the-bracket-action-button).
@@ -463,6 +465,33 @@ column's `Spacing` between buttons is 2 by default.
 
 Status (2026-09-18): compiles clean in 0.9.2; first rendered in ChargeKeeper 1.58.2 with brand
 0.9.1 — placement seen, states, animations, reduced motion and theme switching not yet reported.
+
+## Texts
+
+The component's own texts are in en-GB with Norwegian bokmål built in, laid out as
+[the primitives guide](zerozero-primitives.md#texts) describes: `Texts.resx` and `Texts.nb.resx` in
+`src/ZeroZero.Brand.Core` for the console banner and in `src/ZeroZero.Brand.WinUI` for the About
+surface, each entry with a context note. The UI culture picks the language.
+
+- **The component's own texts**: the banner's version line and libraries heading; on the About
+  surface the version prefix, Website, Donate, What's new, the three notes messages (fetching,
+  failed, empty), the libraries toggle in both states, the credit line, the copyright footer, Check
+  for Updates and the close button's screen-reader name.
+- **The application's own data is never translated**: app name, description, its own buttons, the
+  credits' names, authors, purposes and licences, and the release notes are shown as supplied. The
+  studio name and the tagline are brand copy and stay English in every language.
+- **Overriding or adding a language**: pass an `IStringLocalizer` as `ConsoleBanner.Print`'s
+  `strings`, `SetInfo`'s `strings` or `BrandAboutOptions.Strings`. It is asked first for every key
+  of the resource files; a key it does not hold, or holds blank, falls to the component's own text.
+
+Traps:
+
+- **The banner keys must stay ASCII in every language.** The banner exists to print on any console
+  code page and through redirected output, so a host translation with a non-ASCII letter breaks it.
+- **The credit line `LibraryCredit` carries the library name as `{0}`**, which becomes the link when
+  the credit has a `Url`. A host wording without `{0}`, or with it twice, shows no link.
+- **The libraries toggle carries its arrow inside the text**, ▾ while the list is hidden and ▴ while
+  it is shown, so a host translation of `LibrariesCollapsed` and `LibrariesExpanded` keeps the arrows.
 
 ## Screenshots
 

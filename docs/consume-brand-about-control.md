@@ -11,8 +11,11 @@ routes and the CI shapes are in [`consuming.md`](consuming.md).
 2. Host `BrandAboutControl` in the existing About page's XAML, in place of the bespoke layout —
    or, under the settings shell, return it from the About section's `Build` with no scroll viewer
    of its own, since the shell puts one over every page.
-3. Call `SetInfo(AboutInfo)` from the page's constructor or `Loaded` handler, after
-   `InitializeComponent`; a cached page calling it again on every visit is safe. It is a method and
+3. Call `SetInfo(info, strings)` from the page's constructor or `Loaded` handler, after
+   `InitializeComponent`; a cached page calling it again on every visit is safe. `strings` is
+   optional: the control's own texts follow the UI culture in en-GB and Norwegian, and an
+   `IStringLocalizer` passed here overrides them key by key
+   ([Texts](zerozero-brand.md#texts)). It is a method and
    not a property for a build reason: the WinUI XAML compiler generates metadata that needs a
    parameterless constructor for the type of every public property on a XAML class, and
    `AboutInfo`'s `required` members leave it without one, so a settable property fails the build

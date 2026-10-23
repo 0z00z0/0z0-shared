@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Localization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -30,11 +31,6 @@ public sealed partial class BrandAboutControl : UserControl
     /// </summary>
     private static readonly TimeSpan FetchTimeout = TimeSpan.FromSeconds(3);
 
-    /// <summary>What is shown while the fetch is in flight, and what replaces it when it fails —
-    /// one plain sentence, no error code, no retry offered.</summary>
-    private const string Fetching = "Fetching the notes…";
-    private const string FetchFailed = "The release notes could not be fetched.";
-
     /// <summary>Gap between neighbouring row buttons, and between wrapped lines of them.</summary>
     private const double RowSpacing = 8;
 
@@ -43,6 +39,8 @@ public sealed partial class BrandAboutControl : UserControl
     private static readonly HttpClient Http = new() { Timeout = FetchTimeout };
 
     private AboutInfo? _info;
+
+    private IStringLocalizer _texts = BrandTexts.With(null);
 
     /// <summary>The fetch in flight, if any. One at a time: a second press while it runs is
     /// ignored rather than starting a parallel request. A reply is applied only while its own fetch
@@ -61,6 +59,12 @@ public sealed partial class BrandAboutControl : UserControl
 
     private readonly Button _newsButton;
 
+    private readonly Button _siteButton;
+
+    private readonly Button _donateButton;
+
+    private readonly TextBlock _donateLabel = new() { VerticalAlignment = VerticalAlignment.Center };
+
     /// <summary>
     /// Raised after the external-libraries list or the release-notes panel toggles, since either
     /// changes this control's desired height. A hosting <see cref="BrandAboutWindow"/> uses this to
@@ -76,22 +80,21 @@ public sealed partial class BrandAboutControl : UserControl
         TaglineText.Text    = CoreBrand.Tagline;
 
         // Named so a probe can find a row button by name.
-        var siteButton   = CreateRowButton("Website", "SiteBtn");
-        var donateButton = CreateRowButton(DonateContent(), "DonateBtn");
-        // The content is a panel rather than a string, so the accessible name is stated explicitly.
-        AutomationProperties.SetName(donateButton, "Donate");
-        _newsButton      = CreateRowButton("What's new", "NewsBtn");
-        _buttonRow.Children.Add(siteButton);
-        _buttonRow.Children.Add(donateButton);
+        _siteButton   = CreateRowButton(null, "SiteBtn");
+        _donateButton = CreateRowButton(DonateContent(), "DonateBtn");
+        _newsButton   = CreateRowButton(null, "NewsBtn");
+        _buttonRow.Children.Add(_siteButton);
+        _buttonRow.Children.Add(_donateButton);
         _buttonRow.Children.Add(_newsButton);
         _builtInButtonCount = _buttonRow.Children.Count;
         ButtonRowSlot.Child = _buttonRow;
+        ApplyTexts();
 
         // Wired once here, never from SetInfo, which a cached page calls on every visit: wiring there
         // stacks a handler per call. The notes handler reads the current _info for the same reason.
-        _newsButton.Click  += (_, _) => _ = ToggleNotesAsync();
-        siteButton.Click   += (_, _) => Open(CoreBrand.WebsiteUrl);
-        donateButton.Click += (_, _) => Open(CoreBrand.BuyMeACoffeeUrl);
+        _newsButton.Click   += (_, _) => _ = ToggleNotesAsync();
+        _siteButton.Click   += (_, _) => Open(CoreBrand.WebsiteUrl);
+        _donateButton.Click += (_, _) => Open(CoreBrand.BuyMeACoffeeUrl);
 
         // A page host navigating away is the same event as a window closing: whatever is in flight
         // must not land on a control that is no longer on screen.
@@ -115,18 +118,32 @@ public sealed partial class BrandAboutControl : UserControl
     /// is safe. A method, because a public <see cref="AboutInfo"/> property fails the XAML build with
     /// CS9035 (docs/consume-brand-about-control.md). <see cref="BrandAboutWindow"/> calls it itself.
     /// </summary>
-    public void SetInfo(AboutInfo info)
+    /// <param name="info">The application's own data, shown as supplied.</param>
+    /// <param name="strings">Asked before the control's own texts for every key; null asks nothing.</param>
+    public void SetInfo(AboutInfo info, IStringLocalizer? strings = null)
     {
         _info = info;
+        _texts = BrandTexts.With(strings);
+        ApplyTexts();
         Populate(info);
+    }
+
+    private void ApplyTexts()
+    {
+        _siteButton.Content = _texts["Website"].Value;
+        _donateLabel.Text = _texts["Donate"].Value;
+        // The content is a panel rather than a string, so the accessible name is stated explicitly.
+        AutomationProperties.SetName(_donateButton, _donateLabel.Text);
+        _newsButton.Content = _texts["WhatsNew"].Value;
+        ApplyLibrariesToggleText();
     }
 
     private void Populate(AboutInfo info)
     {
         AppNameText.Text     = info.AppName;
-        VersionText.Text     = $"v{info.Version}";
+        VersionText.Text     = _texts["Version", info.Version];
         DescriptionText.Text = info.Description;
-        FooterText.Text     = $"Copyright © {DateTime.UtcNow.Year} {CoreBrand.StudioName} · MIT Licence";
+        FooterText.Text      = _texts["Footer", DateTime.UtcNow.Year, CoreBrand.StudioName];
 
         // A repopulate is a different application's data, so notes fetched, or still being fetched,
         // for the previous one are not shown against it.
@@ -165,7 +182,7 @@ public sealed partial class BrandAboutControl : UserControl
     /// <summary>A button in the row's own style: the brand face at the row's size, natural width.
     /// The content is a label for every button but Donate, which carries a drawn mark beside
     /// its own.</summary>
-    private Button CreateRowButton(object content, string? name)
+    private Button CreateRowButton(object? content, string? name)
     {
         var button = new Button
         {
@@ -195,7 +212,7 @@ public sealed partial class BrandAboutControl : UserControl
             VerticalAlignment = VerticalAlignment.Center,
         };
         content.Children.Add((UIElement)((DataTemplate)Resources["DonateMark"]).LoadContent());
-        content.Children.Add(new TextBlock { Text = "Donate", VerticalAlignment = VerticalAlignment.Center });
+        content.Children.Add(_donateLabel);
         return content;
     }
 
@@ -232,7 +249,7 @@ public sealed partial class BrandAboutControl : UserControl
             return;
         }
 
-        NewsText.Text = Fetching;
+        NewsText.Text = _texts["NotesFetching"].Value;
         RaiseContentResized();
 
         var fetch = new CancellationTokenSource(FetchTimeout);
@@ -241,6 +258,7 @@ public sealed partial class BrandAboutControl : UserControl
         {
             string text = await ReleaseNotesReader.FetchAsync(Http, url, fetch.Token);
             if (_fetch != fetch) return;
+            if (text.Length == 0) text = _texts["NotesEmpty"].Value;
             _notes = text;
             NewsText.Text = text;
         }
@@ -251,7 +269,7 @@ public sealed partial class BrandAboutControl : UserControl
             // which is the reader's decision rather than this control's.
             if (_fetch != fetch) return;
             Debug.WriteLine($"BrandAboutControl: release notes fetch failed: {ex}");
-            NewsText.Text = FetchFailed;
+            NewsText.Text = _texts["NotesFetchFailed"].Value;
         }
         finally
         {
@@ -278,17 +296,22 @@ public sealed partial class BrandAboutControl : UserControl
                 Opacity       = 0.85,
             };
 
-            if (library.Url is { } url)
+            // The name becomes the link wherever the wording puts it, so it is split out at a marker;
+            // a host wording that leaves the name out, or names it twice, gets no link.
+            string[] around = _texts["LibraryCredit", "\0", library.Author, library.Purpose, library.License].Value.Split('\0');
+
+            if (library.Url is { } url && around.Length == 2)
             {
                 var link = new Hyperlink();
                 link.Inlines.Add(new Run { Text = library.Name });
                 link.Click += (_, _) => Open(url);
+                if (around[0].Length > 0) line.Inlines.Add(new Run { Text = around[0] });
                 line.Inlines.Add(link);
-                line.Inlines.Add(new Run { Text = $" — {library.Author} — {library.Purpose} ({library.License})" });
+                if (around[1].Length > 0) line.Inlines.Add(new Run { Text = around[1] });
             }
             else
             {
-                line.Text = $"{library.Name} — {library.Author} — {library.Purpose} ({library.License})";
+                line.Text = _texts["LibraryCredit", library.Name, library.Author, library.Purpose, library.License];
             }
 
             LibrariesPanel.Children.Add(line);
@@ -298,10 +321,13 @@ public sealed partial class BrandAboutControl : UserControl
     private void OnLibrariesToggle(object sender, RoutedEventArgs e)
     {
         bool expanded = LibrariesPanel.Visibility == Visibility.Visible;
-        LibrariesPanel.Visibility  = expanded ? Visibility.Collapsed : Visibility.Visible;
-        LibrariesToggleBtn.Content = expanded ? "External libraries ▾" : "External libraries ▴";
+        LibrariesPanel.Visibility = expanded ? Visibility.Collapsed : Visibility.Visible;
+        ApplyLibrariesToggleText();
         RaiseContentResized();
     }
+
+    private void ApplyLibrariesToggleText() =>
+        LibrariesToggleBtn.Content = _texts[LibrariesPanel.Visibility == Visibility.Visible ? "LibrariesExpanded" : "LibrariesCollapsed"].Value;
 
     /// <summary>Every raise goes through here: a host's throwing handler is logged, never let out of a
     /// click handler or lost in the fetch's unobserved task.</summary>

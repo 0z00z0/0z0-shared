@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AppVersion" xml:space="preserve">
+    <value>{0} versjon {1}</value>
+    <comment>Line of the console About banner; {0} = application name, {1} = version number. ASCII only: the banner must print on any console code page.</comment>
+  </data>
+  <data name="ExternalLibraries" xml:space="preserve">
+    <value>Eksterne biblioteker:</value>
+    <comment>Heading in the console About banner above one line per credited third-party library. ASCII only: the banner must print on any console code page.</comment>
+  </data>
+</root>

@@ -200,7 +200,6 @@
                      Expander's card chrome (its header keeps its own theme brushes). -->
                 <StackPanel x:Name="LibrariesGroup" Spacing="4">
                     <Button x:Name="LibrariesToggleBtn" Click="OnLibrariesToggle"
-                            Content="External libraries ▾"
                             FontSize="9" FontFamily="{StaticResource BrandFontFamily}"
                             Padding="0" MinWidth="0" MinHeight="0"
                             Background="Transparent" BorderBrush="Transparent"
