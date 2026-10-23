@@ -18,8 +18,9 @@ public sealed class TextPromptOptions
     /// <summary>The wording on the confirm button, which sits on the right.</summary>
     public required string Confirm { get; init; }
 
-    /// <summary>The wording on the cancel button. "Cancel" unless the caller has a reason.</summary>
-    public string Cancel { get; init; } = "Cancel";
+    /// <summary>The wording on the cancel button. The controls' own "Cancel", read through
+    /// <see cref="ControlTexts"/> when the options are made, unless the caller has a reason.</summary>
+    public string Cancel { get; init; } = ControlTexts.Current["PromptCancel"];
 
     /// <summary>An extra line beneath the field — a consequence, a format hint. None by default.</summary>
     public string? Note { get; init; }
