@@ -17,7 +17,7 @@
     <comment>Relative age under a minute, in the last publish and last command rows. Lower case: it follows a dash in StatusLastCommand.</comment>
   </data>
   <data name="AgeMinutes" xml:space="preserve">
-    <value>{count, plural, one {# min ago} other {# min ago}}</value>
+    <value>{count, plural, one {# minute ago} other {# minutes ago}}</value>
     <comment>Relative age under an hour; count = whole minutes, 1 to 59. ICU plural, lower case: it follows a dash in StatusLastCommand.</comment>
   </data>
   <data name="AgeHours" xml:space="preserve">
@@ -393,7 +393,7 @@
     <comment>Button that opens the change device ID dialogue. Fits a button.</comment>
   </data>
   <data name="PlaceholderHost" xml:space="preserve">
-    <value>e.g. mqtt.example.com</value>
+    <value>for example mqtt.example.com</value>
     <comment>Grey example text in the empty host box; the address is an example, not a real host.</comment>
   </data>
   <data name="PlaceholderPort" xml:space="preserve">
@@ -433,7 +433,7 @@
     <comment>One-line description under the Device name row label. Never restates the label.</comment>
   </data>
   <data name="DescDeviceId" xml:space="preserve">
-    <value>Used in every topic and entity id. Changing it moves them all.</value>
+    <value>Used in every topic and entity ID. Changing it moves them all.</value>
     <comment>Description under the Device ID row label. Never restates the label.</comment>
   </data>
   <data name="DescApply" xml:space="preserve">
@@ -481,7 +481,7 @@
     <comment>Line on the closed publish section when the application declares no group.</comment>
   </data>
   <data name="InfoPublishSwitch" xml:space="preserve">
-    <value>The master switch for the whole feature. Nothing on the network is touched while it is off, and it takes effect immediately.</value>
+    <value>The master switch for the whole feature, taking effect immediately. Nothing is sent while it is off; switching it off marks the device offline at the broker, then closes the connection.</value>
     <comment>Info bubble text for the master switch, followed by ModuleVersion. Full sentences.</comment>
   </data>
   <data name="InfoStatus" xml:space="preserve">
@@ -549,8 +549,8 @@
     <comment>Info bubble text for the Password row.</comment>
   </data>
   <data name="InfoDiscoveryPrefix" xml:space="preserve">
-    <value>Entities are announced using the Home Assistant MQTT Discovery convention, an openly published specification that some MQTT consumers follow and others ignore. Change the prefix only for a consumer that listens elsewhere.</value>
-    <comment>Info bubble text for the Discovery prefix row. Home Assistant MQTT Discovery is a proper name.</comment>
+    <value>Entities are announced in an openly published discovery format, which some programs read and others ignore.</value>
+    <comment>Info bubble text for the Discovery prefix row. Names no product: the format is read by more than one program.</comment>
   </data>
   <data name="InfoTest" xml:space="preserve">
     <value>Tries the values in the fields above, including ones not yet applied, over a throwaway connection of its own. It saves nothing at all: not the fields, and not where the broker answered. Anything left on Automatic may take several addresses to find; the result names the one that answered, and lists what was tried only when none of them did.</value>
@@ -645,11 +645,15 @@
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'. Names the Test connection button, so it matches ButtonTest.</comment>
   </data>
   <data name="DeviceIdTooLong" xml:space="preserve">
-    <value>An id can be at most {0} characters.</value>
+    <value>An ID can be at most {0} characters.</value>
     <comment>Validation message in the change device ID dialogue; {0} = maximum length (48).</comment>
   </data>
   <data name="DeviceIdNoAlnum" xml:space="preserve">
-    <value>An id must contain at least one letter or digit.</value>
+    <value>An ID must contain at least one letter or digit.</value>
     <comment>Validation message in the change device ID dialogue.</comment>
+  </data>
+  <data name="InfoPublishGroups" xml:space="preserve">
+    <value>Each switch takes effect at once. Switching a group off marks its entities unavailable without removing them, so the names and areas chosen for them are kept.</value>
+    <comment>Info bubble text for the What to publish heading, shown when the application supplies none. Full sentences.</comment>
   </data>
 </root>

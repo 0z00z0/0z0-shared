@@ -277,8 +277,9 @@ public sealed partial class MqttSettingsPanel : UserControl
         if (setup.PublishInfo is { } info && !string.IsNullOrWhiteSpace(info))
             SetInfo(PublishInfoIcon, _strings["SubjectPublishSwitch"].Value, WithModuleVersion(info));
 
-        // No module fallback: the header hides a blank bubble.
-        PublishHeader.Info = setup.PublishGroupsInfo ?? "";
+        PublishHeader.Info = setup.PublishGroupsInfo is { } groupsInfo && !string.IsNullOrWhiteSpace(groupsInfo)
+            ? groupsInfo
+            : _strings["InfoPublishGroups"].Value;
     }
 
     private static void SetInfo(InfoIcon icon, string subject, string info)

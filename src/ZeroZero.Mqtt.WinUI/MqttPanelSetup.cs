@@ -114,9 +114,8 @@ public sealed class MqttPanelSetup
     /// <summary>The master switch's info icon.</summary>
     public string? PublishInfo { get; init; }
 
-    /// <summary>The "What to publish" heading's info icon. Consumer-owned with no fallback: the
-    /// module knows nothing about what an application publishes, including how to describe the
-    /// section as a whole. Left unset, the heading carries no icon rather than an empty one.</summary>
+    /// <summary>The "What to publish" heading's info icon. Left unset or blank, the module's own text
+    /// says what a group switch does, which is the same for every application.</summary>
     public string? PublishGroupsInfo { get; init; }
 
     /// <summary>An application-specific consequence of renaming the device, shown in the change

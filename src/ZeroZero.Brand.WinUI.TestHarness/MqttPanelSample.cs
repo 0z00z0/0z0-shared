@@ -105,8 +105,6 @@ internal static class MqttPanelSample
             DefaultDeviceName = "Harness (demo)",
             PublishTitle = "Publish to MQTT",
             PublishDescription = "Publishes this rig's invented state to an MQTT broker.",
-            PublishGroupsInfo = "Switching a group off withdraws its entities from the broker; "
-                              + "switching it back on announces them again.",
             DeviceIdConsequence = "This rig publishes nothing, so nothing here has a consequence.",
             CommandLabel = id => id == "quiet_mode" ? "Quiet mode" : id,
         };

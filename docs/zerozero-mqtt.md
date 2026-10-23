@@ -1255,20 +1255,20 @@ culture; the panel names each row's icon through the host's localizer instead.
 what Automatic does about encryption, what the endpoint search remembers — identical for every
 consumer, and no host writes any of it.
 
-**What an application publishes is the host's.** The module knows none of it. Four members carry it,
-and `PublishGroupsInfo` deliberately has no fallback, so an unset one leaves the heading with no
-icon rather than an empty one:
+**What an application publishes is the host's.** The module knows none of it, so these members
+carry it:
 
 | Member | Where it renders |
 |---|---|
 | `PublishTitle` | The master switch card's header |
 | `PublishDescription` | The one line under the master switch — the only place the panel says what this application publishes |
 | `PublishInfo` | The master switch's info icon |
-| `PublishGroupsInfo` | The "What to publish" heading's icon. No fallback. |
+| `PublishGroupsInfo` | The "What to publish" heading's icon |
 | `DeviceIdConsequence` | An application-specific consequence, shown in the device-id dialogue under the module's own |
 
-A blank or whitespace-only `PublishTitle`, `PublishDescription` or `PublishInfo` keeps the module's own
-text, and so does a blank answer from the host's localizer.
+A blank or whitespace-only `PublishTitle`, `PublishDescription`, `PublishInfo` or `PublishGroupsInfo`
+keeps the module's own text, and so does a blank answer from the host's localizer. The module's
+`PublishGroupsInfo` text says what a group switch does, which is the same for every application.
 
 ### Theming
 

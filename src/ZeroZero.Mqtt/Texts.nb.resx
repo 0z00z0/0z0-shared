@@ -481,7 +481,7 @@
     <comment>Line on the closed publish section when the application declares no group.</comment>
   </data>
   <data name="InfoPublishSwitch" xml:space="preserve">
-    <value>Hovedbryteren for hele funksjonen. Ingenting på nettverket berøres mens den er av, og den virker umiddelbart.</value>
+    <value>Hovedbryteren for hele funksjonen, og den virker umiddelbart. Ingenting sendes mens den er av; når den slås av, meldes enheten frakoblet hos brokeren før tilkoblingen lukkes.</value>
     <comment>Info bubble text for the master switch, followed by ModuleVersion. Full sentences.</comment>
   </data>
   <data name="InfoStatus" xml:space="preserve">
@@ -549,8 +549,8 @@
     <comment>Info bubble text for the Password row.</comment>
   </data>
   <data name="InfoDiscoveryPrefix" xml:space="preserve">
-    <value>Entiteter kunngjøres etter Home Assistant MQTT Discovery-konvensjonen, en åpent publisert spesifikasjon som noen MQTT-mottakere følger og andre ignorerer. Endre prefikset bare for en mottaker som lytter et annet sted.</value>
-    <comment>Info bubble text for the Discovery prefix row. Home Assistant MQTT Discovery is a proper name.</comment>
+    <value>Entitetene kunngjøres i et åpent publisert discovery-format, som noen programmer leser og andre ignorerer.</value>
+    <comment>Info bubble text for the Discovery prefix row. Names no product: the format is read by more than one program.</comment>
   </data>
   <data name="InfoTest" xml:space="preserve">
     <value>Prøver verdiene i feltene over, også de som ikke er tatt i bruk ennå, over en egen midlertidig tilkobling. Ingenting lagres: verken feltene eller hvor brokeren svarte. Det som står på Automatisk kan kreve flere adresser før det finnes; resultatet nevner den som svarte, og lister opp det som ble prøvd bare når ingen svarte.</value>
@@ -651,5 +651,9 @@
   <data name="DeviceIdNoAlnum" xml:space="preserve">
     <value>En ID må inneholde minst én bokstav eller ett siffer.</value>
     <comment>Validation message in the change device ID dialogue.</comment>
+  </data>
+  <data name="InfoPublishGroups" xml:space="preserve">
+    <value>Hver bryter virker med en gang. Når en gruppe slås av, merkes entitetene som utilgjengelige uten å bli fjernet, slik at navnene og områdene som er valgt for dem, beholdes.</value>
+    <comment>Info bubble text for the What to publish heading, shown when the application supplies none. Full sentences.</comment>
   </data>
 </root>
