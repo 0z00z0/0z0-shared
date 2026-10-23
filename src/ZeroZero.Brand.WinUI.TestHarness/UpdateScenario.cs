@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -29,6 +30,7 @@ internal static class UpdateScenario
     private const string ApplicationName = "Brand Test Harness";
 
     private static readonly Version Running = new(1, 0, 0);
+    private static readonly UpdateMessages Messages = new();
 
     /// <summary>A release with notes long enough to show the panel scrolling, and a hash line the
     /// stripper is expected to drop.</summary>
@@ -55,6 +57,10 @@ internal static class UpdateScenario
     /// for the capture; nothing answers them.</summary>
     internal static void ShowStage(string stage)
     {
+        // --culture nb-NO shows the window in that language, whatever the machine's own.
+        if (HarnessArguments.ValueAfter(Environment.GetCommandLineArgs(), "--culture") is { } culture)
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+
         var (workArea, scale) = MonitorMetrics.ForCursor();
 
         foreach (ElementTheme theme in new[] { ElementTheme.Light, ElementTheme.Dark })
@@ -106,27 +112,27 @@ internal static class UpdateScenario
 
             case "refusal":
                 _ = window.ShowMessageAsync(
-                    UpdateMessages.CannotInstallHeadline(Refused),
-                    UpdateMessages.CannotInstallText(Refused),
+                    Messages.CannotInstallHeadline(Refused),
+                    Messages.CannotInstallText(Refused),
                     attention: true);
                 break;
 
             case "failure":
                 _ = window.ShowMessageAsync(
-                    UpdateMessages.LaunchFailedHeadline,
-                    UpdateMessages.LaunchFailedText(new LaunchResult(false, "the file changed after it was verified")),
+                    Messages.LaunchFailedHeadline,
+                    Messages.LaunchFailedText(new LaunchResult(false, "the file changed after it was verified")),
                     attention: true);
                 break;
 
             case "uptodate":
                 _ = window.ShowMessageAsync(
-                    UpdateMessages.UpToDateHeadline, UpdateMessages.UpToDateText(Running), attention: false);
+                    Messages.UpToDateHeadline, Messages.UpToDateText(Running), attention: false);
                 break;
 
             case "check-failed":
                 _ = window.ShowMessageAsync(
-                    UpdateMessages.CheckFailedHeadline,
-                    UpdateMessages.CheckFailedText(new UpdateCheckResult(
+                    Messages.CheckFailedHeadline,
+                    Messages.CheckFailedText(new UpdateCheckResult(
                         UpdateCheckOutcome.TimedOut, Running, Detail: "no answer within 10 s")),
                     attention: true);
                 break;

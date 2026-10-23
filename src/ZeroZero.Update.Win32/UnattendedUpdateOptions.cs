@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using ZeroZero.Primitives;
 
 namespace ZeroZero.Update.Win32;
@@ -79,6 +80,10 @@ public sealed class UnattendedUpdateOptions
     /// the policy refuses it. Null keeps the policy's check to itself. Either way the policy's flow
     /// answers its own prompts and draws nothing.</summary>
     public SharedUpdateCheck? SharedCheck { get; init; }
+
+    /// <summary>Asked first for the reasons a tick gives, <see cref="UpdateMessages.MachineInUse"/>
+    /// and <see cref="UpdateMessages.InstallerRunning"/>. Null asks nothing.</summary>
+    public IStringLocalizer? Strings { get; init; }
 
     public ILogSink Log { get; init; } = NullLogSink.Instance;
 

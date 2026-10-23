@@ -1,11 +1,11 @@
+using Microsoft.Extensions.Localization;
 using Microsoft.UI.Xaml;
 
 namespace ZeroZero.Update.WinUI;
 
 /// <summary>
 /// What the shared update window needs from the application. The wording of every outcome is the
-/// component's, so only the application's own name, its theme and where its release notes come
-/// from are settable here.
+/// component's; an application overrides a text, or adds a language, through <see cref="Strings"/>.
 /// </summary>
 public sealed record UpdateWindowOptions
 {
@@ -23,4 +23,8 @@ public sealed record UpdateWindowOptions
     /// panel out.
     /// </summary>
     public Func<ReleaseInfo, string?>? ReleaseNotes { get; init; }
+
+    /// <summary>Asked first for every text the window shows, by its key in the component's
+    /// Texts.resx. Null asks nothing.</summary>
+    public IStringLocalizer? Strings { get; init; }
 }

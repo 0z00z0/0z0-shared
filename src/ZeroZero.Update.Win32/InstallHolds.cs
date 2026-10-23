@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using ZeroZero.Primitives;
 
 namespace ZeroZero.Update.Win32;
@@ -6,8 +7,9 @@ namespace ZeroZero.Update.Win32;
 /// update paths; never stops a download or an installer already running. Thread-safe.</summary>
 public sealed class InstallHolds
 {
-    /// <summary>The reason given where a hold's function throws: a broken check holds.</summary>
-    public const string Unreadable = "the application could not tell whether it is busy";
+    /// <summary>Asked first for <see cref="UpdateMessages.HoldUnreadable"/>, the reason where a
+    /// hold's function throws or answers blank. Null asks nothing.</summary>
+    public IStringLocalizer? Strings { get; init; }
 
     private readonly Lock _gate = new();
     private readonly List<Entry> _entries = [];
@@ -71,6 +73,8 @@ public sealed class InstallHolds
                 return Unreadable;
             }
         }
+
+        private string Unreadable => new UpdateMessages(owner.Strings).HoldUnreadable;
 
         public void Dispose() => owner.Remove(this);
     }
