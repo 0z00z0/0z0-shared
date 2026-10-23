@@ -95,14 +95,17 @@ public class MqttEndpointPlanTests
 
     [Trait(Guard.Category, Guard.Value)]
     [Fact]
-    public void Reusable_IgnoresAnEntryThatDoesNotSayWhetherItWasEncrypted()
+    public void Sweep_LeadsWithAnEntryThatDoesNotSayWhetherItWasEncryptedCipherFirst()
     {
-        // Absent is not the same as plain: reading it as plain would pin Automatic to clear text for
-        // good on the strength of a default.
-        var incomplete = new MqttEndpointMemory("broker.invalid", "user", 1883, MqttTransport.Tcp);
+        // Absent is not plain: a missing field must never put clear text ahead of cipher, nor make a
+        // host that drops it lose the remembered endpoint for good.
+        var incomplete = new MqttEndpointMemory("broker.invalid", "user", 1884, MqttTransport.Tcp);
 
-        Assert.Null(MqttEndpointPlan.Reusable(Request(), incomplete));
-        Assert.NotNull(MqttEndpointPlan.Reusable(Request(encryption: MqttEncryptionMode.Off), incomplete));
+        var sweep = MqttEndpointPlan.Sweep(Request(), incomplete);
+
+        Assert.Equal([new(1884, MqttTransport.Tcp, true), new(1884, MqttTransport.Tcp, false)], sweep.Take(2));
+        Assert.Equal([new(1884, MqttTransport.Tcp, false)],
+            MqttEndpointPlan.Sweep(Request(encryption: MqttEncryptionMode.Off), incomplete).Take(1));
     }
 
     [Fact]

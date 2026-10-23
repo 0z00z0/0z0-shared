@@ -618,6 +618,10 @@ the live state. **Such a host calls `NotifyConnectionStateChanged()` on the setu
 state changes**, from any thread; a setup built from the connection follows `StateChanged` itself.
 Without either, the Status rows and the closed Broker line are redrawn only when the page is.
 
+**A stored endpoint keeps all five fields.** `MqttEndpointMemory.Encrypted` defaults to null, which
+means "not recorded": the sweep tries both schemes on that endpoint, cipher first, and nothing can
+report the encryption in force from it. A host that writes four fields back gets that for good.
+
 **Two obligations the panel's own copy depends on.** `ConnectionChanged` must run the connection's
 apply path, because the device-id dialogue promises the old entities are removed and the ledger is
 what keeps that promise. `PublishSetChanged` must republish the discovery document, not merely the

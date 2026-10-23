@@ -70,6 +70,14 @@ the connection's state changes.**
 - **The panel follows only while it is loaded and visible**, and catches up once when it is shown
   again, so a page kept for the next visit costs nothing and is never held alive by the connection.
 
+**A host that stores the remembered endpoint stores all five fields of `MqttEndpointMemory`.** The
+fifth, `Encrypted`, is optional in the constructor and defaults to null. A panel whose
+`RecallEndpoint` returns an entry rebuilt from four stored values never reports the encryption in
+force: the Connection row loses its encrypted or not-encrypted clause, and the closed Broker line
+keeps encryption on Automatic while the link is up. The port and transport are still shown as found,
+and the connection still tries cipher before clear text on that endpoint. A setup built from the
+connection reads the connection's own complete entry once a connect has succeeded.
+
 **If the application already stores MQTT settings of its own, carry them into the store before the
 panel is first shown.** The module reads only its own file, so an upgrading user otherwise opens the
 panel to an empty broker host with their existing configuration still sitting unread in the old

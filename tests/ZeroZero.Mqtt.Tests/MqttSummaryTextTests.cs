@@ -138,11 +138,11 @@ public class MqttSummaryTextTests
     }
 
     [Fact]
-    public void AnEntryPredatingTheRecordedSchemeCannotAnswerAnAutomaticEncryptionQuestion()
+    public void AnEntryThatDoesNotSayWhichSchemeItUsedStillAnswersForPortAndTransport()
     {
-        // Absent is not plain, and reading it as plain would show "not encrypted (detected)" on the
-        // strength of a field nobody ever wrote.
-        Assert.Equal("broker.invalid · Automatic · Automatic · Automatic",
+        // Absent is not plain, and reading it as plain would show "not encrypted^" on the
+        // strength of a field nobody ever wrote; the port and transport it does record still stand.
+        Assert.Equal("broker.invalid · 8883^ · TCP^ · Automatic",
                      Summary(Request(), Memory(encrypted: null)));
     }
 
