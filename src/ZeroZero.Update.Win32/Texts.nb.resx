@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="InstallLabel" xml:space="preserve">
+    <value>Installer nå</value>
+    <comment>Button label under the install question in the update window; pressing it downloads and runs the installer. Short: the buttons sit one per line in a narrow window.</comment>
+  </data>
+  <data name="LaterLabel" xml:space="preserve">
+    <value>Ikke nå</value>
+    <comment>Button label under the install question; pressing it closes the window and installs nothing. Short, as InstallLabel.</comment>
+  </data>
+  <data name="ReleasePageLabel" xml:space="preserve">
+    <value>Utgivelsessiden</value>
+    <comment>Button label under the install question; pressing it opens the release's web page. Short, as InstallLabel.</comment>
+  </data>
+  <data name="CloseLabel" xml:space="preserve">
+    <value>Lukk</value>
+    <comment>Button label under a message in the update window, and the screen-reader name of the cross in its corner; both close the window. Short, as InstallLabel.</comment>
+  </data>
+  <data name="CancelDownloadLabel" xml:space="preserve">
+    <value>Stopp nedlastingen</value>
+    <comment>Button label while the installer downloads; pressing it stops the download and closes the window. Short, as InstallLabel.</comment>
+  </data>
+  <data name="AvailableHeadline" xml:space="preserve">
+    <value>Versjon {0} er tilgjengelig</value>
+    <comment>Heading over the install question. {0} = the new version, for example 1.2.3; no full stop.</comment>
+  </data>
+  <data name="InstallBody" xml:space="preserve">
+    <value>Versjon {0} er installert. Installasjonsprogrammet lastes ned og kontrolleres før det kjøres, og {1} lukkes når det starter.</value>
+    <comment>Text under the install question's heading. {0} = the running version; {1} = the application's name as the subject, inserted as written, which Norwegian does not inflect.</comment>
+  </data>
+  <data name="DownloadingHeadline" xml:space="preserve">
+    <value>Laster ned versjon {0}</value>
+    <comment>Heading while the installer downloads. {0} = the new version; no full stop.</comment>
+  </data>
+  <data name="DownloadBody" xml:space="preserve">
+    <value>{0} lukkes når installasjonsprogrammet starter.</value>
+    <comment>Text under the download heading. {0} = the application's name as the subject, inserted as written, which Norwegian does not inflect.</comment>
+  </data>
+  <data name="DownloadProgress" xml:space="preserve">
+    <value>{0:N1} av {1:N1} MB</value>
+    <comment>Line under the download progress bar. {0} = megabytes received, {1} = megabytes in total, both with one decimal in the reader's number format.</comment>
+  </data>
+  <data name="DownloadProgressSoFar" xml:space="preserve">
+    <value>{0:N1} MB så langt</value>
+    <comment>Line under the download progress bar where the total size is unknown. {0} = megabytes received, with one decimal in the reader's number format.</comment>
+  </data>
+  <data name="VerifyingText" xml:space="preserve">
+    <value>Kontrollerer hashverdien og signaturen.</value>
+    <comment>Line under the full progress bar while the downloaded installer is checked. Replaces DownloadProgress at the same place.</comment>
+  </data>
+  <data name="VerifyingHeadline" xml:space="preserve">
+    <value>Kontrollerer versjon {0}</value>
+    <comment>Heading while the downloaded installer is checked. {0} = the new version; no full stop.</comment>
+  </data>
+  <data name="UpToDateHeadline" xml:space="preserve">
+    <value>Oppdatert</value>
+    <comment>Heading over the notice that no newer version exists. No full stop.</comment>
+  </data>
+  <data name="UpToDateText" xml:space="preserve">
+    <value>Versjon {0} er den nyeste.</value>
+    <comment>Text under UpToDateHeadline. {0} = the running version.</comment>
+  </data>
+  <data name="NothingReleasedHeadline" xml:space="preserve">
+    <value>Ingenting er utgitt ennå</value>
+    <comment>Heading over the notice that the application has never published a version. No full stop.</comment>
+  </data>
+  <data name="NothingReleasedText" xml:space="preserve">
+    <value>Ingen utgivelse er publisert ennå.</value>
+    <comment>Text under NothingReleasedHeadline.</comment>
+  </data>
+  <data name="CheckFailedHeadline" xml:space="preserve">
+    <value>Søket etter oppdateringer ble ikke fullført</value>
+    <comment>Heading over a message saying why the search for a newer version failed. No full stop.</comment>
+  </data>
+  <data name="CheckRateLimited" xml:space="preserve">
+    <value>GitHub avviste søket etter oppdateringer fordi grensen for antall forespørsler er nådd. Prøv igjen etter {0:t}.</value>
+    <comment>Text under CheckFailedHeadline when GitHub refused for too many requests. {0} = the local clock time the limit lifts, in the reader's short time format.</comment>
+  </data>
+  <data name="CheckRateLimitedLater" xml:space="preserve">
+    <value>GitHub avviste søket etter oppdateringer fordi grensen for antall forespørsler er nådd. Prøv igjen om en stund.</value>
+    <comment>As CheckRateLimited, where GitHub gave no time.</comment>
+  </data>
+  <data name="CheckUnreachable" xml:space="preserve">
+    <value>Fikk ikke kontakt med oppdateringstjenesten: {0}.</value>
+    <comment>Text under CheckFailedHeadline. {0} = an English clause naming the cause, which stays English in every language.</comment>
+  </data>
+  <data name="CheckTimedOut" xml:space="preserve">
+    <value>Oppdateringstjenesten svarte ikke i tide: {0}.</value>
+    <comment>Text under CheckFailedHeadline. {0} = an English clause naming the cause, which stays English in every language.</comment>
+  </data>
+  <data name="CheckRequestFailed" xml:space="preserve">
+    <value>Oppdateringstjenesten svarte med en feil: {0}.</value>
+    <comment>Text under CheckFailedHeadline. {0} = an English clause naming the cause, which stays English in every language.</comment>
+  </data>
+  <data name="CheckInvalidResponse" xml:space="preserve">
+    <value>Oppdateringstjenesten svarte med noe denne versjonen ikke forstår: {0}.</value>
+    <comment>Text under CheckFailedHeadline. {0} = an English clause naming the cause, which stays English in every language.</comment>
+  </data>
+  <data name="CheckFailedOther" xml:space="preserve">
+    <value>Søket etter oppdateringer ble ikke fullført: {0}.</value>
+    <comment>Text under CheckFailedHeadline for any other cause. {0} = an English clause naming the cause, which stays English in every language.</comment>
+  </data>
+  <data name="CannotInstallHeadline" xml:space="preserve">
+    <value>Versjon {0} ble ikke installert</value>
+    <comment>Heading over a refusal to install. {0} = the new version; no full stop.</comment>
+  </data>
+  <data name="HashNotPublished" xml:space="preserve">
+    <value>Utgivelsen oppgir ingen SHA-256 for installasjonsprogrammet, så en nedlasting kunne ikke kontrolleres mot den, og ingenting ble lastet ned.</value>
+    <comment>Reason under CannotInstallHeadline. RefusalAdvice follows after a blank line.</comment>
+  </data>
+  <data name="HashAmbiguous" xml:space="preserve">
+    <value>Utgivelsen oppgir mer enn én SHA-256, så verdien for installasjonsprogrammet kan ikke skilles fra de andre, og ingenting ble lastet ned.</value>
+    <comment>Reason under CannotInstallHeadline. RefusalAdvice follows after a blank line.</comment>
+  </data>
+  <data name="InstallerAssetMissing" xml:space="preserve">
+    <value>Utgivelsen har ingen fil med navnet {0}, så det var ingenting å laste ned.</value>
+    <comment>Reason under CannotInstallHeadline. {0} = the installer's file name; RefusalAdvice follows after a blank line.</comment>
+  </data>
+  <data name="DownloadFailed" xml:space="preserve">
+    <value>Nedlastingen ble ikke fullført: {0}.</value>
+    <comment>Reason under CannotInstallHeadline. {0} = an English clause naming the cause, which stays English; RefusalAdvice follows after a blank line.</comment>
+  </data>
+  <data name="NotInstalledOther" xml:space="preserve">
+    <value>Oppdateringen ble ikke installert: {0}.</value>
+    <comment>Reason under CannotInstallHeadline for any other cause. {0} = an English clause naming the cause, which stays English; RefusalAdvice follows after a blank line.</comment>
+  </data>
+  <data name="RefusedHashMismatch" xml:space="preserve">
+    <value>Det nedlastede installasjonsprogrammet er ikke filen utgivelsen publiserte: {0}.</value>
+    <comment>Reason under CannotInstallHeadline. {0} = an English clause naming both hashes, which stays English; RefusalAdvice follows after a blank line.</comment>
+  </data>
+  <data name="RefusedNotSigned" xml:space="preserve">
+    <value>Det nedlastede installasjonsprogrammet har ingen signatur, så ingenting viser hvem som har laget det.</value>
+    <comment>Reason under CannotInstallHeadline. RefusalAdvice follows after a blank line.</comment>
+  </data>
+  <data name="RefusedSignatureInvalid" xml:space="preserve">
+    <value>Det nedlastede installasjonsprogrammet er endret etter at det ble signert.</value>
+    <comment>Reason under CannotInstallHeadline. RefusalAdvice follows after a blank line.</comment>
+  </data>
+  <data name="RefusedSignerMismatch" xml:space="preserve">
+    <value>Det nedlastede installasjonsprogrammet er signert av en annen utgiver: {0}.</value>
+    <comment>Reason under CannotInstallHeadline. {0} = an English clause naming the publisher found, which stays English; RefusalAdvice follows after a blank line.</comment>
+  </data>
+  <data name="RefusedCertificateNotPinned" xml:space="preserve">
+    <value>Det nedlastede installasjonsprogrammet har den forventede utgiverens navn, men på et sertifikat denne versjonen ikke godtar: {0}.</value>
+    <comment>Reason under CannotInstallHeadline: the right publisher name on a certificate not accepted. {0} = an English clause naming the certificate, which stays English; RefusalAdvice follows after a blank line.</comment>
+  </data>
+  <data name="RefusedFileMissing" xml:space="preserve">
+    <value>Det nedlastede installasjonsprogrammet var borte før det kunne kontrolleres.</value>
+    <comment>Reason under CannotInstallHeadline. RefusalAdvice follows after a blank line.</comment>
+  </data>
+  <data name="RefusedSignatureCheckFailed" xml:space="preserve">
+    <value>Windows avviste signaturen på det nedlastede installasjonsprogrammet: {0}.</value>
+    <comment>Reason under CannotInstallHeadline. {0} = an English clause with the Windows code, which stays English; RefusalAdvice follows after a blank line.</comment>
+  </data>
+  <data name="RefusedOther" xml:space="preserve">
+    <value>Det nedlastede installasjonsprogrammet ble avvist: {0}.</value>
+    <comment>Reason under CannotInstallHeadline for any other verdict. {0} = an English clause naming the cause, which stays English; RefusalAdvice follows after a blank line.</comment>
+  </data>
+  <data name="RefusalAdvice" xml:space="preserve">
+    <value>Filen ble ikke kjørt. Oppdater fra utgivelsessiden i stedet.</value>
+    <comment>Closing paragraph after every refusal and failed start, after a blank line. ReleasePageLabel names the same page.</comment>
+  </data>
+  <data name="LaunchFailedHeadline" xml:space="preserve">
+    <value>Installasjonsprogrammet startet ikke</value>
+    <comment>Heading over a message that the verified installer would not start. No full stop.</comment>
+  </data>
+  <data name="LaunchFailedText" xml:space="preserve">
+    <value>Installasjonsprogrammet kunne ikke startes: {0}.</value>
+    <comment>Text under LaunchFailedHeadline. {0} = an English clause naming the cause, which stays English; RefusalAdvice follows after a blank line.</comment>
+  </data>
+  <data name="HeldHeadline" xml:space="preserve">
+    <value>Versjon {0} kan ikke installeres nå</value>
+    <comment>Heading when the application is busy and holds the install. {0} = the new version; no full stop.</comment>
+  </data>
+  <data name="HeldText" xml:space="preserve">
+    <value>Oppdateringen startet ikke fordi {0}. Prøv igjen når det er ferdig.</value>
+    <comment>Text under HeldHeadline. {0} = a lower-case clause saying what is busy, written by the application or one of HoldUnreadable, MachineInUse, InstallerRunning; after "fordi" it takes subordinate word order.</comment>
+  </data>
+  <data name="HoldUnreadable" xml:space="preserve">
+    <value>programmet ikke kunne avgjøre om det er opptatt</value>
+    <comment>Clause inserted after "fordi" in HeldText where the application's busy check failed. Lower case, no full stop, subordinate word order ("ikke" before the verb) to fit that sentence.</comment>
+  </data>
+  <data name="MachineInUse" xml:space="preserve">
+    <value>maskinen er i bruk</value>
+    <comment>Clause inserted after "fordi" in HeldText, and the reason an unattended install waits, when someone is using the computer. Lower case, no full stop, subordinate word order to fit that sentence.</comment>
+  </data>
+  <data name="InstallerRunning" xml:space="preserve">
+    <value>installasjonsprogrammet allerede kjører</value>
+    <comment>Clause inserted after "fordi" in HeldText, and the reason an unattended install does nothing, once the installer has started. Lower case, no full stop, subordinate word order ("allerede" before the verb) to fit that sentence.</comment>
+  </data>
+</root>

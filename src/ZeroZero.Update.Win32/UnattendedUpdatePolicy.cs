@@ -68,11 +68,8 @@ public sealed class UnattendedUpdatePolicy : IDisposable
     /// the screen is not locked. Fixed: an application refuses a moment and cannot permit one.</summary>
     public static readonly TimeSpan RequiredIdle = TimeSpan.FromMinutes(10);
 
-    /// <summary>The reason a tick gives when the machine is neither locked nor untouched for long
-    /// enough. One constant wording, so a machine in use all afternoon writes one line.</summary>
-    public const string MachineInUse = "the machine is in use";
-
     private readonly IUpdateService _service;
+    private readonly UpdateMessages _messages;
     private readonly UpdateFlow _flow;
     private readonly UnattendedUpdateOptions _options;
     private readonly IMachineIdle _idle;
@@ -108,6 +105,7 @@ public sealed class UnattendedUpdatePolicy : IDisposable
         _idle = idle ?? MachineIdle.Instance;
         _time = time ?? TimeProvider.System;
         _log = options.Log;
+        _messages = new UpdateMessages(options.Strings);
 
         // Its own flow, wired to prompts that answer themselves, so nothing on this path can draw
         // over the application's own update window. A shared check shares the answer only: the
@@ -154,7 +152,7 @@ public sealed class UnattendedUpdatePolicy : IDisposable
 
         // The installer is running and the application is on its way out. A tick landing in that
         // gap must not start a second one.
-        if (_handedOver) return new UnattendedTick(UnattendedOutcome.InstallerStarted, "the installer is already running", _prepared?.Release);
+        if (_handedOver) return new UnattendedTick(UnattendedOutcome.InstallerStarted, _messages.InstallerRunning, _prepared?.Release);
 
         // Checking goes on while something is held, so a release published since is still found.
         if (CheckDue)
@@ -278,7 +276,7 @@ public sealed class UnattendedUpdatePolicy : IDisposable
     {
         MachineIdleReading reading = _idle.Read();
         if (reading.ScreenLocked) return InstallMoment.Now;
-        return reading.SinceLastInput >= RequiredIdle ? InstallMoment.Now : InstallMoment.NotNow(MachineInUse);
+        return reading.SinceLastInput >= RequiredIdle ? InstallMoment.Now : InstallMoment.NotNow(_messages.MachineInUse);
     }
 
     private UnattendedTick Refuse(InstallMoment moment, ReleaseInfo release)
