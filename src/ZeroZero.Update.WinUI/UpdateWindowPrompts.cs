@@ -16,6 +16,7 @@ namespace ZeroZero.Update.WinUI;
 public sealed class UpdateWindowPrompts : IUpdatePrompts
 {
     private readonly UpdateWindowOptions _options;
+    private readonly UpdateMessages _messages;
     private UpdateWindow? _window;
 
     public UpdateWindowPrompts(UpdateWindowOptions options)
@@ -23,6 +24,7 @@ public sealed class UpdateWindowPrompts : IUpdatePrompts
         ArgumentNullException.ThrowIfNull(options);
         ArgumentException.ThrowIfNullOrWhiteSpace(options.ApplicationName);
         _options = options;
+        _messages = new UpdateMessages(options.Strings);
     }
 
     public async Task<InstallChoice> AskToInstallAsync(ReleaseInfo release, Version runningVersion)
@@ -40,22 +42,22 @@ public sealed class UpdateWindowPrompts : IUpdatePrompts
         _window?.BeginDownload(release) ?? default;
 
     public Task SayUpToDateAsync(Version runningVersion) =>
-        SayAsync(UpdateMessages.UpToDateHeadline, UpdateMessages.UpToDateText(runningVersion), attention: false);
+        SayAsync(_messages.UpToDateHeadline, _messages.UpToDateText(runningVersion), attention: false);
 
     public Task SayNothingReleasedAsync() =>
-        SayAsync(UpdateMessages.NothingReleasedHeadline, UpdateMessages.NothingReleased(), attention: false);
+        SayAsync(_messages.NothingReleasedHeadline, _messages.NothingReleased(), attention: false);
 
     public Task SayCheckFailedAsync(UpdateCheckResult result) =>
-        SayAsync(UpdateMessages.CheckFailedHeadline, UpdateMessages.CheckFailedText(result), attention: true);
+        SayAsync(_messages.CheckFailedHeadline, _messages.CheckFailedText(result), attention: true);
 
     public Task SayCannotInstallAsync(PreparedUpdate update) =>
-        SayAsync(UpdateMessages.CannotInstallHeadline(update), UpdateMessages.CannotInstallText(update), attention: true);
+        SayAsync(_messages.CannotInstallHeadline(update), _messages.CannotInstallText(update), attention: true);
 
     public Task SayLaunchFailedAsync(PreparedUpdate update, LaunchResult result) =>
-        SayAsync(UpdateMessages.LaunchFailedHeadline, UpdateMessages.LaunchFailedText(result), attention: true);
+        SayAsync(_messages.LaunchFailedHeadline, _messages.LaunchFailedText(result), attention: true);
 
     public Task SayHeldAsync(ReleaseInfo release, string reason) =>
-        SayAsync(UpdateMessages.HeldHeadline(release), UpdateMessages.HeldText(reason), attention: false);
+        SayAsync(_messages.HeldHeadline(release), _messages.HeldText(reason), attention: false);
 
     public void Dismiss()
     {

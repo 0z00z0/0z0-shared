@@ -63,7 +63,7 @@ public sealed class MqttProbeSession
         _current = token;
         _currentTarget = target is { } given ? SameValues(given) : null;
         _settled = false;
-        Line = _text.Strings.Get("TestRunning");
+        Line = _text.Strings["TestRunning"].Value;
         IsFailure = false;
         return token;
     }
@@ -101,14 +101,14 @@ public sealed class MqttProbeSession
         if (!validation.Usable)
         {
             if (test)
-                Refuse(validation.Message ?? _text.Strings.Format(
-                    "PortNotANumber", MqttBrokerEdits.PortMin, MqttBrokerEdits.PortMax));
+                Refuse(validation.Message ?? _text.Strings[
+                    "PortNotANumber", MqttBrokerEdits.PortMin, MqttBrokerEdits.PortMax].Value);
             return MqttProbeDecision.Unusable;
         }
 
         if (!MqttEndpointPlan.ShouldProbe(trigger, publishingEnabled, target.Host))
         {
-            if (test) Refuse(_text.Strings.Get("ReportNoHost"));
+            if (test) Refuse(_text.Strings["ReportNoHost"].Value);
             return MqttProbeDecision.NothingToProbe;
         }
 

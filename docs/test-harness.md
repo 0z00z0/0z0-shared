@@ -32,7 +32,8 @@ read from the process command line and compared ordinally.
 
 `--anchor` adds a small pure-white window a capture can be checked against; About, `--update` and
 `--tray` take it. `--probe <path>` writes the numbers a run measured, as described under probe
-files.
+files. `--culture <name>`, in any mode, sets the UI culture before the first window, so
+`--culture nb-NO` shows every component's Norwegian texts.
 
 | Mode | Option | Effect |
 |---|---|---|
@@ -48,6 +49,9 @@ files.
 | `--mqtt` | `--error` | An out-of-range port, so the validation tier is on screen. |
 | `--mqtt` | `--dialogue "<window title>"` | Opens the device-id dialogue on that one window and opens no other. |
 | `--mqtt` | `--info "<window title>"` | The same with the first info bubble's flyout. |
+| `--mqtt` | `--remove "<window title>"` | The same with the removal confirmation; confirming it shows the no-connection outcome, because the sample's connection is never applied. |
+| `--mqtt` | `--only "<window title>"` | Opens that one window and nothing else. |
+| `--mqtt` | `--link-up <seconds>` | The link reads as searching and comes up after that many seconds, signalled from a background thread through `MqttPanelSetup.NotifyConnectionStateChanged`, so a capture before and after shows the Status rows and the closed Broker line redrawn. |
 | `--mqtt`, `--palette`, `--rows` | `--probe <path>` | Writes the colour and face that reached each element. |
 | `--settings` | `--only Light\|Dark` | Opens one window. |
 | `--settings` | `--fit` | Fits the window to its pages. |
@@ -91,7 +95,7 @@ files.
 | `text-prompt-result.txt` | `--prompt --confirm` and `--prompt --cancel`. |
 | `mqtt-harness-unhandled.txt` | Any run: an exception that reached the application. |
 | `mqtt-harness-error.txt` | `--mqtt`: a panel window that failed to construct. |
-| `mqtt-harness-dialogue.txt`, `mqtt-harness-info.txt` | `--mqtt --dialogue` and `--info`: the control to press or open was not found. |
+| `mqtt-harness-dialogue.txt`, `mqtt-harness-info.txt` | `--mqtt --dialogue`, `--remove` and `--info`: the control to press or open was not found. |
 | `tray-harness-failed.txt` | `--tray`: a failure the host reported. |
 
 ## Used by

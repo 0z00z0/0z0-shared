@@ -35,6 +35,14 @@
     <ZeroZeroFamilyPin Include="MQTTnet" Version="5.2.0.1603" />
   </ItemGroup>
 
+  <ItemGroup Label="Texts">
+    <!-- The host-override seam for a component's texts, through ZeroZero.Primitives. -->
+    <ZeroZeroFamilyPin Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.12" />
+    <!-- ICU plural formatting for the MQTT module's counted texts. MIT by its source repository;
+         the package ships no licence text, so a consuming application carries the notice. -->
+    <ZeroZeroFamilyPin Include="MessageFormat" Version="8.0.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Process and startup">
     <!-- The scheduler library the startup component registers through, and the session-ending
          signal the lifecycle component listens for, as the tray host listens for the theme and

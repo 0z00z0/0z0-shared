@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -11,7 +12,7 @@ internal static class DeviceIdDialog
     /// id to store, or null when the dialogue was dismissed.</summary>
     /// <param name="resultStyle">The panel's result tier, passed in so no host key can restyle it.</param>
     public static async Task<string?> AskAsync(
-        FrameworkElement owner, MqttPanelSetup setup, MqttStrings strings, string current,
+        FrameworkElement owner, MqttPanelSetup setup, IStringLocalizer strings, string current,
         Style? resultStyle, Style? errorStyle)
     {
         var idBox = new TextBox
@@ -28,21 +29,21 @@ internal static class DeviceIdDialog
         // Echoes the sanitised id that will be published.
         var previewText = new TextBlock { Style = resultStyle };
         // Names the mechanism, not a consequence; a host adds its own through DeviceIdConsequence.
-        var ack = new CheckBox { Content = strings.Get("DeviceIdAcknowledge") };
+        var ack = new CheckBox { Content = strings["DeviceIdAcknowledge"].Value };
 
         var body = new StackPanel { Spacing = 8, Width = 420 };
         body.Children.Add(new TextBlock
         {
-            Text = strings.Format("DeviceIdCurrent", current),
+            Text = strings["DeviceIdCurrent", current].Value,
             TextWrapping = TextWrapping.Wrap,
         });
-        body.Children.Add(new TextBlock { Text = strings.Get("DeviceIdNew"), Style = resultStyle });
+        body.Children.Add(new TextBlock { Text = strings["DeviceIdNew"].Value, Style = resultStyle });
         body.Children.Add(idBox);
         body.Children.Add(previewText);
         body.Children.Add(errorText);
         body.Children.Add(new TextBlock
         {
-            Text = strings.Get("DeviceIdWarning"),
+            Text = strings["DeviceIdWarning"].Value,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 4, 0, 0),
         });
@@ -55,10 +56,10 @@ internal static class DeviceIdDialog
             XamlRoot = owner.XamlRoot,
             // Rooted beside the page, so it does not inherit a RequestedTheme set on the panel's subtree.
             RequestedTheme = owner.ActualTheme,
-            Title = strings.Get("DeviceIdTitle"),
+            Title = strings["DeviceIdTitle"].Value,
             Content = body,
-            PrimaryButtonText = strings.Get("DeviceIdConfirm"),
-            CloseButtonText = strings.Get("DeviceIdCancel"),
+            PrimaryButtonText = strings["DeviceIdConfirm"].Value,
+            CloseButtonText = strings["DeviceIdCancel"].Value,
             DefaultButton = ContentDialogButton.Close,
             IsPrimaryButtonEnabled = false,
         };
@@ -72,7 +73,7 @@ internal static class DeviceIdDialog
 
             errorText.Text = error ?? "";
             errorText.Visibility = error is null ? Visibility.Collapsed : Visibility.Visible;
-            previewText.Text = error is null ? strings.Format("DeviceIdPreview", candidate) : "";
+            previewText.Text = error is null ? strings["DeviceIdPreview", candidate].Value : "";
             dialog.IsPrimaryButtonEnabled = CanConfirm(error, candidate, current, ack.IsChecked == true);
         }
 

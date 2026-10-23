@@ -1,17 +1,18 @@
 using Xunit;
+using ZeroZero.Controls.WinUI;
 
-namespace ZeroZero.Mqtt.Tests;
+namespace ZeroZero.Controls.Tests;
 
-/// <summary>The walk the WinUI loader runs over the resource indexes: which map answers a module
-/// string first. The shapes are the ones a consuming application's merged index and the library's
+/// <summary>The walk the WinUI loader runs over the resource indexes: which map answers a library
+/// key first. The shapes are the ones a consuming application's merged index and the library's
 /// own <c>.pri</c> have — the application's entries under the bare map name, the library's under the
 /// library's name, and the library's own file under the bare name again.</summary>
 /// <remarks>The loader that opens those indexes is Windows-only and needs a desktop session, so it
 /// keeps nothing but the opening: which indexes, which maps under them, both orders and the walk
-/// live in <see cref="MqttResourceMaps"/> and these tests execute them rather than restating them.
+/// live in <see cref="ResourceMapWalk"/> and these tests execute them rather than restating them.
 /// The indexes below are therefore written in an order of their own and walked in the module's, so a
 /// reversal there fails an assertion here.</remarks>
-public class MqttResourceMapsTests
+public class ResourceMapWalkTests
 {
     private const string Library = "ZeroZero.Mqtt.WinUI";
     private const string Map = "Resources";
@@ -21,7 +22,7 @@ public class MqttResourceMapsTests
 
     /// <summary>The index a merged application build produces, which the loader opens by asking for
     /// no file.</summary>
-    private const string ApplicationIndex = MqttResourceMaps.ApplicationIndex;
+    private const string ApplicationIndex = ResourceMapWalk.ApplicationIndex;
 
     /// <summary>The library's own file beside the executable, written out rather than composed, so a
     /// change to how the module forms that name fails here.</summary>
@@ -48,7 +49,7 @@ public class MqttResourceMapsTests
         params (string Name, Dictionary<string, Dictionary<string, string>> Content)[] indexes)
     {
         List<Func<string, string?>> probes = [];
-        foreach (string name in MqttResourceMaps.Indexes(Library))
+        foreach (string name in ResourceMapWalk.Indexes(Library))
             foreach ((string candidate, var content) in indexes)
                 if (string.Equals(candidate, name, StringComparison.Ordinal)) probes.AddRange(ProbesIn(content));
 
@@ -60,7 +61,7 @@ public class MqttResourceMapsTests
     private static List<Func<string, string?>> ProbesIn(Dictionary<string, Dictionary<string, string>> index)
     {
         List<Func<string, string?>> probes = [];
-        foreach (string path in MqttResourceMaps.Subtrees(Library, Map))
+        foreach (string path in ResourceMapWalk.Subtrees(Library, Map))
             if (index.TryGetValue(path, out var map)) probes.Add(key => map.GetValueOrDefault(key));
 
         if (index.TryGetValue(Root, out var root)) probes.Add(key => root.GetValueOrDefault(key));
@@ -84,24 +85,24 @@ public class MqttResourceMapsTests
     /// own first, so its entries outrank the library's.</summary>
     [Fact]
     public void TheApplicationsIndexIsOpenedBeforeTheLibrarysOwnFile() =>
-        Assert.Equal(new[] { ApplicationIndex, LibraryIndex }, MqttResourceMaps.Indexes(Library));
+        Assert.Equal(new[] { ApplicationIndex, LibraryIndex }, ResourceMapWalk.Indexes(Library));
 
     /// <summary>The application's own index is named by no file at all, which is the branch the
     /// loader takes to open the index the application already has rather than a file beside it.</summary>
     [Fact]
-    public void TheApplicationsIndexIsNamedByNoFile() => Assert.Empty(MqttResourceMaps.ApplicationIndex);
+    public void TheApplicationsIndexIsNamedByNoFile() => Assert.Empty(ResourceMapWalk.ApplicationIndex);
 
     [Fact]
     public void AHostsOwnEntryOutranksTheLibrarysCopy() =>
         Assert.Equal(
             "HOST-OVERRIDE",
-            MqttResourceMaps.Find("ButtonApply", Probes((ApplicationIndex, MergedApplicationIndex()))));
+            ResourceMapWalk.Find("ButtonApply", Probes((ApplicationIndex, MergedApplicationIndex()))));
 
     [Fact]
     public void AKeyTheHostDoesNotSupplyFallsToTheLibrarysMap() =>
         Assert.Equal(
             "Test connection",
-            MqttResourceMaps.Find("ButtonTest", Probes((ApplicationIndex, MergedApplicationIndex()))));
+            ResourceMapWalk.Find("ButtonTest", Probes((ApplicationIndex, MergedApplicationIndex()))));
 
     /// <summary>The case that regresses silently: both indexes file the key under the bare map, so
     /// only the order the two are opened in decides which wording the panel renders. The library's
@@ -111,7 +112,7 @@ public class MqttResourceMapsTests
     public void TheApplicationsIndexOutranksTheLibrarysOwnFile() =>
         Assert.Equal(
             "HOST-OVERRIDE",
-            MqttResourceMaps.Find(
+            ResourceMapWalk.Find(
                 "ButtonApply",
                 Probes((LibraryIndex, LibraryOwnIndex()), (ApplicationIndex, MergedApplicationIndex()))));
 
@@ -119,7 +120,7 @@ public class MqttResourceMapsTests
     public void AKeyOnlyTheLibrarysOwnFileHoldsIsStillFound() =>
         Assert.Equal(
             "Test connection",
-            MqttResourceMaps.Find(
+            ResourceMapWalk.Find(
                 "ButtonTest",
                 Probes(
                     (ApplicationIndex, Index((Map, "ButtonApply", "HOST-OVERRIDE"))),
@@ -131,7 +132,7 @@ public class MqttResourceMapsTests
     public void TheLibrarysMapOutranksItsBareName() =>
         Assert.Equal(
             "Apply",
-            MqttResourceMaps.Find(
+            ResourceMapWalk.Find(
                 "ButtonApply",
                 Probes((
                     ApplicationIndex,
@@ -142,7 +143,7 @@ public class MqttResourceMapsTests
     public void ASubtreeOutranksTheIndexRoot() =>
         Assert.Equal(
             "HOST-OVERRIDE",
-            MqttResourceMaps.Find(
+            ResourceMapWalk.Find(
                 "ButtonApply",
                 Probes((
                     ApplicationIndex,
@@ -152,7 +153,7 @@ public class MqttResourceMapsTests
     public void AnIndexHoldingItsItemsDirectlyUnderTheRootStillAnswers() =>
         Assert.Equal(
             "Apply",
-            MqttResourceMaps.Find(
+            ResourceMapWalk.Find(
                 "ButtonApply",
                 Probes((ApplicationIndex, Index((Root, "ButtonApply", "Apply"))))));
 
@@ -160,23 +161,23 @@ public class MqttResourceMapsTests
     public void AProbeThatThrowsCountsAsNotHavingTheKey() =>
         Assert.Equal(
             "Apply",
-            MqttResourceMaps.Find(
+            ResourceMapWalk.Find(
                 "ButtonApply",
                 [_ => throw new InvalidOperationException(), _ => "Apply"]));
 
-    /// <summary>An empty answer is passed over, so the built-in en-GB fills the control rather than
-    /// the panel rendering a blank one.</summary>
+    /// <summary>An empty answer is passed over, so the library's own text fills the control rather than
+    /// a blank one.</summary>
     [Fact]
     public void AnEmptyAnswerIsNotAnAnswer() =>
-        Assert.Equal("Apply", MqttResourceMaps.Find("ButtonApply", [_ => "", _ => "Apply"]));
+        Assert.Equal("Apply", ResourceMapWalk.Find("ButtonApply", [_ => "", _ => "Apply"]));
 
     [Fact]
     public void AKeyNoIndexHoldsAnswersNothing() =>
         Assert.Null(
-            MqttResourceMaps.Find(
+            ResourceMapWalk.Find(
                 "ButtonMissing",
                 Probes((ApplicationIndex, MergedApplicationIndex()), (LibraryIndex, LibraryOwnIndex()))));
 
     [Fact]
-    public void NoIndexAtAllAnswersNothing() => Assert.Null(MqttResourceMaps.Find("ButtonApply", []));
+    public void NoIndexAtAllAnswersNothing() => Assert.Null(ResourceMapWalk.Find("ButtonApply", []));
 }

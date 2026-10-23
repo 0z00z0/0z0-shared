@@ -97,11 +97,14 @@ This guide is complete for adoption: the component's own source and tests need n
 
 `ZeroZero.Update.Win32`:
 
-- **`UpdateMessages`** — every sentence the update puts in front of a person, as plain strings:
-  the question's headline and body, the download's headline and the line under its bar, and one
-  sentence per outcome that stops an install. Apart from any window, so a surface written outside
-  this repository words an outcome exactly as the shared one does. Every refusal has a sentence of
-  its own and ends the same way: the file was not run, and the release page is where to go instead.
+- **`UpdateMessages`** — every sentence the update puts in front of a person, as plain strings in
+  the UI culture: the button labels, the question's headline and body, the download's headline and
+  the line under its bar, one sentence per outcome that stops an install, and the reasons a hold or
+  the unattended policy gives. Apart from any window, so a surface written outside this repository
+  words an outcome exactly as the shared one does: construct one, `new UpdateMessages(localizer)`,
+  where the localizer is optional. Every refusal has a sentence of its own and ends the same way: the
+  file was not run, and the release page is where to go instead. [Texts](#texts) has the languages
+  and how to override one.
 - **`IUpdatePrompts`** — what a surface implements. Every call is awaited and does not complete
   until the person has chosen or read what it put on screen, so nothing in the flow runs behind a
   window still in front of them. The three answers to a check with nothing to install are asked for
@@ -137,9 +140,10 @@ This guide is complete for adoption: the component's own source and tests need n
   often a check runs — periodically or once — the retry tick, the shutdown callback, the call the
   component makes before a release is downloaded (`MayDownloadNow`), the application's holds asked
   immediately before an installer starts (`Holds`), the callback every tick's result is reported
-  to, and the check the application's own flows share (`SharedCheck`). Absent, nothing of the kind
-  happens. `Shutdown` is required, the first tick comes `InitialDelay` (30 s) after `Start`, and a
-  negative delay or an interval of zero or less throws. Every other member is optional and null by
+  to, the check the application's own flows share (`SharedCheck`), and a localizer for the reasons
+  a tick gives (`Strings`). Absent, nothing of the kind happens. `Shutdown` is required, the first
+  tick comes `InitialDelay` (30 s) after `Start`, and a negative delay or an interval of zero or
+  less throws. Every other member is optional and null by
   default: no call accepts every moment, no `Holds` holds nothing, and no shared check keeps the
   policy's check to itself.
 - **`CheckCadence`** — `Periodic`, checking every `CheckInterval`, or `Once`, checking a single time
@@ -161,8 +165,8 @@ This guide is complete for adoption: the component's own source and tests need n
   question answers `Later`; closing during the download stops it, as Escape does.
 - **`UpdateWindowPrompts`** — the flow's prompts, driving one window from the question through the
   download to the answer. This is what an application constructs.
-- **`UpdateWindowOptions`** — the application's name, the theme, and where its release notes come
-  from where it keeps its own. The wording is the component's, so there is nothing else to set.
+- **`UpdateWindowOptions`** — the application's name, the theme, where its release notes come
+  from where it keeps its own, and a localizer asked first for every text (`Strings`).
   `ApplicationName` is required; `Theme` follows the application; a null `ReleaseNotes`, or a null
   from it, shows the release body without its markdown, and an empty string leaves the notes out.
 
@@ -250,9 +254,10 @@ dotnet run --project src/ZeroZero.Brand.WinUI.TestHarness -- --update --stage qu
 
 `--stage` takes `question`, `download`, `verifying`, `refusal`, `failure`, `uptodate` or
 `check-failed`, and opens that one stage in both themes side by side; the window shows one stage at
-a time, so each costs a run of its own. `--anchor` adds the pure-white patch a capture is checked
-against. `--update --silent <path>` runs the trigger that shows nothing over a service with a
-release to offer, so the windows it did not open can be counted from outside, and
+a time, so each costs a run of its own. `--culture nb-NO` shows the stage in that language whatever
+the machine's own. `--anchor` adds the pure-white patch a capture is checked against.
+`--update --silent <path>` runs the trigger that shows nothing over a service with a release to
+offer, so the windows it did not open can be counted from outside, and
 `--update --over-about update|plain --probe <path>` opens the About window and then a window on top
 of it and records whether the one beneath dismissed itself — `plain` is the control, a window that
 counts itself among nothing, which is how the measurement is known to be able to fail.
@@ -470,14 +475,23 @@ holds.Hold(() => lidWait.IsRunning ? "the lid wait is running" : null);
 - **A flow asks twice.** Before the install question, so nobody is asked something a hold would
   refuse, and again immediately before the launch, where a hold discards the verified download.
   Either way the run answers `UpdateFlowResult.Held`, nothing starts and `Shutdown` is not called.
+- **A hold applies to both install paths**, so it also stops an installation the person starts from
+  the update window. A condition that must hold back only the automatic path, such as an "install
+  updates automatically" switch that is off, goes in `UnattendedUpdateOptions.MayDownloadNow`,
+  which only the automatic path asks: a release is then reported but not downloaded in the
+  background.
 - **The person is told through `IUpdatePrompts.SayHeldAsync`**, worded by
   `UpdateMessages.HeldHeadline` and `HeldText`: on a manual run, on `InstallAsync`, and before the
   launch on any run. A scheduled run held before its question says nothing.
 - **The first hold in registration order gives the reason.** It is a few words, read after
-  "because", and the log is keyed on it: one wording per cause writes one line per cause.
-- **A function that throws holds**, with `InstallHolds.Unreadable` as its reason, and its exception
-  is logged once for that hold; a blank reason holds with the same wording. A function is called on
-  the asking thread at every ask.
+  "because", and the log is keyed on it: one wording per cause writes one line per cause. A
+  translated `HeldText` puts its own conjunction there, so the reason is written to fit it: in
+  Norwegian, after "fordi", in subordinate word order ("programmet ikke kunne", not "programmet
+  kunne ikke").
+- **A function that throws holds**, with `UpdateMessages.HoldUnreadable` as its reason, read through
+  `InstallHolds.Strings` where the application sets one, and its exception is logged once for that
+  hold; a blank reason holds with the same wording. A function is called on the asking thread at
+  every ask.
 - **Null holds nothing.** Either option left null installs as though no hold existed.
 - **A hold never stops a check, a download or an installer already started.** One that is never
   disposed stops every install for the life of the process, so the application disposes it when
@@ -656,7 +670,8 @@ does not wait for a report to be handled.
   signer with its pins. The component carries none of its own.
 - **The running version**, when the entry assembly is not the application — a plug-in host, a
   test — through `UpdateOptions.RunningVersion`.
-- **The application name and the theme** the window takes. The wording is the component's.
+- **The application name and the theme** the window takes. The wording is the component's, and an
+  application overrides a text or adds a language through a localizer ([Texts](#texts)).
 - **The shutdown callback.** The flow calls it once the installer process exists and never before;
   when and how the application exits is its own decision. An application armed with the lifecycle
   component marks the exit deliberate first, or the relaunch hook starts it again under the
@@ -688,7 +703,30 @@ does not wait for a report to be handled.
 - **The release workflow** that signs the installer, attaches it under the expected name and
   writes its SHA-256 in the release body.
 
+## Texts
+
+Every text the update shows is in `ZeroZero.Update.Win32`'s `Texts.resx` (en-GB) with Norwegian
+bokmål built in (`Texts.nb.resx`), chosen by the UI culture; `docs/zerozero-primitives.md` has the
+file layout. Sizes and the rate-limit time follow the regional format (`CurrentCulture`), so
+`--culture nb-NO` in the harness changes the words and not the decimal separator.
+
+- **Three places take the application's own `IStringLocalizer`**, asked first by key, each optional
+  and null by default: `UpdateWindowOptions.Strings` for everything the window shows,
+  `InstallHolds.Strings` for `HoldUnreadable`, and `UnattendedUpdateOptions.Strings` for the
+  reasons a tick gives, `MachineInUse` and `InstallerRunning`. A surface of its own passes it to
+  `new UpdateMessages(localizer)`. `UpdateFlowOptions` takes none: the flow writes no text itself.
+- **Overriding one text** is one key in the application's localizer, named as in `Texts.resx`;
+  every key it does not hold, or holds blank, keeps the component's own. Adding a language is the
+  same localizer answering in that culture.
+- **The reasons are also what the log is keyed on**, so a translated reason appears inside the
+  English log line that names it, as a hold's own reason does.
+
 ## Traps
+
+- **A translated sentence can carry an English clause.** The detail of a failed check, a refused
+  download or a launch that would not start comes from the update core in English and is inserted
+  as it is: a Norwegian message reads "Nedlastingen ble ikke fullført: the server closed the
+  connection." The detail names what went wrong for whoever reads the log, and is not translated.
 
 - **The running version is the entry assembly's.** `Assembly.GetEntryAssembly()`, never the
   executing one: the executing assembly is this library once the code is shared, and its version

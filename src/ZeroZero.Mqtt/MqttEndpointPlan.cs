@@ -152,11 +152,13 @@ public static class MqttEndpointPlan
                 Add(new(port, transport, MqttEndpoint.Encrypts(transport, port, requested)));
         }
 
-        // An entry from before the encryption state was recorded only survives Reusable under an
-        // explicit choice, so the setting is what fills the gap — never a bare false.
+        // An entry that does not say which scheme it used leads with both, in the setting's order,
+        // so a missing field never puts clear text ahead of cipher.
         if (remembered is { } m)
-            Add(new(m.Port, m.Transport, m.Encrypted ?? MqttEndpoint.Encrypts(
-                m.Transport, m.Port, request.Encryption == MqttEncryptionMode.On)));
+        {
+            if (m.Encrypted is { } encrypted) Add(new(m.Port, m.Transport, encrypted));
+            else AddEndpoint(m.Port, m.Transport);
+        }
 
         foreach (var transport in Order(request.Transport, remembered?.Transport))
         {
@@ -179,12 +181,6 @@ public static class MqttEndpointPlan
         && m.Port is >= 1 and <= 65535
         && Same(m.Host, request.Host)
         && Same(m.Username, request.Username)
-        // An entry written before the encryption state was recorded cannot answer a question that
-        // includes it. Absent, not false: a missing field read as plain would pin Automatic to clear
-        // text for good on the strength of a struct default. Such an entry costs one sweep, once,
-        // and is rewritten complete. Under an explicit choice it still applies — nothing is being
-        // asked about encryption there.
-        && (request.Encryption != MqttEncryptionMode.Auto || m.Encrypted is not null)
             ? m : null;
 
     /// <summary>Whether an explicit action should start a probe. Pure.</summary>

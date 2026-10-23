@@ -10,4 +10,9 @@
     <Description>Shared branding constants and About-window data contracts for ZeroZero Software apps.</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- The console banner's texts: the resource reader with the host's localizer asked first. -->
+    <ProjectReference Include="..\ZeroZero.Primitives\ZeroZero.Primitives.csproj" />
+  </ItemGroup>
+
 </Project>

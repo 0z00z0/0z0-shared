@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using ZeroZero.Brand.Core;
 
 namespace ZeroZero.Brand.WinUI;
@@ -28,4 +29,7 @@ public sealed record BrandAboutOptions
     /// exit and keep the window open. Leave <see langword="null"/> to simply close the window.
     /// </summary>
     public Func<Task<bool>>? OnBeforeExit { get; init; }
+
+    /// <summary>The host's localizer, asked before the window's own texts for every key; null asks nothing.</summary>
+    public IStringLocalizer? Strings { get; init; }
 }

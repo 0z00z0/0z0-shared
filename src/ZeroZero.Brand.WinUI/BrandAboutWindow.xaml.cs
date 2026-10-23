@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using ZeroZero.Controls.WinUI;
 using ZeroZero.Win32;
 
@@ -43,7 +44,12 @@ public sealed partial class BrandAboutWindow : Window
         _options = options;
         InitializeComponent();
 
-        AboutControl.SetInfo(options.Info);
+        AboutControl.SetInfo(options.Info, options.Strings);
+
+        var texts = BrandTexts.With(options.Strings);
+        UpdateBtn.Content = texts["CheckForUpdates"].Value;
+        // The cross alone tells a screen reader nothing.
+        AutomationProperties.SetName(CloseBtn, texts["Close"].Value);
 
         // Escape is the same act as looking away, so it takes the same path.
         _popup = ContentSizedPopup.Attach(this, Root, ContentWidth, Dismiss);

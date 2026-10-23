@@ -76,5 +76,5 @@ public sealed partial class InfoIcon : UserControl
     // button introduces itself whatever a row calls its subject.
     private void ApplyAutomationName() =>
         AutomationProperties.SetName(Root,
-            string.IsNullOrEmpty(Subject) ? "More information" : $"More information about {Subject}");
+            string.IsNullOrEmpty(Subject) ? ControlTexts.Current["InfoName"] : ControlTexts.Current["InfoNameAbout", Subject]);
 }

@@ -40,8 +40,8 @@ public class InstallHoldsTests
     {
         _holds.Hold(() => throw new InvalidOperationException("the check broke"));
 
-        Assert.Equal(InstallMoment.NotNow(InstallHolds.Unreadable), _holds.Ask(_log));
-        Assert.Equal(InstallMoment.NotNow(InstallHolds.Unreadable), _holds.Ask(_log));
+        Assert.Equal(InstallMoment.NotNow("the application could not tell whether it is busy"), _holds.Ask(_log));
+        Assert.Equal(InstallMoment.NotNow("the application could not tell whether it is busy"), _holds.Ask(_log));
         Assert.Single(_log.Errors);
     }
 

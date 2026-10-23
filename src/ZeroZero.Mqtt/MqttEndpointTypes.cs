@@ -17,11 +17,8 @@ public readonly record struct MqttEndpointCandidate(int Port, MqttTransport Tran
 /// on the strength of its own success. It reaches a host through
 /// <see cref="MqttConnectionSetup.RememberEndpoint"/> instead, which the host is free to persist
 /// wherever it keeps state.</para>
-/// <para><see cref="Encrypted"/> is nullable because an entry written before it existed does not
-/// say. Null is "not recorded", which is not the same as plain, and reading it as plain would leave
-/// Automatic permanently satisfied with clear text on the strength of a default. An entry without it
-/// is re-probed once under Automatic and rewritten complete; under an explicit choice it still
-/// applies, because nothing is being asked about encryption there.</para>
+/// <para><see cref="Encrypted"/> null is "not recorded", never plain: the sweep tries both schemes
+/// on that endpoint. A host that stores the entry stores all five fields.</para>
 /// </remarks>
 public sealed record MqttEndpointMemory(
     string Host, string Username, int Port, MqttTransport Transport, bool? Encrypted = null);

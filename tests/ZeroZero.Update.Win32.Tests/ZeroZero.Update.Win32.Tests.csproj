@@ -27,6 +27,14 @@
     <Compile Include="..\Shared\RecordingLogSink.cs" Link="Shared\RecordingLogSink.cs" />
     <Compile Include="..\Shared\Polling.cs" Link="Shared\Polling.cs" />
     <Compile Include="..\Shared\SynchronousProgress.cs" Link="Shared\SynchronousProgress.cs" />
+    <Compile Include="..\Shared\UiCulture.cs" Link="Shared\UiCulture.cs" />
+    <Compile Include="..\Shared\TranslationFiles.cs" Link="Shared\TranslationFiles.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The translator's files, read as data: the context notes are not compiled into the assembly. -->
+    <None Include="..\..\src\ZeroZero.Update.Win32\Texts.resx" Link="Translations\Texts.resx" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ZeroZero.Update.Win32\Texts.nb.resx" Link="Translations\Texts.nb.resx" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

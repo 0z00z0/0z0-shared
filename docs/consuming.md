@@ -249,9 +249,9 @@ token every restore then needs.
 ## Traps
 
 - **`DefaultLanguage`.** An app that ships its own language-folder resources declares
-  `<DefaultLanguage>en-GB</DefaultLanguage>` in its own project. A library declares it for its own
-  `.resw`, but a merged app PRI is built from the app's resources and no library can declare the
-  default on the app's behalf — without it MakePRI compares them against `en-US` and warns `PRI257`.
+  `<DefaultLanguage>en-GB</DefaultLanguage>` in its own project. A merged app PRI is built from the
+  app's resources and no library can declare the default on the app's behalf — without it MakePRI
+  compares them against `en-US` and warns `PRI257`.
 - **`UndefineProperties`** on the sibling route, above.
 - **`PerMonitorV2`.** The consuming app's `app.manifest` declares per-monitor-v2 DPI awareness, so
   every shared window renders sharp on a high-DPI display rather than being bitmap-stretched.
@@ -286,6 +286,8 @@ difference matters to a consumer that has not yet taken the kit:
 | `CommunityToolkit.WinUI.Controls.SettingsControls` | `8.2.251219` | A **ceiling**. |
 | `H.NotifyIcon.WinUI` | `2.4.1` | A **ceiling**, for the same reason: the tray host's notify-icon library, which a consuming application references directly as well. No type of it reaches a public signature. |
 | `MQTTnet` | `5.2.0.1603` | Transitive only, and no type of it reaches a public signature. |
+| `Microsoft.Extensions.Localization.Abstractions` | `10.0.12` | Transitive, through `ZeroZero.Primitives`. Its `IStringLocalizer` is a public signature: the interface a host implements to override or translate a component's texts. |
+| `MessageFormat` | `8.0.0` | Transitive only, through `ZeroZero.Mqtt`; no type of it reaches a public signature. MIT-licensed by its source repository, and the package ships no licence text, so a consuming application carries the notice itself. |
 | `TaskScheduler` | `2.12.2` | Transitive only, through `ZeroZero.Startup`; no type of it reaches a public signature. |
 | `Microsoft.Win32.SystemEvents` | `10.0.12` | Transitive only, through `ZeroZero.Lifecycle` and `ZeroZero.Tray.WinUI`; no type of it reaches a public signature. The runtime's own assembly, pinned at the .NET 10 servicing release the family builds on and raised with it. |
 | `Microsoft.NET.Test.Sdk` | `18.9.0` | The test trio, for a consumer's own test projects. |
@@ -310,5 +312,5 @@ consumer to reference it.** The module's own `MqttQos`, `MqttMessage`, `MqttConn
 `MqttPubackCode` stand in front of it, so an app never names an MQTTnet type and a version bump here
 is not a consumer-visible API change.
 
-No third-party type reaches a public signature of any assembly in this repository, so a bump of any
-pin above is never an API change for a consumer.
+The one third-party type in a public signature is `IStringLocalizer`, a stable interface of the
+localisation abstractions; a bump of any other pin above is never an API change for a consumer.

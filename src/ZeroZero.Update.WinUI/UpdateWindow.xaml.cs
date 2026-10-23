@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using ZeroZero.Brand.WinUI;
 using ZeroZero.Controls.WinUI;
 using ZeroZero.Update.Win32;
@@ -29,6 +30,7 @@ public sealed partial class UpdateWindow : Window
     }
 
     private readonly UpdateWindowOptions _options;
+    private readonly UpdateMessages _messages;
     private readonly IDisposable _transient;
     private readonly ContentSizedPopup _popup;
 
@@ -50,17 +52,20 @@ public sealed partial class UpdateWindow : Window
     {
         ArgumentNullException.ThrowIfNull(options);
         _options = options;
+        _messages = new UpdateMessages(options.Strings);
         InitializeComponent();
 
         Title = options.ApplicationName;
         Root.RequestedTheme = options.Theme;
         AppNameText.Text = options.ApplicationName;
 
-        InstallButton.Label = UpdateMessages.InstallLabel;
-        LaterButton.Label = UpdateMessages.LaterLabel;
-        NotesButton.Label = UpdateMessages.ReleasePageLabel;
-        CloseButton.Label = UpdateMessages.CloseLabel;
-        CancelButton.Label = UpdateMessages.CancelDownloadLabel;
+        InstallButton.Label = _messages.InstallLabel;
+        LaterButton.Label = _messages.LaterLabel;
+        NotesButton.Label = _messages.ReleasePageLabel;
+        CloseButton.Label = _messages.CloseLabel;
+        CancelButton.Label = _messages.CancelDownloadLabel;
+        // The cross shows a symbol only; a screen reader needs the word.
+        AutomationProperties.SetName(DismissButton, _messages.CloseLabel);
 
         InstallButton.Click += (_, _) => Answer(InstallChoice.Install);
         LaterButton.Click += (_, _) => Answer(InstallChoice.Later);
@@ -87,8 +92,8 @@ public sealed partial class UpdateWindow : Window
 
         _answer = new TaskCompletionSource<InstallChoice>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        HeadlineText.Text = UpdateMessages.AvailableHeadline(release);
-        BodyText.Text = UpdateMessages.InstallBody(runningVersion, _options.ApplicationName);
+        HeadlineText.Text = _messages.AvailableHeadline(release);
+        BodyText.Text = _messages.InstallBody(runningVersion, _options.ApplicationName);
 
         // The host's text is taken as written; only the release body is stripped of its markdown.
         string notes = _options.ReleaseNotes?.Invoke(release) ?? ReleaseNotesText.Strip(release.Body);
@@ -112,11 +117,11 @@ public sealed partial class UpdateWindow : Window
         _stopping?.Dispose();
         _stopping = new CancellationTokenSource();
         _downloading = release;
-        HeadlineText.Text = UpdateMessages.DownloadingHeadline(release);
-        BodyText.Text = UpdateMessages.DownloadBody(_options.ApplicationName);
+        HeadlineText.Text = _messages.DownloadingHeadline(release);
+        BodyText.Text = _messages.DownloadBody(_options.ApplicationName);
         DownloadBar.IsIndeterminate = true;
         DownloadBar.Value = 0;
-        ProgressText.Text = UpdateMessages.DownloadProgressText(0, null);
+        ProgressText.Text = _messages.DownloadProgressText(0, null);
 
         GoTo(Stage.Downloading);
         return new DownloadSurface(new MarshalledProgress(this), _stopping.Token);
@@ -251,12 +256,12 @@ public sealed partial class UpdateWindow : Window
             // with the line: nothing is downloading any more.
             bool whole = progress.TotalBytes is { } total && total > 0 && progress.BytesReceived >= total;
             ProgressText.Text = whole
-                ? UpdateMessages.VerifyingText
-                : UpdateMessages.DownloadProgressText(progress.BytesReceived, progress.TotalBytes);
+                ? _messages.VerifyingText
+                : _messages.DownloadProgressText(progress.BytesReceived, progress.TotalBytes);
             if (_downloading is { } release)
                 HeadlineText.Text = whole
-                    ? UpdateMessages.VerifyingHeadline(release)
-                    : UpdateMessages.DownloadingHeadline(release);
+                    ? _messages.VerifyingHeadline(release)
+                    : _messages.DownloadingHeadline(release);
         }
         catch (Exception ex)
         {

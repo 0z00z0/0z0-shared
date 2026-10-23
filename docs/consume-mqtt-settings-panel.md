@@ -19,9 +19,8 @@ holds a direct reference at that version, and a direct reference below a transit
 an error. Raise both or neither.
 
 An app that ships its own language-folder resources declares `<DefaultLanguage>en-GB</DefaultLanguage>`
-in its own project. The panel declares it for its own `.resw`, but a merged app PRI is built from the
-app's resources and no library can declare the default on its behalf — without it MakePRI compares
-them against `en-US` and warns `PRI257`.
+in its own project. A merged app PRI is built from the app's resources and no library can declare
+the default on its behalf — without it MakePRI compares them against `en-US` and warns `PRI257`.
 
 ## Host it
 
@@ -53,13 +52,31 @@ the same link.
 Required on top: the settings store, the declared publish groups, the topic root, and the two change
 callbacks.
 
-Optional and worth supplying: `DefaultDeviceName`, the master card's title, description and info
-text, `PublishGroupsInfo`, `DeviceIdConsequence`, `CommandLabel`, and `Log`.
+Optional: the texts under [Which texts the application supplies](#which-texts-the-application-supplies),
+`OfferRemoval`, `Strings` and `Log`.
 
 **A host with no `MqttConnection` to hand** uses `new MqttPanelSetup { ... }` and sets `Activity`,
 `ConnectionState` and `PublishNow` itself; `Initialise` throws an `ArgumentException` naming the
 first one missing. `RecallEndpoint` is then the same accessor the connection is given, and without
 it the Status rows never show where the connection landed.
+
+**The panel redraws the Status rows, the closed Broker line and the Publish now button the moment
+the connection's state changes.**
+
+- **Built from the connection, nothing is needed:** the setup follows `MqttConnection.StateChanged`.
+- **Built without it, call `setup.NotifyConnectionStateChanged()` on every state change**, from any
+  thread; the panel moves the redraw to its own. Without the call those rows keep what they read
+  when the page last drew, and a link that comes up meanwhile leaves the Broker line on Automatic.
+- **The panel follows only while it is loaded and visible**, and catches up once when it is shown
+  again, so a page kept for the next visit costs nothing and is never held alive by the connection.
+
+**A host that stores the remembered endpoint stores all five fields of `MqttEndpointMemory`.** The
+fifth, `Encrypted`, is optional in the constructor and defaults to null. A panel whose
+`RecallEndpoint` returns an entry rebuilt from four stored values never reports the encryption in
+force: the Connection row loses its encrypted or not-encrypted clause, and the closed Broker line
+keeps encryption on Automatic while the link is up. The port and transport are still shown as found,
+and the connection still tries cipher before clear text on that endpoint. A setup built from the
+connection reads the connection's own complete entry once a connect has succeeded.
 
 **If the application already stores MQTT settings of its own, carry them into the store before the
 panel is first shown.** The module reads only its own file, so an upgrading user otherwise opens the
@@ -73,6 +90,25 @@ Two obligations the panel's own copy depends on:
   old entities are removed, and the discovery ledger is what keeps that promise.
 - **`PublishSetChanged` must republish the discovery document**, not merely the state. The announced
   entity set is baked into the retained document.
+
+## Removing the published device
+
+`OfferRemoval = true` adds a last section, "Remove from the broker": one card whose button opens a
+confirmation stating what is lost, with Cancel as the default.
+
+- **It is off unless the application sets it**, and it needs a setup built from the connection:
+  `Initialise` throws an `ArgumentException` for a setup built without one.
+- **Confirmed, it runs the connection's own `RemoveDeviceAsync`**, under the connection's gate, so an
+  apply arriving meanwhile waits for it.
+- **After a removal the panel writes publishing off through the store and raises
+  `ConnectionChanged`.** That is how the application learns of it; no other callback exists. The
+  outcome stays on the card while the detail sections hide.
+- **The button is disabled while publishing is off, while the connection reads anything but
+  connected, and while a removal runs.** The section is hidden while publishing is off, except to
+  show the outcome of a removal just made.
+- **A link lost at the moment of removal removes nothing and writes nothing**, and the card says so.
+- **It never removes on its own**: not on switching publishing off, not on any other settings
+  change, and not without a person confirming.
 
 ## Declare the publish groups
 
@@ -91,9 +127,9 @@ entities.
 |---|---|
 | `Initialise(setup)` | Once, on the UI thread, before anything else. |
 | `Reload()` | Whenever the host re-shows the page and the store may have changed while it was away — a write the panel did not make. Re-reads the store; keeps whatever is being typed. Throws before `Initialise`. |
-| `Refresh()` | When the page comes back on screen with nothing edited and the store as the panel left it: re-reads the live connection only. Under the settings shell, the section's `Enter` hook — or `Reload` there, in an application whose settings change outside the panel. |
+| `Refresh()` | When the page comes back on screen with nothing edited and the store as the panel left it: re-reads the live connection only. Under the settings shell, the section's `Enter` callback, which runs each time the section is shown — or `Reload` there, in an application whose settings change outside the panel. |
 | `Revert()` | Only behind an explicit control: it discards staged broker edits. Throws before `Initialise`. |
-| `Cancel()` | On window close only — an in-flight probe outlives the window. Final: the panel never touches its controls again, so a host that keeps the page for the next visit, as the settings shell does, calls it from the window's `Closed` and never from a leave hook. |
+| `Cancel()` | On window close only — an in-flight probe outlives the window. Final: the panel never touches its controls again, so a host that keeps the page for the next visit, as the settings shell does, calls it from the window's `Closed` and never from the callback that runs on leaving the page. |
 
 `Reload` and `Revert` read the settings store the panel is handed on `Initialise`, so both throw an
 `InvalidOperationException` naming the ordering when it has not been called. `Refresh` and `Cancel`
@@ -260,15 +296,27 @@ fell back reads as the module's own default, which is exactly what the measureme
 palette that is merely poor. `scripts/Capture 'MQTT panel' screenshots.ps1 -Branded` renders the panel under
 an extreme palette for the same purpose.
 
-## Translation
+## Which texts the application supplies
 
-One `.resw` under `Strings\en-GB\`, read through the Windows App SDK's `ResourceManager` and the
-`ResourceMap`s below it — several are tried, because where a library's strings land in the index
-depends on how the consuming application builds. The application's own map is asked before the
-library's copy, so a host's `.resw` entry for a module key is the one the panel renders. A consumer
-localises by adding a language folder; a host with its own resource system supplies an
-`IMqttStringSource` on the setup object instead. Everything falls back to the module's built-in
-en-GB, so a resource map that fails to load leaves a readable panel rather than blank controls.
+The panel speaks en-GB and Norwegian bokmål out of the box, chosen by the UI culture: `nb-NO` and
+`nb` read bokmål, every other culture en-GB.
+
+- **The application supplies only what the module cannot know**, through the setup:
+  `DefaultDeviceName`, `PublishTitle`, `PublishDescription`, `PublishInfo`, `PublishGroupsInfo`,
+  `DeviceIdConsequence` and `CommandLabel`. Each is optional. Left unset, the module's own text stands
+  for the title, description and the two info texts, `DeviceIdConsequence` adds nothing, and the
+  last-command row shows the entity ID.
+- **Every other text on the panel is the module's**: headings, rows, buttons, status lines, the
+  device-ID dialogue, and the removal card and its confirmation. `OfferRemoval` carries no text.
+- **With `Strings` left null, the application's own `.resw` is asked first**, so an entry named like
+  a module key overrides the module. Copies of module texts in an application's resources are
+  therefore deleted, unless they are deliberate translations.
+- **Override one text, or add a language,** with an `IStringLocalizer` on `MqttPanelSetup.Strings`.
+  It is asked first for every key, in place of the `.resw`; a key it does not hold, or holds blank,
+  falls back to the module's file for the UI culture, then to en-GB.
+- **The keys and what each text is** are in `Texts.resx` in `ZeroZero.Mqtt`; every entry's comment
+  says where the text appears and what its placeholders hold. The full rules are in
+  [`zerozero-mqtt.md`](zerozero-mqtt.md#translation).
 
 ## Inside the panel
 
@@ -277,8 +325,8 @@ The rules the markup and code-behind keep, for anyone changing the panel itself.
 - **Alignment.** Every field is one width (`MqttFieldWidth`), every card right-aligns its content,
   and an info icon always sits to the left of the field it explains. No adornment can then displace
   a right edge, and the whole column lands on one line without a per-card measurement.
-- **No user-facing text in the markup.** Every string comes from `MqttStrings`, so the module's
-  prose has one home, one fallback and one translation route.
+- **No user-facing text in the markup.** Every text comes from the module's resource files behind
+  the host's localizer, so the module's prose has one home and one translation route.
 - **The font is set on the root, and every keyed style that renders text repeats the key.** Rows
   built in code inherit it; an element with an explicit style takes the style's value over the
   inherited one, so a style without the key would fall back to the stock face.
@@ -320,5 +368,6 @@ The rules the markup and code-behind keep, for anyone changing the panel itself.
 - **Apply does not repeat a test that has just passed.** When the newest test passed on exactly
   the values being applied — host, port, transport, encryption, username, password, certificate
   trust and device id — Apply shows that pass again and opens no connection.
+- **It never removes the device** unless the application sets `OfferRemoval` and a person confirms.
 - Nothing in the Broker group takes effect until Apply, and an unapplied edit is marked beside the
   section heading rather than inside the group that holds the fields.

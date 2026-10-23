@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
@@ -25,12 +26,16 @@ internal sealed class MqttPanelScenario
         // nothing else overlaps.
         string? dialogueOn = ValueAfter(commandLine, "--dialogue");
         string? infoOn = ValueAfter(commandLine, "--info");
-        string? only = dialogueOn ?? infoOn;
+        string? removeOn = ValueAfter(commandLine, "--remove");
+        string? only = dialogueOn ?? infoOn ?? removeOn ?? ValueAfter(commandLine, "--only");
+        if (ValueAfter(commandLine, "--link-up") is { Length: > 0 } seconds)
+            MqttPanelSample.LinkComesUpAfter = TimeSpan.FromSeconds(double.Parse(seconds, CultureInfo.InvariantCulture));
 
         ShowMqttPanels(branded, Has(commandLine, "--mica"), Has(commandLine, "--error"), only);
 
         if (dialogueOn is { Length: > 0 }) OnceSettled(dialogueOn, window => window.OpenDeviceIdDialogue());
         if (infoOn is { Length: > 0 }) OnceSettled(infoOn, window => window.OpenFirstInfoBubble());
+        if (removeOn is { Length: > 0 }) OnceSettled(removeOn, window => window.OpenRemovalDialogue());
 
         if (ValueAfter(commandLine, "--probe") is { Length: > 0 } probePath)
             ProbeFile.WriteAfter(TimeSpan.FromSeconds(2.5), probePath, path =>

@@ -67,7 +67,7 @@ public class UnattendedUpdatePolicyTests
         UnattendedTick refused = await policy.TickAsync();
 
         Assert.Equal(UnattendedOutcome.Refused, refused.Outcome);
-        Assert.Equal(UnattendedUpdatePolicy.MachineInUse, refused.Reason);
+        Assert.Equal("the machine is in use", refused.Reason);
         Assert.Equal(0, _service.Launches);
         Assert.Equal(0, _shutdowns);
 

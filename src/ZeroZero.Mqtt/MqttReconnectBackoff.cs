@@ -19,7 +19,7 @@ internal sealed class MqttReconnectBackoff
     /// <summary>What the next wait costs while the connection is down.</summary>
     public TimeSpan Delay { get; private set; } = MqttConnection.InitialBackoff;
 
-    /// <summary>Forgets the session and drops back to the floor. A resume from standby killed the
+    /// <summary>Forgets the session and drops back to the floor. A resume from standby ended the
     /// socket, so the session that ended with it is not a flap.</summary>
     public void Resume()
     {

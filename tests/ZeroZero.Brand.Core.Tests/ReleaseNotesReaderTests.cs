@@ -16,10 +16,10 @@ public class ReleaseNotesReaderTests
     }
 
     [Fact]
-    public async Task AShortBodyComesBackTrimmedAndAnEmptyOneSaysSo()
+    public async Task AShortBodyComesBackTrimmedAndABlankOneEmpty()
     {
         Assert.Equal("Fixed a thing.", await Fetch(HttpStatusCode.OK, "Fixed a thing.\n\n"));
-        Assert.Equal(ReleaseNotesReader.NothingToShow, await Fetch(HttpStatusCode.OK, "  \n"));
+        Assert.Equal("", await Fetch(HttpStatusCode.OK, "  \n"));
     }
 
     [Fact]

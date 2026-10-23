@@ -2,8 +2,8 @@
 
 `ZeroZero.Controls.WinUI` holds the WinUI controls that carry no studio identity: the settings-row
 vocabulary — info bubble, section header, card row — title-bar theming, the single-line text
-prompt, the sizing of a popup window to its own content, and a taskbar-and-Alt+Tab setter that
-survives a start before the taskbar exists.
+prompt, the sizing of a popup window to its own content, a taskbar-and-Alt+Tab setter that
+survives a start before the taskbar exists, and a localizer over the application's own `.resw`.
 `net10.0-windows10.0.26100.0`, the Windows App SDK, the Community Toolkit's settings
 controls, `ZeroZero.Win32` and `ZeroZero.Primitives`; no font pack, no palette, and no toolkit type
 in a public signature.
@@ -41,7 +41,7 @@ This guide is complete for adoption: the component's own source and tests need n
   binds them. The glyph names Segoe Fluent Icons with Segoe MDL2 Assets as its fallback, so it still
   draws on a Windows older than 11, and the foreground resolves a stock theme brush, so the bubble
   follows the host's theme with no key to declare. With no subject the name is plain "More
-  information". A bare bubble does not hide itself when `Info` is empty; the row and the section
+  information". Both names are the assembly's own texts ([Texts](#texts)). A bare bubble does not hide itself when `Info` is empty; the row and the section
   header hide theirs.
 - **`SettingsSectionHeader`** — the sub-heading that opens a group of rows: a rule, the heading,
   an optional bubble and a `Trailing` slot for a marker such as "Unapplied changes". The rule sits
@@ -79,13 +79,13 @@ This guide is complete for adoption: the component's own source and tests need n
   an equal-width cancel-and-confirm row with the confirm on the right. Resolves with the text on
   confirm and null on cancel, Escape from any control, or any other way out; Enter confirms from
   the field; the
-  confirm button waits for text unless `AllowEmpty` is set. Every string is the caller's —
-  `Confirm` says what the answer does, "Rename", not "OK" — and so is the theme, so an application
+  confirm button waits for text unless `AllowEmpty` is set. Every string but the default `Cancel`
+  is the caller's — `Confirm` says what the answer does, "Rename", not "OK" — and so is the theme, so an application
   pinned dark passes it. The prompt collapses the field's selection on every way out, Alt+F4
   included: closing while the field holds its opening selection crashes the process with an access
   violation in the XAML runtime.
   The text comes back untrimmed. `Title`, `Message` and `Confirm` are required; `Cancel` defaults to
-  "Cancel", `MaxLength` to 0 (no limit), and without `AllowEmpty` whitespace alone does not enable
+  the assembly's own "Cancel" ([Texts](#texts)), read when the options are made, `MaxLength` to 0 (no limit), and without `AllowEmpty` whitespace alone does not enable
   the confirm.
 - **`PopupWindowFit`** — a window sized to its own content and centred on the monitor it is on. The
   caller hands it the window, the scroller's content panel, and `PopupWindowFitOptions`: the fixed
@@ -127,11 +127,40 @@ This guide is complete for adoption: the component's own source and tests need n
   optional, and without one nothing is written and the once-per-process line stays unspent.
   `ContentSizedPopup` sets it this way, and the About window, the update window and the text prompt
   are built on it.
+- **`ResourceMapStringLocalizer(library)`** — an `IStringLocalizer` over the application's own
+  `.resw` entries, for a host that wants its resource files to override a library's texts. Optional:
+  a host passes it where a component takes a localizer, and the MQTT panel uses it when its setup
+  supplies none. `library` is the library's assembly name. Several maps are asked, because where
+  resources land in the index depends on how the application builds: the application's merged index
+  and then `<library>.pri` beside the executable, and under each the `Resources` map, then
+  `<library>/Resources`, then `<library>`, then the root. **The application's own `Resources` map is
+  asked first, so any application key with the same name as a library key overrides it**, meant or
+  not. An index that fails to open leaves fewer places to ask, never an exception; an empty answer
+  counts as none, and a key nothing answers comes back not found, so the library's own text stands.
+  `GetAllStrings` returns nothing. The application's own resources need `DefaultLanguage` en-GB in
+  its project ([`consuming.md`](consuming.md)).
 
 Not here, by design: anything carrying the studio's face or palette. Those are the brand component's
 ([`zerozero-brand.md`](zerozero-brand.md)), which a component takes when it needs them and says so.
 No theme keys either: every control resolves stock brushes, and a host recolours a heading through
 the properties it inherits.
+
+## Texts
+
+The assembly writes three texts of its own: the info bubble's two screen-reader names (`InfoName`,
+`InfoNameAbout` with the subject as `{0}`) and the text prompt's default `PromptCancel`. They are in
+en-GB with Norwegian bokmål built in, in `src/ZeroZero.Controls.WinUI/Texts.resx` and
+`Texts.nb.resx`, laid out as [the primitives guide](zerozero-primitives.md#texts) describes; the UI
+culture picks the language.
+
+- **`ControlTexts.Strings`** — one optional `IStringLocalizer` for the whole application, asked first
+  for every key; null, the default, asks nothing. One static setting rather than a member per
+  control, because bubbles are also created inside other components, the settings rows and the MQTT
+  panel among them, where an application cannot reach them.
+- **Set it at start-up, before the first window opens.** A bubble reads it when its name is set and
+  a `TextPromptOptions` when it is made, so a later change reaches only bubbles and prompts created
+  after it.
+- A caller's own `Cancel` on `TextPromptOptions` is shown as given and never translated.
 
 ## Take the reference
 
@@ -206,7 +235,9 @@ the title-bar enum and palette, compiled in as linked source and pinned — opaq
 grounds the window colour, glyph and fill ordering, no value shared between the two sets — and
 the controls' markup read as data, so the section header keeps its rule above a heading whose
 colour and face are the host's, the row keeps its bubble before its field, and the prompt keeps
-its confirm on the right of two equal columns. `ContentSizedPopup`'s arithmetic — rounding up, the
+its confirm on the right of two equal columns. The order `ResourceMapStringLocalizer` asks its
+maps in is linked in and driven over supplied maps; opening a real index needs the runtime and is
+not covered. `ContentSizedPopup`'s arithmetic — rounding up, the
 200-unit fallback, the work-area cap and the centring — is linked in and tested; its window calls
 are looked at in the harness. `PopupWindowFit` is not covered there: it needs a
 live window and a laid-out panel. The arithmetic it defers to is covered in

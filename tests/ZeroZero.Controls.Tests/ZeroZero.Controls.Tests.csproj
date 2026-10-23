@@ -20,6 +20,15 @@
     <Compile Include="..\..\src\ZeroZero.Controls.WinUI\SwitcherVisibilityGuard.cs" Link="Linked\SwitcherVisibilityGuard.cs" />
     <!-- The content-sized popup's arithmetic, which names no WinUI type. -->
     <Compile Include="..\..\src\ZeroZero.Controls.WinUI\ContentSizedPopupLayout.cs" Link="Linked\ContentSizedPopupLayout.cs" />
+    <!-- The resource-map walk behind the application-first localizer, which names no WinUI type. -->
+    <Compile Include="..\..\src\ZeroZero.Controls.WinUI\ResourceMapWalk.cs" Link="Linked\ResourceMapWalk.cs" />
+    <Compile Include="..\Shared\TranslationFiles.cs" Link="Shared\TranslationFiles.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The translator's files, read as data: the context notes are not compiled. -->
+    <None Include="..\..\src\ZeroZero.Controls.WinUI\Texts.resx" Link="Translations\Texts.resx" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ZeroZero.Controls.WinUI\Texts.nb.resx" Link="Translations\Texts.nb.resx" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -28,6 +28,7 @@ internal static class UpdateCancelScenario
     private const string DirectoryPrefix = "harness-update";
 
     private static readonly Version Running = new(1, 0, 0);
+    private static readonly UpdateMessages Messages = new();
 
     /// <summary>The window the rig drives. Built here rather than left to
     /// <see cref="UpdateWindowPrompts"/> so its buttons can be pressed; everything below the window
@@ -69,18 +70,18 @@ internal static class UpdateCancelScenario
         // Answered through the buttons themselves rather than behind their backs, so what is
         // measured is the path a person takes.
         await Task.Delay(TimeSpan.FromSeconds(1.2));
-        if (!Press(UpdateMessages.InstallLabel))
+        if (!Press(Messages.InstallLabel))
         {
-            await EndAsync(UpdateMessages.InstallLabel);
+            await EndAsync(Messages.InstallLabel);
             return;
         }
 
         await Task.Delay(TimeSpan.FromSeconds(2.5));
         long servedWhenStopped = server.BytesServed;
         if (mode == "caller") caller.Cancel();
-        else if (!Press(UpdateMessages.CancelDownloadLabel))
+        else if (!Press(Messages.CancelDownloadLabel))
         {
-            await EndAsync(UpdateMessages.CancelDownloadLabel);
+            await EndAsync(Messages.CancelDownloadLabel);
             return;
         }
 
@@ -152,12 +153,12 @@ internal static class UpdateCancelScenario
         public Task SayCheckFailedAsync(UpdateCheckResult result) => Task.CompletedTask;
 
         public Task SayCannotInstallAsync(PreparedUpdate update) =>
-            window.ShowMessageAsync(UpdateMessages.CannotInstallHeadline(update),
-                                    UpdateMessages.CannotInstallText(update), attention: true);
+            window.ShowMessageAsync(Messages.CannotInstallHeadline(update),
+                                    Messages.CannotInstallText(update), attention: true);
 
         public Task SayLaunchFailedAsync(PreparedUpdate update, LaunchResult result) =>
-            window.ShowMessageAsync(UpdateMessages.LaunchFailedHeadline,
-                                    UpdateMessages.LaunchFailedText(result), attention: true);
+            window.ShowMessageAsync(Messages.LaunchFailedHeadline,
+                                    Messages.LaunchFailedText(result), attention: true);
 
         public void Dismiss() => window.Dismiss();
     }

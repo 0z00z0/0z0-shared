@@ -32,7 +32,6 @@
                  lines up with what sits above it. -->
             <StackPanel Padding="16,12,16,16">
                 <Button x:Name="UpdateBtn"
-                        Content="Check for Updates"
                         FontSize="11" FontFamily="{StaticResource BrandFontFamily}"
                         HorizontalAlignment="Stretch"/>
             </StackPanel>

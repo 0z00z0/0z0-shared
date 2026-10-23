@@ -1,15 +1,15 @@
 namespace ZeroZero.Mqtt;
 
-/// <summary>Pure rendering of the status lines a settings panel shows, in the module's own en-GB.
+/// <summary>Pure rendering of the status lines a settings panel shows, in the module's own texts.
 /// Callers pass the current instant in rather than the formatter reading a clock, so the wording is
 /// testable without one, and every probe sentence is composed here rather than beside the socket
 /// that produced it.</summary>
 /// <remarks>The static face of <see cref="MqttPanelText.Default"/>. A caller with a translation to
-/// apply builds a <see cref="MqttPanelText"/> over its own string source instead; everything else
+/// apply builds a <see cref="MqttPanelText"/> over its own localizer instead; everything else
 /// wants the module's own wording, and this is the shorter way to ask for it.</remarks>
 public static class MqttStatusText
 {
-    /// <summary>"just now" / "5 min ago" / "3 hours ago" / "2 days ago", or <paramref name="never"/>
+    /// <summary>"just now" / "5 minutes ago" / "3 hours ago" / "2 days ago", or <paramref name="never"/>
     /// when there is nothing to render. A future timestamp reads as "just now", not a negative age.</summary>
     public static string Relative(DateTimeOffset? when, DateTimeOffset now, string never) =>
         MqttPanelText.Default.Relative(when, now, never);
@@ -20,8 +20,8 @@ public static class MqttStatusText
         MqttPanelText.Default.DescribeBroker(request, memory);
 
     /// <summary>The Broker section's line while it is closed: what the connection is configured
-    /// with, a value left on Automatic marked as detected rather than chosen. Pure.</summary>
-    public static string SummariseBroker(
+    /// with, and where each value left on Automatic but found ends. Pure.</summary>
+    public static MqttBrokerSummary SummariseBroker(
         MqttEndpointRequest request, MqttEndpointMemory? memory, MqttConnectionState state,
         MqttCertificateTrustMode trust) =>
         MqttPanelText.Default.SummariseBroker(request, memory, state, trust);

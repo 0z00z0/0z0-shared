@@ -197,7 +197,7 @@ public class MqttProbeSessionTests
     {
         var session = new MqttProbeSession();
 
-        session.Refuse(MqttStrings.Default.Get("ReportNoHost"));
+        session.Refuse(MqttPanelText.Default.Strings["ReportNoHost"].Value);
 
         Assert.Equal("No broker host set.", session.Line);
         Assert.False(session.Busy);
@@ -361,10 +361,10 @@ public class MqttProbeSessionTests
     [Fact]
     public void ATranslatedSessionComposesItsLinesFromItsOwnStrings()
     {
-        var session = new MqttProbeSession(new MqttPanelText(new MqttStrings(new FixedStringSource(new()
+        var session = new MqttProbeSession(new MqttPanelText(new FixedLocalizer(new()
         {
             ["TestRunning"] = "Tester…",
-        }))));
+        })));
 
         session.Start();
 

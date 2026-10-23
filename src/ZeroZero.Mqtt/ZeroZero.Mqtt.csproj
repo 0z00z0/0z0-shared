@@ -20,6 +20,8 @@
 
   <ItemGroup>
     <PackageReference Include="MQTTnet" />
+    <!-- ICU plural formatting for the counted texts in Texts.resx. -->
+    <PackageReference Include="MessageFormat" />
   </ItemGroup>
 
   <ItemGroup>
