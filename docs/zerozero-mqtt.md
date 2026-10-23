@@ -631,9 +631,9 @@ state, because the announced entity set is baked into the retained document.
 |---|---|
 | `Initialise(setup)` | Once, on the UI thread, before anything else. |
 | `Reload()` | Whenever the host re-shows the page and the store may have changed while it was away — a write the panel did not make. Re-reads the store; keeps whatever is being typed. Throws before `Initialise`. |
-| `Refresh()` | When the page comes back on screen with nothing edited and the store as the panel left it: re-reads the live connection only. Under the settings shell, the section's `Enter` hook — or `Reload` there, in an application whose settings change outside the panel. |
+| `Refresh()` | When the page comes back on screen with nothing edited and the store as the panel left it: re-reads the live connection only. Under the settings shell, the section's `Enter` callback, which runs each time the section is shown — or `Reload` there, in an application whose settings change outside the panel. |
 | `Revert()` | Only behind an explicit control: it discards staged broker edits. Throws before `Initialise`. |
-| `Cancel()` | On window close only — an in-flight probe outlives the window. Final: the panel never touches its controls again, so a host that keeps the page for the next visit, as the settings shell does, calls it from the window's `Closed` and never from a leave hook. |
+| `Cancel()` | On window close only — an in-flight probe outlives the window. Final: the panel never touches its controls again, so a host that keeps the page for the next visit, as the settings shell does, calls it from the window's `Closed` and never from the callback that runs on leaving the page. |
 
 **`Reload` and `Revert` throw an `InvalidOperationException` if the panel has not been initialised**,
 naming the ordering. Both read the settings store the panel is handed on `Initialise`, so neither
@@ -1051,7 +1051,7 @@ itself — `Failed` with the exception's type and message, `TlsUntrusted` only w
 an authentication failure — and the clear-text retry stays blocked either way, because encryption
 was on offer.
 
-**Certificate trust** is a setting rather than a hook, because encryption forced on against a broker
+**Certificate trust** is a setting rather than a callback the application supplies, because encryption forced on against a broker
 with a self-signed certificate cannot connect under system trust alone, and the failure otherwise
 reads as "the connection failed" with no route to a fix. `MqttCertificateTrustMode` has two values:
 
@@ -1140,7 +1140,7 @@ Three rules move it:
   continuous by having each connect read as a success.
 - **A session that outlives thirty seconds is stable**, and drops the ladder back to the floor, so
   one bad minute does not leave a healthy link reconnecting a minute late for the rest of the
-  session. A resume from standby does the same, because the suspend killed the socket and the
+  session. A resume from standby does the same, because the suspend ended the socket and the
   session that ended with it was not the broker's doing. So does a changed parameter set, because a
   wait earned under the old values says nothing about the new ones: the loop reconnects with them
   at once, link up or down. `ApplyAsync` returns before that reconnect has happened.
