@@ -114,7 +114,7 @@ internal static class MqttPanelSample
             // Pinned for the same reason as the device id: the resolved default would carry the
             // machine name into the placeholder and into every screenshot.
             DefaultDeviceName = "Harness (demo)",
-            PublishTitle = "Publish to MQTT",
+            PublishTitle = "Remote control (MQTT)",
             PublishDescription = "Publishes this rig's invented state to a remote control server.",
             DeviceIdConsequence = "This rig publishes nothing, so nothing here has a consequence.",
             CommandLabel = id => id == "quiet_mode" ? "Quiet mode" : id,

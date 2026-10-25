@@ -306,6 +306,11 @@ The panel speaks en-GB and Norwegian bokmål out of the box, chosen by the UI cu
   `DeviceIdConsequence` and `CommandLabel`. Each is optional. Left unset, the module's own text stands
   for the title, description and the two info texts, `DeviceIdConsequence` adds nothing, and the
   last-command row shows the entity ID.
+- **The application's own texts say "server" or "server address" and "remote control"** (Norwegian
+  "fjernstyring"), and use neither the word "broker" nor an unexplained "MQTT", since most people know
+  neither. This covers every text above, entity descriptions, and the application's own settings and
+  log texts. The acronym appears once, in a heading, as "Remote control (MQTT)"; only the module's
+  section heading "Broker" keeps the word.
 - **Every other text on the panel is the module's**: headings, rows, buttons, status lines, the
   device-ID dialogue, and the removal card and its confirmation. `OfferRemoval` carries no text.
 - **With `Strings` left null, the application's own `.resw` is asked first**, so an entry named like

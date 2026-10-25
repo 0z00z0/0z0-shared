@@ -562,7 +562,7 @@ Mqtt.Initialise(new MqttPanelSetup(connection)
     ConnectionChanged   = () => connection.Apply(settings.Read().Connect()),
     PublishSetChanged   = () => publisher.Republish(),
     DefaultDeviceName   = $"Example App ({Environment.MachineName})",
-    PublishTitle        = "Publish to MQTT",
+    PublishTitle        = "Remote control (MQTT)",
     PublishDescription  = "Publishes this application's state to a remote control server.",
     OfferRemoval        = true,
     DeviceIdConsequence = "Any dashboard card pointing at the old entities has to be repointed.",
@@ -1283,6 +1283,13 @@ carry it:
 A blank or whitespace-only `PublishTitle`, `PublishDescription`, `PublishInfo` or `PublishGroupsInfo`
 keeps the module's own text, and so does a blank answer from the host's localizer. The module's
 `PublishGroupsInfo` text says what a group switch does, which is the same for every application.
+
+**An application's own texts say "server" or "server address" and "remote control"** (Norwegian
+"fjernstyring"), and use neither the word "broker" nor an unexplained "MQTT", since most people know
+neither. This covers `PublishTitle`, `PublishDescription`, `PublishInfo`, `PublishGroupsInfo`,
+`DeviceIdConsequence`, `CommandLabel`, entity `Description` texts and the application's own settings
+and log texts. The acronym appears once, in a heading, as "Remote control (MQTT)"; only the module's
+section heading "Broker" keeps the word.
 
 ### Theming
 

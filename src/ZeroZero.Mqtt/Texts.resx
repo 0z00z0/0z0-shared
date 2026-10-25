@@ -445,8 +445,8 @@
     <comment>Default line under the master switch when the application supplies none.</comment>
   </data>
   <data name="TitlePublishSwitch" xml:space="preserve">
-    <value>Publish to MQTT</value>
-    <comment>Default header of the master switch card when the application supplies none.</comment>
+    <value>Remote control (MQTT)</value>
+    <comment>Default header of the master switch card when the application supplies none. The acronym appears once, in parentheses after the plain words.</comment>
   </data>
   <data name="SummaryBrokerNotSet" xml:space="preserve">
     <value>No server set</value>
