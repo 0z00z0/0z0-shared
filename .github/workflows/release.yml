@@ -49,10 +49,11 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: ./.github/scripts/release-guard.ps1 -Tag $env:TAG -Check Notes
 
+      # An exact SDK version keeps the download on the release feed; ci.yml says why.
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "10.0.x"
+          dotnet-version: "10.0.403"
 
       - name: Restore
         run: dotnet restore 0z0-shared.slnx

@@ -29,10 +29,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # An exact SDK version makes the install script download from its release feed. A channel
+      # such as 10.0.x resolves through an aka.ms redirect to a storage origin that can fail on its
+      # own, with no fallback to the feed. The same line sits in release.yml.
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "10.0.x"
+          dotnet-version: "10.0.403"
 
       - name: Restore
         run: dotnet restore 0z0-shared.slnx
