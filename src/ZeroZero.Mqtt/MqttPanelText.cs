@@ -79,7 +79,7 @@ public sealed class MqttPanelText
         };
     }
 
-    /// <summary>The "Broker in use" row: the saved host with whatever port and transport are in
+    /// <summary>The "Server in use" row: the saved host with whatever port and transport are in
     /// force, whether pinned by hand or found by probing.</summary>
     /// <remarks>A remembered endpoint is only ever read for its own host and user name, so a machine
     /// that has moved reports "not connected yet" rather than the address it used somewhere else.</remarks>

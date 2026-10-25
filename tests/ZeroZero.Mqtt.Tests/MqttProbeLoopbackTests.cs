@@ -22,7 +22,7 @@ public class MqttProbeLoopbackTests
         var report = await MqttProbe.RunAsync(Target(FakeBroker.ClosedPort()), CancellationToken.None);
 
         Assert.Equal(MqttProbeOutcome.Unreachable, report.Outcome);
-        Assert.Contains("Could not reach the broker", MqttStatusText.Describe(report));
+        Assert.Contains("Could not reach the server", MqttStatusText.Describe(report));
     }
 
     [Trait(Guard.Category, Guard.Value)]
@@ -152,6 +152,6 @@ public class MqttProbeLoopbackTests
             new MqttProbeTarget("  ", 1883, "", "", "exampleapp_probe"), CancellationToken.None);
 
         Assert.Empty(report.Attempts);
-        Assert.Equal("No broker host set.", MqttStatusText.Describe(report));
+        Assert.Equal("No server address set.", MqttStatusText.Describe(report));
     }
 }

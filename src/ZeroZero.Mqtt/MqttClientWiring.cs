@@ -122,7 +122,7 @@ internal static class MqttClientWiring
     internal static string DisconnectReason(MqttClientDisconnectedEventArgs e) =>
         e.Exception is { } ex ? MqttProbe.Describe(ex)
         : !string.IsNullOrWhiteSpace(e.ReasonString) ? $"{e.Reason}: {e.ReasonString.Trim()}"
-        : e.Reason == MqttClientDisconnectReason.NormalDisconnection ? "the broker or the network closed it"
+        : e.Reason == MqttClientDisconnectReason.NormalDisconnection ? "the server or the network closed it"
         : e.Reason.ToString();
 
     /// <summary>The PUBACK reason code, as the protocol numbers it.</summary>

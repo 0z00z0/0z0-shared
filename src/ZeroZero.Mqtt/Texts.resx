@@ -29,24 +29,24 @@
     <comment>Relative age of a day or more; count = whole days. ICU plural, lower case: it follows a dash in StatusLastCommand.</comment>
   </data>
   <data name="StatusNoHost" xml:space="preserve">
-    <value>No broker host set</value>
-    <comment>Status value in the Connection row when no broker host is set. No full stop.</comment>
+    <value>No server address set</value>
+    <comment>Status value in the Connection row when no host is set. No full stop.</comment>
   </data>
   <data name="StatusProbing" xml:space="preserve">
-    <value>Looking for the broker</value>
-    <comment>Status value in the Connection row while the broker is being searched for. No full stop.</comment>
+    <value>Looking for the server</value>
+    <comment>Status value in the Connection row while the server is being searched for. No full stop.</comment>
   </data>
   <data name="StatusBrokerNotSet" xml:space="preserve">
     <value>Not set</value>
-    <comment>Status value in the Broker in use row when no host is set. No full stop.</comment>
+    <comment>Status value in the Server in use row when no host is set. No full stop.</comment>
   </data>
   <data name="StatusBrokerUnsettled" xml:space="preserve">
     <value>{0} — not connected yet</value>
-    <comment>Broker in use row before a port and transport are known; {0} = host name.</comment>
+    <comment>Server in use row before a port and transport are known; {0} = host name.</comment>
   </data>
   <data name="StatusBrokerInUse" xml:space="preserve">
     <value>{0}:{1} over {2}</value>
-    <comment>Broker in use row; {0} = host name, {1} = port number, {2} = transport name (TransportTcp or TransportWebSocket).</comment>
+    <comment>Server in use row; {0} = host name, {1} = port number, {2} = transport name (TransportTcp or TransportWebSocket).</comment>
   </data>
   <data name="StatusNothingPublished" xml:space="preserve">
     <value>Nothing published yet</value>
@@ -73,8 +73,8 @@
     <comment>Connection state while the master switch is off; status value, no full stop.</comment>
   </data>
   <data name="StateSearching" xml:space="preserve">
-    <value>Looking for the broker</value>
-    <comment>Connection state while the broker is being searched for; status value, no full stop.</comment>
+    <value>Looking for the server</value>
+    <comment>Connection state while the server is being searched for; status value, no full stop.</comment>
   </data>
   <data name="StateConnecting" xml:space="preserve">
     <value>Connecting</value>
@@ -113,27 +113,27 @@
     <comment>Result under Test connection; {0} = transport name.</comment>
   </data>
   <data name="ProbeUnreachable" xml:space="preserve">
-    <value>Could not reach the broker over {0} — {1}.</value>
+    <value>Could not reach the server over {0} — {1}.</value>
     <comment>Result under Test connection; {0} = transport name, {1} = system error detail in English.</comment>
   </data>
   <data name="ProbeTimedOut" xml:space="preserve">
-    <value>The broker did not answer over {0} within {1} seconds.</value>
+    <value>The server did not answer over {0} within {1} seconds.</value>
     <comment>Result under Test connection; {0} = transport name, {1} = timeout in whole seconds (10).</comment>
   </data>
   <data name="ProbeAuthRejected" xml:space="preserve">
-    <value>The broker rejected these credentials over {0} ({1}).</value>
-    <comment>Result under Test connection; {0} = transport name, {1} = broker reason code text.</comment>
+    <value>The server rejected these credentials over {0} ({1}).</value>
+    <comment>Result under Test connection; {0} = transport name, {1} = server reason code text.</comment>
   </data>
   <data name="ProbeRejected" xml:space="preserve">
-    <value>The broker refused the connection over {0} ({1}).</value>
-    <comment>Result under Test connection; {0} = transport name, {1} = broker reason code text.</comment>
+    <value>The server refused the connection over {0} ({1}).</value>
+    <comment>Result under Test connection; {0} = transport name, {1} = server reason code text.</comment>
   </data>
   <data name="ProbeTlsUntrusted" xml:space="preserve">
     <value>The encrypted connection over {0} failed — {1}.</value>
     <comment>Result under Test connection; {0} = transport name, {1} = certificate error detail in English.</comment>
   </data>
   <data name="ProbeTlsUnsupported" xml:space="preserve">
-    <value>The broker does not accept encrypted connections over {0} on that port — {1}.</value>
+    <value>The server does not accept encrypted connections over {0} on that port — {1}.</value>
     <comment>Result under Test connection; {0} = transport name, {1} = error detail in English.</comment>
   </data>
   <data name="ProbeFailed" xml:space="preserve">
@@ -158,7 +158,7 @@
   </data>
   <data name="ClauseRejected" xml:space="preserve">
     <value>was refused ({0})</value>
-    <comment>Fragment, no capital and no full stop. Follows an endpoint or transport name; {0} = broker reason code text.</comment>
+    <comment>Fragment, no capital and no full stop. Follows an endpoint or transport name; {0} = server reason code text.</comment>
   </data>
   <data name="ClauseTlsUntrusted" xml:space="preserve">
     <value>refused the encrypted connection ({0})</value>
@@ -181,8 +181,8 @@
     <comment>Progress line while a port is tried; {0} = ProgressEndpoint.</comment>
   </data>
   <data name="ProgressTransport" xml:space="preserve">
-    <value>Trying {0} — asking the broker…</value>
-    <comment>Progress line once a port opened and the broker is asked; {0} = ProgressEndpoint.</comment>
+    <value>Trying {0} — asking the server…</value>
+    <comment>Progress line once a port opened and the server is asked; {0} = ProgressEndpoint.</comment>
   </data>
   <data name="ProgressFinished" xml:space="preserve">
     <value>{0} {1}.</value>
@@ -193,7 +193,7 @@
     <comment>Progress line for an endpoint that gave no verdict; {0} = ProgressEndpoint.</comment>
   </data>
   <data name="ReportNoHost" xml:space="preserve">
-    <value>No broker host set.</value>
+    <value>No server address set.</value>
     <comment>Result under Test connection when no host is set. Full sentence.</comment>
   </data>
   <data name="ReportConnected" xml:space="preserve">
@@ -201,7 +201,7 @@
     <comment>Result under Test connection after a success; {0} = transport name, {1} = port number.</comment>
   </data>
   <data name="ReportNothingReached" xml:space="preserve">
-    <value>The broker was not reached. {0}.</value>
+    <value>The server was not reached. {0}.</value>
     <comment>Result when no endpoint answered; {0} = ReportFragment texts joined by ReportFragmentJoin.</comment>
   </data>
   <data name="ReportFragment" xml:space="preserve">
@@ -229,8 +229,8 @@
     <comment>Marker on the Broker heading while edits wait for Apply.</comment>
   </data>
   <data name="PublishFailed" xml:space="preserve">
-    <value>Nothing reached the broker</value>
-    <comment>Last publish row, in the error colour, when Publish now reached no broker. No full stop.</comment>
+    <value>Nothing reached the server</value>
+    <comment>Last publish row, in the error colour, when Publish now reached no server. No full stop.</comment>
   </data>
   <data name="PortOutOfRange" xml:space="preserve">
     <value>Port must be between {0} and {1}.</value>
@@ -261,11 +261,11 @@
     <comment>First certificate-trust dropdown choice: only certificates the operating system trusts.</comment>
   </data>
   <data name="TrustAcceptAny" xml:space="preserve">
-    <value>Any certificate the broker presents</value>
+    <value>Any certificate the server presents</value>
     <comment>Second certificate-trust dropdown choice: any certificate is accepted.</comment>
   </data>
   <data name="TrustAcceptAnyNote" xml:space="preserve">
-    <value>The traffic stays encrypted, and nothing checks that the broker is the machine it claims to be. The last resort for a certificate that cannot be made to verify.</value>
+    <value>The traffic stays encrypted, and nothing checks that the server is the machine it claims to be. The last resort for a certificate that cannot be made to verify.</value>
     <comment>Note under the certificate-trust dropdown while TrustAcceptAny is chosen. Says which protection is dropped.</comment>
   </data>
   <data name="DeviceIdTitle" xml:space="preserve">
@@ -293,7 +293,7 @@
     <comment>Live preview under the new ID box; {0} = the ID as it will be published.</comment>
   </data>
   <data name="DeviceIdWarning" xml:space="preserve">
-    <value>Changing the ID renames every entity this application publishes. Anything pointing at the old names stops working, with no error reported anywhere.&#xA;&#xA;The old entities are removed from the broker, and their recorded history does not carry over to the new ones.&#xA;&#xA;Leaving the box empty falls back to the name derived from this machine.</value>
+    <value>Changing the ID renames every entity this application publishes. Anything pointing at the old names stops working, with no error reported anywhere.&#xA;&#xA;The old entities are removed from the server, and their recorded history does not carry over to the new ones.&#xA;&#xA;Leaving the box empty falls back to the name derived from this machine.</value>
     <comment>Warning in the change device ID dialogue. Three paragraphs separated by blank lines; keep them.</comment>
   </data>
   <data name="DeviceIdAcknowledge" xml:space="preserve">
@@ -321,7 +321,7 @@
     <comment>Row label in the Status section.</comment>
   </data>
   <data name="RowBrokerInUse" xml:space="preserve">
-    <value>Broker in use</value>
+    <value>Server in use</value>
     <comment>Row label in the Status section.</comment>
   </data>
   <data name="RowLastPublish" xml:space="preserve">
@@ -342,7 +342,7 @@
   </data>
   <data name="RowHost" xml:space="preserve">
     <value>Host</value>
-    <comment>Row label in the Broker section: the broker's host name or address.</comment>
+    <comment>Row label in the Broker section: the server's host name or address.</comment>
   </data>
   <data name="RowPort" xml:space="preserve">
     <value>Port</value>
@@ -378,11 +378,11 @@
   </data>
   <data name="ButtonApply" xml:space="preserve">
     <value>Apply</value>
-    <comment>Button that saves the broker fields and reconnects. Fits a button; named in InfoBroker and InfoDeviceName.</comment>
+    <comment>Button that saves the connection fields and reconnects. Fits a button; named in InfoBroker and InfoDeviceName.</comment>
   </data>
   <data name="ButtonTest" xml:space="preserve">
     <value>Test connection</value>
-    <comment>Button that tries the broker fields without saving. Fits a button; named in InfoBroker.</comment>
+    <comment>Button that tries the connection fields without saving. Fits a button; named in InfoBroker.</comment>
   </data>
   <data name="ButtonPublishNow" xml:space="preserve">
     <value>Publish now</value>
@@ -409,7 +409,7 @@
     <comment>One-line description under the Transport row label. Never restates the label.</comment>
   </data>
   <data name="DescEncryption" xml:space="preserve">
-    <value>Encrypts traffic to the broker.</value>
+    <value>Encrypts traffic to the server.</value>
     <comment>One-line description under the Encrypted connection row label. Never restates the label.</comment>
   </data>
   <data name="DescCertificateTrust" xml:space="preserve">
@@ -437,11 +437,11 @@
     <comment>Description under the Device ID row label. Never restates the label.</comment>
   </data>
   <data name="DescApply" xml:space="preserve">
-    <value>Saves every broker field above and reconnects once. Nothing above is live until then.</value>
+    <value>Saves every connection field above and reconnects once. Nothing above is live until then.</value>
     <comment>Description under the Apply these settings row label.</comment>
   </data>
   <data name="DescPublishSwitch" xml:space="preserve">
-    <value>Publishes this application's state to an MQTT broker.</value>
+    <value>Publishes this application's state to a remote control server.</value>
     <comment>Default line under the master switch when the application supplies none.</comment>
   </data>
   <data name="TitlePublishSwitch" xml:space="preserve">
@@ -449,7 +449,7 @@
     <comment>Default header of the master switch card when the application supplies none.</comment>
   </data>
   <data name="SummaryBrokerNotSet" xml:space="preserve">
-    <value>No broker set</value>
+    <value>No server set</value>
     <comment>Line on the closed Broker section when no host is set. No full stop.</comment>
   </data>
   <data name="SummaryBroker" xml:space="preserve">
@@ -477,7 +477,7 @@
     <comment>Line on the closed publish section when the application declares no group.</comment>
   </data>
   <data name="InfoPublishSwitch" xml:space="preserve">
-    <value>The master switch for the whole feature, taking effect immediately. Nothing is sent while it is off; switching it off marks the device offline at the broker, then closes the connection.</value>
+    <value>The master switch for the whole feature, taking effect immediately. Nothing is sent while it is off; switching it off marks the device offline at the server, then closes the connection.</value>
     <comment>Info bubble text for the master switch, followed by ModuleVersion. Full sentences.</comment>
   </data>
   <data name="InfoStatus" xml:space="preserve">
@@ -485,19 +485,19 @@
     <comment>Info bubble text for the Status heading. Full sentence.</comment>
   </data>
   <data name="InfoConnection" xml:space="preserve">
-    <value>Where the broker settings in force came from, and whether the live link is encrypted — a setting left on Automatic can land on either.</value>
+    <value>Where the connection settings in force came from, and whether the live link is encrypted — a setting left on Automatic can land on either.</value>
     <comment>Info bubble text for the Connection row. Automatic is OptionAutomatic.</comment>
   </data>
   <data name="InfoBrokerInUse" xml:space="preserve">
     <value>The address the live connection is using — the saved settings, not any unapplied edit in the fields below.</value>
-    <comment>Info bubble text for the Broker in use row.</comment>
+    <comment>Info bubble text for the Server in use row.</comment>
   </data>
   <data name="InfoLastPublish" xml:space="preserve">
-    <value>When a message last reached the broker. Unchanged values are not re-sent, so this stands still while nothing changes. Publish now sends the current state for the groups switched on below.</value>
+    <value>When a message last reached the server. Unchanged values are not re-sent, so this stands still while nothing changes. Publish now sends the current state for the groups switched on below.</value>
     <comment>Info bubble text for the Last publish row. Publish now is ButtonPublishNow.</comment>
   </data>
   <data name="InfoLastCommand" xml:space="preserve">
-    <value>The most recent command the broker sent that was acted on. One that was refused never appears here.</value>
+    <value>The most recent remote control command that was acted on. One that was refused never appears here.</value>
     <comment>Info bubble text for the Last command accepted row.</comment>
   </data>
   <data name="InfoDevice" xml:space="preserve">
@@ -513,7 +513,7 @@
     <comment>Info bubble text for the Device ID row; {0} = maximum length (48).</comment>
   </data>
   <data name="InfoBroker" xml:space="preserve">
-    <value>Changes here take effect on Apply, which remakes the connection once. Anything left on Automatic is found by trying the broker when Test connection or Apply is pressed, and at no other time.</value>
+    <value>Changes here take effect on Apply, which remakes the connection once. Anything left on Automatic is found by trying the server when Test connection or Apply is pressed, and at no other time.</value>
     <comment>Info bubble text for the Broker heading. Apply, Test connection and Automatic are ButtonApply, ButtonTest and OptionAutomatic.</comment>
   </data>
   <data name="InfoHost" xml:space="preserve">
@@ -521,7 +521,7 @@
     <comment>Info bubble text for the Host row. ws:// and wss:// are typed literally.</comment>
   </data>
   <data name="InfoPort" xml:space="preserve">
-    <value>Automatic tries the ports brokers commonly use, encrypted and plain, and remembers the one that answered. Choose Other… to type a port.</value>
+    <value>Automatic tries the ports remote control servers commonly use, encrypted and plain, and remembers the one that answered. Choose Other… to type a port.</value>
     <comment>Info bubble text for the Port row. Automatic and Other… are OptionAutomatic and PortCustom.</comment>
   </data>
   <data name="InfoTransport" xml:space="preserve">
@@ -529,15 +529,15 @@
     <comment>Info bubble text for the Transport row. Automatic is OptionAutomatic.</comment>
   </data>
   <data name="InfoEncryption" xml:space="preserve">
-    <value>Automatic tries each endpoint encrypted first, and falls back to clear text only where the broker offers no encryption at all — a rejected password or an untrusted certificate ends the search instead. A choice made by hand is always used, and a host typed as a wss:// address is encrypted whatever this is set to.</value>
+    <value>Automatic tries each endpoint encrypted first, and falls back to clear text only where the server offers no encryption at all — a rejected password or an untrusted certificate ends the search instead. A choice made by hand is always used, and a host typed as a wss:// address is encrypted whatever this is set to.</value>
     <comment>Info bubble text for the Encrypted connection row. Automatic is OptionAutomatic.</comment>
   </data>
   <data name="InfoCertificateTrust" xml:space="preserve">
-    <value>A broker carrying a certificate of its own making is refused by the certificates this machine trusts, and accepting any certificate is what connects to it.</value>
+    <value>A server carrying a certificate of its own making is refused by the certificates this machine trusts, and accepting any certificate is what connects to it.</value>
     <comment>Info bubble text for the Certificate trust row.</comment>
   </data>
   <data name="InfoUsername" xml:space="preserve">
-    <value>Changing the username starts the search for the broker endpoint again: a broker often serves a separate listener per account.</value>
+    <value>Changing the username starts the search for the server endpoint again: a server often serves a separate listener per account.</value>
     <comment>Info bubble text for the Username row.</comment>
   </data>
   <data name="InfoPassword" xml:space="preserve">
@@ -549,7 +549,7 @@
     <comment>Info bubble text for the Discovery prefix row. Names no product: the format is read by more than one program.</comment>
   </data>
   <data name="InfoTest" xml:space="preserve">
-    <value>Tries the values in the fields above, including ones not yet applied, over a throwaway connection of its own. It saves nothing at all: not the fields, and not where the broker answered. Anything left on Automatic may take several addresses to find; the result names the one that answered, and lists what was tried only when none of them did.</value>
+    <value>Tries the values in the fields above, including ones not yet applied, over a throwaway connection of its own. It saves nothing at all: not the fields, and not where the server answered. Anything left on Automatic may take several addresses to find; the result names the one that answered, and lists what was tried only when none of them did.</value>
     <comment>Info bubble text for the Test connection button. Automatic is OptionAutomatic.</comment>
   </data>
   <data name="ModuleVersion" xml:space="preserve">
@@ -577,7 +577,7 @@
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectBrokerInUse" xml:space="preserve">
-    <value>the broker in use</value>
+    <value>the server in use</value>
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectLastPublish" xml:space="preserve">
@@ -601,15 +601,15 @@
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectBroker" xml:space="preserve">
-    <value>the broker section</value>
+    <value>the Broker section</value>
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectHost" xml:space="preserve">
-    <value>the broker host</value>
+    <value>the server address</value>
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectPort" xml:space="preserve">
-    <value>the broker port</value>
+    <value>the server port</value>
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectTransport" xml:space="preserve">
@@ -625,11 +625,11 @@
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectUsername" xml:space="preserve">
-    <value>the broker username</value>
+    <value>the server username</value>
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectPassword" xml:space="preserve">
-    <value>the broker password</value>
+    <value>the server password</value>
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectDiscoveryPrefix" xml:space="preserve">
@@ -653,7 +653,7 @@
     <comment>Info bubble text for the What to publish heading, shown when the application supplies none. Full sentences.</comment>
   </data>
   <data name="HeadingRemoval" xml:space="preserve">
-    <value>Remove from the broker</value>
+    <value>Remove from the server</value>
     <comment>Section heading above the device-removal card, last on the panel. Shown only in applications that offer removal.</comment>
   </data>
   <data name="RowRemoval" xml:space="preserve">
@@ -673,7 +673,7 @@
     <comment>Title of the removal confirmation dialogue. A question, answered by RemovalConfirm or RemovalCancel.</comment>
   </data>
   <data name="RemovalWarning" xml:space="preserve">
-    <value>Everything this device published is emptied from the broker, and publishing is switched off so nothing announces it again. Anything reading the device loses the names, entity IDs and areas chosen for its entities, and announcing it again creates new ones. This cannot be undone.</value>
+    <value>Everything this device published is emptied from the server, and publishing is switched off so nothing announces it again. Anything reading the device loses the names, entity IDs and areas chosen for its entities, and announcing it again creates new ones. This cannot be undone.</value>
     <comment>Body of the removal confirmation dialogue. States what is lost before the button that loses it.</comment>
   </data>
   <data name="RemovalConfirm" xml:space="preserve">
@@ -689,15 +689,15 @@
     <comment>Status line on the Published device row while the removal runs.</comment>
   </data>
   <data name="RemovalDone" xml:space="preserve">
-    <value>The device has been removed from the broker, and publishing is off.</value>
+    <value>The device has been removed from the server, and publishing is off.</value>
     <comment>Status line on the Published device row after a removal. Full sentence; stays after the master switch is turned off.</comment>
   </data>
   <data name="RemovalNoConnection" xml:space="preserve">
-    <value>Nothing was removed, because there is no live connection to the broker. Try again once it is connected.</value>
+    <value>Nothing was removed, because there is no live connection to the server. Try again once it is connected.</value>
     <comment>Status line on the Published device row, in the error colour, when the link was gone at the moment of removal.</comment>
   </data>
   <data name="RemovalFailed" xml:space="preserve">
-    <value>The removal stopped part-way, so the broker may still hold some of the device.</value>
+    <value>The removal stopped part-way, so the server may still hold some of the device.</value>
     <comment>Status line on the Published device row, in the error colour, when the removal failed part-way.</comment>
   </data>
   <data name="InfoDetectedMark" xml:space="preserve">

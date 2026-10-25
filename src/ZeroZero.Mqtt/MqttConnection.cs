@@ -475,7 +475,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             _signals.Drop();
 
             if (_outage.IsNewLoss())
-                _log.Info($"MQTT: the connection to the broker was lost — {MqttClientWiring.DisconnectReason(e)}. " +
+                _log.Info($"MQTT: the connection to the server was lost — {MqttClientWiring.DisconnectReason(e)}. " +
                           "Sending resumes when the connection returns.");
         }
         return Task.CompletedTask;
@@ -618,7 +618,7 @@ public sealed class MqttConnection : IMqttPublisher, IDisposable
             {
                 // The broker took the packet and declined the message — an ACL on the topic, a quota.
                 // Silence here is what lets a value that never arrived be recorded as sent.
-                _log.Error($"MqttConnection.Publish: '{topic}' was refused by the broker ({code}).", null);
+                _log.Error($"MqttConnection.Publish: '{topic}' was refused by the server ({code}).", null);
                 return false;
             }
 

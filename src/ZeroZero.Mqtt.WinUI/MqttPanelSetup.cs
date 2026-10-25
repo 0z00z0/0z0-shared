@@ -33,7 +33,7 @@ public sealed class MqttPanelSetup
     /// <paramref name="connection"/> for as long as the panel lives. Any of the four set in the object
     /// initialiser as well replaces the connection's.</summary>
     /// <remarks>Each accessor asks the connection at the moment it is called, so the Connection row,
-    /// the Broker in use row and the closed Broker line all describe the same link. Wiring the four by
+    /// the Server in use row and the closed Broker line all describe the same link. Wiring the four by
     /// hand leaves room for one of them to describe something else — typically an endpoint accessor
     /// left out, under which the Connection row reads connected while the other two say nothing has
     /// been found.</remarks>

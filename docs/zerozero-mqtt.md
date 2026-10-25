@@ -563,7 +563,7 @@ Mqtt.Initialise(new MqttPanelSetup(connection)
     PublishSetChanged   = () => publisher.Republish(),
     DefaultDeviceName   = $"Example App ({Environment.MachineName})",
     PublishTitle        = "Publish to MQTT",
-    PublishDescription  = "Publishes this application's state to an MQTT broker.",
+    PublishDescription  = "Publishes this application's state to a remote control server.",
     OfferRemoval        = true,
     DeviceIdConsequence = "Any dashboard card pointing at the old entities has to be repointed.",
     CommandLabel        = id => entities.NameOf(id),
@@ -587,7 +587,7 @@ come from the `MqttConnection` handed in, and each asks it at the moment a row i
 | `RecallEndpoint` | `RememberedEndpoint` |
 | `PublishNow` | `PublishNowAsync()` |
 
-The Connection row, the Broker in use row and the closed Broker line therefore always describe one
+The Connection row, the Server in use row and the closed Broker line therefore always describe one
 link. Any of the four set in the object initialiser as well replaces the connection's.
 
 **A host with no `MqttConnection` to hand sets the four itself**, with the parameterless constructor —
@@ -612,7 +612,7 @@ Mqtt.Initialise(new MqttPanelSetup
 `Activity`, `ConnectionState` and `PublishNow` are then needed as well: **`Initialise` throws an
 `ArgumentException` naming the first one missing.** The three are not `required`, so the compiler
 does not catch a missing one. `RecallEndpoint` stays optional; it is the same accessor the
-connection is given through `MqttConnectionSetup.RecallEndpoint`, and without it the Broker in use
+connection is given through `MqttConnectionSetup.RecallEndpoint`, and without it the Server in use
 row and the closed Broker line never show a detected endpoint while the Connection row still reads
 the live state. **Such a host calls `NotifyConnectionStateChanged()` on the setup whenever the
 state changes**, from any thread; a setup built from the connection follows `StateChanged` itself.
@@ -1245,7 +1245,7 @@ Automatic · Automatic` on almost every machine, which looks like information an
 **A detected value is shown only while the link that found it is up.** Once the connection drops the
 same value is a reading from an earlier moment, and presenting it unqualified would be the error the
 marking exists to prevent, reached by another route — so each Automatic field falls back to the bare
-instruction. A blank host reads `No broker set`, and the encryption clause follows the address where
+instruction. A blank host reads `No server set`, and the encryption clause follows the address where
 the address settles it: a WebSocket front door on a port whose scheme is fixed reads `encrypted`
 whatever the switch says, matching the Connection row rather than contradicting it.
 

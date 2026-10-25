@@ -199,7 +199,7 @@ public class MqttProbeSessionTests
 
         session.Refuse(MqttPanelText.Default.Strings["ReportNoHost"].Value);
 
-        Assert.Equal("No broker host set.", session.Line);
+        Assert.Equal("No server address set.", session.Line);
         Assert.False(session.Busy);
     }
 
@@ -208,11 +208,11 @@ public class MqttProbeSessionTests
     {
         var session = new MqttProbeSession();
         long token = session.Start();
-        session.Refuse("No broker host set.");
+        session.Refuse("No server address set.");
 
         session.Report(token, Trying(1883, MqttTransport.Tcp));
 
-        Assert.Equal("No broker host set.", session.Line);
+        Assert.Equal("No server address set.", session.Line);
     }
 
     [Fact]
@@ -350,7 +350,7 @@ public class MqttProbeSessionTests
 
         Assert.Equal(MqttProbeDecision.NothingToProbe,
             session.Decide(MqttProbeTrigger.TestConnection, Usable, publishingEnabled: true, Tested with { Host = "" }));
-        Assert.Equal("No broker host set.", session.Line);
+        Assert.Equal("No server address set.", session.Line);
 
         Assert.Equal(MqttProbeDecision.Run,
             session.Decide(MqttProbeTrigger.TestConnection, Usable, publishingEnabled: true, Tested));

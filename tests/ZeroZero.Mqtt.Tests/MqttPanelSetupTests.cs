@@ -25,7 +25,7 @@ public class MqttPanelSetupTests
     }
 
     /// <summary>The live contradiction this construction exists to prevent: a Connection row reading
-    /// connected above a Broker in use row reading "not connected yet", because the two were wired to
+    /// connected above a Server in use row reading "not connected yet", because the two were wired to
     /// different sources. Every accessor is read before the link exists and again after it, so a
     /// value captured at construction reads the first answer for ever.</summary>
     [Trait(Guard.Category, Guard.Value)]

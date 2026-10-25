@@ -40,12 +40,12 @@ public class MqttSummaryTextTests
 
     [Fact]
     public void ASummaryWithNoHostSaysSoRatherThanRenderingAnEmptyEndpoint() =>
-        Assert.Equal("No broker set", Summary(Request(host: "   "), Memory()));
+        Assert.Equal("No server set", Summary(Request(host: "   "), Memory()));
 
     [Fact]
     public void ANoHostSummaryIsUnaffectedByAcceptingAnyCertificate() =>
         // Unconfigured stays unconfigured: there is no link for the warning to be about.
-        Assert.Equal("No broker set",
+        Assert.Equal("No server set",
                      Summary(Request(host: "   "), Memory(), trust: MqttCertificateTrustMode.AcceptAny));
 
     [Fact]

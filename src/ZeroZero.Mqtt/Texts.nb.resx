@@ -29,24 +29,24 @@
     <comment>Relative age of a day or more; count = whole days. ICU plural, lower case: it follows a dash in StatusLastCommand.</comment>
   </data>
   <data name="StatusNoHost" xml:space="preserve">
-    <value>Ingen vert er angitt for brokeren</value>
-    <comment>Status value in the Connection row when no broker host is set. No full stop.</comment>
+    <value>Ingen serveradresse er angitt</value>
+    <comment>Status value in the Connection row when no host is set. No full stop.</comment>
   </data>
   <data name="StatusProbing" xml:space="preserve">
-    <value>Leter etter brokeren</value>
-    <comment>Status value in the Connection row while the broker is being searched for. No full stop.</comment>
+    <value>Leter etter serveren</value>
+    <comment>Status value in the Connection row while the server is being searched for. No full stop.</comment>
   </data>
   <data name="StatusBrokerNotSet" xml:space="preserve">
     <value>Ikke angitt</value>
-    <comment>Status value in the Broker in use row when no host is set. No full stop.</comment>
+    <comment>Status value in the Server in use row when no host is set. No full stop.</comment>
   </data>
   <data name="StatusBrokerUnsettled" xml:space="preserve">
     <value>{0} — ikke tilkoblet ennå</value>
-    <comment>Broker in use row before a port and transport are known; {0} = host name.</comment>
+    <comment>Server in use row before a port and transport are known; {0} = host name.</comment>
   </data>
   <data name="StatusBrokerInUse" xml:space="preserve">
     <value>{0}:{1} over {2}</value>
-    <comment>Broker in use row; {0} = host name, {1} = port number, {2} = transport name (TransportTcp or TransportWebSocket).</comment>
+    <comment>Server in use row; {0} = host name, {1} = port number, {2} = transport name (TransportTcp or TransportWebSocket).</comment>
   </data>
   <data name="StatusNothingPublished" xml:space="preserve">
     <value>Ingenting publisert ennå</value>
@@ -73,8 +73,8 @@
     <comment>Connection state while the master switch is off; status value, no full stop.</comment>
   </data>
   <data name="StateSearching" xml:space="preserve">
-    <value>Leter etter brokeren</value>
-    <comment>Connection state while the broker is being searched for; status value, no full stop.</comment>
+    <value>Leter etter serveren</value>
+    <comment>Connection state while the server is being searched for; status value, no full stop.</comment>
   </data>
   <data name="StateConnecting" xml:space="preserve">
     <value>Kobler til</value>
@@ -113,27 +113,27 @@
     <comment>Result under Test connection; {0} = transport name.</comment>
   </data>
   <data name="ProbeUnreachable" xml:space="preserve">
-    <value>Fikk ikke kontakt med brokeren over {0} — {1}.</value>
+    <value>Fikk ikke kontakt med serveren over {0} — {1}.</value>
     <comment>Result under Test connection; {0} = transport name, {1} = system error detail in English.</comment>
   </data>
   <data name="ProbeTimedOut" xml:space="preserve">
-    <value>Brokeren svarte ikke over {0} innen {1} sekunder.</value>
+    <value>Serveren svarte ikke over {0} innen {1} sekunder.</value>
     <comment>Result under Test connection; {0} = transport name, {1} = timeout in whole seconds (10).</comment>
   </data>
   <data name="ProbeAuthRejected" xml:space="preserve">
-    <value>Brokeren avviste denne påloggingen over {0} ({1}).</value>
-    <comment>Result under Test connection; {0} = transport name, {1} = broker reason code text.</comment>
+    <value>Serveren avviste denne påloggingen over {0} ({1}).</value>
+    <comment>Result under Test connection; {0} = transport name, {1} = server reason code text.</comment>
   </data>
   <data name="ProbeRejected" xml:space="preserve">
-    <value>Brokeren nektet tilkoblingen over {0} ({1}).</value>
-    <comment>Result under Test connection; {0} = transport name, {1} = broker reason code text.</comment>
+    <value>Serveren nektet tilkoblingen over {0} ({1}).</value>
+    <comment>Result under Test connection; {0} = transport name, {1} = server reason code text.</comment>
   </data>
   <data name="ProbeTlsUntrusted" xml:space="preserve">
     <value>Den krypterte tilkoblingen over {0} mislyktes — {1}.</value>
     <comment>Result under Test connection; {0} = transport name, {1} = certificate error detail in English.</comment>
   </data>
   <data name="ProbeTlsUnsupported" xml:space="preserve">
-    <value>Brokeren godtar ikke krypterte tilkoblinger over {0} på den porten — {1}.</value>
+    <value>Serveren godtar ikke krypterte tilkoblinger over {0} på den porten — {1}.</value>
     <comment>Result under Test connection; {0} = transport name, {1} = error detail in English.</comment>
   </data>
   <data name="ProbeFailed" xml:space="preserve">
@@ -158,7 +158,7 @@
   </data>
   <data name="ClauseRejected" xml:space="preserve">
     <value>ble avvist ({0})</value>
-    <comment>Fragment, no capital and no full stop. Follows an endpoint or transport name; {0} = broker reason code text.</comment>
+    <comment>Fragment, no capital and no full stop. Follows an endpoint or transport name; {0} = server reason code text.</comment>
   </data>
   <data name="ClauseTlsUntrusted" xml:space="preserve">
     <value>avviste den krypterte tilkoblingen ({0})</value>
@@ -181,8 +181,8 @@
     <comment>Progress line while a port is tried; {0} = ProgressEndpoint.</comment>
   </data>
   <data name="ProgressTransport" xml:space="preserve">
-    <value>Prøver {0} — spør brokeren…</value>
-    <comment>Progress line once a port opened and the broker is asked; {0} = ProgressEndpoint.</comment>
+    <value>Prøver {0} — spør serveren…</value>
+    <comment>Progress line once a port opened and the server is asked; {0} = ProgressEndpoint.</comment>
   </data>
   <data name="ProgressFinished" xml:space="preserve">
     <value>{0} {1}.</value>
@@ -193,7 +193,7 @@
     <comment>Progress line for an endpoint that gave no verdict; {0} = ProgressEndpoint.</comment>
   </data>
   <data name="ReportNoHost" xml:space="preserve">
-    <value>Ingen vert er angitt for brokeren.</value>
+    <value>Ingen serveradresse er angitt.</value>
     <comment>Result under Test connection when no host is set. Full sentence.</comment>
   </data>
   <data name="ReportConnected" xml:space="preserve">
@@ -201,7 +201,7 @@
     <comment>Result under Test connection after a success; {0} = transport name, {1} = port number.</comment>
   </data>
   <data name="ReportNothingReached" xml:space="preserve">
-    <value>Fikk ikke kontakt med brokeren. {0}.</value>
+    <value>Fikk ikke kontakt med serveren. {0}.</value>
     <comment>Result when no endpoint answered; {0} = ReportFragment texts joined by ReportFragmentJoin.</comment>
   </data>
   <data name="ReportFragment" xml:space="preserve">
@@ -229,8 +229,8 @@
     <comment>Marker on the Broker heading while edits wait for Apply.</comment>
   </data>
   <data name="PublishFailed" xml:space="preserve">
-    <value>Ingenting nådde brokeren</value>
-    <comment>Last publish row, in the error colour, when Publish now reached no broker. No full stop.</comment>
+    <value>Ingenting nådde serveren</value>
+    <comment>Last publish row, in the error colour, when Publish now reached no server. No full stop.</comment>
   </data>
   <data name="PortOutOfRange" xml:space="preserve">
     <value>Porten må være mellom {0} og {1}.</value>
@@ -261,11 +261,11 @@
     <comment>First certificate-trust dropdown choice: only certificates the operating system trusts.</comment>
   </data>
   <data name="TrustAcceptAny" xml:space="preserve">
-    <value>Alle sertifikater brokeren viser fram</value>
+    <value>Alle sertifikater serveren viser fram</value>
     <comment>Second certificate-trust dropdown choice: any certificate is accepted.</comment>
   </data>
   <data name="TrustAcceptAnyNote" xml:space="preserve">
-    <value>Trafikken forblir kryptert, og ingenting kontrollerer at brokeren er den maskinen den gir seg ut for å være. Siste utvei for et sertifikat som ikke kan bekreftes.</value>
+    <value>Trafikken forblir kryptert, og ingenting kontrollerer at serveren er den maskinen den gir seg ut for å være. Siste utvei for et sertifikat som ikke kan bekreftes.</value>
     <comment>Note under the certificate-trust dropdown while TrustAcceptAny is chosen. Says which protection is dropped.</comment>
   </data>
   <data name="DeviceIdTitle" xml:space="preserve">
@@ -293,7 +293,7 @@
     <comment>Live preview under the new ID box; {0} = the ID as it will be published.</comment>
   </data>
   <data name="DeviceIdWarning" xml:space="preserve">
-    <value>Når ID-en endres, får hver entitet dette programmet publiserer nytt navn. Alt som peker på de gamle navnene slutter å virke, uten at noen feil blir meldt noe sted.&#xA;&#xA;De gamle entitetene fjernes fra brokeren, og den registrerte historikken deres følger ikke med til de nye.&#xA;&#xA;En tom boks gir navnet som er utledet fra denne maskinen.</value>
+    <value>Når ID-en endres, får hver entitet dette programmet publiserer nytt navn. Alt som peker på de gamle navnene slutter å virke, uten at noen feil blir meldt noe sted.&#xA;&#xA;De gamle entitetene fjernes fra serveren, og den registrerte historikken deres følger ikke med til de nye.&#xA;&#xA;En tom boks gir navnet som er utledet fra denne maskinen.</value>
     <comment>Warning in the change device ID dialogue. Three paragraphs separated by blank lines; keep them.</comment>
   </data>
   <data name="DeviceIdAcknowledge" xml:space="preserve">
@@ -321,7 +321,7 @@
     <comment>Row label in the Status section.</comment>
   </data>
   <data name="RowBrokerInUse" xml:space="preserve">
-    <value>Broker i bruk</value>
+    <value>Server i bruk</value>
     <comment>Row label in the Status section.</comment>
   </data>
   <data name="RowLastPublish" xml:space="preserve">
@@ -342,7 +342,7 @@
   </data>
   <data name="RowHost" xml:space="preserve">
     <value>Vert</value>
-    <comment>Row label in the Broker section: the broker's host name or address.</comment>
+    <comment>Row label in the Broker section: the server's host name or address.</comment>
   </data>
   <data name="RowPort" xml:space="preserve">
     <value>Port</value>
@@ -378,11 +378,11 @@
   </data>
   <data name="ButtonApply" xml:space="preserve">
     <value>Ta i bruk</value>
-    <comment>Button that saves the broker fields and reconnects. Fits a button; named in InfoBroker and InfoDeviceName.</comment>
+    <comment>Button that saves the connection fields and reconnects. Fits a button; named in InfoBroker and InfoDeviceName.</comment>
   </data>
   <data name="ButtonTest" xml:space="preserve">
     <value>Test tilkoblingen</value>
-    <comment>Button that tries the broker fields without saving. Fits a button; named in InfoBroker.</comment>
+    <comment>Button that tries the connection fields without saving. Fits a button; named in InfoBroker.</comment>
   </data>
   <data name="ButtonPublishNow" xml:space="preserve">
     <value>Publiser nå</value>
@@ -409,7 +409,7 @@
     <comment>One-line description under the Transport row label. Never restates the label.</comment>
   </data>
   <data name="DescEncryption" xml:space="preserve">
-    <value>Krypterer trafikken til brokeren.</value>
+    <value>Krypterer trafikken til serveren.</value>
     <comment>One-line description under the Encrypted connection row label. Never restates the label.</comment>
   </data>
   <data name="DescCertificateTrust" xml:space="preserve">
@@ -437,11 +437,11 @@
     <comment>Description under the Device ID row label. Never restates the label.</comment>
   </data>
   <data name="DescApply" xml:space="preserve">
-    <value>Lagrer alle brokerfeltene over og kobler til på nytt én gang. Ingenting over gjelder før da.</value>
+    <value>Lagrer alle tilkoblingsfeltene over og kobler til på nytt én gang. Ingenting over gjelder før da.</value>
     <comment>Description under the Apply these settings row label.</comment>
   </data>
   <data name="DescPublishSwitch" xml:space="preserve">
-    <value>Publiserer tilstanden til dette programmet til en MQTT-broker.</value>
+    <value>Publiserer tilstanden til dette programmet til en fjernstyringsserver.</value>
     <comment>Default line under the master switch when the application supplies none.</comment>
   </data>
   <data name="TitlePublishSwitch" xml:space="preserve">
@@ -449,7 +449,7 @@
     <comment>Default header of the master switch card when the application supplies none.</comment>
   </data>
   <data name="SummaryBrokerNotSet" xml:space="preserve">
-    <value>Ingen broker angitt</value>
+    <value>Ingen server angitt</value>
     <comment>Line on the closed Broker section when no host is set. No full stop.</comment>
   </data>
   <data name="SummaryBroker" xml:space="preserve">
@@ -477,7 +477,7 @@
     <comment>Line on the closed publish section when the application declares no group.</comment>
   </data>
   <data name="InfoPublishSwitch" xml:space="preserve">
-    <value>Hovedbryteren for hele funksjonen, og den virker umiddelbart. Ingenting sendes mens den er av; når den slås av, meldes enheten frakoblet hos brokeren før tilkoblingen lukkes.</value>
+    <value>Hovedbryteren for hele funksjonen, og den virker umiddelbart. Ingenting sendes mens den er av; når den slås av, meldes enheten frakoblet hos serveren før tilkoblingen lukkes.</value>
     <comment>Info bubble text for the master switch, followed by ModuleVersion. Full sentences.</comment>
   </data>
   <data name="InfoStatus" xml:space="preserve">
@@ -485,19 +485,19 @@
     <comment>Info bubble text for the Status heading. Full sentence.</comment>
   </data>
   <data name="InfoConnection" xml:space="preserve">
-    <value>Hvor brokerinnstillingene som gjelder kom fra, og om den aktive forbindelsen er kryptert — en innstilling som står på Automatisk kan havne på begge.</value>
+    <value>Hvor tilkoblingsinnstillingene som gjelder kom fra, og om den aktive forbindelsen er kryptert — en innstilling som står på Automatisk kan havne på begge.</value>
     <comment>Info bubble text for the Connection row. Automatic is OptionAutomatic.</comment>
   </data>
   <data name="InfoBrokerInUse" xml:space="preserve">
     <value>Adressen den aktive tilkoblingen bruker — de lagrede innstillingene, ikke endringer i feltene nedenfor som ikke er tatt i bruk.</value>
-    <comment>Info bubble text for the Broker in use row.</comment>
+    <comment>Info bubble text for the Server in use row.</comment>
   </data>
   <data name="InfoLastPublish" xml:space="preserve">
-    <value>Når en melding sist nådde brokeren. Uendrede verdier sendes ikke på nytt, så dette står stille så lenge ingenting endres. Publiser nå sender gjeldende tilstand for gruppene som er slått på nedenfor.</value>
+    <value>Når en melding sist nådde serveren. Uendrede verdier sendes ikke på nytt, så dette står stille så lenge ingenting endres. Publiser nå sender gjeldende tilstand for gruppene som er slått på nedenfor.</value>
     <comment>Info bubble text for the Last publish row. Publish now is ButtonPublishNow.</comment>
   </data>
   <data name="InfoLastCommand" xml:space="preserve">
-    <value>Den siste kommandoen fra brokeren som ble utført. En avvist kommando vises aldri her.</value>
+    <value>Den siste fjernstyringskommandoen som ble utført. En avvist kommando vises aldri her.</value>
     <comment>Info bubble text for the Last command accepted row.</comment>
   </data>
   <data name="InfoDevice" xml:space="preserve">
@@ -513,7 +513,7 @@
     <comment>Info bubble text for the Device ID row; {0} = maximum length (48).</comment>
   </data>
   <data name="InfoBroker" xml:space="preserve">
-    <value>Endringer her gjelder fra Ta i bruk, som oppretter tilkoblingen på nytt én gang. Alt som står på Automatisk finnes ved å prøve brokeren når Test tilkoblingen eller Ta i bruk trykkes, og aldri ellers.</value>
+    <value>Endringer her gjelder fra Ta i bruk, som oppretter tilkoblingen på nytt én gang. Alt som står på Automatisk finnes ved å prøve serveren når Test tilkoblingen eller Ta i bruk trykkes, og aldri ellers.</value>
     <comment>Info bubble text for the Broker heading. Apply, Test connection and Automatic are ButtonApply, ButtonTest and OptionAutomatic.</comment>
   </data>
   <data name="InfoHost" xml:space="preserve">
@@ -521,7 +521,7 @@
     <comment>Info bubble text for the Host row. ws:// and wss:// are typed literally.</comment>
   </data>
   <data name="InfoPort" xml:space="preserve">
-    <value>Automatisk prøver portene brokere vanligvis bruker, krypterte og ukrypterte, og husker den som svarte. Velg Annen… for å skrive inn en port.</value>
+    <value>Automatisk prøver portene fjernstyringsservere vanligvis bruker, krypterte og ukrypterte, og husker den som svarte. Velg Annen… for å skrive inn en port.</value>
     <comment>Info bubble text for the Port row. Automatic and Other… are OptionAutomatic and PortCustom.</comment>
   </data>
   <data name="InfoTransport" xml:space="preserve">
@@ -529,15 +529,15 @@
     <comment>Info bubble text for the Transport row. Automatic is OptionAutomatic.</comment>
   </data>
   <data name="InfoEncryption" xml:space="preserve">
-    <value>Automatisk prøver hvert endepunkt kryptert først, og faller tilbake til klartekst bare der brokeren ikke tilbyr kryptering i det hele tatt — et avvist passord eller et sertifikat uten tillit avslutter søket i stedet. Et valg gjort manuelt brukes alltid, og en vert skrevet som wss://-adresse er kryptert uansett hva dette står på.</value>
+    <value>Automatisk prøver hvert endepunkt kryptert først, og faller tilbake til klartekst bare der serveren ikke tilbyr kryptering i det hele tatt — et avvist passord eller et sertifikat uten tillit avslutter søket i stedet. Et valg gjort manuelt brukes alltid, og en vert skrevet som wss://-adresse er kryptert uansett hva dette står på.</value>
     <comment>Info bubble text for the Encrypted connection row. Automatic is OptionAutomatic.</comment>
   </data>
   <data name="InfoCertificateTrust" xml:space="preserve">
-    <value>En broker med et sertifikat den har laget selv avvises av sertifikatene denne maskinen stoler på, og det er ved å godta alle sertifikater at tilkoblingen lykkes.</value>
+    <value>En server med et sertifikat den har laget selv avvises av sertifikatene denne maskinen stoler på, og det er ved å godta alle sertifikater at tilkoblingen lykkes.</value>
     <comment>Info bubble text for the Certificate trust row.</comment>
   </data>
   <data name="InfoUsername" xml:space="preserve">
-    <value>Et endret brukernavn starter søket etter brokerens endepunkt på nytt: en broker har ofte en egen lytter per konto.</value>
+    <value>Et endret brukernavn starter søket etter serverens endepunkt på nytt: en server har ofte en egen lytter per konto.</value>
     <comment>Info bubble text for the Username row.</comment>
   </data>
   <data name="InfoPassword" xml:space="preserve">
@@ -549,7 +549,7 @@
     <comment>Info bubble text for the Discovery prefix row. Names no product: the format is read by more than one program.</comment>
   </data>
   <data name="InfoTest" xml:space="preserve">
-    <value>Prøver verdiene i feltene over, også de som ikke er tatt i bruk ennå, over en egen midlertidig tilkobling. Ingenting lagres: verken feltene eller hvor brokeren svarte. Det som står på Automatisk kan kreve flere adresser før det finnes; resultatet nevner den som svarte, og lister opp det som ble prøvd bare når ingen svarte.</value>
+    <value>Prøver verdiene i feltene over, også de som ikke er tatt i bruk ennå, over en egen midlertidig tilkobling. Ingenting lagres: verken feltene eller hvor serveren svarte. Det som står på Automatisk kan kreve flere adresser før det finnes; resultatet nevner den som svarte, og lister opp det som ble prøvd bare når ingen svarte.</value>
     <comment>Info bubble text for the Test connection button. Automatic is OptionAutomatic.</comment>
   </data>
   <data name="ModuleVersion" xml:space="preserve">
@@ -577,7 +577,7 @@
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectBrokerInUse" xml:space="preserve">
-    <value>brokeren i bruk</value>
+    <value>serveren i bruk</value>
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectLastPublish" xml:space="preserve">
@@ -601,15 +601,15 @@
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectBroker" xml:space="preserve">
-    <value>brokerdelen</value>
+    <value>Broker-delen</value>
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectHost" xml:space="preserve">
-    <value>brokerens vert</value>
+    <value>serveradressen</value>
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectPort" xml:space="preserve">
-    <value>brokerens port</value>
+    <value>serverens port</value>
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectTransport" xml:space="preserve">
@@ -625,11 +625,11 @@
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectUsername" xml:space="preserve">
-    <value>brukernavnet for brokeren</value>
+    <value>brukernavnet for serveren</value>
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectPassword" xml:space="preserve">
-    <value>passordet for brokeren</value>
+    <value>passordet for serveren</value>
     <comment>Screen-reader name of an info icon, spoken inside the Controls text 'More information about {0}'.</comment>
   </data>
   <data name="SubjectDiscoveryPrefix" xml:space="preserve">
@@ -653,7 +653,7 @@
     <comment>Info bubble text for the What to publish heading, shown when the application supplies none. Full sentences.</comment>
   </data>
   <data name="HeadingRemoval" xml:space="preserve">
-    <value>Fjern fra brokeren</value>
+    <value>Fjern fra serveren</value>
     <comment>Section heading above the device-removal card, last on the panel. Shown only in applications that offer removal.</comment>
   </data>
   <data name="RowRemoval" xml:space="preserve">
@@ -673,7 +673,7 @@
     <comment>Title of the removal confirmation dialogue. A question, answered by RemovalConfirm or RemovalCancel.</comment>
   </data>
   <data name="RemovalWarning" xml:space="preserve">
-    <value>Alt denne enheten har publisert, tømmes fra brokeren, og publiseringen slås av slik at ingenting kunngjør den igjen. Det som leser enheten, mister navnene, entitets-ID-ene og områdene som er valgt for entitetene, og en ny kunngjøring lager nye. Dette kan ikke angres.</value>
+    <value>Alt denne enheten har publisert, tømmes fra serveren, og publiseringen slås av slik at ingenting kunngjør den igjen. Det som leser enheten, mister navnene, entitets-ID-ene og områdene som er valgt for entitetene, og en ny kunngjøring lager nye. Dette kan ikke angres.</value>
     <comment>Body of the removal confirmation dialogue. States what is lost before the button that loses it.</comment>
   </data>
   <data name="RemovalConfirm" xml:space="preserve">
@@ -689,15 +689,15 @@
     <comment>Status line on the Published device row while the removal runs.</comment>
   </data>
   <data name="RemovalDone" xml:space="preserve">
-    <value>Enheten er fjernet fra brokeren, og publiseringen er slått av.</value>
+    <value>Enheten er fjernet fra serveren, og publiseringen er slått av.</value>
     <comment>Status line on the Published device row after a removal. Full sentence; stays after the master switch is turned off.</comment>
   </data>
   <data name="RemovalNoConnection" xml:space="preserve">
-    <value>Ingenting ble fjernet, fordi det ikke er noen aktiv tilkobling til brokeren. Prøv igjen når den er tilkoblet.</value>
+    <value>Ingenting ble fjernet, fordi det ikke er noen aktiv tilkobling til serveren. Prøv igjen når den er tilkoblet.</value>
     <comment>Status line on the Published device row, in the error colour, when the link was gone at the moment of removal.</comment>
   </data>
   <data name="RemovalFailed" xml:space="preserve">
-    <value>Fjerningen stoppet underveis, så brokeren kan fortsatt ha deler av enheten.</value>
+    <value>Fjerningen stoppet underveis, så serveren kan fortsatt ha deler av enheten.</value>
     <comment>Status line on the Published device row, in the error colour, when the removal failed part-way.</comment>
   </data>
   <data name="InfoDetectedMark" xml:space="preserve">

@@ -14,7 +14,7 @@ public static class MqttStatusText
     public static string Relative(DateTimeOffset? when, DateTimeOffset now, string never) =>
         MqttPanelText.Default.Relative(when, now, never);
 
-    /// <summary>The "Broker in use" line: the saved host with whatever port and transport are in
+    /// <summary>The "Server in use" line: the saved host with whatever port and transport are in
     /// force, whether pinned by hand or found by probing. Pure.</summary>
     public static string DescribeBroker(MqttEndpointRequest request, MqttEndpointMemory? memory) =>
         MqttPanelText.Default.DescribeBroker(request, memory);

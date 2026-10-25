@@ -93,7 +93,7 @@ Two obligations the panel's own copy depends on:
 
 ## Removing the published device
 
-`OfferRemoval = true` adds a last section, "Remove from the broker": one card whose button opens a
+`OfferRemoval = true` adds a last section, "Remove from the server": one card whose button opens a
 confirmation stating what is lost, with Cancel as the default.
 
 - **It is off unless the application sets it**, and it needs a setup built from the connection:

@@ -79,7 +79,7 @@ public class MqttPanelTextTests
 
     [Fact]
     public void ConnectionSaysSoWhenThereIsNoHostToConnectTo() =>
-        Assert.Equal("No broker host set",
+        Assert.Equal("No server address set",
             Text.Connection(Request(host: "  "), null, MqttConnectionState.Connected, probing: false));
 
     [Fact]
@@ -87,7 +87,7 @@ public class MqttPanelTextTests
     {
         var memory = new MqttEndpointMemory("broker.invalid", "user", 8883, MqttTransport.Tcp, true);
 
-        Assert.Equal("Looking for the broker",
+        Assert.Equal("Looking for the server",
             Text.Connection(Request(), memory, MqttConnectionState.Connected, probing: true));
     }
 
@@ -125,7 +125,7 @@ public class MqttPanelTextTests
 
     [Theory]
     [InlineData(MqttConnectionState.Disabled, "Not publishing")]
-    [InlineData(MqttConnectionState.Searching, "Looking for the broker")]
+    [InlineData(MqttConnectionState.Searching, "Looking for the server")]
     [InlineData(MqttConnectionState.Connecting, "Connecting")]
     [InlineData(MqttConnectionState.Retrying, "Reconnecting")]
     [InlineData(MqttConnectionState.Failed, "Not connected")]
@@ -141,7 +141,7 @@ public class MqttPanelTextTests
     public void TheInstructionTheProvenanceAndTheAddressAreThreeDifferentAnswers()
     {
         // Automatic is a persisted choice meaning "find it each time". After a sweep the request
-        // still says Auto, the Connection row says how it was arrived at, and Broker in use says
+        // still says Auto, the Connection row says how it was arrived at, and Server in use says
         // what it landed on. Collapsing any two would lose a fact.
         var request = Request();
         var memory = new MqttEndpointMemory("broker.invalid", "user", 8883, MqttTransport.Tcp, true);
@@ -271,7 +271,7 @@ public class MqttPanelTextTests
 
         // A refused credential is the finding; naming the transport that never answered sends nobody
         // anywhere useful.
-        Assert.Equal("The broker rejected these credentials over WebSocket (NotAuthorised).", sentence);
+        Assert.Equal("The server rejected these credentials over WebSocket (NotAuthorised).", sentence);
     }
 
     [Fact]
@@ -361,7 +361,7 @@ public class MqttPanelTextTests
 
         Assert.Equal("Trying TCP on port 1883…", port);
         Assert.NotEqual(port, transport);
-        Assert.Contains("asking the broker", transport);
+        Assert.Contains("asking the server", transport);
     }
 
     [Fact]
@@ -375,7 +375,7 @@ public class MqttPanelTextTests
 
     [Fact]
     public void Describe_OfAnEmptyRunSaysThereWasNothingToTry() =>
-        Assert.Equal("No broker host set.", Text.Describe(new MqttProbeReport([])));
+        Assert.Equal("No server address set.", Text.Describe(new MqttProbeReport([])));
 
     [Fact]
     public void Describe_OfAFailedRunListsWhatWasTriedWithoutRepeatingItself()
@@ -389,7 +389,7 @@ public class MqttPanelTextTests
         string sentence = Text.Describe(report);
 
         // Nothing answered anywhere, which is the one case where what was tried is the finding.
-        Assert.Equal("The broker was not reached. TCP did not answer; WebSocket did not answer.",
+        Assert.Equal("The server was not reached. TCP did not answer; WebSocket did not answer.",
             sentence);
     }
 

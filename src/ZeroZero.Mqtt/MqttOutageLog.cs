@@ -46,7 +46,7 @@ internal sealed class MqttOutageLog(ILogSink log)
         }
 
         if (Interlocked.Exchange(ref _reported, OutageReported) != OutageReported)
-            log.Info("MQTT: the broker could not be reached — " +
+            log.Info("MQTT: the server could not be reached — " +
                 string.Join("; ", attempts.Select(a => $"{Where(a)}: {a.Result.Detail}")) +
                 ". Sending resumes when the connection returns.");
     }
@@ -54,9 +54,9 @@ internal sealed class MqttOutageLog(ILogSink log)
     // What waiting cannot fix. Null for every outcome that is only the link being down.
     private static string? RefusalText(MqttProbeOutcome outcome) => outcome switch
     {
-        MqttProbeOutcome.AuthRejected => "the broker refused the login",
-        MqttProbeOutcome.Rejected => "the broker refused the connection",
-        MqttProbeOutcome.TlsUntrusted => "the broker's certificate is not trusted",
+        MqttProbeOutcome.AuthRejected => "the server refused the login",
+        MqttProbeOutcome.Rejected => "the server refused the connection",
+        MqttProbeOutcome.TlsUntrusted => "the server's certificate is not trusted",
         _ => null,
     };
 

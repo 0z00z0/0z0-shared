@@ -115,7 +115,7 @@ internal static class MqttPanelSample
             // machine name into the placeholder and into every screenshot.
             DefaultDeviceName = "Harness (demo)",
             PublishTitle = "Publish to MQTT",
-            PublishDescription = "Publishes this rig's invented state to an MQTT broker.",
+            PublishDescription = "Publishes this rig's invented state to a remote control server.",
             DeviceIdConsequence = "This rig publishes nothing, so nothing here has a consequence.",
             CommandLabel = id => id == "quiet_mode" ? "Quiet mode" : id,
         };

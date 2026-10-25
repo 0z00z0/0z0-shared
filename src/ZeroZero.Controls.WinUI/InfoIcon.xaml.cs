@@ -38,7 +38,7 @@ public sealed partial class InfoIcon : UserControl
         new PropertyMetadata("", (d, e) => ((InfoIcon)d).InfoText.Text = (string?)e.NewValue ?? ""));
 
     /// <summary>
-    /// What the explanation is about, e.g. "the broker host". Screen readers meet several of these
+    /// What the explanation is about, e.g. "the server address". Screen readers meet several of these
     /// on one page, so the accessible name has to name the setting rather than repeat "more
     /// information".
     /// </summary>
