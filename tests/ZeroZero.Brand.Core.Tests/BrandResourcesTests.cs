@@ -27,6 +27,7 @@ public class BrandResourcesTests
         (nameof(Brand.ColorSteelBlue), "BrandSteelBlue"),
         (nameof(Brand.ColorTerracotta), "BrandTerracotta"),
         (nameof(Brand.ColorOrange), "BrandOrange"),
+        (nameof(Brand.ColorSlate), "BrandSlate"),
     ];
 
     private static readonly string[] PaletteThemes = ["Default", "Light"];

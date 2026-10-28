@@ -29,7 +29,8 @@ This guide is complete for adoption: the component's own source and tests need n
 
 - **`Brand`** — studio-wide constants: name, tagline, website, Buy Me a Coffee URL, GitHub org URL,
   and the brand palette as hex strings (teal / blue / purple / indigo / amber / steel blue /
-  terracotta / orange, plus the two background tones). Each accent is named for the colour itself
+  terracotta / orange / slate, plus the two background tones). Slate is the studio's muted text
+  colour. Each accent is named for the colour itself
   rather than for a job it does in one application, so a second application can take it without
   inheriting the first one's meaning. Nothing in the component shows `OrgUrl`.
 - **`ExternalLibrary`** — a small record describing a third-party dependency to credit (name, author,
@@ -113,9 +114,10 @@ References `ZeroZero.Brand.Core`, `ZeroZero.Win32` and `ZeroZero.Controls.WinUI`
   build output and the publish output each hold both files, with no warning. A publish on the
   project-reference route is not measured.
 - **The brand resource dictionary**, `Themes/BrandResources.xaml` — the palette and the typeface in
-  the form XAML consumes. Ten colour keys, `BrandBackgroundColour`, `BrandBackgroundAltColour`,
+  the form XAML consumes. Eleven colour keys, `BrandBackgroundColour`, `BrandBackgroundAltColour`,
   `BrandTealColour`, `BrandBlueColour`, `BrandPurpleColour`, `BrandIndigoColour`,
-  `BrandAmberColour`, `BrandSteelBlueColour`, `BrandTerracottaColour` and `BrandOrangeColour`; a
+  `BrandAmberColour`, `BrandSteelBlueColour`, `BrandTerracottaColour`, `BrandOrangeColour` and
+  `BrandSlateColour`, the muted text colour; a
   brush per colour, `BrandTealBrush` and so on; and `BrandFontFamily`, the brand face, merged in from
   `Themes/BrandFont.xaml`. Light and dark
   carry the palette unchanged, because identity does not follow the theme; high contrast resolves
@@ -165,6 +167,7 @@ floor unnoticed.
 | Steel blue | 7.49 | 8.20 | 2.56 |
 | Terracotta | 7.14 | 7.81 | 2.69 |
 | Orange | 7.01 | 7.67 | 2.74 |
+| Slate | 5.27 | 5.76 | 3.65 |
 
 Two rules follow, and both are properties of the palette rather than advice.
 
@@ -179,7 +182,7 @@ a low-opacity result is ground whatever is laid over it. At 24 % nothing in the 
 a distinguishable tint there. Use the solid colour where a fill has to be seen. This is a property of
 the ground, not of any one colour — every accent falls short, and so does white.
 
-Indigo is the tightest of the eight accents on both counts: the dimmest tint on either ground, and
+Indigo is the tightest of the nine accents on both counts: the dimmest tint on either ground, and
 the only accent that clears the 3:1 non-text floor without clearing 4.5:1 for body text. So the floor
 the palette as a whole is held to is the 3:1 non-text figure, not 4.5:1 — Indigo sits at 3.46 on the
 brand background. Steel blue, terracotta and orange all clear 4.5:1 on both brand grounds, so none of

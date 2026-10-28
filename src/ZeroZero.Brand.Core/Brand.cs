@@ -34,4 +34,7 @@ public static class Brand
     public const string ColorSteelBlue = "#7fa8b8";
     public const string ColorTerracotta = "#c9926b";
     public const string ColorOrange = "#e0872a";
+
+    // The studio's muted text colour.
+    public const string ColorSlate = "#7388a0";
 }

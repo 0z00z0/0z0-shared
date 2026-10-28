@@ -50,6 +50,7 @@ public class PaletteContrastTests
         ("SteelBlue", Brand.ColorSteelBlue),
         ("Terracotta", Brand.ColorTerracotta),
         ("Orange", Brand.ColorOrange),
+        ("Slate", Brand.ColorSlate),
     ];
 
     /// <summary>
@@ -68,6 +69,7 @@ public class PaletteContrastTests
         { "SteelBlue",   7.49,   7.10,   8.20,  2.56 },
         { "Terracotta",  7.14,   6.76,   7.81,  2.69 },
         { "Orange",      7.01,   6.64,   7.67,  2.74 },
+        { "Slate",       5.27,   4.99,   5.76,  3.65 },
     };
 
     [Theory]
@@ -115,13 +117,14 @@ public class PaletteContrastTests
     }
 
     /// <summary>
-    /// The two newest members clear body-text contrast on both brand grounds, not merely the
+    /// The newest members clear body-text contrast on both brand grounds, not merely the
     /// non-text floor the palette as a whole is held to — Indigo is the one that does not, and a
     /// new colour joining below it would lower the palette rather than fill it out.
     /// </summary>
     [Theory]
     [InlineData("SteelBlue")]
     [InlineData("Terracotta")]
+    [InlineData("Slate")]
     public void TheNewestAccentsClearBodyTextContrastOnBothBrandGrounds(string name)
     {
         string colour = Accents.Single(a => a.Name == name).Colour;
@@ -193,7 +196,7 @@ public class PaletteContrastTests
     /// <summary>
     /// Indigo is the palette's tightest accent on both counts, which is why steel blue joining below
     /// it would have needed an exception of its own and does not: Indigo composites to the dimmest
-    /// tint of the eight, and it is the only accent that clears the non-text floor without clearing
+    /// tint of the nine, and it is the only accent that clears the non-text floor without clearing
     /// the body-text one. Both grounds sit near black, so the tint order is a property of the accent.
     /// </summary>
     [Fact]
