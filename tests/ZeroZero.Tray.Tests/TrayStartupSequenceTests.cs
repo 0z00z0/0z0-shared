@@ -54,6 +54,9 @@ public class TrayStartupSequenceTests
         Assert.Equal((5, 5, 1), (result.Attempts, rig.Attempts, rig.Abandoned));
         Assert.Equal(TimeSpan.FromSeconds(4), result.Elapsed);
         Assert.Equal("TryCreate failed.", result.LastError?.Message);
+        Assert.Contains("refused it 5 times", result.Explanation);
+        Assert.Contains("not ready yet", result.Explanation);
+        Assert.Contains("Last refusal: TryCreate failed. (no error code given)", result.Explanation);
     }
 
     [Fact]

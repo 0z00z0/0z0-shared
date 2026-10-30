@@ -164,11 +164,16 @@ single-instance lock with no icon, and every later launch is refused until it is
 - **It retries the icon.** A taskbar that exists can still refuse the icon for a moment. The icon
   is offered up to `CreateAttempts` times (5), `RetryDelay` (1 s) apart.
 - **It reports.** The `TrayStartupResult` carries `Outcome`, `IsCreated`, `Attempts`, `Elapsed`
-  and `LastError`, the shell's last refusal, for the log.
+  and `LastError`, the shell's last refusal. `Explanation` is one plain line for the log, null on
+  `Created`: what failed, the likely cause (the taskbar or the notification area was not ready
+  yet), that the application is expected to try again or be restarted, and the last refusal's
+  message and error code. The notify-icon library's refusal ("TryCreate failed.") carries no
+  Win32 code, and the line says so.
+- **It logs nothing itself**, not even a refused attempt: the result is the only report.
 - **It never throws for the shell.** It throws only what `Start()` throws for the application's
   own mistakes: off the UI thread, started twice, disposed, a delegate in the options throwing, or
   an option out of range.
-- **It never decides what happens next.** It does not exit, log or try again after its bounds.
+- **It never decides what happens next.** It does not exit or try again after its bounds.
 
 | Outcome | The host afterwards |
 |---|---|
@@ -215,9 +220,9 @@ The sequence, for either `StartAsync` overload and either restart mechanism:
 4. **`await TrayStartup.StartAsync`.**
 5. **On `Created`**, open the windows, then call `MarkStartupComplete()`.
 6. **On any other outcome**, report it through the crash handlers, which run the cleanup and end the
-   process. The exit is not deliberate, so the restart mechanism brings the process back. `LastError`
-   is null for `ShellNeverAppeared`, so that report carries no exception; the caller logs `Outcome`,
-   `Attempts` and `Elapsed` itself, as in the example below.
+   process. The exit is not deliberate, so the restart mechanism brings the process back. The caller
+   logs `Explanation` and reports without an exception: a shell that was not ready is not a defect
+   in the application, and the line already holds the refusal's message.
 
 ```csharp
 // The lock is taken and the restart mechanism armed.
@@ -231,8 +236,8 @@ var crash = CrashHandlers.Register(new CrashHandlerOptions
 var started = await TrayStartup.StartAsync(_tray);   // or StartAsync(create, abandon)
 if (!started.IsCreated)
 {
-    sink.Info($"Tray icon not created: {started.Outcome}, {started.Attempts} attempts in {started.Elapsed}.");
-    crash.Report("tray", started.LastError);   // logs, cleans up, ends the process; does not return
+    sink.Info(started.Explanation!);
+    crash.Report("tray", null);   // logs, cleans up, ends the process; does not return
 }
 
 // Windows open from here on, and only here.
