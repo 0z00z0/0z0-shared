@@ -35,7 +35,7 @@
   </ItemGroup>
 
   <!--
-    Brand typeface: Cascadia Mono (0z0-design/fonts). Shipped as Content so it travels with the
+    Brand typeface: Cascadia Code (0z0-design/fonts). Shipped as Content so it travels with the
     library into every consuming app's output, and the markup names it under this assembly's own
     folder — the one location both reference routes produce. A project reference also drops a copy
     at the consuming app's output root; a package reference does not, and a font URI that resolves
@@ -60,7 +60,7 @@
     <!-- An implicit glob has already taken everything under Assets\ as Content, so an Include on
          its own leaves two items per file and packs each of them to a different destination. -->
     <Content Remove="Assets\Fonts\**" />
-    <Content Include="Assets\Fonts\CascadiaMono.ttf">
+    <Content Include="Assets\Fonts\CascadiaCode.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Pack>true</Pack>
       <PackagePath>$(BrandAssetPackagePath)</PackagePath>

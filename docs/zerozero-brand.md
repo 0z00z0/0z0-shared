@@ -83,9 +83,9 @@ References `ZeroZero.Brand.Core`, `ZeroZero.Win32` and `ZeroZero.Controls.WinUI`
   label. See [the bracket action button](#the-bracket-action-button).
 - **`BrandBracketButtonColumn`** — several of those buttons stacked, all at the width of the widest,
   so their brackets line up. See [the bracket action button](#the-bracket-action-button).
-- **The brand typeface**, Cascadia Mono, with its OFL licence. Shipped as content so it travels with
-  the library into every consuming app's output, at
-  `ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf`. **That folder is the only one both
+- **The brand typeface**, Cascadia Code with its ligatures, on every surface, body text included,
+  with its OFL licence. Shipped as content so it travels with the library into every consuming app's
+  output, at `ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaCode.ttf`. **That folder is the only one both
   reference routes produce.** One dictionary, `Themes/BrandFont.xaml`, names that address under the
   key `BrandFontFamily`, and every brand control merges it into its own resources, so a host merges
   nothing for them. A control loads the dictionary as it is constructed, so a dictionary that is not
@@ -101,7 +101,7 @@ References `ZeroZero.Brand.Core`, `ZeroZero.Win32` and `ZeroZero.Controls.WinUI`
   `lib\<tfm>\ZeroZero.Brand.WinUI\Assets\Fonts\`, the folder a consuming WinUI build resolves a
   referenced library's assets from, and that is what fills the second column. **Nothing reports a
   font URI that resolves to no file** — the face falls back to the family name, which on a machine
-  with Cascadia Mono installed is indistinguishable from success, so neither a screenshot nor a text
+  with Cascadia Code installed is indistinguishable from success, so neither a screenshot nor a text
   measurement tells the two apart. `BrandFontPathTests` holds the URIs in the markup to the paths the
   package carries instead.
 
@@ -430,7 +430,7 @@ the scaling the rest of the button takes, which a picture would not. A chevron w
 none, so a button written before this is unchanged. Only `Rest` and `Attention` show it: the
 spinner and the slashed zero take its place while `Busy` and `Success` are showing.
 
-**Pick a character the face carries.** Cascadia Mono covers 1483 code points and a good many
+**Pick a character the face carries.** Cascadia Code covers 1483 code points and a good many
 obvious choices are not among them: `↗` and `✕` are both absent, and Windows draws an absent
 character from whatever font it falls back to — a different shape and weight sitting beside a label
 in the brand face. Measured as present and used by the update window: `↓`, `→`, `»`, `×` and the

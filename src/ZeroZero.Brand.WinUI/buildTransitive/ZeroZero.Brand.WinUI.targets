@@ -12,14 +12,14 @@
   -->
   <Target Name="ZeroZeroBrandAssetsToPublish" AfterTargets="ComputeResolvedFilesToPublishList">
     <ItemGroup>
-      <_ZeroZeroBrandPublishAsset Include="$(MSBuildThisFileDirectory)..\lib\*\ZeroZero.Brand.WinUI\Assets\Fonts\CascadiaMono.ttf" />
+      <_ZeroZeroBrandPublishAsset Include="$(MSBuildThisFileDirectory)..\lib\*\ZeroZero.Brand.WinUI\Assets\Fonts\CascadiaCode.ttf" />
       <_ZeroZeroBrandPublishAsset Include="$(MSBuildThisFileDirectory)..\lib\*\ZeroZero.Brand.WinUI\Assets\Fonts\LICENCE-OFL.txt" />
     </ItemGroup>
 
     <!-- A package that no longer carries both files at that path would otherwise publish an
          application without the face and say nothing. -->
     <Error Condition="'@(_ZeroZeroBrandPublishAsset->Count())' != '2'"
-           Text="ZeroZero.Brand.WinUI: expected CascadiaMono.ttf and LICENCE-OFL.txt under lib\&lt;tfm&gt;\ZeroZero.Brand.WinUI\Assets\Fonts\ in the package at $(MSBuildThisFileDirectory)..\ and found @(_ZeroZeroBrandPublishAsset->Count()) file(s), so the published application would carry no brand typeface." />
+           Text="ZeroZero.Brand.WinUI: expected CascadiaCode.ttf and LICENCE-OFL.txt under lib\&lt;tfm&gt;\ZeroZero.Brand.WinUI\Assets\Fonts\ in the package at $(MSBuildThisFileDirectory)..\ and found @(_ZeroZeroBrandPublishAsset->Count()) file(s), so the published application would carry no brand typeface." />
 
     <ItemGroup>
       <_ZeroZeroBrandPublishAsset RelativePath="ZeroZero.Brand.WinUI\Assets\Fonts\%(Filename)%(Extension)"

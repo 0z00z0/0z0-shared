@@ -4,6 +4,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Under this assembly's folder, the one place the font exists on both reference routes. -->
-    <FontFamily x:Key="BrandFontFamily">ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaMono.ttf#Cascadia Mono</FontFamily>
+    <FontFamily x:Key="BrandFontFamily">ms-appx:///ZeroZero.Brand.WinUI/Assets/Fonts/CascadiaCode.ttf#Cascadia Code</FontFamily>
 
 </ResourceDictionary>
