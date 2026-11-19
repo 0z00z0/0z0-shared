@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>ZeroZero.Brand.WinUI</RootNamespace>
     <Version>$(BrandVersion)</Version>
@@ -53,7 +53,7 @@
     the two ever part company.
   -->
   <PropertyGroup>
-    <BrandAssetPackagePath>lib\net10.0-windows10.0.26100\$(MSBuildProjectName)\Assets\Fonts\</BrandAssetPackagePath>
+    <BrandAssetPackagePath>lib\net11.0-windows10.0.26100\$(MSBuildProjectName)\Assets\Fonts\</BrandAssetPackagePath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -83,8 +83,8 @@
   </ItemGroup>
 
   <Target Name="PackagePathMatchesTargetFramework" BeforeTargets="GenerateNuspec">
-    <Error Condition="'$(TargetFramework)' != 'net10.0-windows10.0.26100.0'"
-           Text="BrandAssetPackagePath names lib\net10.0-windows10.0.26100, which was NuGet's short form of net10.0-windows10.0.26100.0. TargetFramework is now $(TargetFramework), so the fonts would pack to a folder no consumer looks in and every consuming build would fail with MSB3030. Update both." />
+    <Error Condition="'$(TargetFramework)' != 'net11.0-windows10.0.26100.0'"
+           Text="BrandAssetPackagePath names lib\net11.0-windows10.0.26100, which was NuGet's short form of net11.0-windows10.0.26100.0. TargetFramework is now $(TargetFramework), so the fonts would pack to a folder no consumer looks in and every consuming build would fail with MSB3030. Update both." />
   </Target>
 
 </Project>

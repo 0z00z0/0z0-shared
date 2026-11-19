@@ -5,7 +5,7 @@ structure; the host supplies the content and receives every edit as a callback.
 
 ## Reference
 
-`ZeroZero.Mqtt.WinUI` (`net10.0-windows10.0.26100.0`), which pulls in `ZeroZero.Mqtt`,
+`ZeroZero.Mqtt.WinUI` (`net11.0-windows10.0.26100.0`), which pulls in `ZeroZero.Mqtt`,
 `ZeroZero.Mqtt.Discovery`, `ZeroZero.Config`, `ZeroZero.Primitives`, `ZeroZero.Controls.WinUI` and,
 beneath the controls, `ZeroZero.Win32` transitively — the one reference is the whole module, entity table included. The About control is
 the brand component's and is a reference of its own. Same reference recipe as the About control: either a `PackageReference` on the studio's GitHub Packages

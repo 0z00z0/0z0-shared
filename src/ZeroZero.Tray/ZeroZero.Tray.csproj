@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Plain net10.0: the container writer, the slot size and the contrast policy touch no UI
+    <!-- Plain net11.0: the container writer, the slot size and the contrast policy touch no UI
          framework, so an application renders its icon with whatever it draws with and hands the
          frames here. The WinUI host of the tray icon is a later project under the same key. -->
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <RootNamespace>ZeroZero.Tray</RootNamespace>
     <Version>$(TrayVersion)</Version>
 

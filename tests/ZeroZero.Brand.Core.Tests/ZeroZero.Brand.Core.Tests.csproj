@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Plain net10.0, matching the project under test. Nothing here references
+    <!-- Plain net11.0, matching the project under test. Nothing here references
          ZeroZero.Brand.WinUI: the Windows App SDK bootstrapper blocks on a runner with no desktop
          session, so a WinUI-coupled test assembly would hang CI rather than fail it (issue #13). -->
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <RootNamespace>ZeroZero.Brand.Core.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>

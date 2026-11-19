@@ -6,7 +6,7 @@ that cannot be parsed. `ZeroZero.Config.Sections` is one document whose top-leve
 owned by different components, addressed one section at a time, plus the migration from an older
 file to a new one. `ZeroZero.Config.Watch` picks up an edit made outside the application without a
 restart: one file watcher, a quiet window so a single save arrives once, and a classifier that says
-whether what changed was worth reacting to. All three are plain `net10.0`, with no package references
+whether what changed was worth reacting to. All three are plain `net11.0`, with no package references
 and no domain vocabulary — which is what makes them **foundation** rather than a component: any
 component may take them, and the MQTT module does, for its settings file and its discovery ledger.
 
@@ -21,8 +21,8 @@ This guide is complete for adoption: the component's own source and tests need n
 
 | | |
 |---|---|
-| SDK | .NET 10 |
-| Platform | Any .NET 10 target; nothing Windows-specific. |
+| SDK | .NET 11 |
+| Platform | Any .NET 11 target; nothing Windows-specific. |
 
 ## Which one to take
 
@@ -456,12 +456,12 @@ beside them and references the plain assembly. An application taking a component
 references the plain assembly — the MQTT module does — has it transitively and adds nothing.
 
 The tests are in `tests/ZeroZero.Config.Tests`, `tests/ZeroZero.Config.Sections.Tests` and
-`tests/ZeroZero.Config.Watch.Tests`, plain `net10.0`, and run on any machine with the SDK: no
+`tests/ZeroZero.Config.Watch.Tests`, plain `net11.0`, and run on any machine with the SDK: no
 desktop, no broker, no network — with one exception: the watcher's tests change real files on a real
 disk and read what the watcher reports, only the clock being substituted, and two of them assert how
 many notifications one save delivers and in what shape. That is a property of the Windows
 directory-change API rather than of the assembly, so `tests/ZeroZero.Config.Watch.Tests` runs on
-Windows. The assembly itself is plain `net10.0` and carries nothing Windows-specific.
+Windows. The assembly itself is plain `net11.0` and carries nothing Windows-specific.
 
 The migration is proven against two fixtures, and the difference between them is the point:
 

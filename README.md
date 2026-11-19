@@ -92,13 +92,13 @@ only appear while adopting.
 
 ## Requirements
 
-- **.NET 10 SDK.**
+- **.NET 11 SDK.**
 - **Windows 10 1809 (build 10.0.17763) or later**, with the Windows App SDK, for the WinUI
   assemblies. The Windows App SDK and SDK build tools arrive as NuGet packages, so `dotnet restore`
   is enough.
 
-The WinUI projects target `net10.0-windows10.0.26100.0`, so the solution builds on Windows only; the
-plain `net10.0` assemblies and every test project but eight are portable in isolation.
+The WinUI projects target `net11.0-windows10.0.26100.0`, so the solution builds on Windows only; the
+plain `net11.0` assemblies and every test project but eight are portable in isolation.
 `ZeroZero.Win32.Tests` calls user32, `ZeroZero.Diagnostics.Dumps.Tests` writes the registry,
 `ZeroZero.Lifecycle.Tests` takes named mutexes and starts a child process, `ZeroZero.Startup.Tests`
 registers tasks in the real Task Scheduler, `ZeroZero.Tray.Tests` reads the taskbar window and the

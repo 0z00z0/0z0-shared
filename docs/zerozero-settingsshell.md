@@ -5,7 +5,7 @@ page left to the application: Mica chrome with the system title bar painted for 
 navigation pane with a product footer, one scroll viewer over the pages, placement against the
 application's saved rectangle, Escape to close, and a section lifecycle — an enter and a leave
 hook around every change of section, and a per-section build-once flag a rebuild honours.
-`net10.0-windows10.0.26100.0`, the Windows App SDK and `ZeroZero.Controls.WinUI`, which brings
+`net11.0-windows10.0.26100.0`, the Windows App SDK and `ZeroZero.Controls.WinUI`, which brings
 `ZeroZero.Win32` and `ZeroZero.Primitives` with it; no font pack, no palette, no theme keys and no
 strings of its own.
 
@@ -20,7 +20,7 @@ This guide is complete for adoption: the component's own source and tests need n
 
 | | |
 |---|---|
-| SDK | .NET 10 |
+| SDK | .NET 11 |
 | Platform | Windows 10 1809 (build 10.0.17763) or later, with the Windows App SDK. Unpackaged. |
 | Toolkit | `CommunityToolkit.WinUI.Controls.SettingsControls` arrives through `ZeroZero.Controls.WinUI`, at the family's pin, which is a ceiling for a consumer's own direct reference ([`consuming.md`](consuming.md#third-party-pins)). |
 
@@ -221,7 +221,7 @@ unset, the backdrop stays as Windows tints it.
 
 ## Tests and the harness
 
-`tests/ZeroZero.SettingsShell.Tests` is a plain `net10.0` project that references no WinUI
+`tests/ZeroZero.SettingsShell.Tests` is a plain `net11.0` project that references no WinUI
 assembly: a WinUI window needs the XAML runtime, and the Windows App SDK bootstrapper hangs a
 runner with no desktop session rather than failing it (issue #13). What can be tested without the
 runtime is compiled in as linked source: the section lifecycle, which pins the order of every hook

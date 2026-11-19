@@ -5,7 +5,7 @@ as, the power-safe elevated definition, registration, the direct enabled read, e
 deletion, the repair of a task an older build registered, and a demand start that proves the task
 can run. **The watchdog task** — the probe that starts the application again when its process is
 gone, its three triggers, the record of a deliberate exit that holds it off, and the same repair
-discipline applied unconditionally. Plain `net10.0`; one project reference, `ZeroZero.Primitives`,
+discipline applied unconditionally. Plain `net11.0`; one project reference, `ZeroZero.Primitives`,
 for the log sink; one package, the `TaskScheduler` library, of which no type reaches a public
 signature. No user interface, no window, no message pump.
 
@@ -44,8 +44,8 @@ This guide is complete for adoption: the component's own source and tests need n
 
 | | |
 |---|---|
-| SDK | .NET 10 |
-| Platform | Windows. The assembly targets plain `net10.0` and declares itself Windows-only through `SupportedOSPlatform`, with no version: nothing here needs a build floor, and the project states none. An application taking it alongside the WinUI components inherits their floor, not one from here. |
+| SDK | .NET 11 |
+| Platform | Windows. The assembly targets plain `net11.0` and declares itself Windows-only through `SupportedOSPlatform`, with no version: nothing here needs a build floor, and the project states none. An application taking it alongside the WinUI components inherits their floor, not one from here. |
 | Token | Registering or repairing either task needs an elevated process: the scheduler refuses a highest-run-level task from a standard token, with an access-denied error. Reading, enabling, disabling, deleting and demand-starting work from any token that owns the task. `Ensure` reports the refusal as its `Failed` outcome rather than throwing, so an application started without elevation runs on with no backstop instead of not starting. |
 | Globalisation | The consuming application must not set `InvariantGlobalization`. Every write through the scheduler library then fails with a type-initialisation error while every read still works, so the failure looks like a permissions problem. |
 
@@ -342,7 +342,7 @@ exit code the application gives that case is reported as a failed verification.
 Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Startup`; it brings
 `ZeroZero.Primitives` and the scheduler library with it.
 
-The tests are in `tests/ZeroZero.Startup.Tests`, plain `net10.0`, and run on Windows only,
+The tests are in `tests/ZeroZero.Startup.Tests`, plain `net11.0`, and run on Windows only,
 against the real scheduler: tasks named `ZeroZero.Startup.Tests.<guid>` in the root folder, each
 starting the command interpreter with an exit code, a program that stays up, or a path no file
 occupies, deleted when the test ends and swept at the start of a run. From a standard token the

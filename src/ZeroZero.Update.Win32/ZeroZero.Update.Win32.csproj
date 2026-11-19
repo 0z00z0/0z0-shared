@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Plain net10.0: the orchestration and the wording touch no XAML, so a headless tool can take
+    <!-- Plain net11.0: the orchestration and the wording touch no XAML, so a headless tool can take
          this and supply prompts of its own. The window that shows them is ZeroZero.Update.WinUI.
          The assembly declares itself Windows-only through SupportedOSPlatform, as the one it takes
          does. -->
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <RootNamespace>ZeroZero.Update.Win32</RootNamespace>
     <Version>$(UpdateVersion)</Version>
 

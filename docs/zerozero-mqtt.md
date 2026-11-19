@@ -21,7 +21,7 @@ This guide is complete for adoption: the component's own source and tests need n
 
 | | |
 |---|---|
-| SDK | .NET 10 |
+| SDK | .NET 11 |
 | Broker | MQTT 5.0. The version is pinned, because a 5.0 CONNACK separates bad credentials from any other refusal and a 5.0 PUBACK says whether a publish was taken. |
 | Receiver | Home Assistant 2024.11.0 or later. Device-based discovery sets that floor: an older receiver never subscribes to the device topic and sees no entities at all. |
 | Panel | Windows 10 1809 (build 10.0.17763) or later, with the Windows App SDK. |
@@ -31,12 +31,12 @@ This guide is complete for adoption: the component's own source and tests need n
 
 | Assembly | Target | References | Knows about |
 |---|---|---|---|
-| `ZeroZero.Primitives` | `net10.0` | `Microsoft.Extensions.Localization.Abstractions` | The log sink, the version reader, the coalescing gate, a component's texts behind the host's localizer |
-| `ZeroZero.Config` | `net10.0` | — | Atomic JSON files, snapshot reads, mutation under one lock, quarantine of an unreadable file |
-| `ZeroZero.Controls.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Win32`, `ZeroZero.Primitives`, the Community Toolkit | The settings-row vocabulary, title-bar theming, the text prompt, the popup sized to its content |
-| `ZeroZero.Mqtt` | `net10.0` | `ZeroZero.Primitives`, `ZeroZero.Config`, `MQTTnet`, `MessageFormat` | Topics, payloads, QoS, retain, the Last Will, transports, endpoint search, certificate trust, command routing, publish groups, the module's texts |
-| `ZeroZero.Mqtt.Discovery` | `net10.0` | `ZeroZero.Mqtt`, `ZeroZero.Primitives`, `ZeroZero.Config` | Entities, component types, the device document, availability, eviction |
-| `ZeroZero.Mqtt.WinUI` | `net10.0-windows10.0.26100.0` | `ZeroZero.Mqtt`, `ZeroZero.Mqtt.Discovery`, `ZeroZero.Primitives`, `ZeroZero.Controls.WinUI` | Rendering the settings a user edits |
+| `ZeroZero.Primitives` | `net11.0` | `Microsoft.Extensions.Localization.Abstractions` | The log sink, the version reader, the coalescing gate, a component's texts behind the host's localizer |
+| `ZeroZero.Config` | `net11.0` | — | Atomic JSON files, snapshot reads, mutation under one lock, quarantine of an unreadable file |
+| `ZeroZero.Controls.WinUI` | `net11.0-windows10.0.26100.0` | `ZeroZero.Win32`, `ZeroZero.Primitives`, the Community Toolkit | The settings-row vocabulary, title-bar theming, the text prompt, the popup sized to its content |
+| `ZeroZero.Mqtt` | `net11.0` | `ZeroZero.Primitives`, `ZeroZero.Config`, `MQTTnet`, `MessageFormat` | Topics, payloads, QoS, retain, the Last Will, transports, endpoint search, certificate trust, command routing, publish groups, the module's texts |
+| `ZeroZero.Mqtt.Discovery` | `net11.0` | `ZeroZero.Mqtt`, `ZeroZero.Primitives`, `ZeroZero.Config` | Entities, component types, the device document, availability, eviction |
+| `ZeroZero.Mqtt.WinUI` | `net11.0-windows10.0.26100.0` | `ZeroZero.Mqtt`, `ZeroZero.Mqtt.Discovery`, `ZeroZero.Primitives`, `ZeroZero.Controls.WinUI` | Rendering the settings a user edits |
 
 `ZeroZero.Primitives`, `ZeroZero.Config` and `ZeroZero.Controls.WinUI` are foundation rather than
 part of the module: none carries MQTT vocabulary, none references a component, and each is
@@ -53,7 +53,7 @@ as a reference of its own.
 The dependency runs one way. `ZeroZero.Mqtt` contains no entity vocabulary and no receiver
 vocabulary beyond the default discovery prefix; a console tool or a service references it alone and
 gets a broker connection with nothing above it. `ZeroZero.Mqtt.Discovery` is WinUI-free, so an
-entity table composes in a plain `net10.0` test project with no broker and no UI present.
+entity table composes in a plain `net11.0` test project with no broker and no UI present.
 
 **A consumer takes one project reference.** Referencing `ZeroZero.Mqtt.Discovery` brings the core
 and both of its foundation assemblies transitively; referencing `ZeroZero.Mqtt.WinUI` brings those
@@ -1204,7 +1204,7 @@ testing again — see [The endpoint sweep](#the-endpoint-sweep).
 The panel never writes a settings store directly: every commit goes through `IMqttSettingsStore.Update`,
 so a host whose configuration is one document keeps its own read-modify-write.
 
-A host that draws its own form keeps these rules through two plain `net10.0` types.
+A host that draws its own form keeps these rules through two plain `net11.0` types.
 `MqttBrokerEdits` stages the Broker block, certificate trust included and the device fields not: a
 typed port must fall in 1 to 65535, `Validate()` is the gate Apply and Test share, `Apply(store)`
 writes nothing when it refuses, and `Reload` moves only untouched fields to the new saved values.
@@ -1258,7 +1258,7 @@ one short true fact. A consumer that declares no groups at all reads `Nothing to
 The entities behind the groups are never counted, because the panel is not shown the entity set.
 
 Both lines compose through `MqttPanelText.SummariseBroker` and `MqttPanelText.SummarisePublish` in
-the plain `net10.0` assembly, with `MqttPublishRows.Tally` reducing a `PublishGroupSet` to the two
+the plain `net11.0` assembly, with `MqttPublishRows.Tally` reducing a `PublishGroupSet` to the two
 numbers from one snapshot. The panel assembles no sentence of its own, so what a closed section says
 is testable without a window. `MqttPublishRow.InfoSubject` is the module's own text for the UI
 culture; the panel names each row's icon through the host's localizer instead.

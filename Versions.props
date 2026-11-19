@@ -14,7 +14,7 @@
        finds nothing. A published number never moves backwards. -->
   <PropertyGroup>
     <BrandVersion>0.13.0</BrandVersion>
-    <BuildVersion>0.9.3</BuildVersion>
+    <BuildVersion>0.10.0</BuildVersion>
     <ConfigVersion>0.9.0</ConfigVersion>
     <ControlsVersion>0.11.0</ControlsVersion>
     <DiagnosticsVersion>0.8.0</DiagnosticsVersion>

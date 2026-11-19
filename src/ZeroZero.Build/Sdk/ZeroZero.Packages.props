@@ -17,8 +17,8 @@
        ZeroZero.Build.targets holds the declared list to compare a project's resolved pins against.
        A pin moves here, and nowhere else. -->
   <ItemGroup Label="Windows App SDK">
-    <ZeroZeroFamilyPin Include="Microsoft.WindowsAppSDK" Version="2.4.0" />
-    <ZeroZeroFamilyPin Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2270" />
+    <ZeroZeroFamilyPin Include="Microsoft.WindowsAppSDK" Version="2.7.0" />
+    <ZeroZeroFamilyPin Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2957" />
   </ItemGroup>
 
   <ItemGroup Label="UI">
@@ -26,8 +26,7 @@
          a direct reference below a transitive one is NU1605, an error. Raise both or neither. -->
     <ZeroZeroFamilyPin Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.251219" />
     <!-- The notify-icon library behind the tray host, and a ceiling for the same reason: both
-         applications hold a direct reference at this version, so a bump here is a bump in both.
-         Not the newest available; the version the applications were measured at. -->
+         applications hold a direct reference at this version, so a bump here is a bump in both. -->
     <ZeroZeroFamilyPin Include="H.NotifyIcon.WinUI" Version="2.4.1" />
   </ItemGroup>
 
@@ -37,7 +36,7 @@
 
   <ItemGroup Label="Texts">
     <!-- The host-override seam for a component's texts, through ZeroZero.Primitives. -->
-    <ZeroZeroFamilyPin Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.12" />
+    <ZeroZeroFamilyPin Include="Microsoft.Extensions.Localization.Abstractions" Version="11.0.0" />
     <!-- ICU plural formatting for the MQTT module's counted texts. MIT by its source repository;
          the package ships no licence text, so a consuming application carries the notice. -->
     <ZeroZeroFamilyPin Include="MessageFormat" Version="8.0.0" />
@@ -49,31 +48,30 @@
          display changes. No type of either reaches a public signature of any assembly. -->
     <ZeroZeroFamilyPin Include="TaskScheduler" Version="2.12.2" />
     <!-- A runtime-companion package: the assembly Microsoft.WindowsDesktop.App ships, republished
-         on every .NET 10 servicing release under the runtime's own number, with one API across
+         on every .NET 11 servicing release under the runtime's own number, with one API across
          the train. The pin is the current servicing release of the runtime the family builds on,
          and it moves with that runtime, never with what a package cache happens to hold. A floor
          for a consumer: a direct reference above it wins, one below it is NU1605. -->
-    <ZeroZeroFamilyPin Include="Microsoft.Win32.SystemEvents" Version="10.0.12" />
+    <ZeroZeroFamilyPin Include="Microsoft.Win32.SystemEvents" Version="11.0.0" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">
-    <!-- The version a consuming application's test project resolves, not the newest published:
-         18.10.0 exists and is deliberately not taken. The kit refuses a VersionOverride, so a
-         consumer whose own reference sits above the family's cannot import the kit at all — the
-         pin has to meet the applications where they are, and moves when they move. -->
-    <ZeroZeroFamilyPin Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <!-- The version every consuming application's test project resolves. The kit refuses a
+         VersionOverride, so a consumer whose own reference sits above the family's cannot import
+         the kit at all: a consumer's direct reference moves with this pin. -->
+    <ZeroZeroFamilyPin Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
     <ZeroZeroFamilyPin Include="xunit" Version="2.9.3" />
     <!-- Matched to the same application, and still a VSTest adapter rather than a Microsoft
          Testing Platform one. That is the load-bearing part: `dotnet test` keeps printing the
          per-assembly totals line, and `.github/scripts/run-tests.ps1` reads its counts out of that
          line by pattern. A runner that moved to the new platform would leave every count parsed as
          zero while the run still reported success, so the runner and that script move together. -->
-    <ZeroZeroFamilyPin Include="xunit.runner.visualstudio" Version="4.0.0" />
+    <ZeroZeroFamilyPin Include="xunit.runner.visualstudio" Version="4.0.1" />
     <!-- Microsoft's controllable TimeProvider, for the one thing a test cannot honestly wait for: a
          debounce window. A test that sleeps the window measures how loaded the machine is, so it
          passes here and fails on a runner with fewer cores. Test-only, and referenced only by the
          suites that move a clock. -->
-    <ZeroZeroFamilyPin Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.9.0" />
+    <ZeroZeroFamilyPin Include="Microsoft.Extensions.TimeProvider.Testing" Version="11.0.0" />
   </ItemGroup>
 
   <ItemGroup>

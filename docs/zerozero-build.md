@@ -21,7 +21,8 @@ This guide is complete for adoption: the component's own source and tests need n
 
 | | |
 |---|---|
-| SDK | .NET 10 |
+| SDK | .NET 11 |
+| Windows App Runtime | `Microsoft.WindowsAppRuntime.2` 2.7.0.0 registered for the user, for an unpackaged WinUI application built under the kit; a self-contained publish carries it in the application folder instead. |
 | Platform | Windows, for the WinUI block, the manifest and signing; the property blocks and the pins are portable. |
 | Shell | PowerShell 7 (`pwsh`) on the path for the signing step; `ZeroZeroPowerShell` names another executable. |
 
@@ -31,7 +32,7 @@ This guide is complete for adoption: the component's own source and tests need n
 |---|---|
 | `Sdk/ZeroZero.Build.props` | The language settings (`LangVersion` latest, `Nullable` and `ImplicitUsings` enabled, `NeutralLanguage` en-GB) and the studio identity (`Authors`, `Company`, `Copyright`). Defaults: a value set in a project file wins. Also `ZeroZeroBuildDir`, the folder the kit's other files are reached from. `AssemblyTitle`, `Product`, `Description`, repository URLs and licence are left to the project. |
 | `Sdk/ZeroZero.Packages.props` | Central package management switched on, `VersionOverride` switched off, and the family's pins — the table under [Third-party pins in `consuming.md`](consuming.md#third-party-pins), each declared as a `ZeroZeroFamilyPin` item that `ZZB006` checks. |
-| `Sdk/ZeroZero.WinUIApp.props` | The unpackaged WinUI application block, imported by an application project at the top of its own file: `OutputType` WinExe, the Windows target framework (`net10.0-windows10.0.26100.0`) and minimum platform (`10.0.17763.0`), `UseWinUI`, `WindowsPackageType` None, `EnableMsixTooling` false, `WinUISDKReferences` false, a `RuntimeIdentifier` from the process architecture, `DefaultLanguage` en-GB, and the manifest wiring below. |
+| `Sdk/ZeroZero.WinUIApp.props` | The unpackaged WinUI application block, imported by an application project at the top of its own file: `OutputType` WinExe, the Windows target framework (`net11.0-windows10.0.26100.0`) and minimum platform (`10.0.17763.0`), `UseWinUI`, `WindowsPackageType` None, `EnableMsixTooling` false, `WinUISDKReferences` false, a `RuntimeIdentifier` from the process architecture, `DefaultLanguage` en-GB, and the manifest wiring below. |
 | `Sdk/ZeroZero.Build.targets` | The guards, the manifest writer and the signing step. |
 | `templates/app.manifest` | The application manifest with two tokens: `{AssemblyName}` and `{ExecutionLevel}`. It declares Windows 10 and 11 support, per-monitor-v2 DPI awareness and the common-controls-6 dependency the task dialog in `ZeroZero.Win32` needs. |
 | `templates/Directory.Build.rsp` | The family's MSBuild switches, to copy to a consuming repository's root. It carries `-nodeReuse:false`, which ends the worker nodes with the build rather than leaving each one and its console host running for the next fifteen minutes. Node reuse is the one setting here that cannot be a property: MSBuild settles it before any project file is evaluated, so a response file is the only shape it has. What the file decides and what it cannot is [below](#what-the-response-file-governs-and-what-it-does-not). |
@@ -116,7 +117,7 @@ repository's `nuget.config` names, at the version `global.json` names. The three
 same files, reached by name through the `Sdk` attribute.
 
 ```json
-{ "msbuild-sdks": { "ZeroZero.Build": "0.7.0" } }
+{ "msbuild-sdks": { "ZeroZero.Build": "0.10.0" } }
 ```
 
 ```xml

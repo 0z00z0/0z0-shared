@@ -281,19 +281,19 @@ difference matters to a consumer that has not yet taken the kit:
 
 | Package | Version | What the pin is |
 |---|---|---|
-| `Microsoft.WindowsAppSDK` | `2.4.0` | A **floor**. |
-| `Microsoft.Windows.SDK.BuildTools` | `10.0.28000.2270` | A **floor**. |
+| `Microsoft.WindowsAppSDK` | `2.7.0` | A **floor**. |
+| `Microsoft.Windows.SDK.BuildTools` | `10.0.28000.2957` | A **floor**. |
 | `CommunityToolkit.WinUI.Controls.SettingsControls` | `8.2.251219` | A **ceiling**. |
 | `H.NotifyIcon.WinUI` | `2.4.1` | A **ceiling**, for the same reason: the tray host's notify-icon library, which a consuming application references directly as well. No type of it reaches a public signature. |
 | `MQTTnet` | `5.2.0.1603` | Transitive only, and no type of it reaches a public signature. |
-| `Microsoft.Extensions.Localization.Abstractions` | `10.0.12` | Transitive, through `ZeroZero.Primitives`. Its `IStringLocalizer` is a public signature: the interface a host implements to override or translate a component's texts. |
+| `Microsoft.Extensions.Localization.Abstractions` | `11.0.0` | Transitive, through `ZeroZero.Primitives`. Its `IStringLocalizer` is a public signature: the interface a host implements to override or translate a component's texts. |
 | `MessageFormat` | `8.0.0` | Transitive only, through `ZeroZero.Mqtt`; no type of it reaches a public signature. MIT-licensed by its source repository, and the package ships no licence text, so a consuming application carries the notice itself. |
 | `TaskScheduler` | `2.12.2` | Transitive only, through `ZeroZero.Startup`; no type of it reaches a public signature. |
-| `Microsoft.Win32.SystemEvents` | `10.0.12` | Transitive only, through `ZeroZero.Lifecycle` and `ZeroZero.Tray.WinUI`; no type of it reaches a public signature. The runtime's own assembly, pinned at the .NET 10 servicing release the family builds on and raised with it. |
-| `Microsoft.NET.Test.Sdk` | `18.9.0` | The test trio, for a consumer's own test projects. |
+| `Microsoft.Win32.SystemEvents` | `11.0.0` | Transitive only, through `ZeroZero.Lifecycle` and `ZeroZero.Tray.WinUI`; no type of it reaches a public signature. The runtime's own assembly, pinned at the .NET 11 servicing release the family builds on and raised with it. |
+| `Microsoft.NET.Test.Sdk` | `18.12.0` | The test trio, for a consumer's own test projects. |
 | `xunit` | `2.9.3` | |
-| `xunit.runner.visualstudio` | `4.0.0` | |
-| `Microsoft.Extensions.TimeProvider.Testing` | `10.9.0` | Test-only, and taken only by a suite that moves a clock rather than waiting on one. Nothing under `src/` references it, so it reaches no consumer that does not ask for it. |
+| `xunit.runner.visualstudio` | `4.0.1` | |
+| `Microsoft.Extensions.TimeProvider.Testing` | `11.0.0` | Test-only, and taken only by a suite that moves a clock rather than waiting on one. Nothing under `src/` references it, so it reaches no consumer that does not ask for it. |
 
 **The two Windows App SDK pins are a floor, not a lock.** A consuming app that pins on its own may
 pin higher, and NuGet unifies a package graph on the version nearest the consuming project, so the

@@ -2,7 +2,7 @@
 
 Two assemblies under one key. `ZeroZero.Tray` is the plain half: the icon file an application
 writes for its notification icon, the size the taskbar draws that icon at, and whether the
-taskbar it sits on is light or dark. Plain `net10.0`, no XAML, no Windows App SDK, no drawing.
+taskbar it sits on is light or dark. Plain `net11.0`, no XAML, no Windows App SDK, no drawing.
 `ZeroZero.Tray.WinUI` is the host: the icon's lifecycle in a WinUI 3 application with the
 notify-icon library's efficiency mode refused, the theme, display and shell-restart listeners,
 the cache the rendered file lives in, the tooltip discipline, click classification and the menu
@@ -20,7 +20,7 @@ This guide is complete for adoption: the component's own source and tests need n
 
 | | |
 |---|---|
-| SDK | .NET 10 |
+| SDK | .NET 11 |
 | Platform | Windows 10 1809 (build 10.0.17763) or later. The plain assembly declares itself Windows-only: the taskbar's scale is a window metric and the theme is a registry value. |
 | Host | WinUI 3 on the Windows App SDK at the build kit's pin, unpackaged. The host takes the notify-icon library `H.NotifyIcon.WinUI` at the kit's pin, a ceiling for a consumer that references the library directly. |
 
@@ -329,7 +329,7 @@ and keeps the file current itself.
 
 ## Tests and the harness
 
-`tests/ZeroZero.Tray.Tests` is plain `net10.0` and references no WinUI assembly: a WinUI-coupled
+`tests/ZeroZero.Tray.Tests` is plain `net11.0` and references no WinUI assembly: a WinUI-coupled
 test assembly hangs a runner with no desktop session rather than failing it (issue #13). The
 plain half is tested directly. The host's framework-free files — the tooltip discipline, the
 click policy, the file cache, the descriptors and the startup sequence — are compiled in as linked

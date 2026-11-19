@@ -23,19 +23,19 @@ on:
 
 jobs:
   build:
-    # The WinUI projects target net10.0-windows and need the Windows App SDK build tooling.
+    # The WinUI projects target net11.0-windows and need the Windows App SDK build tooling.
     runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v7
 
       # An exact SDK version makes the install script download from its release feed. A channel
-      # such as 10.0.x resolves through an aka.ms redirect to a storage origin that can fail on its
+      # such as 11.0.x resolves through an aka.ms redirect to a storage origin that can fail on its
       # own, with no fallback to the feed. The same line sits in release.yml.
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "10.0.403"
+          dotnet-version: "11.0.100"
 
       - name: Restore
         run: dotnet restore 0z0-shared.slnx

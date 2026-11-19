@@ -19,9 +19,9 @@ This guide is complete for adoption: the component's own source and tests need n
 
 | | |
 |---|---|
-| SDK | .NET 10 |
-| `ZeroZero.Brand.Core` | Plain `net10.0` — no WinUI, no Windows-specific dependencies, safe from a console app or any other .NET target. Its one dependency is `ZeroZero.Primitives`, which reads its texts. |
-| `ZeroZero.Brand.WinUI` | `net10.0-windows10.0.26100.0`, Windows 10 1809 (build 10.0.17763) or later, with the Windows App SDK. Unpackaged. |
+| SDK | .NET 11 |
+| `ZeroZero.Brand.Core` | Plain `net11.0` — no WinUI, no Windows-specific dependencies, safe from a console app or any other .NET target. Its one dependency is `ZeroZero.Primitives`, which reads its texts. |
+| `ZeroZero.Brand.WinUI` | `net11.0-windows10.0.26100.0`, Windows 10 1809 (build 10.0.17763) or later, with the Windows App SDK. Unpackaged. |
 
 ## The assemblies
 

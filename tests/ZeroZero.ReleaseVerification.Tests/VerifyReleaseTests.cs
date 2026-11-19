@@ -234,7 +234,7 @@ public sealed class VerifyReleaseTests(PackedRelease release)
         var other = Encoding.Unicode.GetBytes("+0000000");
         var occurrences = 0;
         var package = Artefacts.CopyWithEntryBytes(release.PackagePath, Path.Combine(feed, release.PackageName),
-            "lib/net10.0/ZeroZero.Primitives.dll", bytes => Artefacts.ReplaceAll(bytes, stamp, other, out occurrences));
+            "lib/net11.0/ZeroZero.Primitives.dll", bytes => Artefacts.ReplaceAll(bytes, stamp, other, out occurrences));
         Assert.True(occurrences > 0, "the assembly carries no UTF-16 stamp to rewrite");
         var record = Artefacts.Record(release.RecordPath, Path.Combine(feed, "release-artefacts.json"), hashOfPackage: package);
 
@@ -255,7 +255,7 @@ public sealed class VerifyReleaseTests(PackedRelease release)
         var replaced = Encoding.Unicode.GetBytes(other + "+");
         var occurrences = 0;
         var package = Artefacts.CopyWithEntryBytes(release.PackagePath, Path.Combine(feed, release.PackageName),
-            "lib/net10.0/ZeroZero.Primitives.dll", bytes => Artefacts.ReplaceAll(bytes, stamp, replaced, out occurrences));
+            "lib/net11.0/ZeroZero.Primitives.dll", bytes => Artefacts.ReplaceAll(bytes, stamp, replaced, out occurrences));
         Assert.True(occurrences > 0, "the assembly carries no UTF-16 stamp to rewrite");
         var record = Artefacts.Record(release.RecordPath, Path.Combine(feed, "release-artefacts.json"), hashOfPackage: package);
 
@@ -275,7 +275,7 @@ public sealed class VerifyReleaseTests(PackedRelease release)
         var none = Encoding.Unicode.GetBytes("-unknown");
         var occurrences = 0;
         var package = Artefacts.CopyWithEntryBytes(release.PackagePath, Path.Combine(feed, release.PackageName),
-            "lib/net10.0/ZeroZero.Primitives.dll", bytes => Artefacts.ReplaceAll(bytes, stamp, none, out occurrences));
+            "lib/net11.0/ZeroZero.Primitives.dll", bytes => Artefacts.ReplaceAll(bytes, stamp, none, out occurrences));
         Assert.True(occurrences > 0, "the assembly carries no UTF-16 stamp to rewrite");
         var record = Artefacts.Record(release.RecordPath, Path.Combine(feed, "release-artefacts.json"), hashOfPackage: package);
 

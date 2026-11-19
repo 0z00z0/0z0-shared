@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Plain net10.0, and no reference to ZeroZero.Controls.WinUI: the Windows App SDK
+    <!-- Plain net11.0, and no reference to ZeroZero.Controls.WinUI: the Windows App SDK
          bootstrapper blocks on a runner with no desktop session, so a WinUI-coupled test assembly
          would hang CI rather than fail it (issue #13). What can be tested without the XAML runtime
          is compiled in as linked source, and the markup is read as data. -->
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <RootNamespace>ZeroZero.Controls.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>

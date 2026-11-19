@@ -4,7 +4,7 @@
 vocabulary — info bubble, section header, card row — title-bar theming, the single-line text
 prompt, the sizing of a popup window to its own content, a taskbar-and-Alt+Tab setter that
 survives a start before the taskbar exists, and a localizer over the application's own `.resw`.
-`net10.0-windows10.0.26100.0`, the Windows App SDK, the Community Toolkit's settings
+`net11.0-windows10.0.26100.0`, the Windows App SDK, the Community Toolkit's settings
 controls, `ZeroZero.Win32` and `ZeroZero.Primitives`; no font pack, no palette, and no toolkit type
 in a public signature.
 That is what makes it **foundation** rather than a component: any UI component may take it without
@@ -23,7 +23,7 @@ This guide is complete for adoption: the component's own source and tests need n
 
 | | |
 |---|---|
-| SDK | .NET 10 |
+| SDK | .NET 11 |
 | Platform | Windows 10 1809 (build 10.0.17763) or later, with the Windows App SDK. Unpackaged. |
 | Toolkit | `CommunityToolkit.WinUI.Controls.SettingsControls` at the family's pin, which is a ceiling for a consumer's own direct reference ([`consuming.md`](consuming.md#third-party-pins)). |
 
@@ -228,7 +228,7 @@ ContentPanel.SizeChanged += (_, _) => _fit.FitToContent();
 
 ## Tests and the harness
 
-`tests/ZeroZero.Controls.Tests` is a plain `net10.0` project that references no WinUI assembly:
+`tests/ZeroZero.Controls.Tests` is a plain `net11.0` project that references no WinUI assembly:
 a WinUI control needs the XAML runtime, and the Windows App SDK bootstrapper hangs a runner with
 no desktop session rather than failing it (issue #13). What can be tested without the runtime is:
 the title-bar enum and palette, compiled in as linked source and pinned — opaque throughout,

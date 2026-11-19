@@ -3,7 +3,7 @@
 `ZeroZero.Lifecycle` keeps a tray application one process that comes back: the single-instance
 lock held for the life of the process, the deliberate-exit mark and the relaunch on any other clean
 exit under a sliding-window limit, and the per-user data path every other file hangs off. Plain
-`net10.0`; one project reference, `ZeroZero.Primitives`, for the log sink; one package,
+`net11.0`; one project reference, `ZeroZero.Primitives`, for the log sink; one package,
 `Microsoft.Win32.SystemEvents`, for the session-ending signal. No window, no message pump and no
 user interface: it is armed before any of those exist.
 
@@ -18,8 +18,8 @@ This guide is complete for adoption: the component's own source and tests need n
 
 | | |
 |---|---|
-| SDK | .NET 10 |
-| Platform | Windows. The assembly targets plain `net10.0` and declares itself Windows-only through `SupportedOSPlatform`, with no version: nothing here needs a build floor, and the project states none. An application taking it alongside the WinUI components inherits their floor, not one from here. |
+| SDK | .NET 11 |
+| Platform | Windows. The assembly targets plain `net11.0` and declares itself Windows-only through `SupportedOSPlatform`, with no version: nothing here needs a build floor, and the project states none. An application taking it alongside the WinUI components inherits their floor, not one from here. |
 
 ## What it contains
 
@@ -182,7 +182,7 @@ relaunched, which is what it should do.
 Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Lifecycle`; it brings
 `ZeroZero.Primitives` with it.
 
-The tests are in `tests/ZeroZero.Lifecycle.Tests`, plain `net10.0`, and run on Windows only. They
+The tests are in `tests/ZeroZero.Lifecycle.Tests`, plain `net11.0`, and run on Windows only. They
 take real named mutexes under `Local\ZeroZero.Lifecycle.Tests.<guid>`, with the other instance
 played by a thread of its own, and one created through the platform call with an empty protected
 access list so that nobody — the creating process included — may open it, which is the only way to

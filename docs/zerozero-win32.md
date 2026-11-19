@@ -2,7 +2,7 @@
 
 `ZeroZero.Win32` is the raw native layer: monitor, DPI and taskbar metrics as plain numbers, the
 arithmetic that fits a window into a work area, the native task
-dialog and the four message boxes, and dark native chrome for the process. Plain `net10.0`, no
+dialog and the four message boxes, and dark native chrome for the process. Plain `net11.0`, no
 package references, no project references, no XAML and no Windows App SDK — which is what makes it
 **foundation** rather than a component, and what lets a console tool take it as readily as a WinUI
 application. The About window, the text prompt, the settings shell and the update window take their
@@ -20,8 +20,8 @@ This guide is complete for adoption: the component's own source and tests need n
 
 | | |
 |---|---|
-| SDK | .NET 10 |
-| Platform | Windows. The assembly targets plain `net10.0` and declares itself Windows-only through `SupportedOSPlatform`, with no version: nothing here needs a build floor, and the project states none. A call from code that may run elsewhere is a compiler warning. An application taking it alongside the WinUI components inherits their floor, not one from here. |
+| SDK | .NET 11 |
+| Platform | Windows. The assembly targets plain `net11.0` and declares itself Windows-only through `SupportedOSPlatform`, with no version: nothing here needs a build floor, and the project states none. A call from code that may run elsewhere is a compiler warning. An application taking it alongside the WinUI components inherits their floor, not one from here. |
 | Manifest | The task dialog needs common controls version 6, declared in the consuming application's own manifest (below). `PerMonitorV2` DPI awareness in the same manifest is what makes the monitor metrics agree with the scale the window is drawn at. |
 
 ## What it contains
@@ -118,7 +118,7 @@ component, the update component's Win32 entry point, the MQTT settings panel or 
 already has it and adds nothing. Which of those take it directly is in
 [`consume-win32-foundation.md`](consume-win32-foundation.md).
 
-The tests are in `tests/ZeroZero.Win32.Tests`, plain `net10.0`, and run on Windows only: they call
+The tests are in `tests/ZeroZero.Win32.Tests`, plain `net11.0`, and run on Windows only: they call
 user32 and shcore against the real desktop, create a hidden framed window to measure, and read the
 packed task-dialog configuration back through its pointers. `WindowFitTests` needs none of that —
 the arithmetic takes numbers and answers with numbers. No test shows the dialog or a message

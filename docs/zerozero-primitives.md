@@ -4,7 +4,7 @@
 two-member log sink and its no-op, the reader of the version an assembly reports and the form an
 About box shows, the coalescing gate, the timestamp-list file, a component's own texts with the
 host's localizer asked first, and the source-revision stamp as build properties and targets.
-Plain `net10.0`, no project references, no domain vocabulary, and one package reference: the
+Plain `net11.0`, no project references, no domain vocabulary, and one package reference: the
 localisation abstractions (`Microsoft.Extensions.Localization.Abstractions`, the `IStringLocalizer`
 interface alone, no dependency injection, logging or options). That is what makes it
 **foundation** rather than a component: any component may take it. The MQTT module
@@ -24,8 +24,8 @@ This guide is complete for adoption: the component's own source and tests need n
 
 | | |
 |---|---|
-| SDK | .NET 10 |
-| Platform | Any .NET 10 target; nothing Windows-specific. |
+| SDK | .NET 11 |
+| Platform | Any .NET 11 target; nothing Windows-specific. |
 
 ## What it contains
 
@@ -163,5 +163,5 @@ the build half of `AssemblyVersionText`, so it ships with the assembly that read
 reference delivers a working version display. The kit neither duplicates nor imports it, and this
 repository's `Directory.Build.props` imports both, each from its own folder.
 
-The tests are in `tests/ZeroZero.Primitives.Tests`, plain `net10.0`, and run on any machine with the
+The tests are in `tests/ZeroZero.Primitives.Tests`, plain `net11.0`, and run on any machine with the
 SDK: no desktop, no broker, no network.

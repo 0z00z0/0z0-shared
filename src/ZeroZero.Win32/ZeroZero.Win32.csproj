@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Plain net10.0, not net10.0-windows: a net10.0 console tool cannot reference a Windows-TFM
+    <!-- Plain net11.0, not net11.0-windows: a net11.0 console tool cannot reference a Windows-TFM
          assembly, and this layer exists so headless consumers can take it. The assembly declares
          itself Windows-only through SupportedOSPlatform instead. -->
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <RootNamespace>ZeroZero.Win32</RootNamespace>
     <Version>$(Win32Version)</Version>
     <!-- The LibraryImport source generator emits unsafe marshalling code. -->

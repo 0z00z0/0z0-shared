@@ -9,7 +9,7 @@ GitHub release against the running version, the download into a fresh private di
 verification of the installer before it runs, the launch-or-refuse policy, the stale-download sweep
 and the check scheduler.
 
-`ZeroZero.Update` and `ZeroZero.Update.Win32` are plain `net10.0` and declare themselves
+`ZeroZero.Update` and `ZeroZero.Update.Win32` are plain `net11.0` and declare themselves
 Windows-only; `ZeroZero.Update.WinUI` targets WinUI. `ZeroZero.Update` takes `ZeroZero.Primitives`
 for the log sink and the version reader; `ZeroZero.Update.WinUI` takes `ZeroZero.Brand.WinUI` for
 the bracket action button and the studio typeface, `ZeroZero.Win32` for monitor metrics and the
@@ -27,8 +27,8 @@ This guide is complete for adoption: the component's own source and tests need n
 
 | | |
 |---|---|
-| SDK | .NET 10 |
-| Platform | Windows. The two plain assemblies target `net10.0` and declare themselves Windows-only through `SupportedOSPlatform`, with no version. The signature check is WinVerifyTrust. |
+| SDK | .NET 11 |
+| Platform | Windows. The two plain assemblies target `net11.0` and declare themselves Windows-only through `SupportedOSPlatform`, with no version. The signature check is WinVerifyTrust. |
 | The application | Able to show a WinUI window, and to call the flow from the thread that owns its windows. There is no path that shows nothing but a message box: a tool with no window at all takes `ZeroZero.Update` and supplies prompts of its own. |
 | The release | A GitHub release, not a draft and not a pre-release, whose tag is a plain version (`v1.2.3`), which carries an asset named exactly as `InstallerFileName` says with the version substituted, and whose body carries the installer's SHA-256 as the only *distinct* 64-digit hexadecimal token in it — one value, repeated as often as the notes like. |
 | The installer | Authenticode-signed by the expected signer, per-user, and able to start while the application exits: the flow launches it without elevation and the application exits once it has started. |
@@ -833,7 +833,7 @@ Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Updat
 takes `ZeroZero.Update.Win32`, and a headless tool takes `ZeroZero.Update` alone.
 
 The tests are in `tests/ZeroZero.Update.Tests` and `tests/ZeroZero.Update.Win32.Tests`, plain
-`net10.0`, and run on Windows only. The window has none: it is proved by the harness and the
+`net11.0`, and run on Windows only. The window has none: it is proved by the harness and the
 pictures above. The release server is a loopback listener that writes exactly
 the status, headers and bytes each test says, so a download that ends early is a socket closing
 early. The verifier is exercised against real files: copies of the assembly under test signed

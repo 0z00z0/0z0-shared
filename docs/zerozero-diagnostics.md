@@ -3,7 +3,7 @@
 Crash diagnostics: what a process does with an exception nothing caught, the file that crash reaches
 when everything else has failed, the version line that says which build wrote the log, and the
 Windows Error Reporting registration that turns a crash into a dump file. Two assemblies, plain
-`net10.0`, no third-party package of their own: `ZeroZero.Diagnostics` is the entry point and carries
+`net11.0`, no third-party package of their own: `ZeroZero.Diagnostics` is the entry point and carries
 `ZeroZero.Diagnostics.Dumps` with it. Both take `ZeroZero.Primitives` for the log sink and the version
 reader, and nothing else.
 
@@ -26,8 +26,8 @@ This guide is complete for adoption: the component's own source and tests need n
 
 | | |
 |---|---|
-| SDK | .NET 10 |
-| Platform | `ZeroZero.Diagnostics` runs anywhere .NET 10 does. `ZeroZero.Diagnostics.Dumps` declares itself Windows-only: it writes the Windows Error Reporting registry key and nothing else. |
+| SDK | .NET 11 |
+| Platform | `ZeroZero.Diagnostics` runs anywhere .NET 11 does. `ZeroZero.Diagnostics.Dumps` declares itself Windows-only: it writes the Windows Error Reporting registry key and nothing else. |
 | Elevation | Arming a dump registration writes the machine hive, which needs an elevated process. Windows Error Reporting reads local dump settings from `HKEY_LOCAL_MACHINE` alone; a registration under the current user's hive is accepted by the registry and produces no dump (measured: three crashes, no file). |
 | Error mode | A process whose error mode carries `SEM_NOGPFAULTERRORBOX` never reaches Windows Error Reporting, so no registration produces a dump for it. The mode is inherited from the parent: an application launched by the shell has mode 0, while a build server's job shell runs with the flag set (measured: 0x8003 on the hosted runner) and hands it to every child. A process that must be dumpable under such a parent clears it with `SetErrorMode(0)`. |
 
@@ -176,7 +176,7 @@ Either route in [`consuming.md`](consuming.md). The reference is `ZeroZero.Diagn
 registration alone takes `ZeroZero.Diagnostics.Dumps`.
 
 The tests are in `tests/ZeroZero.Diagnostics.Tests` and `tests/ZeroZero.Diagnostics.Dumps.Tests`,
-plain `net10.0`, Windows only for the second. Each test assembly is its own crash victim: it carries
+plain `net11.0`, Windows only for the second. Each test assembly is its own crash victim: it carries
 an entry point the tests launch as a separate process, so an unhandled exception is genuinely
 unhandled, a dropped task is genuinely finalised, and what the handlers wrote is read back from disk.
 The registry lifecycle runs against a real key under the current user's hive, under a scratch path,
